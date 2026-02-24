@@ -13,3 +13,4 @@ admin_token.txt
 *.token
 *.token.txt
 full_project_code.txt
+nohup.out
