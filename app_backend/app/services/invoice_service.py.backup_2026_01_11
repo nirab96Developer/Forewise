@@ -1,0 +1,165 @@
+"""
+Invoice Service
+"""
+
+from typing import Optional, List, Tuple
+from decimal import Decimal
+from datetime import date as dt_date
+from sqlalchemy.orm import Session
+from sqlalchemy import select, func, or_
+
+from app.models.invoice import Invoice
+from app.models.supplier import Supplier
+from app.models.project import Project
+from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceSearch, InvoiceStatistics
+from app.services.base_service import BaseService
+from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+
+
+class InvoiceService(BaseService[Invoice]):
+    """Invoice Service - CORE"""
+    
+    def __init__(self):
+        super().__init__(Invoice)
+    
+    def _generate_invoice_number(self, db: Session) -> str:
+        """Generate unique invoice number"""
+        # Get max number
+        max_num = db.execute(
+            select(func.max(Invoice.invoice_number))
+        ).scalar()
+        
+        if max_num and max_num.isdigit():
+            next_num = int(max_num) + 1
+        else:
+            # Start from current year + sequence
+            import datetime
+            next_num = int(f"{datetime.datetime.now().year}0001")
+        
+        return str(next_num)
+    
+    def create(self, db: Session, data: InvoiceCreate, current_user_id: int) -> Invoice:
+        """Create invoice"""
+        # UNIQUE: invoice_number
+        existing = db.query(Invoice).filter(
+            Invoice.invoice_number == data.invoice_number,
+            Invoice.deleted_at.is_(None)
+        ).first()
+        if existing:
+            raise DuplicateException(f"Invoice {data.invoice_number} already exists")
+        
+        # Validate FK: supplier_id (no FK in DB but validate anyway)
+        supplier = db.query(Supplier).filter_by(id=data.supplier_id).first()
+        if not supplier:
+            raise ValidationException(f"Supplier {data.supplier_id} not found")
+        if not supplier.is_active:
+            raise ValidationException(f"Supplier {data.supplier_id} is not active")
+        
+        # Validate FK: project_id (if provided)
+        if data.project_id:
+            project = db.query(Project).filter_by(id=data.project_id).first()
+            if not project:
+                raise ValidationException(f"Project {data.project_id} not found")
+        
+        # Create
+        invoice_dict = data.model_dump(exclude_unset=True)
+        invoice_dict['created_by'] = current_user_id
+        invoice_dict['paid_amount'] = Decimal(0)
+        
+        invoice = Invoice(**invoice_dict)
+        
+        db.add(invoice)
+        db.commit()
+        db.refresh(invoice)
+        
+        return invoice
+    
+    def update(self, db: Session, invoice_id: int, data: InvoiceUpdate, current_user_id: int) -> Invoice:
+        """Update invoice"""
+        invoice = self.get_by_id_or_404(db, invoice_id)
+        
+        # Version check
+        if data.version is not None and invoice.version != data.version:
+            raise DuplicateException("Invoice was modified by another user")
+        
+        update_dict = data.model_dump(exclude_unset=True, exclude={'version'})
+        
+        # UNIQUE: invoice_number (if changed)
+        if 'invoice_number' in update_dict and update_dict['invoice_number'] != invoice.invoice_number:
+            existing = db.query(Invoice).filter(
+                Invoice.invoice_number == update_dict['invoice_number'],
+                Invoice.id != invoice_id,
+                Invoice.deleted_at.is_(None)
+            ).first()
+            if existing:
+                raise DuplicateException(f"Invoice {update_dict['invoice_number']} already exists")
+        
+        # Update
+        for field, value in update_dict.items():
+            setattr(invoice, field, value)
+        
+        if invoice.version is not None:
+            invoice.version += 1
+        
+        db.commit()
+        db.refresh(invoice)
+        
+        return invoice
+    
+    def list(self, db: Session, search: InvoiceSearch) -> Tuple[List[Invoice], int]:
+        """List invoices"""
+        query = self._base_query(db, include_deleted=search.include_deleted)
+        
+        if search.q:
+            query = query.where(Invoice.invoice_number.ilike(f"%{search.q}%"))
+        
+        if search.supplier_id:
+            query = query.where(Invoice.supplier_id == search.supplier_id)
+        if search.project_id:
+            query = query.where(Invoice.project_id == search.project_id)
+        if search.status:
+            query = query.where(Invoice.status == search.status.value)
+        if search.date_from:
+            query = query.where(Invoice.issue_date >= search.date_from)
+        if search.date_to:
+            query = query.where(Invoice.issue_date <= search.date_to)
+        if search.is_active is not None:
+            query = query.where(Invoice.is_active == search.is_active)
+        
+        total = db.execute(select(func.count()).select_from(query.subquery())).scalar() or 0
+        
+        sort_col = getattr(Invoice, search.sort_by, Invoice.issue_date)
+        query = query.order_by(sort_col.desc() if search.sort_desc else sort_col.asc())
+        
+        offset = (search.page - 1) * search.page_size
+        invoices = db.execute(query.offset(offset).limit(search.page_size)).scalars().all()
+        
+        return invoices, total
+    
+    def get_by_number(self, db: Session, invoice_number: str) -> Optional[Invoice]:
+        """Get by invoice number"""
+        return db.execute(
+            select(Invoice).where(
+                Invoice.invoice_number == invoice_number,
+                Invoice.deleted_at.is_(None)
+            )
+        ).scalar_one_or_none()
+    
+    def get_statistics(self, db: Session, filters: Optional[dict] = None) -> InvoiceStatistics:
+        """Get statistics"""
+        query = select(Invoice).where(Invoice.deleted_at.is_(None))
+        
+        if filters:
+            if filters.get('supplier_id'):
+                query = query.where(Invoice.supplier_id == filters['supplier_id'])
+        
+        invoices = db.execute(query).scalars().all()
+        
+        return InvoiceStatistics(
+            total=len(invoices),
+            total_amount=sum(inv.total_amount for inv in invoices),
+            paid_amount=sum(inv.paid_amount for inv in invoices),
+            balance_due=sum(inv.balance_due for inv in invoices),
+            by_status={},
+            overdue_count=sum(1 for inv in invoices if inv.is_overdue)
+        )

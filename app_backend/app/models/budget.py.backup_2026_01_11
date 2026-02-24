@@ -1,0 +1,132 @@
+"""
+Budget model - מודל תקציב
+מנהל את התקציבים ברמה היררכית: מרחב → אזור → פרויקט
+"""
+from __future__ import annotations
+# Removed enum import - using String instead
+from typing import TYPE_CHECKING, Optional
+from datetime import datetime, date
+from decimal import Decimal
+
+from sqlalchemy import Column, Integer, String, Text, Unicode, UnicodeText, DateTime, Numeric, ForeignKey, Boolean, Index, Date
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import List
+
+from app.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.region import Region
+    from app.models.area import Area
+    from app.models.project import Project
+    from app.models.user import User
+
+
+# Removed BudgetType and BudgetStatus enums - budget_type and status are String in DB
+
+
+class Budget(BaseModel):
+    """Budget model - תקציב"""
+
+    __tablename__ = "budgets"
+    __table_args__ = {"extend_existing": True}
+
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Basic info
+    name: Mapped[str] = mapped_column(Unicode(100), nullable=False)
+    code: Mapped[Optional[str]] = mapped_column(String(50), unique=True, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(UnicodeText, nullable=True)
+
+    # Type and status - DB: nvarchar(255), NO (String, not Enum)
+    budget_type: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(255), nullable=False, index=True
+    )
+    
+    # DB: bit, NO
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    # Hierarchy
+    parent_budget_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("budgets.id"), nullable=True
+    )
+
+    # Foreign keys
+    region_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("regions.id"), nullable=True, index=True
+    )
+    area_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("areas.id"), nullable=True, index=True
+    )
+    project_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("projects.id"), nullable=True, index=True
+    )
+    created_by: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )
+
+    # Budget amounts
+    total_amount: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
+    allocated_amount: Mapped[Optional[float]] = mapped_column(
+        Numeric(15, 2), default=0.0, nullable=True
+    )
+    spent_amount: Mapped[Optional[float]] = mapped_column(
+        Numeric(15, 2), default=0.0, nullable=True
+    )
+    committed_amount: Mapped[Optional[float]] = mapped_column(
+        Numeric(15, 2), default=0.0, nullable=True
+    )
+
+    # Dates
+    fiscal_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+
+    # Notes
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Relationships - removed back_populates to avoid errors with commented relationships in other models
+    parent_budget: Mapped[Optional["Budget"]] = relationship(
+        "Budget", remote_side="Budget.id"
+    )
+    child_budgets: Mapped[List["Budget"]] = relationship("Budget")
+    region: Mapped[Optional["Region"]] = relationship("Region")
+    area: Mapped[Optional["Area"]] = relationship("Area")
+    project: Mapped[Optional["Project"]] = relationship(
+        "Project", foreign_keys="Budget.project_id"
+    )
+    creator: Mapped[Optional["User"]] = relationship(
+        "User", foreign_keys=[created_by]
+    )
+    # Relationships to other models - commented out to avoid import errors
+    # budget_items: Mapped[List["BudgetItem"]] = relationship(
+    #     "BudgetItem", cascade="all, delete-orphan"
+    # )
+    # allocations: Mapped[List["BudgetAllocation"]] = relationship("BudgetAllocation")
+    # outgoing_transfers: Mapped[List["BudgetTransfer"]] = relationship(
+    #     "BudgetTransfer", foreign_keys="BudgetTransfer.source_budget_id"
+    # )
+    # incoming_transfers: Mapped[List["BudgetTransfer"]] = relationship(
+    #     "BudgetTransfer", foreign_keys="BudgetTransfer.target_budget_id"
+    # )
+    # releases: Mapped[List["BalanceRelease"]] = relationship(
+    #     "BalanceRelease", cascade="all, delete-orphan"
+    # )
+
+    @property
+    def available_amount(self) -> float:
+        """Calculate available budget"""
+        return float(self.total_amount or 0) - float(self.spent_amount or 0) - float(self.committed_amount or 0)
+
+    @property
+    def utilization_percentage(self) -> float:
+        """Calculate budget utilization percentage"""
+        if not self.total_amount:
+            return 0.0
+        return (float(self.spent_amount or 0) / float(self.total_amount)) * 100
+
+    def __repr__(self):
+        return f"<Budget(id={self.id}, name='{self.name}', total={self.total_amount})>"

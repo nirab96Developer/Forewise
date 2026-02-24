@@ -1,0 +1,47 @@
+[
+  {
+    "id": "alrt-1",
+    "type": "license_expired",
+    "severity": "high",
+    "project_id": "19094",
+    "equipment_id": "202133",
+    "deadline": "2024-09-29T00:00:00Z",
+    "cta": ["renew_license", "replace_equipment"]
+  },
+  {
+    "id": "alrt-2",
+    "type": "tender_expiring",
+    "severity": "medium",
+    "project_id": "19095",
+    "tender_id": "16073",
+    "deadline": "2025-03-31T00:00:00Z",
+    "cta": ["extend_tender", "find_alternative"]
+  },
+  {
+    "id": "alrt-3",
+    "type": "data_anomaly",
+    "severity": "high",
+    "project_id": "19096",
+    "equipment_id": "180677",
+    "deadline": null,
+    "cta": ["fix_data", "contact_supplier"]
+  },
+  {
+    "id": "alrt-4",
+    "type": "license_expiring",
+    "severity": "medium",
+    "project_id": "19097",
+    "equipment_id": "205571",
+    "deadline": "2025-03-31T00:00:00Z",
+    "cta": ["renew_license", "schedule_maintenance"]
+  },
+  {
+    "id": "alrt-5",
+    "type": "price_discrepancy",
+    "severity": "low",
+    "project_id": "19098",
+    "supplier_id": "514980051",
+    "deadline": null,
+    "cta": ["review_prices", "update_contract"]
+  }
+]

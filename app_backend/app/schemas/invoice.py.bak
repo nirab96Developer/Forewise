@@ -1,0 +1,330 @@
+# app/schemas/invoice.py
+"""Invoice schemas."""
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class InvoiceStatus(str, Enum):
+    """Invoice status enum."""
+    
+    DRAFT = "draft"
+    PENDING = "pending"
+    APPROVED = "approved"
+    SENT = "sent"
+    PAID = "paid"
+    OVERDUE = "overdue"
+    CANCELLED = "cancelled"
+    DISPUTED = "disputed"
+
+
+class PaymentMethod(str, Enum):
+    """Payment method enum."""
+    
+    BANK_TRANSFER = "bank_transfer"
+    CHECK = "check"
+    CASH = "cash"
+    CREDIT_CARD = "credit_card"
+    OTHER = "other"
+
+
+class PaymentStatus(str, Enum):
+    """Payment status enum."""
+    
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class InvoiceBase(BaseModel):
+    """Base invoice schema."""
+    
+    invoice_number: str = Field(..., min_length=1, max_length=50, description="Invoice number")
+    supplier_id: int = Field(..., gt=0, description="Supplier ID")
+    project_id: Optional[int] = Field(None, gt=0, description="Project ID")
+    period_start: date = Field(..., description="Billing period start")
+    period_end: date = Field(..., description="Billing period end")
+    due_date: date = Field(..., description="Payment due date")
+    currency: str = Field("ILS", max_length=3, description="Currency code")
+    notes: Optional[str] = Field(None, description="Additional notes")
+    
+    @field_validator("period_end")
+    @classmethod
+    def validate_period_dates(cls, v, info):
+        """Ensure period end is after start."""
+        if "period_start" in info.data:
+            if v <= info.data["period_start"]:
+                raise ValueError("Period end must be after start")
+        return v
+    
+    @field_validator("due_date")
+    @classmethod
+    def validate_due_date(cls, v, info):
+        """Ensure due date is after period end."""
+        if "period_end" in info.data:
+            if v <= info.data["period_end"]:
+                raise ValueError("Due date must be after period end")
+        return v
+
+
+class InvoiceCreate(InvoiceBase):
+    """Create invoice schema."""
+    
+    worklog_ids: List[int] = Field(..., min_items=1, description="Worklog IDs to include")
+    tax_rate: Decimal = Field(Decimal("0.17"), ge=0, le=1, description="Tax rate (0-1)")
+    discount_percentage: Decimal = Field(Decimal("0"), ge=0, le=1, description="Discount percentage (0-1)")
+    discount_amount: Decimal = Field(Decimal("0"), ge=0, description="Discount amount")
+
+
+class InvoiceUpdate(BaseModel):
+    """Update invoice schema."""
+    
+    status: Optional[InvoiceStatus] = None
+    due_date: Optional[date] = None
+    notes: Optional[str] = None
+    tax_rate: Optional[Decimal] = Field(None, ge=0, le=1)
+    discount_percentage: Optional[Decimal] = Field(None, ge=0, le=1)
+    discount_amount: Optional[Decimal] = Field(None, ge=0)
+
+
+class InvoiceItemCreate(BaseModel):
+    """Create invoice item schema."""
+    
+    worklog_id: Optional[int] = Field(None, gt=0, description="Worklog ID")
+    description: str = Field(..., min_length=1, max_length=500, description="Item description")
+    quantity: int = Field(..., ge=1, description="Quantity")
+    unit_price: Decimal = Field(..., ge=0, description="Unit price")
+    unit: Optional[str] = Field(None, max_length=50, description="Unit of measurement")
+    category: Optional[str] = Field(None, max_length=100, description="Item category")
+
+
+class InvoiceItemResponse(BaseModel):
+    """Invoice item response schema."""
+    
+    id: int
+    invoice_id: int
+    worklog_id: Optional[int] = None
+    description: str
+    quantity: int
+    unit_price: Decimal
+    unit: Optional[str] = None
+    category: Optional[str] = None
+    total_amount: Decimal = Decimal("0")
+    
+    # From relationships
+    worklog_title: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+    
+    def model_post_init(self, __context):
+        """Calculate total amount."""
+        self.total_amount = self.unit_price * self.quantity
+
+
+class PaymentCreate(BaseModel):
+    """Create payment schema."""
+    
+    invoice_id: int = Field(..., gt=0, description="Invoice ID")
+    amount: Decimal = Field(..., ge=0, description="Payment amount")
+    payment_method: PaymentMethod = Field(..., description="Payment method")
+    payment_date: date = Field(..., description="Payment date")
+    reference: Optional[str] = Field(None, max_length=100, description="Payment reference")
+    notes: Optional[str] = Field(None, description="Payment notes")
+
+
+class PaymentResponse(BaseModel):
+    """Payment response schema."""
+    
+    id: int
+    invoice_id: int
+    amount: Decimal
+    payment_method: PaymentMethod
+    payment_date: date
+    status: PaymentStatus
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+    
+    # Timestamps
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    # From relationships
+    invoice_number: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class InvoiceResponse(InvoiceBase):
+    """Invoice response schema."""
+    
+    id: int
+    status: InvoiceStatus
+    project_id: Optional[int] = None
+    
+    # Financial
+    subtotal: Decimal = Decimal("0")
+    tax_amount: Decimal = Decimal("0")
+    discount_amount: Decimal = Decimal("0")
+    total_amount: Decimal = Decimal("0")
+    paid_amount: Decimal = Decimal("0")
+    remaining_amount: Decimal = Decimal("0")
+    
+    # Timestamps
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    sent_at: Optional[datetime] = None
+    paid_at: Optional[datetime] = None
+    
+    # Computed properties
+    is_overdue: bool = False
+    days_overdue: int = 0
+    payment_percentage: float = 0.0
+    
+    # From relationships
+    supplier_name: Optional[str] = None
+    supplier_contact: Optional[str] = None
+    project_name: Optional[str] = None
+    
+    # Items and payments
+    items: List[InvoiceItemResponse] = Field(default_factory=list)
+    payments: List[PaymentResponse] = Field(default_factory=list)
+    
+    model_config = ConfigDict(from_attributes=True)
+    
+    def model_post_init(self, __context):
+        """Calculate computed fields."""
+        # Remaining amount
+        self.remaining_amount = self.total_amount - self.paid_amount
+        
+        # Is overdue
+        if self.status not in ["paid", "cancelled"] and self.due_date < date.today():
+            self.is_overdue = True
+            self.days_overdue = (date.today() - self.due_date).days
+        
+        # Payment percentage
+        if self.total_amount > 0:
+            self.payment_percentage = float(self.paid_amount / self.total_amount * 100)
+
+
+class InvoiceDetailed(InvoiceResponse):
+    """Invoice with full details."""
+    
+    # Additional details
+    worklogs: List[dict] = Field(default_factory=list)
+    payment_history: List[dict] = Field(default_factory=list)
+    approval_history: List[dict] = Field(default_factory=list)
+
+
+class InvoiceFilter(BaseModel):
+    """Filter for invoices."""
+    
+    search: Optional[str] = Field(None, description="Search in invoice number, supplier name")
+    status: Optional[InvoiceStatus] = None
+    statuses: Optional[List[InvoiceStatus]] = None
+    supplier_id: Optional[int] = None
+    project_id: Optional[int] = None
+    is_overdue: Optional[bool] = None
+    period_start_from: Optional[date] = None
+    period_start_to: Optional[date] = None
+    period_end_from: Optional[date] = None
+    period_end_to: Optional[date] = None
+    due_date_from: Optional[date] = None
+    due_date_to: Optional[date] = None
+    min_amount: Optional[Decimal] = None
+    max_amount: Optional[Decimal] = None
+    min_payment_percentage: Optional[float] = None
+    max_payment_percentage: Optional[float] = None
+
+
+class InvoiceSummary(BaseModel):
+    """Invoice summary statistics."""
+    
+    total_invoices: int = 0
+    
+    # By status
+    draft_count: int = 0
+    pending_count: int = 0
+    approved_count: int = 0
+    sent_count: int = 0
+    paid_count: int = 0
+    overdue_count: int = 0
+    cancelled_count: int = 0
+    disputed_count: int = 0
+    
+    # Financial
+    total_amount: Decimal = Decimal("0")
+    total_paid: Decimal = Decimal("0")
+    total_remaining: Decimal = Decimal("0")
+    average_invoice_amount: Decimal = Decimal("0")
+    
+    # Overdue
+    overdue_amount: Decimal = Decimal("0")
+    average_days_overdue: float = 0.0
+    
+    # By supplier
+    by_supplier: Dict[str, int] = Field(default_factory=dict)
+    
+    # By project
+    by_project: Dict[str, int] = Field(default_factory=dict)
+    
+    # Payment trends
+    payment_trend: str = "stable"  # "increasing", "decreasing", "stable"
+
+
+class InvoiceGenerationRequest(BaseModel):
+    """Invoice generation request schema."""
+    
+    supplier_id: int = Field(..., gt=0, description="Supplier ID")
+    project_id: Optional[int] = Field(None, gt=0, description="Project ID")
+    period_start: date = Field(..., description="Billing period start")
+    period_end: date = Field(..., description="Billing period end")
+    due_date: Optional[date] = Field(None, description="Payment due date")
+    include_worklogs: List[int] = Field(..., min_items=1, description="Worklog IDs to include")
+    tax_rate: Decimal = Field(Decimal("0.17"), ge=0, le=1, description="Tax rate")
+    discount_percentage: Decimal = Field(Decimal("0"), ge=0, le=1, description="Discount percentage")
+    notes: Optional[str] = Field(None, description="Additional notes")
+
+
+class InvoiceApprovalRequest(BaseModel):
+    """Invoice approval request schema."""
+    
+    approver_id: int = Field(..., gt=0, description="Approver user ID")
+    approval_notes: Optional[str] = Field(None, description="Approval notes")
+    approved_amount: Optional[Decimal] = Field(None, ge=0, description="Approved amount (if different)")
+
+
+class InvoiceDisputeRequest(BaseModel):
+    """Invoice dispute request schema."""
+    
+    dispute_reason: str = Field(..., min_length=1, max_length=500, description="Dispute reason")
+    disputed_amount: Optional[Decimal] = Field(None, ge=0, description="Disputed amount")
+    supporting_documents: Optional[List[str]] = Field(None, description="Supporting document URLs")
+    requested_by_id: int = Field(..., gt=0, description="Requesting user ID")
+
+
+class InvoiceReminderRequest(BaseModel):
+    """Invoice reminder request schema."""
+    
+    reminder_type: str = Field(..., description="Type of reminder")
+    message: str = Field(..., min_length=1, max_length=1000, description="Reminder message")
+    send_email: bool = Field(True, description="Send email reminder")
+    send_sms: bool = Field(False, description="Send SMS reminder")
+    scheduled_date: Optional[datetime] = Field(None, description="Scheduled send date")
+
+
+class InvoiceTemplate(BaseModel):
+    """Invoice template schema."""
+    
+    name: str = Field(..., min_length=1, max_length=100, description="Template name")
+    description: Optional[str] = Field(None, description="Template description")
+    header_html: Optional[str] = Field(None, description="Header HTML")
+    footer_html: Optional[str] = Field(None, description="Footer HTML")
+    item_template: Optional[str] = Field(None, description="Item template")
+    default_tax_rate: Decimal = Field(Decimal("0.17"), ge=0, le=1)
+    default_currency: str = Field("ILS", max_length=3)
+    is_active: bool = Field(True, description="Is template active")

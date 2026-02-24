@@ -1,0 +1,66 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "project_id": "201661",
+        "name": "שבי דרום",
+        "status": "active"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[34.7, 31.4], [34.72, 31.4], [34.72, 31.42], [34.7, 31.42], [34.7, 31.4]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "project_id": "201662",
+        "name": "יער אשכול",
+        "status": "active"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [34.59, 31.35]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "project_id": "201663",
+        "name": "חולדה",
+        "status": "planning"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [34.78, 32.08]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "project_id": "201664",
+        "name": "גולן עליון",
+        "status": "active"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [35.8, 33.0]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "project_id": "201665",
+        "name": "כרמל מערבי",
+        "status": "completed"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [35.0, 32.75]
+      }
+    }
+  ]
+}
+

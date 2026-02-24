@@ -1,0 +1,372 @@
+"""
+Worklog schemas - אישור דיווח שעות
+מערכת קק"ל - פורמט רשמי
+
+תקן: פירוק אוטומטי ע"י המערכת, ללא עריכה
+לא-תקן: הזנה ידנית, חובה נימוק
+"""
+from typing import Optional, List
+from datetime import date, datetime, time
+from decimal import Decimal
+
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
+
+
+# =============================================================================
+# Segment Schemas - מקטעי עבודה/הפסקה
+# =============================================================================
+
+class WorklogSegmentBase(BaseModel):
+    """Base segment schema"""
+    segment_number: int = Field(..., ge=1, description="מספר סידורי")
+    segment_type: str = Field("work", description="סוג: work או break")
+    start_time: time = Field(..., description="שעת התחלה")
+    end_time: time = Field(..., description="שעת סיום")
+    work_minutes: int = Field(..., ge=0, description="דקות עבודה")
+    break_minutes: int = Field(0, ge=0, description="דקות הפסקה")
+    activity: Optional[str] = Field(None, max_length=200, description="תיאור פעילות")
+
+
+class WorklogSegmentCreate(WorklogSegmentBase):
+    """Create segment schema"""
+    pass
+
+
+class WorklogSegmentResponse(WorklogSegmentBase):
+    """Segment response schema"""
+    id: int
+    worklog_id: int
+    created_at: Optional[datetime] = None
+
+    # Computed
+    duration_formatted: Optional[str] = None
+    work_hours_decimal: Optional[float] = None
+    break_hours_decimal: Optional[float] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# =============================================================================
+# Worklog Base Schemas
+# =============================================================================
+
+class WorklogBase(BaseModel):
+    """
+    Base worklog schema - אישור דיווח שעות
+
+    Header חובה:
+    - report_date: תאריך דיווח
+    - work_order_id: מספר הזמנה
+    - equipment_id: מספר כלי
+    - project_id: פרויקט
+    """
+
+    # === מזהים ===
+    work_order_id: Optional[int] = Field(None, description="מספר הזמנה")
+    user_id: Optional[int] = Field(None, description="מנהל עבודה מדווח")
+    project_id: Optional[int] = Field(None, description="פרויקט")
+    equipment_id: Optional[int] = Field(None, description="מספר כלי")
+    equipment_type_id: Optional[int] = Field(None, description="סוג כלי (ID)")
+    supplier_id: Optional[int] = Field(None, description="ספק")
+    area_id: Optional[int] = Field(None, description="אזור / יחידת ביצוע")
+
+    # === פרטי דיווח ===
+    report_date: date = Field(..., description="תאריך דיווח")
+    report_number: int = Field(..., description="מספר דיווח שעות")
+    start_time: Optional[time] = Field(None, description="שעת התחלה")
+    end_time: Optional[time] = Field(None, description="שעת סיום")
+
+    # === שעות ===
+    work_hours: Decimal = Field(..., ge=0, description="סה״כ שעות עבודה")
+    break_hours: Optional[Decimal] = Field(Decimal("0"), ge=0, description="סה״כ שעות מנוחה")
+    total_hours: Optional[Decimal] = Field(None, ge=0, description="סה״כ דיווח")
+
+    # === פרטי עבודה ===
+    work_type: Optional[str] = Field(None, max_length=50, description="סוג עבודה")
+    activity_description: Optional[str] = Field(None, description="תיאור פעילות")
+    equipment_type: Optional[str] = Field(None, max_length=100, description="סוג כלי")
+
+    # === תקן / לא-תקן ===
+    is_standard: bool = Field(True, description="האם דיווח תקני")
+    non_standard_reason: Optional[str] = Field(
+        None, max_length=500, description="נימוק חריגה (חובה אם לא-תקן)")
+
+    # === הערות ===
+    notes: Optional[str] = Field(None, description="הערות")
+
+    @field_validator('non_standard_reason')
+    @classmethod
+    def validate_non_standard_reason(cls, v, info):
+        """Validate non-standard reason is provided when not standard"""
+        # This validation is done at model level
+        return v
+
+
+class WorklogCreate(WorklogBase):
+    """
+    Create worklog schema
+
+    תקן: מספיק לשלוח total_hours, המערכת תייצר segments אוטומטית
+    לא-תקן: חובה לשלוח segments ו-non_standard_reason
+    """
+    segments: Optional[List[WorklogSegmentCreate]] = Field(
+        None, description="מקטעים (חובה אם לא-תקן)")
+    equipment_scanned: bool = Field(False, description="האם הכלי נסרק")
+    scan_time: Optional[datetime] = Field(None, description="זמן סריקה")
+
+    @model_validator(mode='after')
+    def validate_standard_requirements(self):
+        """Validate requirements based on standard/non-standard"""
+        if not self.is_standard:
+            if not self.non_standard_reason:
+                raise ValueError("נימוק חריגה חובה עבור דיווח לא-תקני")
+            if not self.segments or len(self.segments) == 0:
+                raise ValueError("מקטעים חובה עבור דיווח לא-תקני")
+        return self
+
+
+class WorklogUpdate(BaseModel):
+    """
+    Update worklog schema - all fields optional
+    הערה: לא ניתן לעדכן דיווח שכבר אושר
+    """
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    work_hours: Optional[Decimal] = Field(None, ge=0)
+    break_hours: Optional[Decimal] = Field(None, ge=0)
+    total_hours: Optional[Decimal] = Field(None, ge=0)
+    work_type: Optional[str] = Field(None, max_length=50)
+    activity_description: Optional[str] = None
+    equipment_type: Optional[str] = Field(None, max_length=100)
+    is_standard: Optional[bool] = None
+    non_standard_reason: Optional[str] = Field(None, max_length=500)
+    notes: Optional[str] = None
+    segments: Optional[List[WorklogSegmentCreate]] = None
+
+
+class WorklogSubmit(BaseModel):
+    """Submit worklog for approval"""
+    notes: Optional[str] = Field(None, description="הערות נוספות")
+
+
+class WorklogApprove(BaseModel):
+    """Approve worklog schema"""
+    notes: Optional[str] = Field(None, description="הערות אישור")
+
+
+class WorklogReject(BaseModel):
+    """Reject worklog schema"""
+    rejection_reason: str = Field(..., min_length=5, max_length=500,
+                                  description="סיבת דחייה (חובה)")
+
+
+# =============================================================================
+# Worklog Response Schemas
+# =============================================================================
+
+class WorklogResponse(WorklogBase):
+    """
+    Worklog response schema - תגובה מלאה
+
+    כולל:
+    - כל פרטי הדיווח
+    - מספר מעוצב (WR-YYYY-NNNNNN)
+    - מקטעים
+    - פרטי אישור
+    - פרטי הפצה
+    """
+    id: int
+
+    # === סטטוס ===
+    status: Optional[str] = "pending"
+
+    # === הגשה ===
+    submitted_at: Optional[datetime] = None
+    submitted_by_id: Optional[int] = None
+
+    # === אישור ===
+    approved_by_user_id: Optional[int] = None
+    approved_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+
+    # === הפצה ===
+    sent_to_supplier: Optional[bool] = False
+    sent_to_supplier_at: Optional[datetime] = None
+    sent_to_accountant: Optional[bool] = False
+    sent_to_accountant_at: Optional[datetime] = None
+    sent_to_area_manager: Optional[bool] = False
+    sent_to_area_manager_at: Optional[datetime] = None
+
+    # === בקרה ===
+    equipment_scanned: Optional[bool] = False
+    scan_time: Optional[datetime] = None
+
+    # === Pricing Snapshot ===
+    hourly_rate_snapshot: Optional[Decimal] = Field(None, description="תעריף שעתי בזמן הדיווח")
+    rate_source: Optional[str] = Field(None, description="מקור התעריף")
+    rate_source_name: Optional[str] = Field(None, description="שם מקור התעריף")
+    cost_before_vat: Optional[Decimal] = Field(None, description="עלות לפני מע״מ")
+    vat_rate: Optional[Decimal] = Field(Decimal("0.17"), description="אחוז מע״מ")
+    cost_with_vat: Optional[Decimal] = Field(None, description="עלות כולל מע״מ")
+
+    # === Timestamps ===
+    created_at: datetime
+    updated_at: datetime
+
+    # === Computed ===
+    report_number_formatted: Optional[str] = None
+    is_approved: Optional[bool] = None
+    is_submitted: Optional[bool] = None
+    is_rejected: Optional[bool] = None
+    is_editable: Optional[bool] = None
+    net_hours: Optional[Decimal] = None
+    requires_reason: Optional[bool] = None
+
+    # === Relationships data ===
+    work_order_number: Optional[int] = None
+    work_order_title: Optional[str] = None
+    user_name: Optional[str] = None
+    project_name: Optional[str] = None
+    equipment_name: Optional[str] = None
+    equipment_code: Optional[str] = None
+    supplier_name: Optional[str] = None
+    area_name: Optional[str] = None
+    approved_by_name: Optional[str] = None
+    submitted_by_name: Optional[str] = None
+
+    # === Segments ===
+    segments: Optional[List[WorklogSegmentResponse]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorklogListResponse(BaseModel):
+    """List response with pagination"""
+    items: List[WorklogResponse]
+    total: int
+    page: int
+    size: int
+    pages: int
+
+
+# =============================================================================
+# Filter Schema
+# =============================================================================
+
+class WorklogFilter(BaseModel):
+    """Filter for worklogs"""
+    search: Optional[str] = Field(None, description="חיפוש חופשי")
+    status: Optional[str] = Field(None, max_length=50, description="סטטוס")
+    work_order_id: Optional[int] = None
+    user_id: Optional[int] = None
+    project_id: Optional[int] = None
+    equipment_id: Optional[int] = None
+    supplier_id: Optional[int] = None
+    area_id: Optional[int] = None
+    report_date_from: Optional[date] = None
+    report_date_to: Optional[date] = None
+    is_standard: Optional[bool] = None
+    is_approved: Optional[bool] = None
+
+
+# =============================================================================
+# Email Notification Schemas - הפצה
+# =============================================================================
+
+class WorklogEmailToSupplier(BaseModel):
+    """
+    Email to supplier - לעיון בלבד
+    ❌ ללא סכומים
+    ❌ ללא תקציב
+    """
+    report_number_formatted: str
+    report_date: date
+    work_order_number: Optional[int] = None
+    equipment_code: Optional[str] = None
+    equipment_type: Optional[str] = None
+    project_name: Optional[str] = None
+    work_hours: Decimal
+    break_hours: Decimal
+    total_hours: Decimal
+    segments: List[WorklogSegmentResponse]
+
+
+class WorklogEmailToAccountant(BaseModel):
+    """
+    Email to accountant - מלא
+    ✓ כל הנתונים
+    ✓ תקן / לא-תקן
+    ✓ נימוק
+    ✓ בקרה מול הזמנה
+    """
+    report_number_formatted: str
+    report_date: date
+    work_order_number: Optional[int] = None
+    equipment_code: Optional[str] = None
+    equipment_type: Optional[str] = None
+    project_name: Optional[str] = None
+    supplier_name: Optional[str] = None
+    area_name: Optional[str] = None
+    user_name: Optional[str] = None
+
+    is_standard: bool
+    non_standard_reason: Optional[str] = None
+
+    work_hours: Decimal
+    break_hours: Decimal
+    total_hours: Decimal
+
+    status: str
+    equipment_scanned: bool
+
+    segments: List[WorklogSegmentResponse]
+
+
+# =============================================================================
+# Standard Breakdown Schema - פירוק תקני
+# =============================================================================
+
+class StandardBreakdownConfig(BaseModel):
+    """
+    Configuration for standard breakdown
+    לפי נהלי קק"ל:
+    - 2 שעות עבודה
+    - 30 דקות הפסקה
+    - חוזר עד 9 שעות עבודה + 1.5 שעות הפסקה = 10.5 שעות סה"כ
+    """
+    work_segment_minutes: int = Field(120, description="דקות עבודה בכל מקטע")
+    break_segment_minutes: int = Field(30, description="דקות הפסקה בין מקטעים")
+    max_work_hours: Decimal = Field(Decimal("9.0"), description="מקסימום שעות עבודה")
+    max_break_hours: Decimal = Field(Decimal("1.5"), description="מקסימום שעות הפסקה")
+    max_total_hours: Decimal = Field(Decimal("10.5"), description="מקסימום סה״כ")
+    start_time: time = Field(default_factory=lambda: time(6, 30),
+                             description="שעת התחלה ברירת מחדל")
+
+
+# =============================================================================
+# Daily Work Report Schemas (for compatibility)
+# =============================================================================
+
+class DailyWorkReportCreate(BaseModel):
+    """Schema for creating daily work report"""
+    project_id: int
+    report_date: date
+    weather_conditions: Optional[str] = None
+    workers_count: int = 0
+    activities_summary: Optional[str] = None
+    total_work_hours: Decimal = Decimal("0")
+    status: str = "draft"
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WorkBreakCreate(BaseModel):
+    """Schema for creating work break"""
+    worklog_id: int
+    break_type: str = Field(..., max_length=50)
+    start_time: time
+    end_time: time
+    duration_minutes: int
+    notes: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)

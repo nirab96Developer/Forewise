@@ -1,0 +1,393 @@
+// @ts-nocheck
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, AlertCircle, User, Mail, Phone, Lock } from 'lucide-react';
+import api from '../../services/api';
+
+interface Role {
+  id: number;
+  code: string;
+  name: string;
+}
+
+interface Department {
+  id: number;
+  name: string;
+}
+
+interface Region {
+  id: number;
+  name: string;
+}
+
+interface Area {
+  id: number;
+  name: string;
+  region_id: number;
+}
+
+const NewUser: React.FC = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    full_name: '',
+    phone: '',
+    password: '',
+    confirm_password: '',
+    role_id: '',
+    department_id: '',
+    region_id: '',
+    area_id: '',
+    is_active: true,
+    two_factor_enabled: false,
+  });
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (formData.region_id) {
+      loadAreas(Number(formData.region_id));
+    } else {
+      setAreas([]);
+    }
+  }, [formData.region_id]);
+
+  const loadData = async () => {
+    try {
+      setLoadingData(true);
+      const [rolesRes, deptsRes, regionsRes] = await Promise.all([
+        api.get('/roles'),
+        api.get('/departments'),
+        api.get('/regions'),
+      ]);
+      
+      setRoles(rolesRes.data.items || rolesRes.data || []);
+      setDepartments(deptsRes.data.items || deptsRes.data || []);
+      setRegions(regionsRes.data.items || regionsRes.data || []);
+    } catch (err: any) {
+      setError('שגיאה בטעינת נתונים');
+      console.error(err);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const loadAreas = async (regionId: number) => {
+    try {
+      const response = await api.get('/areas', { params: { region_id: regionId } });
+      const areasData = response.data.items || response.data || [];
+      setAreas(areasData.filter((a: Area) => a.region_id === regionId));
+    } catch (err: any) {
+      console.error('Error loading areas:', err);
+      setAreas([]);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (formData.password !== formData.confirm_password) {
+      setError('הסיסמאות לא תואמות');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError('הסיסמה חייבת להכיל לפחות 8 תווים');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const userData = {
+        username: formData.username,
+        email: formData.email,
+        full_name: formData.full_name,
+        phone: formData.phone || undefined,
+        password: formData.password,
+        role_id: formData.role_id ? Number(formData.role_id) : undefined,
+        department_id: formData.department_id ? Number(formData.department_id) : undefined,
+        region_id: formData.region_id ? Number(formData.region_id) : undefined,
+        area_id: formData.area_id ? Number(formData.area_id) : undefined,
+        is_active: formData.is_active,
+        two_factor_enabled: formData.two_factor_enabled,
+      };
+
+      await api.post('/users', userData);
+      alert('משתמש נוצר בהצלחה!');
+      navigate('/admin');
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'שגיאה ביצירת משתמש');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loadingData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-gray-600">טוען נתונים...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">הוספת משתמש חדש</h1>
+            <p className="text-gray-600">יצירת משתמש חדש במערכת</p>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <span className="text-red-800">{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  שם משתמש *
+                </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Mail className="inline w-4 h-4 ml-1" />
+                  אימייל *
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <User className="inline w-4 h-4 ml-1" />
+                שם מלא *
+              </label>
+              <input
+                type="text"
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Phone className="inline w-4 h-4 ml-1" />
+                טלפון
+              </label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Lock className="inline w-4 h-4 ml-1" />
+                  סיסמה *
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  required
+                  minLength={8}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Lock className="inline w-4 h-4 ml-1" />
+                  אימות סיסמה *
+                </label>
+                <input
+                  type="password"
+                  value={formData.confirm_password}
+                  onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  required
+                  minLength={8}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  תפקיד
+                </label>
+                <select
+                  value={formData.role_id}
+                  onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  disabled={loadingData}
+                >
+                  <option value="">בחר תפקיד</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  מחלקה
+                </label>
+                <select
+                  value={formData.department_id}
+                  onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  disabled={loadingData}
+                >
+                  <option value="">בחר מחלקה</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  מרחב
+                </label>
+                <select
+                  value={formData.region_id}
+                  onChange={(e) => setFormData({ ...formData, region_id: e.target.value, area_id: '' })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  disabled={loadingData}
+                >
+                  <option value="">בחר מרחב</option>
+                  {regions.map((region) => (
+                    <option key={region.id} value={region.id}>
+                      {region.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  אזור
+                </label>
+                <select
+                  value={formData.area_id}
+                  onChange={(e) => setFormData({ ...formData, area_id: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  disabled={loadingData || !formData.region_id}
+                >
+                  <option value="">בחר אזור</option>
+                  {areas.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="h-4 w-4 text-kkl-green focus:ring-kkl-green border-gray-300 rounded"
+                />
+                <label htmlFor="is_active" className="mr-2 text-sm text-gray-700">
+                  משתמש פעיל
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="two_factor_enabled"
+                  checked={formData.two_factor_enabled}
+                  onChange={(e) => setFormData({ ...formData, two_factor_enabled: e.target.checked })}
+                  className="h-4 w-4 text-kkl-green focus:ring-kkl-green border-gray-300 rounded"
+                />
+                <label htmlFor="two_factor_enabled" className="mr-2 text-sm text-gray-700">
+                  הפעל אימות דו-שלבי (2FA)
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => navigate('/admin')}
+                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ביטול
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-6 py-3 bg-kkl-green text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? 'יוצר...' : 'צור משתמש'}
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default NewUser;
+
+
+
+
+
+
+
+

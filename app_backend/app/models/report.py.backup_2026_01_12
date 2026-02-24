@@ -1,0 +1,64 @@
+"""
+Report model - דוחות מערכת
+SYNCED WITH DB - 17.11.2025
+"""
+
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
+from datetime import datetime
+
+from sqlalchemy import Integer, String, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.user import User
+
+
+class Report(BaseModel):
+    """Report model - דוח - SYNCED WITH DB"""
+
+    __tablename__ = "reports"
+
+    __table_args__ = {"extend_existing": True}
+
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Basic info - DB: nvarchar(50), NO / nvarchar(200), NO
+    code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Type and status - DB: nvarchar(255), NO
+    type: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # Template - DB: nvarchar(500), YES / nvarchar(-1), YES
+    template_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    parameters: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    custom_metadata_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Schedule - DB: bit, NO / nvarchar(100), YES / datetimeoffset, YES
+    is_scheduled: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    schedule_cron: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    last_run: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Approval - DB: bit, NO / int, NO
+    requires_approval: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    max_execution_time: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Ownership - DB: int, NO / int, YES
+    created_by_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    owner_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # DB: bit, NO
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    # Relationships
+    # created_by: Mapped["User"] = relationship("User", foreign_keys=[created_by_id])
+    # owner: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id])
+
+    def __repr__(self):
+        return f"<Report(id={self.id}, code='{self.code}', name='{self.name}')>"

@@ -1,0 +1,587 @@
+[
+  {
+    "budget_code": "19094",
+    "project_name": "גילת מפעל האגבות תכנון",
+    "area_name": "גילת",
+    "lat": 31.35,
+    "lng": 34.59
+  },
+  {
+    "budget_code": "19095",
+    "project_name": "יתיר סינגל בית היערן-תכנון",
+    "area_name": "יתיר",
+    "lat": 31.35,
+    "lng": 34.59
+  },
+  {
+    "budget_code": "19096",
+    "project_name": "יתיר סינגל לב-תכנון",
+    "area_name": "יתיר",
+    "lat": 31.35,
+    "lng": 34.59
+  },
+  {
+    "budget_code": "19097",
+    "project_name": "יתיר שביל רגלי-תכנון",
+    "area_name": "יתיר",
+    "lat": 31.35,
+    "lng": 34.59
+  },
+  {
+    "budget_code": "19098",
+    "project_name": "פלוגות סינגל-תכנון",
+    "area_name": "פלוגות",
+    "lat": 31.35,
+    "lng": 34.59
+  },
+  {
+    "budget_code": "19099",
+    "project_name": "קרית גת פלוגת האלוקים-תכנון",
+    "area_name": "קרית גת",
+    "lat": 31.35,
+    "lng": 34.59
+  },
+  {
+    "budget_code": "19103",
+    "project_name": "חולה-האכלת העגוורים 2022",
+    "area_name": "חולה",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19104",
+    "project_name": "חולה-תחזוקה 2022",
+    "area_name": "חולה",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19105",
+    "project_name": "מרכז אקלום חיות בר",
+    "area_name": "חולה",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19119",
+    "project_name": "מגדל העמק-שיפוץ כיתות וספריה",
+    "area_name": "מגדל העמק",
+    "lat": 32.75,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19120",
+    "project_name": "שפעת העופות- אגמון החולה",
+    "area_name": "חולה",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19138",
+    "project_name": "יער אחיהוד-ג'לויס-הנצ' מוניר",
+    "area_name": "יער בלפור",
+    "lat": 32.75,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19141",
+    "project_name": "יער בן שמן-חניון איתן יצחק",
+    "area_name": "בן שמן יער",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19144",
+    "project_name": "פ.קנדה-שדרוג חניון הזיתים",
+    "area_name": "פארק קנדה",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19151",
+    "project_name": "יער שוויץ-שלב ב'",
+    "area_name": "יער שוויץ",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19166",
+    "project_name": "קשת אילון -אולם אנסמבל",
+    "area_name": "אילון",
+    "lat": 32.75,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19199",
+    "project_name": "יער חולדה/משמר דוד-פינת ישיבה",
+    "area_name": "א. יעור - שפלה חוף",
+    "lat": 31.8,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19200",
+    "project_name": "חניון פלס\"ר 7- תב\"ר 2022",
+    "area_name": "גולן",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19204",
+    "project_name": "נס הרים-מרכז שדה-שביל חושי",
+    "area_name": "נס הרים",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19205",
+    "project_name": "מטע-שיפוץ מבנה היסטורי למרכז קהי",
+    "area_name": "מטע",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19229",
+    "project_name": "מ.א רמת הנגב-רמת הרצל",
+    "area_name": "ניצנה",
+    "lat": 30.8,
+    "lng": 34.4
+  },
+  {
+    "budget_code": "19230",
+    "project_name": "חזון סינגל-שביל אופניים",
+    "area_name": "חזון",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19231",
+    "project_name": "קצרין-סינגל שינוי תוואי",
+    "area_name": "קצרין",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19234",
+    "project_name": "מבוא חמה-שביל אופניים",
+    "area_name": "מבוא חמה",
+    "lat": 30.8,
+    "lng": 34.4
+  },
+  {
+    "budget_code": "19235",
+    "project_name": "מבוא חמה-שביל אופניים-תכנון",
+    "area_name": "מבוא חמה",
+    "lat": 30.8,
+    "lng": 34.4
+  },
+  {
+    "budget_code": "19241",
+    "project_name": "יהל קטורה סינגל",
+    "area_name": "מ.א.חבל אילות",
+    "lat": 29.5,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19247",
+    "project_name": "משתלת אשתאול-תכנון לשדרוג המשתלה",
+    "area_name": "מרכז ע. אשתאול",
+    "lat": 31.8,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19248",
+    "project_name": "מ.אשתאול-שדרוג משטח בטון ומערכת",
+    "area_name": "מרכז ע. אשתאול",
+    "lat": 31.8,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19252",
+    "project_name": "מכללת ספיר-עבודות פיתוח אמפי",
+    "area_name": "שדרות",
+    "lat": 31.5,
+    "lng": 34.6
+  },
+  {
+    "budget_code": "19256",
+    "project_name": "סינגל פארק גורן",
+    "area_name": "גורן",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19257",
+    "project_name": "אלון הגליל- כברי - שדרוג סינגל",
+    "area_name": "כברי",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19260",
+    "project_name": "יער בן שמן-פ.הקופים-קידום תב\"ע",
+    "area_name": "בן שמן יער",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19296",
+    "project_name": "רמת הגולן- תכנון שיפוץ אנדרטאות-",
+    "area_name": "גולן",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19297",
+    "project_name": "יער רמות-שביל הנגשה",
+    "area_name": "א. יעור - ההר",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19298",
+    "project_name": "עבודות מיחזור מי נגר -קיץ משתלת",
+    "area_name": "גולני צומת",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19299",
+    "project_name": "רכישת מכונה למילוי מגשי גידול",
+    "area_name": "גולני צומת",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19300",
+    "project_name": "שדרוג חממת הנבטה/השרשה",
+    "area_name": "גולני צומת",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19301",
+    "project_name": "משתלת גולני סככת עובדים",
+    "area_name": "גולני צומת",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19302",
+    "project_name": "משטח בטון לחממת תבלינים -משתלת ג",
+    "area_name": "גולני צומת",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19305",
+    "project_name": "שדרוג משתלת גולני",
+    "area_name": "גולני צומת",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19316",
+    "project_name": "פארק קנדה-חניון צופה אמות המים",
+    "area_name": "פארק קנדה",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19336",
+    "project_name": "יער ירושלים/דרכי חיץ ודרכי יער",
+    "area_name": "יער י-ם",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19337",
+    "project_name": "יער חדרה תשתיות קולטות קהל",
+    "area_name": "א. יעור - מנשה שרון",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19339",
+    "project_name": "יקנעם/טיילת-שיקום תשתיות פיזיות",
+    "area_name": "יקנעם",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19340",
+    "project_name": "מבשרת י-ם-קו מים שבילים וסינגלים",
+    "area_name": "מבשרת י-ם",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19343",
+    "project_name": "חניון-עין ירדה-נגישות 22",
+    "area_name": "משמר הירדן",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19344",
+    "project_name": "יער שוויץ-שביל נגיש קרל לוץ",
+    "area_name": "יער שוויץ",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19346",
+    "project_name": "פארק בגין-סינגל",
+    "area_name": "פארק ארה'ב",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19347",
+    "project_name": "מצר מענית-סינגל",
+    "area_name": "א. יעור - מנשה שרון",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19350",
+    "project_name": "פרדס חנה-אנד' חטיבת הנחל",
+    "area_name": "א. יעור - מנשה שרון",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19352",
+    "project_name": "קצבייה-הנצחה חטיבה 7",
+    "area_name": "מ.א.גולן",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19357",
+    "project_name": "נס הרים-מתחמי משחק לילדים מאוקרא",
+    "area_name": "נס הרים",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19361",
+    "project_name": "מושבי אמפי-חללי צוק איתן",
+    "area_name": "גברעם",
+    "lat": 31.5,
+    "lng": 34.6
+  },
+  {
+    "budget_code": "19362",
+    "project_name": "אליעד-תשתית ציבורית",
+    "area_name": "אלי-עד",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19367",
+    "project_name": "הצבת שילוט-ק\"ק 2017",
+    "area_name": "מרחב מרכז-כללי",
+    "lat": 31.8,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19369",
+    "project_name": "אשקלון אקו פארק",
+    "area_name": "אשקלון- מגדל",
+    "lat": 31.7,
+    "lng": 34.6
+  },
+  {
+    "budget_code": "19374",
+    "project_name": "שילוט טיפות צבעוני לשבילי אופנ'",
+    "area_name": "מרחב צפון-כללי",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19384",
+    "project_name": "באר מילכה הכשרה חקלאית",
+    "area_name": "באר מילכה",
+    "lat": 30.8,
+    "lng": 34.4
+  },
+  {
+    "budget_code": "19385",
+    "project_name": "חבל אילות-הכש' חקלאית ימית",
+    "area_name": "אילת",
+    "lat": 29.5,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19388",
+    "project_name": "שדה אליהו-מצפור לזכר נדב מילוא",
+    "area_name": "שדה אליהו",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19389",
+    "project_name": "נטיעות לפיתוח סביבתי מוא\"ז אשכול",
+    "area_name": "חולית",
+    "lat": 31.2,
+    "lng": 34.3
+  },
+  {
+    "budget_code": "19392",
+    "project_name": "יד מרדכי סינגל",
+    "area_name": "יד מרדכי",
+    "lat": 31.6,
+    "lng": 34.6
+  },
+  {
+    "budget_code": "19397",
+    "project_name": "שערי אדם- מונגשים לכיסא גלגלים",
+    "area_name": "פס הירק",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19399",
+    "project_name": "תל מונד-גן הכבוד הדרום-אפריקאי",
+    "area_name": "תל מונד",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19401",
+    "project_name": "נחל האלה גשר עותמני-תכנון",
+    "area_name": "קרית מלאכי",
+    "lat": 31.7,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19403",
+    "project_name": "יער להב-סינגל אבו חוף",
+    "area_name": "יער להב",
+    "lat": 31.2,
+    "lng": 34.3
+  },
+  {
+    "budget_code": "19409",
+    "project_name": "ההר/בר בהר-עבודות חשמל",
+    "area_name": "א. יעור - ההר",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19415",
+    "project_name": "יער הכרמל-חניון נגישות",
+    "area_name": "יער קרן הכרמל",
+    "lat": 32.75,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19417",
+    "project_name": "יער קרן הכרמל -יער הסיירת הירוקה",
+    "area_name": "יער קרן הכרמל",
+    "lat": 32.75,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19423",
+    "project_name": "יער החמישה/הר הרוח-חניון החרובים",
+    "area_name": "א. יעור - ההר",
+    "lat": 31.8,
+    "lng": 35.0
+  },
+  {
+    "budget_code": "19460",
+    "project_name": "הרי נפתלי-עין רועים-תצפית -חנה",
+    "area_name": "הרי נפתלי",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "budget_code": "19462",
+    "project_name": "ירוחם פארק מורשת",
+    "area_name": "ירוחם",
+    "lat": 30.8,
+    "lng": 34.4
+  },
+  {
+    "budget_code": "19469",
+    "project_name": "יער שער אפריים-תכנון סטטוטורי",
+    "area_name": "א. יעור - מנשה שרון",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19470",
+    "project_name": "יער להב חניון קמבל",
+    "area_name": "יער להב",
+    "lat": 31.2,
+    "lng": 34.3
+  },
+  {
+    "budget_code": "19471",
+    "project_name": "יער דבירה חניון-נגישות",
+    "area_name": "דבורה",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19472",
+    "project_name": "יער קוממיות מפגש הורים חיילים נג",
+    "area_name": "קוממיות",
+    "lat": 31.5,
+    "lng": 34.6
+  },
+  {
+    "budget_code": "19473",
+    "project_name": "יער שחריה חניון אינגרם נגישות",
+    "area_name": "שחריה",
+    "lat": 31.2,
+    "lng": 34.3
+  },
+  {
+    "budget_code": "19474",
+    "project_name": "יער שחריה חורבת כרוע נגישות",
+    "area_name": "שחריה",
+    "lat": 31.2,
+    "lng": 34.3
+  },
+  {
+    "budget_code": "19475",
+    "project_name": "יער ארז חניון איבים נגישות",
+    "area_name": "ארז",
+    "lat": 31.5,
+    "lng": 34.6
+  },
+  {
+    "budget_code": "19477",
+    "project_name": "יער יד מרדכי חניון נביה מרעי נגי",
+    "area_name": "יד מרדכי",
+    "lat": 31.6,
+    "lng": 34.6
+  },
+  {
+    "budget_code": "19478",
+    "project_name": "יער כרמון חניון האורנים נגישות",
+    "area_name": "יער כרמון",
+    "lat": 32.0,
+    "lng": 34.8
+  },
+  {
+    "budget_code": "19479",
+    "project_name": "נירים בית כנסת מעון נגישות",
+    "area_name": "נירים",
+    "lat": 31.2,
+    "lng": 34.3
+  }
+]
+
+
+
+
+
+
+
+
+
+
+

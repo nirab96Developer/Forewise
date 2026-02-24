@@ -1,0 +1,97 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
+from datetime import date, datetime
+from decimal import Decimal
+
+from sqlalchemy import Column, Integer, String, Text, Date, DateTime, Numeric, ForeignKey, Boolean, Unicode, UnicodeText
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.project import Project
+    from app.models.supplier import Supplier
+    from app.models.user import User
+    from app.models.equipment import Equipment
+    from app.models.location import Location
+    from app.models.work_order_status import WorkOrderStatus
+    from app.models.work_order_coordination_log import WorkOrderCoordinationLog
+    from app.models.worklog import Worklog
+
+
+class WorkOrder(BaseModel):
+    __tablename__ = "work_orders"
+
+    __table_args__ = {"extend_existing": True}
+
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Basic info - DB: int, NO / nvarchar(255), YES
+    order_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[Optional[str]] = mapped_column(Unicode(255), nullable=True)  # Unicode for Hebrew
+    description: Mapped[Optional[str]] = mapped_column(
+        UnicodeText, nullable=True)  # Unicode for Hebrew
+
+    # Foreign keys
+    project_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("projects.id"), nullable=True)
+    supplier_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("suppliers.id"), nullable=True)
+    equipment_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("equipment.id"), nullable=True)
+    location_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("locations.id"), nullable=True)
+
+    # Work details
+    equipment_type: Mapped[Optional[str]] = mapped_column(
+        Unicode(100), nullable=True)  # Unicode for Hebrew
+    work_start_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    work_end_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+
+    # Status and priority - DB: nvarchar(50), YES, default='pending' / nvarchar(20), YES, default='medium'
+    status: Mapped[Optional[str]] = mapped_column(String(50), ForeignKey(
+        "work_order_statuses.code"), default="pending", nullable=True)
+    priority: Mapped[Optional[str]] = mapped_column(String(20), default="medium", nullable=True)
+
+    # Portal integration - DB: nvarchar(255), YES / datetime2, YES
+    portal_token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    portal_token_expires: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    portal_expiry: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    response_received_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    token_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    supplier_response_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Financial
+    estimated_hours: Mapped[Optional[Decimal]] = mapped_column(Numeric, nullable=True)
+    actual_hours: Mapped[Optional[Decimal]] = mapped_column(Numeric, nullable=True)
+    hourly_rate: Mapped[Optional[Decimal]] = mapped_column(Numeric, nullable=True)
+    total_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric, nullable=True)
+
+    # Constraints and rejections - DB: int, YES / nvarchar(-1), YES
+    constraint_reason_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("supplier_constraint_reasons.id"), nullable=True)
+    constraint_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    rejection_reason_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    rejection_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_forced_selection: Mapped[Optional[bool]] = mapped_column(
+        Boolean, default=False, nullable=True)
+
+    # Audit
+    created_by_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True)
+
+    # Relationships
+    project: Mapped[Optional["Project"]] = relationship("Project")
+    supplier: Mapped[Optional["Supplier"]] = relationship("Supplier")
+    equipment: Mapped[Optional["Equipment"]] = relationship("Equipment")
+    location: Mapped[Optional["Location"]] = relationship("Location")
+    creator: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by_id])
+    status_ref: Mapped["WorkOrderStatus"] = relationship("WorkOrderStatus")
+    worklogs: Mapped[list["Worklog"]] = relationship("Worklog")
+    coordination_logs: Mapped[list["WorkOrderCoordinationLog"]] = relationship(
+        "WorkOrderCoordinationLog", back_populates="work_order", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<WorkOrder(id={self.id}, title='{self.title}', status='{self.status}')>"

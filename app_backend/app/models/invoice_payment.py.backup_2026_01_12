@@ -1,0 +1,57 @@
+"""
+InvoicePayment model - תשלומים על חשבוניות
+SYNCED WITH DB - 17.11.2025
+"""
+
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
+from datetime import date
+from decimal import Decimal
+
+from sqlalchemy import Integer, String, Text, Boolean, Date, ForeignKey, Numeric
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.invoice import Invoice
+    from app.models.user import User
+
+
+class InvoicePayment(BaseModel):
+    """InvoicePayment model - תשלום על חשבונית - SYNCED WITH DB"""
+
+    __tablename__ = "invoice_payments"
+
+    __table_args__ = {"extend_existing": True}
+
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Foreign keys - DB: int, NO / int, YES
+    invoice_id: Mapped[int] = mapped_column(Integer, ForeignKey("invoices.id"), nullable=False)
+    processed_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Payment info - DB: date, NO / decimal, NO / nvarchar(50), NO
+    payment_date: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
+    payment_method: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # Transaction details - DB: nvarchar(100), YES
+    reference_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    transaction_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    bank_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    account_number: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    # Notes - DB: nvarchar(-1), YES
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # DB: bit, NO
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    # Relationships
+    # invoice: Mapped["Invoice"] = relationship("Invoice")
+    # processor: Mapped[Optional["User"]] = relationship("User")
+
+    def __repr__(self):
+        return f"<InvoicePayment(id={self.id}, invoice_id={self.invoice_id}, amount={self.amount})>"

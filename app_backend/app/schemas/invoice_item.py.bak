@@ -1,0 +1,139 @@
+# /root/app_backend/app/schemas/invoice_item.py - חדש
+"""Invoice item schemas - Aligned with database model."""
+from datetime import datetime
+from decimal import Decimal
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class InvoiceItemBase(BaseModel):
+    """Base invoice item schema."""
+
+    invoice_id: int = Field(..., gt=0, description="Parent invoice ID")
+    worklog_id: Optional[int] = Field(None, gt=0, description="Related worklog ID")
+
+    # Item details
+    line_number: int = Field(..., gt=0, description="Line number in invoice")
+    description: str = Field(
+        ..., min_length=1, max_length=500, description="Item description"
+    )
+    detailed_description: Optional[str] = Field(
+        None, description="Detailed description"
+    )
+
+    # Quantities and rates
+    quantity: Decimal = Field(..., gt=0, description="Quantity")
+    unit: str = Field(
+        "hours", min_length=1, max_length=20, description="Unit of measure"
+    )
+    unit_price: Decimal = Field(..., gt=0, description="Price per unit")
+
+    # Discounts and tax
+    discount_percent: Decimal = Field(
+        Decimal("0"), ge=0, le=100, description="Discount percentage"
+    )
+    tax_percent: Decimal = Field(
+        Decimal("17"), ge=0, le=100, description="Tax percentage"
+    )
+
+    # Reference
+    reference_code: Optional[str] = Field(
+        None, max_length=50, description="Reference code"
+    )
+
+    @field_validator("quantity", "unit_price")
+    @classmethod
+    def validate_positive(cls, v):
+        """Ensure positive values."""
+        if v <= 0:
+            raise ValueError("Must be positive")
+        return v
+
+
+class InvoiceItemCreate(InvoiceItemBase):
+    """Create invoice item schema."""
+
+    pass
+
+
+class InvoiceItemUpdate(BaseModel):
+    """Update invoice item schema."""
+
+    description: Optional[str] = Field(None, min_length=1, max_length=500)
+    detailed_description: Optional[str] = None
+    quantity: Optional[Decimal] = Field(None, gt=0)
+    unit: Optional[str] = Field(None, min_length=1, max_length=20)
+    unit_price: Optional[Decimal] = Field(None, gt=0)
+    discount_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    tax_percent: Optional[Decimal] = Field(None, ge=0, le=100)
+    reference_code: Optional[str] = Field(None, max_length=50)
+    is_active: Optional[bool] = None
+
+
+class InvoiceItemResponse(InvoiceItemBase):
+    """Invoice item response schema."""
+
+    id: int
+
+    # Calculated amounts
+    subtotal: Decimal
+    discount_amount: Decimal
+    tax_amount: Decimal
+    total: Decimal
+
+    # Timestamps
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    is_active: bool = True
+
+    # Computed
+    net_amount: Decimal = Field(Decimal("0"), description="Net amount after discount")
+
+    # From relationships
+    worklog_description: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    def model_post_init(self, __context):
+        """Calculate computed fields."""
+        self.net_amount = self.subtotal - self.discount_amount
+
+
+class InvoiceItemCalculation(BaseModel):
+    """Helper for invoice item calculations."""
+
+    quantity: Decimal
+    unit_price: Decimal
+    discount_percent: Decimal = Decimal("0")
+    tax_percent: Decimal = Decimal("17")
+
+    def calculate(self) -> dict:
+        """Calculate all amounts."""
+        subtotal = self.quantity * self.unit_price
+        discount_amount = subtotal * (self.discount_percent / 100)
+        net_amount = subtotal - discount_amount
+        tax_amount = net_amount * (self.tax_percent / 100)
+        total = net_amount + tax_amount
+
+        return {
+            "subtotal": subtotal,
+            "discount_amount": discount_amount,
+            "net_amount": net_amount,
+            "tax_amount": tax_amount,
+            "total": total,
+        }
+
+
+class InvoiceItemSummary(BaseModel):
+    """Invoice items summary."""
+
+    total_items: int = 0
+    total_quantity: Decimal = Decimal("0")
+    total_subtotal: Decimal = Decimal("0")
+    total_discount: Decimal = Decimal("0")
+    total_tax: Decimal = Decimal("0")
+    total_amount: Decimal = Decimal("0")
+
+    # By unit
+    by_unit: dict = Field(default_factory=dict)

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>אישור דיווח עבודה יומי - קק"ל</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+        
+        @page {
+            size: A4;
+            margin: 12mm;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Heebo', 'Arial Hebrew', Arial, sans-serif;
+            font-size: 9pt;
+            line-height: 1.4;
+            color: #333;
+            background: white;
+        }
+        
+        .document { 
+            border: 1px solid #DDD;
+        }
+        
+        /* Clean Header */
+        .header {
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #009557;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .logo-container {
+            width: 70px;
+            height: 70px;
+        }
+        
+        .logo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .title-section h1 {
+            font-size: 18pt;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 3px;
+        }
+        
+        .title-section .subtitle {
+            font-size: 9pt;
+            color: #666;
+        }
+        
+        .approval-box {
+            text-align: center;
+            border: 2px solid #009557;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+        
+        .approval-box .label {
+            font-size: 8pt;
+            color: #666;
+        }
+        
+        .approval-box .number {
+            font-size: 20pt;
+            font-weight: 700;
+            color: #009557;
+        }
+        
+        /* Simple Info Bar */
+        .doc-info-bar {
+            background: #F9F9F9;
+            padding: 10px 25px;
+            display: flex;
+            justify-content: space-around;
+            border-bottom: 1px solid #EEE;
+        }
+        
+        .doc-info-item { text-align: center; }
+        
+        .doc-info-item .label {
+            font-size: 7pt;
+            color: #888;
+        }
+        
+        .doc-info-item .value {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .content { padding: 20px 25px; }
+        
+        .section-title {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 1px solid #DDD;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        
+        /* Clean Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .info-box {
+            border: 1px solid #E5E5E5;
+            padding: 12px;
+            background: #FAFAFA;
+        }
+        
+        .info-box h4 {
+            font-size: 9pt;
+            color: #009557;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            font-size: 9pt;
+        }
+        
+        .info-row .label { color: #666; }
+        .info-row .value { font-weight: 500; color: #333; }
+        
+        /* Clean Equipment Box */
+        .equipment-section {
+            border: 2px solid #009557;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .equipment-section .equipment-label {
+            font-size: 8pt;
+            color: #666;
+        }
+        
+        .equipment-section .equipment-number {
+            font-size: 26pt;
+            font-weight: 700;
+            color: #009557;
+            letter-spacing: 2px;
+        }
+        
+        .equipment-section .equipment-type {
+            font-size: 10pt;
+            color: #666;
+            margin-top: 3px;
+        }
+        
+        /* Clean Table */
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        
+        .report-table th {
+            background: #009557;
+            color: white;
+            padding: 8px 6px;
+            font-size: 8pt;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .report-table td {
+            padding: 7px 6px;
+            text-align: center;
+            border: 1px solid #E5E5E5;
+            font-size: 9pt;
+        }
+        
+        .report-table tr:nth-child(even) { background: #FAFAFA; }
+        
+        .report-table .total-row {
+            background: #333 !important;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .status-work { color: #009557; font-weight: 600; }
+        .status-rest { color: #888; }
+        
+        /* Clean Summary */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .summary-box {
+            border: 1px solid #DDD;
+            padding: 12px;
+            text-align: center;
+        }
+        
+        .summary-box.primary {
+            background: #009557;
+            color: white;
+            border-color: #009557;
+        }
+        
+        .summary-box .summary-value { font-size: 20pt; font-weight: 700; }
+        .summary-box .summary-label { font-size: 8pt; margin-top: 3px; color: #666; }
+        .summary-box.primary .summary-label { color: rgba(255,255,255,0.9); }
+        .summary-box:not(.primary) .summary-value { color: #333; }
+        
+        /* Clean Signature */
+        .signature-section {
+            margin-top: 20px;
+            padding: 12px 15px;
+            background: #F9F9F9;
+            border: 1px solid #E5E5E5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .signature-info {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+        
+        .signature-block {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .signature-label {
+            font-size: 9pt;
+            color: #666;
+        }
+        
+        .signature-value {
+            font-size: 11pt;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .approved-badge {
+            background: #009557;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 10pt;
+            font-weight: 600;
+        }
+        
+        /* Simple Footer */
+        .footer {
+            background: #F5F5F5;
+            padding: 10px 25px;
+            border-top: 1px solid #DDD;
+            display: flex;
+            justify-content: space-between;
+            font-size: 7pt;
+            color: #888;
+        }
+        
+        .notes-box {
+            background: #FFFEF5;
+            border: 1px solid #EED;
+            padding: 10px;
+            margin: 12px 0;
+            font-size: 9pt;
+        }
+        
+        .notes-box .notes-title {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .notes-box .notes-content {
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="document">
+        <div class="header">
+            <div class="header-right">
+                <div class="logo-container">
+                    <img src="{{ logo_base64 }}" alt="KKL Logo">
+                </div>
+                <div class="title-section">
+                    <h1>אישור דיווח עבודה יומי</h1>
+                    <div class="subtitle">מערכת ניהול יערות - קרן קיימת לישראל</div>
+                </div>
+            </div>
+            <div class="approval-box">
+                <div class="label">מספר אישור</div>
+                <div class="number">{{ confirmation_number }}</div>
+            </div>
+        </div>
+        
+        <div class="doc-info-bar">
+            <div class="doc-info-item">
+                <div class="label">תאריך דיווח</div>
+                <div class="value">{{ report_date }}</div>
+            </div>
+            <div class="doc-info-item">
+                <div class="label">מספר הזמנה</div>
+                <div class="value">{{ order_number }}</div>
+            </div>
+            <div class="doc-info-item">
+                <div class="label">סוג פעולה</div>
+                <div class="value">{{ activity_type }}</div>
+            </div>
+            <div class="doc-info-item">
+                <div class="label">סטטוס</div>
+                <div class="value" style="color: #009557;">✓ מאושר</div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="info-grid">
+                <div class="info-box">
+                    <h4>פרטי פרויקט</h4>
+                    <div class="info-row">
+                        <span class="label">שם הפרויקט:</span>
+                        <span class="value">{{ project_name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">מרחב:</span>
+                        <span class="value">{{ region }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">אזור:</span>
+                        <span class="value">{{ area }}</span>
+                    </div>
+                </div>
+                
+                <div class="info-box">
+                    <h4>פרטי ספק</h4>
+                    <div class="info-row">
+                        <span class="label">שם הספק:</span>
+                        <span class="value">{{ supplier_name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">מספר ספק:</span>
+                        <span class="value">{{ supplier_id }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">טלפון:</span>
+                        <span class="value">{{ supplier_phone }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="equipment-section">
+                <div class="equipment-label">מספר כלי מזהה</div>
+                <div class="equipment-number">{{ equipment_number }}</div>
+                <div class="equipment-type">{{ equipment_type }} | רישוי: {{ equipment_license }}</div>
+            </div>
+            
+            <div class="section-title">פירוט שעות עבודה</div>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>סוג פעילות</th>
+                        <th>שעת התחלה</th>
+                        <th>שעת סיום</th>
+                        <th>משך (שעות)</th>
+                        <th>לתשלום</th>
+                        <th>הערות</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in time_entries %}
+                    <tr>
+                        <td class="status-{{ entry.type }}">{{ entry.activity }}</td>
+                        <td>{{ entry.start_time }}</td>
+                        <td>{{ entry.end_time }}</td>
+                        <td>{{ entry.duration }}</td>
+                        <td>{{ entry.billable }}</td>
+                        <td>{{ entry.notes }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td colspan="3">סה"כ</td>
+                        <td>{{ total_presence }}</td>
+                        <td>{{ total_billable }}</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="summary-grid">
+                <div class="summary-box primary">
+                    <div class="summary-value">{{ total_billable }}</div>
+                    <div class="summary-label">שעות לתשלום</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-value">{{ total_presence }}</div>
+                    <div class="summary-label">סה"כ נוכחות</div>
+                </div>
+                <div class="summary-box">
+                    <div class="summary-value">{{ idle_hours }}</div>
+                    <div class="summary-label">שעות בטלה</div>
+                </div>
+            </div>
+            
+            {% if general_notes %}
+            <div class="notes-box">
+                <span class="notes-title">הערות: </span>
+                <span class="notes-content">{{ general_notes }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="signature-section">
+                <div class="signature-info">
+                    <div class="signature-block">
+                        <span class="signature-label">דווח על ידי:</span>
+                        <span class="signature-value">{{ work_manager_name }}</span>
+                    </div>
+                    <div class="signature-block">
+                        <span class="signature-label">בתאריך:</span>
+                        <span class="signature-value">{{ report_datetime }}</span>
+                    </div>
+                </div>
+                <div class="approved-badge">✓ אושר</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div>מזהה: {{ document_id }}</div>
+            <div>מערכת ניהול יערות קק"ל</div>
+            <div>{{ generated_at }}</div>
+        </div>
+    </div>
+</body>
+</html>

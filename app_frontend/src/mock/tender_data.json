@@ -1,0 +1,523 @@
+[
+  {
+    "supplier_id": "59558049",
+    "supplier_name": "אבו אלקיעאן עלי",
+    "request_id": "15955",
+    "procedure": "447/21",
+    "item_group": "3510",
+    "extension_until": "2025-08-01",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "59558049",
+    "supplier_name": "אבו אלקיעאן עלי",
+    "request_id": "15954",
+    "procedure": "767/23",
+    "item_group": "35550",
+    "extension_until": "2025-12-31",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "59558049",
+    "supplier_name": "אבו אלקיעאן עלי",
+    "request_id": "15950",
+    "procedure": "291/22",
+    "item_group": "3520",
+    "extension_until": "2025-12-31",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "512297532",
+    "supplier_name": "מובילי דרום הר להב בע\"מ",
+    "request_id": "15950",
+    "procedure": "291/22",
+    "item_group": "3520",
+    "extension_until": "2025-12-31",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "512297532",
+    "supplier_name": "מובילי דרום הר להב בע\"מ",
+    "request_id": "15951",
+    "procedure": "765/23",
+    "item_group": "3530",
+    "extension_until": "2025-12-31",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "512297532",
+    "supplier_name": "מובילי דרום הר להב בע\"מ",
+    "request_id": "15951",
+    "procedure": "767/23",
+    "item_group": "3530",
+    "extension_until": "2025-12-31",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "59558049",
+    "supplier_name": "אבו אלקיעאן עלי",
+    "request_id": "15951",
+    "procedure": "765/23",
+    "item_group": "3530",
+    "extension_until": "2025-12-31",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "515220531",
+    "supplier_name": "תומא ח'ורי בע\"מ",
+    "request_id": "15932",
+    "procedure": "764/23",
+    "item_group": "3520",
+    "extension_until": "2025-12-31",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "514980051",
+    "supplier_name": "ת.א.המרכז תשתיות הנגב בע\"מ",
+    "request_id": "15950",
+    "procedure": "291/22",
+    "item_group": "3520",
+    "extension_until": "2025-12-31",
+    "tender_status": "valid",
+    "note": ""
+  },
+  {
+    "supplier_id": "514381029",
+    "supplier_name": "ניסים ואנונו עבודות עפר בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "515360766",
+    "supplier_name": "איאד חוגיראת בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "510541287",
+    "supplier_name": "דחן בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "512297532",
+    "supplier_name": "מובילי דרום הר להב בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "512956707",
+    "supplier_name": "אילן טובול בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "59558049",
+    "supplier_name": "אבו אלקיעאן עלי",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "513744219",
+    "supplier_name": "ס. ירוק ביער בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "515067114",
+    "supplier_name": "בני עפיף סואעד בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "56312515",
+    "supplier_name": "א.ש.גולני - אלסייד שעבאן",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "514809805",
+    "supplier_name": "א.ג. הובלות יתיר בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "512066440",
+    "supplier_name": "א.ל.ה.פרג' עבודות עפר",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "512418450",
+    "supplier_name": "דחפורי השחר בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "53922431",
+    "supplier_name": "יחזקאל יששכר",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "514380815",
+    "supplier_name": "ברוך סיאר בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "37249224",
+    "supplier_name": "אבו אלקיעאן תאופיק",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "514293208",
+    "supplier_name": "חסן שחאדה בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "513057703",
+    "supplier_name": "אחים יקוטי בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "515220531",
+    "supplier_name": "תומא ח'ורי בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "514222363",
+    "supplier_name": "חסן שחאדה בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "514091446",
+    "supplier_name": "א.א.שארב בע\"מ",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "301206371",
+    "supplier_name": "מ.ס. פיתוח הצפון",
+    "request_id": "16073",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-03-31",
+    "tender_status": "expiring_soon",
+    "note": ""
+  },
+  {
+    "supplier_id": "56312515",
+    "supplier_name": "א.ש.גולני - אלסייד שעבאן",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "515360766",
+    "supplier_name": "איאד חוגיראת בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "513057703",
+    "supplier_name": "אחים יקוטי בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "510541287",
+    "supplier_name": "דחן בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "514293208",
+    "supplier_name": "ג. יקוטי עבודות עפר בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "512297532",
+    "supplier_name": "מובילי דרום הר להב בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "59558049",
+    "supplier_name": "אבו אלקיעאן עלי",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "513638320",
+    "supplier_name": "חסון עמוס עבודות עפר בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "512418450",
+    "supplier_name": "דחפורי השחר בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "514380815",
+    "supplier_name": "ברוך סיאר בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "37249224",
+    "supplier_name": "אבו אלקיעאן תאופיק",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "512066440",
+    "supplier_name": "א.ל.ה.פרג' עבודות עפר",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "514381029",
+    "supplier_name": "ניסים ואנונו עבודות עפר בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "513744219",
+    "supplier_name": "ס. ירוק ביער בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "512956707",
+    "supplier_name": "אילן טובול בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "53922431",
+    "supplier_name": "יחזקאל יששכר",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "515067114",
+    "supplier_name": "בני עפיף סואעד בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "514222363",
+    "supplier_name": "חסן שחאדה בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "515220531",
+    "supplier_name": "תומא ח'ורי בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "301206371",
+    "supplier_name": "מ.ס. פיתוח הצפון",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  },
+  {
+    "supplier_id": "514809805",
+    "supplier_name": "א.ג. הובלות יתיר בע\"מ",
+    "request_id": "16648",
+    "procedure": "7338/18",
+    "item_group": "3500",
+    "extension_until": "2025-07-01",
+    "tender_status": "valid",
+    "note": "הארכה נוספת"
+  }
+]
+
+
+
+
+
+
+
+
+
+
+

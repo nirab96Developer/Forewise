@@ -1,0 +1,696 @@
+# app/routers/worklogs.py
+"""
+Worklog management endpoints - אישור דיווח שעות
+מערכת קק"ל - פורמט רשמי
+
+Endpoints:
+- GET /worklogs - רשימת דיווחים
+- GET /worklogs/{id} - דיווח ספציפי
+- POST /worklogs - יצירת דיווח חדש
+- PUT /worklogs/{id} - עדכון דיווח
+- DELETE /worklogs/{id} - מחיקת דיווח
+- POST /worklogs/{id}/submit - הגשה לאישור
+- POST /worklogs/{id}/approve - אישור
+- POST /worklogs/{id}/reject - דחייה
+- GET /worklogs/pending-approval - דיווחים ממתינים לאישור
+- GET /worklogs/my-worklogs - הדיווחים שלי
+- GET /worklogs/statistics - סטטיסטיקות
+"""
+from typing import List, Optional
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.core.dependencies import get_current_active_user
+from app.models.user import User
+from app.schemas.worklog import (
+    WorklogCreate,
+    WorklogUpdate,
+    WorklogResponse,
+    WorklogFilter,
+    WorklogSubmit,
+    WorklogApprove,
+    WorklogReject,
+    WorklogListResponse,
+    WorklogSegmentResponse,
+)
+from app.services.worklog_service import WorklogService
+from app.core.email import send_email
+from app.core.config import settings
+
+router = APIRouter(prefix="/worklogs", tags=["Worklogs - אישור דיווח שעות"])
+worklog_service = WorklogService()
+
+
+def worklog_to_response(worklog) -> WorklogResponse:
+    """Convert worklog model to response with all computed fields."""
+    segments = []
+    if worklog.segments:
+        for seg in worklog.segments:
+            segments.append(WorklogSegmentResponse(
+                id=seg.id,
+                worklog_id=seg.worklog_id,
+                segment_number=seg.segment_number,
+                segment_type=seg.segment_type or "work",
+                start_time=seg.start_time,
+                end_time=seg.end_time,
+                work_minutes=seg.work_minutes,
+                break_minutes=seg.break_minutes or 0,
+                activity=getattr(seg, 'activity', None),
+                created_at=seg.created_at,
+                duration_formatted=seg.duration_formatted if hasattr(
+                    seg, 'duration_formatted') else None,
+                work_hours_decimal=seg.work_hours_decimal if hasattr(
+                    seg, 'work_hours_decimal') else None,
+                break_hours_decimal=seg.break_hours_decimal if hasattr(
+                    seg, 'break_hours_decimal') else None,
+            ))
+
+    return WorklogResponse(
+        id=worklog.id,
+        report_number=worklog.report_number,
+        work_order_id=worklog.work_order_id,
+        user_id=worklog.user_id,
+        project_id=worklog.project_id,
+        equipment_id=worklog.equipment_id,
+        supplier_id=worklog.supplier_id,
+        area_id=worklog.area_id,
+        report_date=worklog.report_date,
+        start_time=worklog.start_time,
+        end_time=worklog.end_time,
+        work_hours=worklog.work_hours,
+        break_hours=worklog.break_hours,
+        total_hours=worklog.total_hours,
+        work_type=worklog.work_type,
+        activity_description=worklog.activity_description,
+        equipment_type=worklog.equipment_type,
+        is_standard=worklog.is_standard,
+        non_standard_reason=worklog.non_standard_reason,
+        notes=worklog.notes,
+        status=worklog.status,
+        submitted_at=worklog.submitted_at,
+        submitted_by_id=worklog.submitted_by_id,
+        approved_by_user_id=worklog.approved_by_user_id,
+        approved_at=worklog.approved_at,
+        rejection_reason=worklog.rejection_reason,
+        sent_to_supplier=worklog.sent_to_supplier,
+        sent_to_supplier_at=worklog.sent_to_supplier_at,
+        sent_to_accountant=worklog.sent_to_accountant,
+        sent_to_accountant_at=worklog.sent_to_accountant_at,
+        sent_to_area_manager=worklog.sent_to_area_manager,
+        sent_to_area_manager_at=worklog.sent_to_area_manager_at,
+        equipment_scanned=worklog.equipment_scanned,
+        scan_time=worklog.scan_time,
+        # Pricing snapshot
+        hourly_rate_snapshot=worklog.hourly_rate_snapshot,
+        rate_source=worklog.rate_source,
+        rate_source_name=worklog.rate_source_name,
+        cost_before_vat=worklog.cost_before_vat,
+        vat_rate=worklog.vat_rate,
+        cost_with_vat=worklog.cost_with_vat,
+        # Timestamps
+        created_at=worklog.created_at,
+        updated_at=worklog.updated_at,
+        # Computed properties
+        report_number_formatted=worklog.report_number_formatted,
+        is_approved=worklog.is_approved,
+        is_submitted=worklog.is_submitted,
+        is_rejected=worklog.is_rejected,
+        is_editable=worklog.is_editable,
+        net_hours=worklog.net_hours,
+        requires_reason=worklog.requires_reason,
+        # Relationship data
+        work_order_number=worklog.work_order.order_number if worklog.work_order else None,
+        work_order_title=worklog.work_order.title if worklog.work_order else None,
+        user_name=worklog.user.full_name if worklog.user and hasattr(
+            worklog.user, 'full_name') else None,
+        project_name=worklog.project.name if worklog.project else None,
+        equipment_name=worklog.equipment.name if worklog.equipment else None,
+        equipment_code=worklog.equipment.code if worklog.equipment else None,
+        supplier_name=worklog.supplier.name if worklog.supplier else None,
+        area_name=worklog.area.name if worklog.area else None,
+        approved_by_name=worklog.approved_by.full_name if worklog.approved_by and hasattr(
+            worklog.approved_by, 'full_name') else None,
+        submitted_by_name=worklog.submitted_by.full_name if worklog.submitted_by and hasattr(
+            worklog.submitted_by, 'full_name') else None,
+        segments=segments,
+    )
+
+
+# =============================================================================
+# Basic CRUD Endpoints
+# =============================================================================
+
+@router.get("", response_model=List[WorklogResponse])
+async def list_worklogs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    status: Optional[str] = None,
+    work_order_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    project_id: Optional[int] = None,
+    equipment_id: Optional[int] = None,
+    supplier_id: Optional[int] = None,
+    area_id: Optional[int] = None,
+    report_date_from: Optional[date] = None,
+    report_date_to: Optional[date] = None,
+    is_standard: Optional[bool] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get list of worklogs with filters.
+
+    רשימת דיווחי שעות עם אפשרויות סינון
+    """
+    try:
+        worklogs = worklog_service.get_worklogs(
+            db=db,
+            skip=skip,
+            limit=limit,
+            status=status,
+            work_order_id=work_order_id,
+            user_id=user_id,
+            project_id=project_id,
+            equipment_id=equipment_id,
+            supplier_id=supplier_id,
+            area_id=area_id,
+            report_date_from=report_date_from,
+            report_date_to=report_date_to,
+            is_standard=is_standard,
+        )
+        return [worklog_to_response(w) for w in worklogs]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/my-worklogs", response_model=List[WorklogResponse])
+async def get_my_worklogs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get current user's worklogs.
+
+    הדיווחים שלי
+    """
+    try:
+        worklogs = worklog_service.get_my_worklogs(db, current_user.id, skip, limit)
+        return [worklog_to_response(w) for w in worklogs]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/pending-approval", response_model=List[WorklogResponse])
+async def get_pending_approval(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get worklogs pending approval.
+
+    דיווחים ממתינים לאישור
+    """
+    try:
+        worklogs = worklog_service.get_worklogs_for_approval(db, current_user.id, skip, limit)
+        return [worklog_to_response(w) for w in worklogs]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/statistics")
+async def get_statistics(
+    user_id: Optional[int] = None,
+    project_id: Optional[int] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get worklog statistics.
+
+    סטטיסטיקות דיווחי שעות
+    """
+    try:
+        return worklog_service.get_worklog_statistics(
+            db, user_id=user_id, project_id=project_id, 
+            date_from=date_from, date_to=date_to
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{worklog_id}", response_model=WorklogResponse)
+async def get_worklog(
+    worklog_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get worklog by ID.
+
+    קבלת דיווח לפי מזהה
+    """
+    worklog = worklog_service.get_worklog(db, worklog_id)
+    if not worklog:
+        raise HTTPException(status_code=404, detail="דיווח לא נמצא")
+    return worklog_to_response(worklog)
+
+
+@router.post("", response_model=WorklogResponse, status_code=status.HTTP_201_CREATED)
+async def create_worklog(
+    worklog: WorklogCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Create new worklog.
+
+    יצירת דיווח שעות חדש
+
+    תקן: מספיק לשלוח total_hours, המערכת תייצר segments אוטומטית
+    לא-תקן: חובה לשלוח segments ו-non_standard_reason
+    """
+    try:
+        created = worklog_service.create_worklog(db, worklog, current_user.id)
+        return worklog_to_response(created)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/{worklog_id}", response_model=WorklogResponse)
+async def update_worklog(
+    worklog_id: int,
+    worklog: WorklogUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Update worklog.
+
+    עדכון דיווח (רק אם בסטטוס טיוטה/ממתין)
+    """
+    try:
+        updated = worklog_service.update_worklog(db, worklog_id, worklog)
+        if not updated:
+            raise HTTPException(status_code=404, detail="דיווח לא נמצא")
+        return worklog_to_response(updated)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{worklog_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_worklog(
+    worklog_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Delete worklog.
+
+    מחיקת דיווח (רק אם בסטטוס טיוטה)
+    """
+    try:
+        success = worklog_service.delete_worklog(db, worklog_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="דיווח לא נמצא")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Workflow Endpoints - הגשה / אישור / דחייה
+# =============================================================================
+
+@router.post("/{worklog_id}/submit", response_model=WorklogResponse)
+async def submit_worklog(
+    worklog_id: int,
+    data: WorklogSubmit = None,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Submit worklog for approval.
+
+    הגשת דיווח לאישור
+    """
+    try:
+        submitted = worklog_service.submit_worklog(db, worklog_id, current_user.id, data)
+        if not submitted:
+            raise HTTPException(status_code=404, detail="דיווח לא נמצא")
+
+        # Send notification email in background
+        if background_tasks:
+            background_tasks.add_task(
+                send_submission_notification,
+                db, submitted, current_user
+            )
+
+        return worklog_to_response(submitted)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{worklog_id}/approve", response_model=WorklogResponse)
+async def approve_worklog(
+    worklog_id: int,
+    data: WorklogApprove = None,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Approve worklog.
+
+    אישור דיווח שעות
+
+    נשלח ל:
+    - ספק (לעיון בלבד, ללא סכומים)
+    - מנהלת חשבונות אזורית (כל הנתונים)
+    - מנהל אזור
+    - מנהל עבודה בשטח
+    """
+    try:
+        approved = worklog_service.approve_worklog(db, worklog_id, current_user.id, data)
+        if not approved:
+            raise HTTPException(status_code=404, detail="דיווח לא נמצא")
+
+        # Send notification emails in background
+        if background_tasks:
+            background_tasks.add_task(
+                send_approval_notifications,
+                db, approved, current_user
+            )
+
+        return worklog_to_response(approved)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{worklog_id}/reject", response_model=WorklogResponse)
+async def reject_worklog(
+    worklog_id: int,
+    data: WorklogReject,
+    background_tasks: BackgroundTasks = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Reject worklog.
+
+    דחיית דיווח שעות (חובה סיבה)
+    """
+    try:
+        rejected = worklog_service.reject_worklog(db, worklog_id, current_user.id, data)
+        if not rejected:
+            raise HTTPException(status_code=404, detail="דיווח לא נמצא")
+
+        # Send rejection notification in background
+        if background_tasks:
+            background_tasks.add_task(
+                send_rejection_notification,
+                db, rejected, current_user, data.rejection_reason
+            )
+
+        return worklog_to_response(rejected)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# Email Notification Functions
+# =============================================================================
+
+async def send_submission_notification(db: Session, worklog, submitted_by: User):
+    """Send email notification when worklog is submitted."""
+    try:
+        subject = f"דיווח שעות חדש להגשה - {worklog.report_number_formatted}"
+        body = f"""
+דיווח שעות חדש הוגש לאישור:
+
+מספר דיווח: {worklog.report_number_formatted}
+תאריך: {worklog.report_date}
+סוג: {'תקן' if worklog.is_standard else 'לא-תקן'}
+שעות: {worklog.total_hours}
+הוגש ע"י: {submitted_by.full_name if hasattr(submitted_by, 'full_name') else submitted_by.username}
+
+{'נימוק חריגה: ' + worklog.non_standard_reason if not worklog.is_standard else ''}
+
+לצפייה במערכת: {settings.FRONTEND_URL or 'http://localhost:5173'}/#/worklogs/{worklog.id}
+"""
+        # Send to approvers (area manager, accountant)
+        # This is a placeholder - implement actual recipient lookup
+        send_email(to="approver@example.com", subject=subject, body=body)
+    except Exception as e:
+        print(f"[WARN] Failed to send submission notification: {e}")
+
+
+async def send_approval_notifications(db: Session, worklog, approved_by: User):
+    """
+    Send email notifications when worklog is approved.
+
+    נשלח ל:
+    - ספק (לעיון בלבד)
+    - מנהלת חשבונות
+    - מנהל אזור
+    - מנהל עבודה בשטח
+    """
+    try:
+        # Build segments table
+        segments_table = ""
+        if worklog.segments:
+            for seg in worklog.segments:
+                seg_type = "עבודה" if seg.segment_type == "work" else "הפסקה"
+                segments_table += f"| {seg.start_time} | {seg.end_time} | {seg_type} | {seg.work_minutes}ד' |\n"
+
+        # === Email to Supplier (limited info, no amounts) ===
+        supplier_subject = f"אישור דיווח שעות - {worklog.report_number_formatted}"
+        supplier_body = f"""
+אישור דיווח שעות - לעיונך
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+מספר דיווח: {worklog.report_number_formatted}
+תאריך: {worklog.report_date}
+מספר הזמנה: {worklog.work_order.order_number if worklog.work_order else 'N/A'}
+מספר כלי: {worklog.equipment.code if worklog.equipment else 'N/A'}
+סוג כלי: {worklog.equipment_type or 'N/A'}
+פרויקט: {worklog.project.name if worklog.project else 'N/A'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+פירוט שעות:
+{segments_table}
+
+סה"כ שעות עבודה: {worklog.work_hours}
+סה"כ הפסקות: {worklog.break_hours}
+סה"כ דיווח: {worklog.total_hours}
+"""
+        if worklog.supplier and worklog.supplier.email:
+            send_email(to=worklog.supplier.email, subject=supplier_subject, body=supplier_body)
+            worklog_service.mark_sent_to_supplier(db, worklog.id)
+
+        # === Email to Accountant (full info) ===
+        accountant_subject = f"[לאישור חשבונית] דיווח שעות - {worklog.report_number_formatted}"
+        accountant_body = f"""
+דיווח שעות אושר - לטיפול בחשבונית
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔷 פרטי הדיווח
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+מספר דיווח: {worklog.report_number_formatted}
+תאריך: {worklog.report_date}
+מספר הזמנה: {worklog.work_order.order_number if worklog.work_order else 'N/A'}
+מספר כלי: {worklog.equipment.code if worklog.equipment else 'N/A'}
+סוג כלי: {worklog.equipment_type or 'N/A'}
+פרויקט: {worklog.project.name if worklog.project else 'N/A'}
+אזור: {worklog.area.name if worklog.area else 'N/A'}
+ספק: {worklog.supplier.name if worklog.supplier else 'N/A'}
+מנהל עבודה: {worklog.user.full_name if worklog.user and hasattr(worklog.user, 'full_name') else 'N/A'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{'🟢 דיווח תקן' if worklog.is_standard else '🟠 דיווח לא-תקן'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{'' if worklog.is_standard else f'נימוק חריגה: {worklog.non_standard_reason}'}
+
+פירוט שעות:
+{segments_table}
+
+סה"כ שעות עבודה: {worklog.work_hours}
+סה"כ הפסקות: {worklog.break_hours}
+סה"כ דיווח: {worklog.total_hours}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+בקרה:
+- סריקת כלי: {'✅' if worklog.equipment_scanned else '❌'}
+- אושר ע"י: {approved_by.full_name if hasattr(approved_by, 'full_name') else approved_by.username}
+- תאריך אישור: {worklog.approved_at}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+לצפייה במערכת: {settings.FRONTEND_URL or 'http://localhost:5173'}/#/worklogs/{worklog.id}
+"""
+        # Send to accountant (placeholder - implement actual lookup)
+        send_email(to="accountant@example.com", subject=accountant_subject, body=accountant_body)
+        worklog_service.mark_sent_to_accountant(db, worklog.id)
+
+        # === Email to Area Manager ===
+        area_manager_subject = f"דיווח שעות אושר - {worklog.report_number_formatted}"
+        area_manager_body = accountant_body  # Same as accountant
+        # Send to area manager (placeholder)
+        send_email(to="area_manager@example.com",
+                   subject=area_manager_subject, body=area_manager_body)
+        worklog_service.mark_sent_to_area_manager(db, worklog.id)
+
+    except Exception as e:
+        print(f"[WARN] Failed to send approval notifications: {e}")
+
+
+async def send_rejection_notification(db: Session, worklog, rejected_by: User, reason: str):
+    """Send email notification when worklog is rejected."""
+    try:
+        subject = f"דיווח שעות נדחה - {worklog.report_number_formatted}"
+        body = f"""
+הדיווח נדחה
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+מספר דיווח: {worklog.report_number_formatted}
+תאריך: {worklog.report_date}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+סיבת דחייה:
+{reason}
+
+נדחה ע"י: {rejected_by.full_name if hasattr(rejected_by, 'full_name') else rejected_by.username}
+
+לצפייה ותיקון: {settings.FRONTEND_URL or 'http://localhost:5173'}/#/worklogs/{worklog.id}
+"""
+        # Send to worklog creator
+        if worklog.user and worklog.user.email:
+            send_email(to=worklog.user.email, subject=subject, body=body)
+    except Exception as e:
+        print(f"[WARN] Failed to send rejection notification: {e}")
+
+
+# === EXPORT ENDPOINTS ===
+
+@router.get("/export/excel")
+async def export_worklogs_to_excel(
+    status: Optional[str] = Query(None, description="Filter by status"),
+    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    area_id: Optional[int] = Query(None, description="Filter by area"),
+    supplier_id: Optional[int] = Query(None, description="Filter by supplier"),
+    project_id: Optional[int] = Query(None, description="Filter by project"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Export worklogs to Excel file.
+    Returns XLSX file for download.
+    """
+    import io
+    from fastapi.responses import StreamingResponse
+
+    try:
+        import pandas as pd
+    except ImportError:
+        raise HTTPException(
+            status_code=500, 
+            detail="pandas not installed. Run: pip install pandas openpyxl"
+        )
+
+    # Get worklogs with filters
+    worklogs = worklog_service.get_worklogs(
+        db,
+        status=status,
+        area_id=area_id or current_user.area_id,  # Default to user's area
+        supplier_id=supplier_id,
+        project_id=project_id,
+        skip=0,
+        limit=10000,  # Large limit for export
+        current_user=current_user,
+    )
+
+    # Filter by date if provided
+    if date_from or date_to:
+        filtered = []
+        for w in worklogs:
+            w_date = str(w.report_date)
+            if date_from and w_date < date_from:
+                continue
+            if date_to and w_date > date_to:
+                continue
+            filtered.append(w)
+        worklogs = filtered
+
+    # Convert to DataFrame
+    data = []
+    for w in worklogs:
+        data.append({
+            'מספר דיווח': w.report_number_formatted if hasattr(w, 'report_number_formatted') else f"WR-{w.report_number}",
+            'תאריך': str(w.report_date),
+            'סוג': 'תקן' if w.is_standard else 'לא-תקן',
+            'שעות עבודה': float(w.work_hours) if w.work_hours else 0,
+            'שעות הפסקה': float(w.break_hours) if w.break_hours else 0,
+            'סה"כ שעות': float(w.total_hours) if w.total_hours else 0,
+            'פרויקט': w.project.name if w.project else '',
+            'ספק': w.supplier.name if w.supplier else '',
+            'כלי': w.equipment.code if w.equipment else '',
+            'סוג כלי': w.equipment_type or '',
+            'סטטוס': w.status or '',
+            'מנהל עבודה': w.user.full_name if w.user else '',
+            'מאשר': w.approved_by.full_name if w.approved_by else '',
+            'תאריך אישור': str(w.approved_at) if w.approved_at else '',
+            'נימוק (אם לא-תקן)': w.non_standard_reason or '',
+        })
+
+    df = pd.DataFrame(data)
+
+    # Create Excel file in memory
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='דיווחי שעות')
+
+        # Auto-adjust column widths
+        worksheet = writer.sheets['דיווחי שעות']
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(50, max(12, max_length + 2))
+            worksheet.column_dimensions[column_letter].width = adjusted_width
+
+    output.seek(0)
+
+    # Generate filename
+    filename = f"worklogs_{date_from or 'all'}_{date_to or 'all'}.xlsx"
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )

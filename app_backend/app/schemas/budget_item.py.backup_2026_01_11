@@ -1,0 +1,170 @@
+# /root/app_backend/app/schemas/budget_item.py - חדש
+"""Budget item schemas - Aligned with database model."""
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class BudgetItemType(str, Enum):
+    """Budget item type enum - matches model."""
+
+    MATERIALS = "materials"
+    LABOR = "labor"
+    EQUIPMENT = "equipment"
+    SERVICES = "services"
+    OVERHEAD = "overhead"
+    CONTINGENCY = "contingency"
+    OTHER = "other"
+
+
+class BudgetItemStatus(str, Enum):
+    """Budget item status enum - matches model."""
+
+    PLANNED = "planned"
+    APPROVED = "approved"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class BudgetItemBase(BaseModel):
+    """Base budget item schema."""
+
+    budget_id: int = Field(..., gt=0, description="Parent budget ID")
+    code: str = Field(..., min_length=1, max_length=50)
+    name: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = Field(None, description="Item description")
+
+    type: BudgetItemType = Field(..., description="Item type")
+    status: BudgetItemStatus = Field(
+        BudgetItemStatus.PLANNED, description="Item status"
+    )
+
+    # Amounts
+    planned_amount: Decimal = Field(..., ge=0, description="Planned amount")
+
+    # Units and pricing
+    unit: Optional[str] = Field(None, max_length=20, description="Unit of measure")
+    quantity: Optional[Decimal] = Field(None, gt=0, description="Quantity")
+    unit_price: Optional[Decimal] = Field(None, gt=0, description="Price per unit")
+
+    # Period
+    start_date: Optional[date] = Field(None, description="Start date")
+    end_date: Optional[date] = Field(None, description="End date")
+
+    notes: Optional[str] = Field(None, description="Additional notes")
+
+    @field_validator("planned_amount")
+    @classmethod
+    def validate_planned_amount(cls, v):
+        """Ensure amount is not negative."""
+        if v < 0:
+            raise ValueError("Planned amount cannot be negative")
+        return v
+
+
+class BudgetItemCreate(BudgetItemBase):
+    """Create budget item schema."""
+
+    allocated_amount: Decimal = Field(Decimal("0"), ge=0)
+    spent_amount: Decimal = Field(Decimal("0"), ge=0)
+
+
+class BudgetItemUpdate(BaseModel):
+    """Update budget item schema."""
+
+    code: Optional[str] = Field(None, min_length=1, max_length=50)
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    type: Optional[BudgetItemType] = None
+    status: Optional[BudgetItemStatus] = None
+    planned_amount: Optional[Decimal] = Field(None, ge=0)
+    allocated_amount: Optional[Decimal] = Field(None, ge=0)
+    spent_amount: Optional[Decimal] = Field(None, ge=0)
+    unit: Optional[str] = Field(None, max_length=20)
+    quantity: Optional[Decimal] = Field(None, gt=0)
+    unit_price: Optional[Decimal] = Field(None, gt=0)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class BudgetItemResponse(BudgetItemBase):
+    """Budget item response schema."""
+
+    id: int
+    allocated_amount: Decimal = Decimal("0")
+    spent_amount: Decimal = Decimal("0")
+
+    # Timestamps
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    is_active: bool = True
+
+    # Computed
+    remaining_amount: Decimal = Field(Decimal("0"), description="Remaining amount")
+    utilization_percent: float = Field(0.0, description="Utilization percentage")
+    is_over_budget: bool = Field(False, description="Is over budget")
+    calculated_amount: Optional[Decimal] = Field(
+        None, description="Calculated from quantity x price"
+    )
+
+    # From relationships
+    budget_name: Optional[str] = None
+    budget_code: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    def model_post_init(self, __context):
+        """Calculate computed fields."""
+        self.remaining_amount = self.planned_amount - self.spent_amount
+        if self.planned_amount > 0:
+            self.utilization_percent = float(
+                self.spent_amount / self.planned_amount * 100
+            )
+        else:
+            self.utilization_percent = 0.0
+        self.is_over_budget = self.spent_amount > self.planned_amount
+        if self.quantity and self.unit_price:
+            self.calculated_amount = self.quantity * self.unit_price
+
+
+class BudgetItemFilter(BaseModel):
+    """Filter for budget items."""
+
+    budget_id: Optional[int] = None
+    code: Optional[str] = None
+    name: Optional[str] = None
+    type: Optional[BudgetItemType] = None
+    types: Optional[list[BudgetItemType]] = None
+    status: Optional[BudgetItemStatus] = None
+    statuses: Optional[list[BudgetItemStatus]] = None
+    min_amount: Optional[Decimal] = None
+    max_amount: Optional[Decimal] = None
+    is_over_budget: Optional[bool] = None
+    search: Optional[str] = Field(None, description="Search in name, code, description")
+
+
+class BudgetItemSummary(BaseModel):
+    """Budget items summary statistics."""
+
+    total_items: int = 0
+    total_planned: Decimal = Decimal("0")
+    total_allocated: Decimal = Decimal("0")
+    total_spent: Decimal = Decimal("0")
+    total_remaining: Decimal = Decimal("0")
+
+    # By type
+    by_type: dict = Field(default_factory=dict)
+
+    # By status
+    by_status: dict = Field(default_factory=dict)
+
+    # Metrics
+    over_budget_count: int = 0
+    over_budget_amount: Decimal = Decimal("0")
+    average_utilization: float = 0.0

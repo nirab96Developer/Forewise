@@ -1,0 +1,1583 @@
+{
+  "by_category": {
+    "CORE": [
+      "activity_logs",
+      "areas",
+      "audit_logs",
+      "budget_items",
+      "budget_tx",
+      "budgets",
+      "conflict_logs",
+      "departments",
+      "equipment",
+      "equipment_categories",
+      "files",
+      "invoice_items",
+      "invoices",
+      "locations",
+      "milestones",
+      "permissions",
+      "pricing_overrides",
+      "project_documents",
+      "projects",
+      "regions",
+      "reports",
+      "roles",
+      "supplier_equipment",
+      "suppliers",
+      "support_ticket_comments",
+      "support_tickets",
+      "users",
+      "work_breaks",
+      "work_orders"
+    ],
+    "LOOKUP": [
+      "activity_types",
+      "equipment_types",
+      "supplier_constraint_reasons",
+      "supplier_rejection_reasons",
+      "work_order_statuses",
+      "worklog_statuses"
+    ],
+    "TRANSACTIONS": [
+      "balance_releases",
+      "budget_allocations",
+      "budget_transfers",
+      "daily_work_reports",
+      "equipment_assignments",
+      "equipment_maintenance",
+      "equipment_scans",
+      "invoice_payments",
+      "project_assignments",
+      "report_runs",
+      "role_assignments",
+      "supplier_rotations",
+      "worklog_segments",
+      "worklog_standards",
+      "worklogs"
+    ],
+    "TEMPORAL": [
+      "notification_types",
+      "notifications",
+      "otp_tokens",
+      "sessions",
+      "supplier_rotation_queue",
+      "sync_queue",
+      "token_blacklist"
+    ],
+    "JUNCTION": [
+      "role_permissions"
+    ],
+    "LOGS": [
+      "supplier_constraint_logs",
+      "work_order_coordination_logs"
+    ],
+    "SYSTEM": [
+      "system_messages",
+      "system_notification_types",
+      "system_rates",
+      "system_schedule_runs",
+      "system_schedules",
+      "system_settings",
+      "system_ui_sections"
+    ]
+  },
+  "needs_migration": [
+    "activity_types",
+    "areas",
+    "budget_transfers",
+    "budget_tx",
+    "departments",
+    "equipment",
+    "equipment_types",
+    "locations",
+    "notification_types",
+    "notifications",
+    "permissions",
+    "pricing_overrides",
+    "project_assignments",
+    "projects",
+    "regions",
+    "report_runs",
+    "role_assignments",
+    "role_permissions",
+    "roles",
+    "supplier_constraint_logs",
+    "supplier_equipment",
+    "supplier_rejection_reasons",
+    "supplier_rotation_queue",
+    "suppliers",
+    "support_ticket_comments",
+    "system_messages",
+    "system_notification_types",
+    "system_rates",
+    "system_settings",
+    "system_ui_sections",
+    "users",
+    "work_breaks",
+    "work_order_coordination_logs",
+    "work_order_statuses",
+    "work_orders",
+    "worklog_segments",
+    "worklog_standards",
+    "worklog_statuses",
+    "worklogs"
+  ],
+  "needs_triggers": [
+    "activity_logs",
+    "activity_types",
+    "areas",
+    "audit_logs",
+    "balance_releases",
+    "budget_allocations",
+    "budget_items",
+    "budget_transfers",
+    "budget_tx",
+    "budgets",
+    "conflict_logs",
+    "daily_work_reports",
+    "departments",
+    "equipment",
+    "equipment_assignments",
+    "equipment_categories",
+    "equipment_maintenance",
+    "equipment_scans",
+    "equipment_types",
+    "files",
+    "invoice_items",
+    "invoice_payments",
+    "invoices",
+    "locations",
+    "milestones",
+    "permissions",
+    "pricing_overrides",
+    "project_assignments",
+    "project_documents",
+    "projects",
+    "regions",
+    "report_runs",
+    "reports",
+    "role_assignments",
+    "roles",
+    "supplier_constraint_reasons",
+    "supplier_equipment",
+    "supplier_rejection_reasons",
+    "supplier_rotations",
+    "suppliers",
+    "support_ticket_comments",
+    "support_tickets",
+    "users",
+    "work_breaks",
+    "work_order_statuses",
+    "work_orders",
+    "worklog_segments",
+    "worklog_standards",
+    "worklog_statuses",
+    "worklogs"
+  ],
+  "decisions": {
+    "activity_logs": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 18
+    },
+    "activity_types": {
+      "category": "LOOKUP",
+      "reason": "Reference/lookup table",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 10
+    },
+    "areas": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at",
+        "version"
+      ],
+      "columns_missing": [
+        "deleted_at"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 11
+    },
+    "audit_logs": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 19
+    },
+    "balance_releases": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 3,
+      "total_columns": 19
+    },
+    "budget_allocations": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 6,
+      "total_columns": 21
+    },
+    "budget_items": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 20
+    },
+    "budget_transfers": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [],
+      "columns_missing": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 4,
+      "total_columns": 13
+    },
+    "budget_tx": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [
+        "is_active",
+        "updated_at",
+        "version",
+        "deleted_at"
+      ],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 7
+    },
+    "budgets": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 25
+    },
+    "conflict_logs": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 3,
+      "total_columns": 25
+    },
+    "daily_work_reports": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 25
+    },
+    "departments": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 12
+    },
+    "equipment": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 30
+    },
+    "equipment_assignments": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 18
+    },
+    "equipment_categories": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 18
+    },
+    "equipment_maintenance": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 25
+    },
+    "equipment_scans": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 3,
+      "total_columns": 20
+    },
+    "equipment_types": {
+      "category": "LOOKUP",
+      "reason": "Reference/lookup table",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 12
+    },
+    "files": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 22
+    },
+    "invoice_items": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 21
+    },
+    "invoice_payments": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 17
+    },
+    "invoices": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 21
+    },
+    "locations": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 14
+    },
+    "milestones": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 20
+    },
+    "notification_types": {
+      "category": "TEMPORAL",
+      "reason": "Temporary/time-bound data",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "updated_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 0,
+      "total_columns": 6
+    },
+    "notifications": {
+      "category": "TEMPORAL",
+      "reason": "Temporary/time-bound data",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 0,
+      "total_columns": 20
+    },
+    "otp_tokens": {
+      "category": "TEMPORAL",
+      "reason": "Temporary/time-bound data",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": false,
+      "has_fks": 1,
+      "total_columns": 12
+    },
+    "permissions": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 12
+    },
+    "pricing_overrides": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "deleted_at",
+        "version"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 13
+    },
+    "project_assignments": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "is_active"
+      ],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 3,
+      "total_columns": 22
+    },
+    "project_documents": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 3,
+      "total_columns": 20
+    },
+    "projects": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "deleted_at",
+        "version"
+      ],
+      "needs_not_null": [
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 5,
+      "total_columns": 12
+    },
+    "regions": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "updated_at",
+        "created_at",
+        "version"
+      ],
+      "columns_missing": [
+        "is_active",
+        "deleted_at"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 8
+    },
+    "report_runs": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "is_active"
+      ],
+      "needs_not_null": [
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 4,
+      "total_columns": 26
+    },
+    "reports": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 22
+    },
+    "role_assignments": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active"
+      ],
+      "columns_missing": [
+        "updated_at",
+        "created_at"
+      ],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 3,
+      "total_columns": 11
+    },
+    "role_permissions": {
+      "category": "JUNCTION",
+      "reason": "M2M link table (2 FKs, minimal data)",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 2,
+      "total_columns": 4
+    },
+    "roles": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 11
+    },
+    "sessions": {
+      "category": "TEMPORAL",
+      "reason": "Temporary/time-bound data",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": false,
+      "has_fks": 1,
+      "total_columns": 13
+    },
+    "supplier_constraint_logs": {
+      "category": "LOGS",
+      "reason": "Append-only log table",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 5,
+      "total_columns": 10
+    },
+    "supplier_constraint_reasons": {
+      "category": "LOOKUP",
+      "reason": "Reference/lookup table",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 16
+    },
+    "supplier_equipment": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "deleted_at",
+        "version"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 9
+    },
+    "supplier_rejection_reasons": {
+      "category": "LOOKUP",
+      "reason": "Reference/lookup table",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 12
+    },
+    "supplier_rotation_queue": {
+      "category": "TEMPORAL",
+      "reason": "Temporary/time-bound data",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 3,
+      "total_columns": 12
+    },
+    "supplier_rotations": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 17
+    },
+    "suppliers": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at",
+        "version"
+      ],
+      "columns_missing": [
+        "deleted_at"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 17
+    },
+    "support_ticket_comments": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "is_active",
+        "deleted_at",
+        "version"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 8
+    },
+    "support_tickets": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": true,
+      "has_fks": 3,
+      "total_columns": 27
+    },
+    "sync_queue": {
+      "category": "TEMPORAL",
+      "reason": "Temporary/time-bound data",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": false,
+      "has_fks": 1,
+      "total_columns": 25
+    },
+    "system_messages": {
+      "category": "SYSTEM",
+      "reason": "System table - leave as-is",
+      "columns_needed": [],
+      "columns_has": [],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 1,
+      "total_columns": 13
+    },
+    "system_notification_types": {
+      "category": "SYSTEM",
+      "reason": "System table - leave as-is",
+      "columns_needed": [],
+      "columns_has": [],
+      "columns_missing": [],
+      "needs_not_null": [
+        "updated_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 0,
+      "total_columns": 7
+    },
+    "system_rates": {
+      "category": "SYSTEM",
+      "reason": "System table - leave as-is",
+      "columns_needed": [],
+      "columns_has": [],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 0,
+      "total_columns": 11
+    },
+    "system_schedule_runs": {
+      "category": "SYSTEM",
+      "reason": "System table - leave as-is",
+      "columns_needed": [],
+      "columns_has": [],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": false,
+      "has_fks": 1,
+      "total_columns": 16
+    },
+    "system_schedules": {
+      "category": "SYSTEM",
+      "reason": "System table - leave as-is",
+      "columns_needed": [],
+      "columns_has": [],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": false,
+      "has_fks": 1,
+      "total_columns": 23
+    },
+    "system_settings": {
+      "category": "SYSTEM",
+      "reason": "System table - leave as-is",
+      "columns_needed": [],
+      "columns_has": [],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 0,
+      "total_columns": 8
+    },
+    "system_ui_sections": {
+      "category": "SYSTEM",
+      "reason": "System table - leave as-is",
+      "columns_needed": [],
+      "columns_has": [],
+      "columns_missing": [],
+      "needs_not_null": [
+        "updated_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 0,
+      "total_columns": 6
+    },
+    "token_blacklist": {
+      "category": "TEMPORAL",
+      "reason": "Temporary/time-bound data",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [],
+      "needs_trigger": false,
+      "has_fks": 2,
+      "total_columns": 9
+    },
+    "users": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 2,
+      "total_columns": 24
+    },
+    "work_breaks": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [
+        "is_active",
+        "updated_at",
+        "version",
+        "deleted_at"
+      ],
+      "needs_not_null": [
+        "created_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 8
+    },
+    "work_order_coordination_logs": {
+      "category": "LOGS",
+      "reason": "Append-only log table",
+      "columns_needed": [
+        "created_at"
+      ],
+      "columns_has": [
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at"
+      ],
+      "needs_trigger": false,
+      "has_fks": 4,
+      "total_columns": 8
+    },
+    "work_order_statuses": {
+      "category": "LOOKUP",
+      "reason": "Reference/lookup table",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 8
+    },
+    "work_orders": {
+      "category": "CORE",
+      "reason": "Core business entity (managed over time)",
+      "columns_needed": [
+        "version",
+        "updated_at",
+        "is_active",
+        "deleted_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "updated_at",
+        "created_at",
+        "version"
+      ],
+      "columns_missing": [
+        "is_active",
+        "deleted_at"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 8,
+      "total_columns": 35
+    },
+    "worklog_segments": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "is_active"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 1,
+      "total_columns": 12
+    },
+    "worklog_standards": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "is_active"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 7
+    },
+    "worklog_statuses": {
+      "category": "LOOKUP",
+      "reason": "Reference/lookup table",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [],
+      "needs_not_null": [
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 0,
+      "total_columns": 8
+    },
+    "worklogs": {
+      "category": "TRANSACTIONS",
+      "reason": "Operational/transaction record",
+      "columns_needed": [
+        "is_active",
+        "updated_at",
+        "created_at"
+      ],
+      "columns_has": [
+        "updated_at",
+        "created_at"
+      ],
+      "columns_missing": [
+        "is_active"
+      ],
+      "needs_not_null": [
+        "created_at",
+        "updated_at"
+      ],
+      "needs_trigger": true,
+      "has_fks": 6,
+      "total_columns": 46
+    }
+  }
+}

@@ -1,0 +1,262 @@
+{
+  "categories": {
+    "CORE_ENTITIES": {
+      "description": "ישויות עסקיות מרכזיות - מקבלות הכל",
+      "columns": [
+        "created_at",
+        "updated_at",
+        "deleted_at",
+        "is_active",
+        "version"
+      ],
+      "tables": [
+        "users",
+        "roles",
+        "permissions",
+        "regions",
+        "areas",
+        "departments",
+        "projects",
+        "suppliers",
+        "equipment",
+        "equipment_types",
+        "equipment_categories",
+        "work_orders",
+        "worklogs",
+        "budgets",
+        "budget_items",
+        "invoices",
+        "invoice_items",
+        "reports",
+        "supplier_constraints"
+      ]
+    },
+    "TRANSACTIONS": {
+      "description": "טרנזקציות/תנועות - בדרך כלל append-only",
+      "columns": [
+        "created_at",
+        "updated_at",
+        "is_active"
+      ],
+      "tables": [
+        "budget_allocations",
+        "budget_transfers",
+        "balance_releases",
+        "invoice_payments",
+        "equipment_assignments",
+        "equipment_maintenance",
+        "supplier_rotations",
+        "equipment_scans",
+        "report_runs"
+      ]
+    },
+    "JUNCTION": {
+      "description": "טבלאות קשר many-to-many",
+      "columns": [
+        "created_at"
+      ],
+      "tables": [
+        "role_permissions",
+        "role_assignments"
+      ]
+    },
+    "LOGS_HISTORY": {
+      "description": "לוגים והיסטוריה - append-only",
+      "columns": [
+        "created_at"
+      ],
+      "tables": [
+        "supplier_constraint_logs"
+      ]
+    },
+    "LOOKUP": {
+      "description": "טבלאות lookup/reference קטנות",
+      "columns": [
+        "created_at",
+        "updated_at",
+        "is_active"
+      ],
+      "tables": [
+        "supplier_constraint_reasons"
+      ]
+    },
+    "TEMPORAL": {
+      "description": "טבלאות זמניות (sessions, tokens, queue)",
+      "columns": [
+        "created_at"
+      ],
+      "tables": []
+    },
+    "SYSTEM": {
+      "description": "טבלאות מערכת",
+      "columns": [],
+      "tables": []
+    }
+  },
+  "migration_plan": {
+    "users": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "roles": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "permissions": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "regions": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [
+        "is_active",
+        "deleted_at"
+      ],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "areas": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [
+        "deleted_at"
+      ],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "departments": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "projects": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [
+        "version",
+        "deleted_at"
+      ],
+      "alter_to_not_null": [
+        "updated_at"
+      ]
+    },
+    "suppliers": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [
+        "deleted_at"
+      ],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "equipment": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "equipment_types": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [
+        "version",
+        "deleted_at"
+      ],
+      "alter_to_not_null": [
+        "updated_at"
+      ]
+    },
+    "work_orders": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [
+        "is_active",
+        "deleted_at"
+      ],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "worklogs": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [
+        "is_active",
+        "deleted_at"
+      ],
+      "alter_to_not_null": [
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "supplier_constraints": {
+      "category": "CORE_ENTITIES",
+      "add_columns": [
+        "updated_at",
+        "version",
+        "is_active",
+        "created_at",
+        "deleted_at"
+      ],
+      "alter_to_not_null": []
+    },
+    "budget_transfers": {
+      "category": "TRANSACTIONS",
+      "add_columns": [
+        "updated_at",
+        "is_active",
+        "created_at"
+      ],
+      "alter_to_not_null": []
+    },
+    "report_runs": {
+      "category": "TRANSACTIONS",
+      "add_columns": [
+        "is_active"
+      ],
+      "alter_to_not_null": [
+        "updated_at"
+      ]
+    },
+    "role_permissions": {
+      "category": "JUNCTION",
+      "add_columns": [],
+      "alter_to_not_null": [
+        "created_at"
+      ]
+    },
+    "role_assignments": {
+      "category": "JUNCTION",
+      "add_columns": [
+        "created_at"
+      ],
+      "alter_to_not_null": []
+    },
+    "supplier_constraint_logs": {
+      "category": "LOGS_HISTORY",
+      "add_columns": [],
+      "alter_to_not_null": [
+        "created_at"
+      ]
+    }
+  },
+  "uncategorized": []
+}

@@ -1,0 +1,35 @@
+[
+  {
+    "plate": "123-45-678",
+    "type": "D8-H/K",
+    "project_id": "201661",
+    "since": "2024-09-18T07:30:00Z",
+    "lat": 31.41,
+    "lng": 34.71
+  },
+  {
+    "plate": "98-765-432",
+    "type": "Shovel-EX",
+    "project_id": "201662",
+    "since": "2024-09-18T08:10:00Z",
+    "lat": 31.35,
+    "lng": 34.59
+  },
+  {
+    "plate": "55-123-999",
+    "type": "Bulldozer-CAT",
+    "project_id": "201664",
+    "since": "2024-09-18T06:45:00Z",
+    "lat": 33.0,
+    "lng": 35.8
+  },
+  {
+    "plate": "77-888-111",
+    "type": "Excavator-Hitachi",
+    "project_id": "201665",
+    "since": "2024-09-17T14:20:00Z",
+    "lat": 32.75,
+    "lng": 35.0
+  }
+]
+

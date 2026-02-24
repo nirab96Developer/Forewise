@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="header">
+    <h1>הזמנת עבודה חדשה</h1>
+</div>
+<h2>התקבלה הזמנת עבודה מס' {{ order_id }}</h2>
+<p><strong>חשוב:</strong> יש לאשר את ההזמנה תוך {{ response_time }}</p>
+<p>לחץ על הכפתור למעבר לדף האישור:</p>
+<a href="{{ landing_url }}" class="button" style="background: #FF9800;">
+    לאישור ההזמנה
+</a>
+<p style="color: red;">
+    <strong>שים לב:</strong> הקישור תקף ל-3 שעות בלבד!
+</p>
+{% endblock %}

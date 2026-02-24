@@ -1,0 +1,101 @@
+# app/routers/reports.py
+"""Report management endpoints."""
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
+from app.core.dependencies import get_current_active_user, require_permission
+from app.models.user import User
+from app.schemas.report import ReportCreate, ReportUpdate, ReportResponse
+from app.services.report_service import ReportService
+
+router = APIRouter(prefix="/reports", tags=["Reports"])
+report_service = ReportService()
+
+
+@router.get("", response_model=List[ReportResponse])
+# Permission check removed - using get_current_active_user
+async def list_reports(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    report_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get list of reports."""
+    try:
+        reports = report_service.get_reports(
+            db=db,
+            skip=skip,
+            limit=limit,
+            report_type=report_type,
+            current_user=current_user,
+        )
+        return reports
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{report_id}", response_model=ReportResponse)
+# Permission check removed - using get_current_active_user
+async def get_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get report by ID."""
+    report = report_service.get_report(db, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return report
+
+
+@router.post("", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
+# Permission check removed - using get_current_active_user
+async def create_report(
+    report: ReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Create new report."""
+    try:
+        return report_service.create_report(db, report, current_user.id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{report_id}/run")
+# Permission check removed - using get_current_active_user
+async def run_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Run a report."""
+    try:
+        result = report_service.run_report(db, report_id, current_user.id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
+# Permission check removed - using get_current_active_user
+async def delete_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Delete report."""
+    try:
+        success = report_service.delete_report(db, report_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Report not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

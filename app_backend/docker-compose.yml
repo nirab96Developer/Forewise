@@ -1,0 +1,89 @@
+version: '3.8'
+
+# KKL Forest Management System - Production Docker Compose
+# Note: For production with SQL Server, configure DATABASE_URL accordingly
+
+services:
+  backend:
+    build: .
+    container_name: fms-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      PYTHONPATH: /app
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - fms-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: fms-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - fms-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Celery worker for background tasks
+  celery-worker:
+    build: .
+    container_name: fms-celery-worker
+    restart: unless-stopped
+    command: celery -A app.core.celery worker --loglevel=info
+    environment:
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      - redis
+      - backend
+    networks:
+      - fms-network
+    profiles:
+      - celery
+
+  # Optional: Celery beat scheduler
+  celery-beat:
+    build: .
+    container_name: fms-celery-beat
+    restart: unless-stopped
+    command: celery -A app.core.celery beat --loglevel=info
+    environment:
+      ENV: ${ENV:-production}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - fms-network
+    profiles:
+      - celery
+
+networks:
+  fms-network:
+    driver: bridge
+
+volumes:
+  redis-data:

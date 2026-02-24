@@ -1,0 +1,66 @@
+{
+  "active_suppliers": [
+    {
+      "supplier_id": "59558049",
+      "name": "אבו אלקיעאן עלי",
+      "order_status": "valid",
+      "expires_at": "2025-08-01T00:00:00Z"
+    },
+    {
+      "supplier_id": "512297532",
+      "name": "מובילי דרום הר להב בע\"מ",
+      "order_status": "valid",
+      "expires_at": "2025-12-31T00:00:00Z"
+    },
+    {
+      "supplier_id": "514809805",
+      "name": "א.ג. הובלות יתיר בע\"מ",
+      "order_status": "expiring_soon",
+      "expires_at": "2025-03-31T00:00:00Z"
+    },
+    {
+      "supplier_id": "515360766",
+      "name": "איאד חוגיראת בע\"מ",
+      "order_status": "expiring_soon",
+      "expires_at": "2025-03-31T00:00:00Z"
+    },
+    {
+      "supplier_id": "301206371",
+      "name": "מ.ס. פיתוח הצפון",
+      "order_status": "expiring_soon",
+      "expires_at": "2025-03-31T00:00:00Z"
+    }
+  ],
+  "active_equipments": [
+    {
+      "plate": "2126670",
+      "type": "משאית מים",
+      "project_name": "גילת מפעל האגבות תכנון",
+      "since": "2024-07-03T00:00:00Z"
+    },
+    {
+      "plate": "141313",
+      "type": "מחפרון זרוע טלסקפי",
+      "project_name": "יתיר סינגל בית היערן-תכנון",
+      "since": "2024-07-31T00:00:00Z"
+    },
+    {
+      "plate": "219713",
+      "type": "מרסקת גזם",
+      "project_name": "יתיר סינגל לב-תכנון",
+      "since": "2024-09-02T00:00:00Z"
+    },
+    {
+      "plate": "208489",
+      "type": "יעה אופני זעיר",
+      "project_name": "יתיר שביל רגלי-תכנון",
+      "since": "2024-09-10T00:00:00Z"
+    },
+    {
+      "plate": "140117",
+      "type": "מחפרון 4*4 +פטיש JCB",
+      "project_name": "פלוגות סינגל-תכנון",
+      "since": "2024-12-15T00:00:00Z"
+    }
+  ]
+}

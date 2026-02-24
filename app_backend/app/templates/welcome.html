@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="header">
+    <h1>ברוך הבא למערכת!</h1>
+</div>
+<h2>שלום {{ name }},</h2>
+<p>החשבון שלך נוצר בהצלחה במערכת ניהול הפרויקטים.</p>
+<p><strong>פרטי החשבון שלך:</strong></p>
+<ul>
+    <li>אימייל: {{ email }}</li>
+    <li>תפקיד: משתמש חדש</li>
+</ul>
+<p>כדי להתחיל לעבוד במערכת:</p>
+<a href="{{ login_url }}" class="button">כניסה למערכת</a>
+<p>אם יש לך שאלות, פנה למנהל המערכת.</p>
+{% endblock %}

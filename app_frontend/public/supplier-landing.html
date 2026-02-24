@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אישור הזמנת עבודה - קק"ל</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .timer-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .timer-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .timer {
+            font-size: 36px;
+            font-weight: bold;
+            color: #dc3545;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .timer.warning {
+            color: #ffc107;
+        }
+        
+        .timer.danger {
+            color: #dc3545;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .order-details {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: right;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .detail-value {
+            color: #666;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-accept {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-accept:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        .btn-reject {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-reject:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .location-info {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        .location-info h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .location-link {
+            display: inline-block;
+            background: #1976d2;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        
+        .location-link:hover {
+            background: #1565c0;
+        }
+        
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .expired-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .buttons {
+                flex-direction: column;
+            }
+            
+            .timer {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🌲</div>
+        <h1>אישור הזמנת עבודה</h1>
+        <p class="subtitle">קרן קיימת לישראל - מערכת ניהול פרויקטים</p>
+        
+        <!-- טיימר -->
+        <div class="timer-container">
+            <div class="timer-label">זמן נותר לאישור ההזמנה:</div>
+            <div class="timer" id="timer">03:00:00</div>
+        </div>
+        
+        <!-- הודעת פג תוקף -->
+        <div class="expired-message" id="expiredMessage" style="display: none;">
+            ⏰ הזמן פג! ההזמנה בוטלה אוטומטית
+        </div>
+        
+        <!-- הודעות שגיאה והצלחה -->
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+        
+        <!-- פרטי ההזמנה -->
+        <div class="order-details" id="orderDetails">
+            <div class="detail-row">
+                <span class="detail-label">מספר הזמנה:</span>
+                <span class="detail-value" id="orderNumber">טוען...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">תאריך הזמנה:</span>
+                <span class="detail-value" id="orderDate">טוען...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">כמות שעות:</span>
+                <span class="detail-value" id="hoursCount">טוען...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">סוג כלי:</span>
+                <span class="detail-value" id="equipmentType">טוען...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">מנהל עבודה:</span>
+                <span class="detail-value" id="managerName">טוען...</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">טלפון:</span>
+                <span class="detail-value" id="managerPhone">טוען...</span>
+            </div>
+        </div>
+        
+        <!-- טופס אישור -->
+        <form id="approvalForm">
+            <div class="form-group">
+                <label for="licensePlate">מספר רישוי כלי:</label>
+                <input type="text" id="licensePlate" name="licensePlate" required 
+                       placeholder="הזן מספר רישוי">
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">הערות (אופציונלי):</label>
+                <textarea id="notes" name="notes" 
+                          placeholder="הערות נוספות..."></textarea>
+            </div>
+            
+            <div class="buttons">
+                <button type="button" class="btn btn-accept" id="acceptBtn">
+                    ✅ אישור ההזמנה
+                </button>
+                <button type="button" class="btn btn-reject" id="rejectBtn">
+                    ❌ דחיית ההזמנה
+                </button>
+            </div>
+        </form>
+        
+        <!-- מידע מיקום -->
+        <div class="location-info" id="locationInfo" style="display: none;">
+            <h3>📍 מיקום העבודה</h3>
+            <p id="locationAddress">טוען מיקום...</p>
+            <a href="#" class="location-link" id="wazeLink" target="_blank">
+                🗺️ פתח ב-Waze
+            </a>
+            <a href="#" class="location-link" id="googleMapsLink" target="_blank">
+                🗺️ פתח ב-Google Maps
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // קבלת פרמטרים מה-URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        
+        // משתנים גלובליים
+        let timeLeft = 3 * 60 * 60; // 3 שעות בשניות
+        let timerInterval;
+        let orderData = null;
+        
+        // אלמנטים
+        const timerElement = document.getElementById('timer');
+        const expiredMessage = document.getElementById('expiredMessage');
+        const orderDetails = document.getElementById('orderDetails');
+        const locationInfo = document.getElementById('locationInfo');
+        const acceptBtn = document.getElementById('acceptBtn');
+        const rejectBtn = document.getElementById('rejectBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        
+        // בדיקה אם יש token
+        if (!token) {
+            showError('קישור לא תקין. חסר מזהה הזמנה.');
+            disableForm();
+        } else {
+            loadOrderData();
+        }
+        
+        // טעינת נתוני ההזמנה
+        async function loadOrderData() {
+            try {
+                const response = await fetch(`/apihttp://167.99.228.10:8000/api/v1/work-orders/supplier-portal/${token}`);
+                
+                if (!response.ok) {
+                    throw new Error('הזמנה לא נמצאה או פג תוקף');
+                }
+                
+                orderData = await response.json();
+                displayOrderData();
+                
+                // הצגת מיקום אם יש
+                if (orderData.location) {
+                    displayLocationInfo();
+                }
+                
+            } catch (error) {
+                showError('שגיאה בטעינת נתוני ההזמנה: ' + error.message);
+                disableForm();
+            }
+        }
+        
+        // הצגת נתוני ההזמנה
+        function displayOrderData() {
+            document.getElementById('orderNumber').textContent = orderData.order_number || 'לא זמין';
+            document.getElementById('orderDate').textContent = formatDate(orderData.start_date);
+            document.getElementById('hoursCount').textContent = orderData.estimated_hours + ' שעות';
+            document.getElementById('equipmentType').textContent = orderData.equipment_type || 'לא זמין';
+            document.getElementById('managerName').textContent = orderData.contact_person || 'לא זמין';
+            document.getElementById('managerPhone').textContent = orderData.contact_phone || 'לא זמין';
+        }
+        
+        // הצגת מידע מיקום
+        function displayLocationInfo() {
+            document.getElementById('locationAddress').textContent = orderData.location || 'מיקום לא זמין';
+            
+            // קישורים ל-Waze ו-Google Maps
+            const wazeLink = document.getElementById('wazeLink');
+            const googleMapsLink = document.getElementById('googleMapsLink');
+            
+            if (orderData.location) {
+                const encodedLocation = encodeURIComponent(orderData.location);
+                wazeLink.href = `https://waze.com/ul?q=${encodedLocation}`;
+                googleMapsLink.href = `https://maps.google.com/maps?q=${encodedLocation}`;
+            }
+            
+            locationInfo.style.display = 'block';
+        }
+        
+        // פורמט תאריך
+        function formatDate(dateString) {
+            if (!dateString) return 'לא זמין';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('he-IL');
+        }
+        
+        // התחלת הטיימר
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleExpiration();
+                }
+            }, 1000);
+        }
+        
+        // עדכון תצוגת הטיימר
+        function updateTimerDisplay() {
+            const hours = Math.floor(timeLeft / 3600);
+            const minutes = Math.floor((timeLeft % 3600) / 60);
+            const seconds = timeLeft % 60;
+            
+            const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            timerElement.textContent = timeString;
+            
+            // שינוי צבע לפי הזמן הנותר
+            if (timeLeft <= 300) { // 5 דקות
+                timerElement.className = 'timer danger';
+            } else if (timeLeft <= 900) { // 15 דקות
+                timerElement.className = 'timer warning';
+            } else {
+                timerElement.className = 'timer';
+            }
+        }
+        
+        // טיפול בפג תוקף
+        function handleExpiration() {
+            expiredMessage.style.display = 'block';
+            orderDetails.style.display = 'none';
+            document.getElementById('approvalForm').style.display = 'none';
+            locationInfo.style.display = 'none';
+            
+            // שליחה אוטומטית לדחייה
+            rejectOrder('פג תוקף');
+        }
+        
+        // אישור ההזמנה
+        async function acceptOrder() {
+            const licensePlate = document.getElementById('licensePlate').value.trim();
+            const notes = document.getElementById('notes').value.trim();
+            
+            if (!licensePlate) {
+                showError('חובה להזין מספר רישוי');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/apihttp://167.99.228.10:8000/api/v1/work-orders/supplier-portal/${token}/accept`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        license_plate: licensePlate,
+                        notes: notes
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'שגיאה באישור ההזמנה');
+                }
+                
+                showSuccess('ההזמנה אושרה בהצלחה!');
+                disableForm();
+                
+                // הצגת מיקום לאחר אישור
+                setTimeout(() => {
+                    locationInfo.style.display = 'block';
+                }, 2000);
+                
+            } catch (error) {
+                showError('שגיאה באישור ההזמנה: ' + error.message);
+            }
+        }
+        
+        // דחיית ההזמנה
+        async function rejectOrder(reason = null) {
+            const notes = document.getElementById('notes').value.trim();
+            
+            try {
+                const response = await fetch(`/apihttp://167.99.228.10:8000/api/v1/work-orders/supplier-portal/${token}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        reason: reason || 'דחייה ידנית',
+                        notes: notes
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'שגיאה בדחיית ההזמנה');
+                }
+                
+                showSuccess('ההזמנה נדחתה');
+                disableForm();
+                
+            } catch (error) {
+                showError('שגיאה בדחיית ההזמנה: ' + error.message);
+            }
+        }
+        
+        // הצגת הודעת שגיאה
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+        
+        // הצגת הודעת הצלחה
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+        
+        // השבתת הטופס
+        function disableForm() {
+            acceptBtn.disabled = true;
+            rejectBtn.disabled = true;
+            document.getElementById('licensePlate').disabled = true;
+            document.getElementById('notes').disabled = true;
+        }
+        
+        // אירועים
+        acceptBtn.addEventListener('click', acceptOrder);
+        rejectBtn.addEventListener('click', () => rejectOrder());
+        
+        // התחלת הטיימר
+        startTimer();
+        
+        // עדכון ראשוני של הטיימר
+        updateTimerDisplay();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

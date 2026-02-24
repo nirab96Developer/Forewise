@@ -1,0 +1,213 @@
+[
+  {
+    "supplier_id": "513057703",
+    "supplier_name": "אחים יקוטי בע\"מ",
+    "equipment_type": "שופל 950 כף רגילה",
+    "license_number": "202133",
+    "license_expiry": "2024-09-29",
+    "price_hour": 270,
+    "updated_at": "2024-05-23",
+    "license_status": "expired"
+  },
+  {
+    "supplier_id": "513057703",
+    "supplier_name": "אחים יקוטי בע\"מ",
+    "equipment_type": "שופל 950 כף רגילה",
+    "license_number": "202162",
+    "license_expiry": "2024-10-23",
+    "price_hour": 270,
+    "updated_at": "2024-05-23",
+    "license_status": "expired"
+  },
+  {
+    "supplier_id": "515360766",
+    "supplier_name": "איאד חוגיראת בע\"מ",
+    "equipment_type": "יעה אופני זעיר",
+    "license_number": "205571",
+    "license_expiry": "2025-03-31",
+    "price_hour": 150,
+    "updated_at": "2024-06-19",
+    "license_status": "expiring_soon"
+  },
+  {
+    "supplier_id": "514980051",
+    "supplier_name": "ת.א.המרכז תשתיות הנגב בע\"מ",
+    "equipment_type": "משאית מים",
+    "license_number": "2126670",
+    "license_expiry": "2025-06-21",
+    "price_hour": 168,
+    "updated_at": "2024-07-03",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "514980051",
+    "supplier_name": "ת.א.המרכז תשתיות הנגב בע\"מ",
+    "equipment_type": "משאית מים+ פועל אחד",
+    "license_number": "2126670",
+    "license_expiry": "2025-06-21",
+    "price_hour": 204,
+    "updated_at": "2024-07-03",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "514980051",
+    "supplier_name": "ת.א.המרכז תשתיות הנגב בע\"מ",
+    "equipment_type": "משאית מים+ 2 פועלים",
+    "license_number": "2126670",
+    "license_expiry": "2025-06-21",
+    "price_hour": 240,
+    "updated_at": "2024-07-03",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "514980051",
+    "supplier_name": "ת.א.המרכז תשתיות הנגב בע\"מ",
+    "equipment_type": "משאית מים+ 3 פועלים",
+    "license_number": "2126670",
+    "license_expiry": "2025-06-21",
+    "price_hour": 275,
+    "updated_at": "2024-07-03",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "514980051",
+    "supplier_name": "ת.א.המרכז תשתיות הנגב בע\"מ",
+    "equipment_type": "משאית מים+ 4 פועלים",
+    "license_number": "2126670",
+    "license_expiry": "2025-06-21",
+    "price_hour": 312,
+    "updated_at": "2024-07-03",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "301206371",
+    "supplier_name": "מס פיתוח הצפון",
+    "equipment_type": "מחפרון זרוע טלסקפי",
+    "license_number": "141313",
+    "license_expiry": "2025-06-13",
+    "price_hour": 180,
+    "updated_at": "2024-07-31",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "515067114",
+    "supplier_name": "בני עפיף סועד בע\"מ",
+    "equipment_type": "מרסקת גזם",
+    "license_number": "219713",
+    "license_expiry": "2025-08-14",
+    "price_hour": 260,
+    "updated_at": "2024-09-02",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "515067114",
+    "supplier_name": "בני עפיף סועד בע\"מ",
+    "equipment_type": "יעה אופני זעיר",
+    "license_number": "219713",
+    "license_expiry": "2025-08-14",
+    "price_hour": 150,
+    "updated_at": "2024-09-02",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "514809805",
+    "supplier_name": "א.ג. הובלות יתיר בע\"מ",
+    "equipment_type": "יעה אופני זעיר",
+    "license_number": "208489",
+    "license_expiry": "2025-07-14",
+    "price_hour": 150,
+    "updated_at": "2024-09-10",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "514809805",
+    "supplier_name": "א.ג. הובלות יתיר בע\"מ",
+    "equipment_type": "מחפרון 4*4 +פטיש JCB",
+    "license_number": "132762",
+    "license_expiry": "2025-04-19",
+    "price_hour": 170,
+    "updated_at": "2024-09-10",
+    "license_status": "expiring_soon"
+  },
+  {
+    "supplier_id": "514809805",
+    "supplier_name": "א.ג. הובלות יתיר בע\"מ",
+    "equipment_type": "מחפר זחלי זעיר",
+    "license_number": "182105",
+    "license_expiry": "2025-01-07",
+    "price_hour": 150,
+    "updated_at": "2024-10-14",
+    "license_status": "expired"
+  },
+  {
+    "supplier_id": "514809805",
+    "supplier_name": "א.ג. הובלות יתיר בע\"מ",
+    "equipment_type": "מחפר זחלי זעיר",
+    "license_number": "155047",
+    "license_expiry": "2025-06-06",
+    "price_hour": 150,
+    "updated_at": "2024-10-14",
+    "license_status": "valid"
+  },
+  {
+    "supplier_id": "515360766",
+    "supplier_name": "איאד חוגיראת בע\"מ",
+    "equipment_type": "מחפר זחלי זעיר",
+    "license_number": "187742",
+    "license_expiry": "2024-10-23",
+    "price_hour": 150,
+    "updated_at": "2024-10-14",
+    "license_status": "expired"
+  },
+  {
+    "supplier_id": "512418450",
+    "supplier_name": "דחפורי השחר בע\"מ",
+    "equipment_type": "שופל 950 כף רגילה",
+    "license_number": "180677",
+    "license_expiry": "0000-00-00",
+    "price_hour": 270,
+    "updated_at": "2024-11-12",
+    "license_status": "expired"
+  },
+  {
+    "supplier_id": "59558049",
+    "supplier_name": "אבו אלקיעאן עלי",
+    "equipment_type": "מפלסת",
+    "license_number": "125096",
+    "license_expiry": "2025-01-31",
+    "price_hour": 280,
+    "updated_at": "2024-05-16",
+    "license_status": "expiring_soon"
+  },
+  {
+    "supplier_id": "512297532",
+    "supplier_name": "מובילי דרום הר להב בע\"מ",
+    "equipment_type": "שופל 950 כף רגילה",
+    "license_number": "141136",
+    "license_expiry": "2025-03-19",
+    "price_hour": 270,
+    "updated_at": "2024-12-04",
+    "license_status": "expiring_soon"
+  },
+  {
+    "supplier_id": "514809805",
+    "supplier_name": "א.ג. הובלות יתיר בע\"מ",
+    "equipment_type": "מחפרון 4*4 +פטיש JCB",
+    "license_number": "140117",
+    "license_expiry": "2026-01-06",
+    "price_hour": 170,
+    "updated_at": "2024-12-15",
+    "license_status": "valid"
+  }
+]
+
+
+
+
+
+
+
+
+
+
+

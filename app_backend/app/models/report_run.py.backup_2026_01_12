@@ -1,0 +1,77 @@
+"""
+ReportRun model - הרצות דוחות
+SYNCED WITH DB - 17.11.2025
+"""
+
+from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
+from datetime import datetime
+
+from sqlalchemy import Integer, String, Text, DateTime, ForeignKey, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.report import Report
+    from app.models.user import User
+
+
+class ReportRun(BaseModel):
+    """ReportRun model - הרצת דוח - SYNCED WITH DB"""
+
+    __tablename__ = "report_runs"
+
+    __table_args__ = {"extend_existing": True}
+
+    # Primary Key
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    # Foreign keys - DB: int, NO / int, NO / int, YES
+    report_id: Mapped[int] = mapped_column(Integer, ForeignKey("reports.id"), nullable=False)
+    run_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    triggered_by_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Status - DB: nvarchar(50), NO, default='RUNNING'
+    status: Mapped[str] = mapped_column(String(50), default="RUNNING", nullable=False)
+
+    # Parameters - DB: nvarchar(-1), YES
+    parameters: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Timing - DB: datetime2, YES / datetime, NO / datetime, YES
+    queued_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default="getdate()", nullable=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Performance - DB: int, YES
+    execution_time_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    duration_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Results - DB: int, YES / nvarchar(-1), YES
+    result_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    result_rows: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    result_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    result_format: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    result_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    result_size_bytes: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+
+    # File - DB: nvarchar(500), YES / varchar(-1), YES
+    file_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    custom_metadata: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Error - DB: nvarchar(-1), YES / varchar(-1), YES
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    error_details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Retry - DB: int, YES / int, NO, default=0 / int, NO, default=1
+    parent_run_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("report_runs.id"), nullable=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    run_number: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+    # Relationships
+    # report: Mapped["Report"] = relationship("Report")
+    # runner: Mapped["User"] = relationship("User", foreign_keys=[run_by])
+    # triggered_by: Mapped[Optional["User"]] = relationship("User", foreign_keys=[triggered_by_id])
+
+    def __repr__(self):
+        return f"<ReportRun(id={self.id}, report_id={self.report_id}, status='{self.status}')>"

@@ -1,0 +1,697 @@
+{
+  "models": {
+    "app/models/__init__.py": {
+      "lines": 87,
+      "has_tablename": false,
+      "imports_ok": true
+    },
+    "app/models/project/project.py": {
+      "lines": 69,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/project/__init__.py": {
+      "lines": 0,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/project/project_assignment.py": {
+      "lines": 31,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/common/support_ticket_comment.py": {
+      "lines": 62,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/common/__init__.py": {
+      "lines": 0,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/common/support_ticket.py": {
+      "lines": 134,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/common/notification.py": {
+      "lines": 89,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/common/system_message.py": {
+      "lines": 112,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/common/file.py": {
+      "lines": 91,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/reporting/__init__.py": {
+      "lines": 0,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/reporting/report.py": {
+      "lines": 80,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/reporting/report_run.py": {
+      "lines": 93,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/equipment/equipment_assignment.py": {
+      "lines": 81,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/equipment/equipment.py": {
+      "lines": 127,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/equipment/equipment_category.py": {
+      "lines": 61,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/equipment/__init__.py": {
+      "lines": 0,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/equipment/equipment_maintenance.py": {
+      "lines": 90,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/equipment/equipment_scan.py": {
+      "lines": 77,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/supplier/__init__.py": {
+      "lines": 0,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/supplier/supplier_constraint_log.py": {
+      "lines": 89,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/supplier/work_order.py": {
+      "lines": 243,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/supplier/supplier.py": {
+      "lines": 78,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/supplier/supplier_rotation.py": {
+      "lines": 62,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/audit/audit_log.py": {
+      "lines": 76,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/audit/__init__.py": {
+      "lines": 0,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/budget/__init__.py": {
+      "lines": 0,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/budget/budget.py": {
+      "lines": 96,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/budget/balance_release.py": {
+      "lines": 106,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/budget/budget_item.py": {
+      "lines": 79,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/worklog/worklog_segment.py": {
+      "lines": 56,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/worklog/work_report.py": {
+      "lines": 146,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/worklog/work_break.py": {
+      "lines": 53,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/worklog/worklog.py": {
+      "lines": 89,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/worklog/daily_work_report.py": {
+      "lines": 97,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/finance/invoice.py": {
+      "lines": 97,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/finance/invoice_item.py": {
+      "lines": 40,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/finance/invoice_payment.py": {
+      "lines": 70,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/base/otp_token.py": {
+      "lines": 105,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/base/base.py": {
+      "lines": 318,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/base/__init__.py": {
+      "lines": 3,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/base/role.py": {
+      "lines": 145,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/base/user.py": {
+      "lines": 111,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/base/permission.py": {
+      "lines": 81,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/base/user_scope.py": {
+      "lines": 88,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/organization/area.py": {
+      "lines": 56,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/organization/__init__.py": {
+      "lines": 0,
+      "has_tablename": false,
+      "imports_ok": false
+    },
+    "app/models/organization/region.py": {
+      "lines": 137,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/organization/department.py": {
+      "lines": 23,
+      "has_tablename": true,
+      "imports_ok": true
+    },
+    "app/models/organization/location.py": {
+      "lines": 111,
+      "has_tablename": true,
+      "imports_ok": true
+    }
+  },
+  "services": {
+    "app/services/project_service.py": {
+      "lines": 320,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/user_service.py": {
+      "lines": 212,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/jwt_service.py": {
+      "lines": 47,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/__init__.py": {
+      "lines": 77,
+      "has_class": false,
+      "async": false
+    },
+    "app/services/supplier_service.py": {
+      "lines": 267,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/project_assignment_service.py": {
+      "lines": 161,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/location_service.py": {
+      "lines": 209,
+      "has_class": true,
+      "async": true
+    },
+    "app/services/region_service.py": {
+      "lines": 188,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/auth_service.py": {
+      "lines": 88,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/report_service.py": {
+      "lines": 385,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/equipment_service.py": {
+      "lines": 177,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/permission_service.py": {
+      "lines": 189,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/work_report_service.py": {
+      "lines": 333,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/area_service.py": {
+      "lines": 125,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/work_order_service.py": {
+      "lines": 284,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/invoice_service.py": {
+      "lines": 258,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/profile_service.py": {
+      "lines": 165,
+      "has_class": true,
+      "async": false
+    },
+    "app/services/notifications/__init__.py": {
+      "lines": 25,
+      "has_class": false,
+      "async": false
+    },
+    "app/services/notifications/notification_service.py": {
+      "lines": 549,
+      "has_class": true,
+      "async": true
+    },
+    "app/services/scheduler/__init__.py": {
+      "lines": 19,
+      "has_class": false,
+      "async": false
+    },
+    "app/services/scheduler/scheduler.py": {
+      "lines": 326,
+      "has_class": true,
+      "async": true
+    },
+    "app/services/scheduler/task_scheduler.py": {
+      "lines": 517,
+      "has_class": true,
+      "async": true
+    }
+  },
+  "endpoints": {
+    "app/api/v1/endpoints/equipment.py": {
+      "lines": 255,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": true,
+        "DELETE": true
+      }
+    },
+    "app/api/v1/endpoints/areas.py": {
+      "lines": 29,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": true,
+        "DELETE": true
+      }
+    },
+    "app/api/v1/endpoints/auth.py": {
+      "lines": 203,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": false,
+        "DELETE": false
+      }
+    },
+    "app/api/v1/endpoints/projects.py": {
+      "lines": 137,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": true,
+        "DELETE": false
+      }
+    },
+    "app/api/v1/endpoints/work_reports.py": {
+      "lines": 75,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": false,
+        "DELETE": false
+      }
+    },
+    "app/api/v1/endpoints/regions.py": {
+      "lines": 29,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": true,
+        "DELETE": true
+      }
+    },
+    "app/api/v1/endpoints/locations.py": {
+      "lines": 217,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": true,
+        "DELETE": true
+      }
+    },
+    "app/api/v1/endpoints/users.py": {
+      "lines": 248,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": true,
+        "DELETE": true
+      }
+    },
+    "app/api/v1/endpoints/suppliers.py": {
+      "lines": 234,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": true,
+        "DELETE": true
+      }
+    },
+    "app/api/v1/endpoints/invoices.py": {
+      "lines": 59,
+      "has_router": true,
+      "methods": {
+        "GET": false,
+        "POST": true,
+        "PUT": false,
+        "DELETE": false
+      }
+    },
+    "app/api/v1/endpoints/work_orders.py": {
+      "lines": 81,
+      "has_router": true,
+      "methods": {
+        "GET": true,
+        "POST": true,
+        "PUT": false,
+        "DELETE": false
+      }
+    }
+  },
+  "schemas": {
+    "app/schemas/base.py": {
+      "classes": [
+        "BaseSchema",
+        "BaseResponse",
+        "PaginationParams",
+        "PaginatedResponse"
+      ],
+      "count": 4
+    },
+    "app/schemas/area.py": {
+      "classes": [
+        "AreaBase",
+        "AreaCreate",
+        "AreaUpdate",
+        "AreaResponse",
+        "AreaInDB",
+        "AreaWithDetails",
+        "AreaGeoJSON",
+        "AreaTypeEnum",
+        "BudgetAllocationToProject",
+        "ForestAnalysis",
+        "OperationalStatus",
+        "PerformanceMetrics"
+      ],
+      "count": 12
+    },
+    "app/schemas/equipment.py": {
+      "classes": [
+        "EquipmentBase",
+        "EquipmentCreate",
+        "EquipmentUpdate",
+        "EquipmentResponse",
+        "EquipmentScan"
+      ],
+      "count": 5
+    },
+    "app/schemas/project.py": {
+      "classes": [
+        "ProjectBase",
+        "ProjectCreate",
+        "ProjectUpdate",
+        "ProjectResponse",
+        "ProjectStatusUpdate"
+      ],
+      "count": 5
+    },
+    "app/schemas/__init__.py": {
+      "classes": [],
+      "count": 0
+    },
+    "app/schemas/invoice.py": {
+      "classes": [
+        "InvoiceBase",
+        "InvoiceCreate",
+        "InvoiceUpdate",
+        "InvoiceResponse",
+        "InvoiceApproval",
+        "InvoicePayment"
+      ],
+      "count": 6
+    },
+    "app/schemas/work_report.py": {
+      "classes": [
+        "HourBreakdown",
+        "WorkReportBase",
+        "WorkReportCreate",
+        "WorkReportUpdate",
+        "WorkReportResponse",
+        "WorkReportApproval"
+      ],
+      "count": 6
+    },
+    "app/schemas/work_order.py": {
+      "classes": [
+        "WorkOrderBase",
+        "WorkOrderCreate",
+        "WorkOrderUpdate",
+        "WorkOrderResponse",
+        "WorkOrderSupplierResponse"
+      ],
+      "count": 5
+    },
+    "app/schemas/role.py": {
+      "classes": [
+        "RoleBase",
+        "RoleCreate",
+        "RoleUpdate",
+        "RoleResponse"
+      ],
+      "count": 4
+    },
+    "app/schemas/region.py": {
+      "classes": [
+        "RegionBase",
+        "RegionCreate",
+        "RegionUpdate",
+        "RegionResponse",
+        "RegionInDB",
+        "RegionWithAreas",
+        "RegionSummaryStats",
+        "RegionGeoJSON",
+        "RegionBoundaryAuditBase",
+        "RegionBoundaryAuditCreate",
+        "RegionBoundaryAuditInDB",
+        "BudgetAllocation"
+      ],
+      "count": 12
+    },
+    "app/schemas/project_assignment.py": {
+      "classes": [
+        "ProjectAssignmentBase",
+        "ProjectAssignmentCreate",
+        "ProjectAssignmentUpdate",
+        "ProjectAssignmentResponse"
+      ],
+      "count": 4
+    },
+    "app/schemas/user.py": {
+      "classes": [
+        "UserStatus",
+        "AuthProvider",
+        "UserBase",
+        "Config:",
+        "UserCreate",
+        "UserRegister",
+        "UserUpdate",
+        "Config:",
+        "UserPasswordChange",
+        "UserStatusUpdate",
+        "UserResponse",
+        "Config:",
+        "UserProfile",
+        "Config:",
+        "UserPublic",
+        "Config:",
+        "UserList",
+        "UserLogin",
+        "UserLoginResponse",
+        "User2FAVerify",
+        "User2FASetup",
+        "User2FASetupResponse",
+        "UserPasswordReset",
+        "UserPasswordResetConfirm",
+        "UserUnlock",
+        "UserFilter",
+        "UserSearch",
+        "UserActivity",
+        "UserStats",
+        "UserPreferences",
+        "UserPreferencesUpdate"
+      ],
+      "count": 31
+    },
+    "app/schemas/department.py": {
+      "classes": [
+        "DepartmentBase",
+        "DepartmentCreate",
+        "DepartmentUpdate",
+        "DepartmentResponse",
+        "DepartmentInDB",
+        "DepartmentWithStatistics",
+        "DepartmentWithHierarchy",
+        "DepartmentWithEmployees",
+        "DepartmentTree",
+        "DepartmentTypeEnum",
+        "ContactInfo",
+        "LocationInfo",
+        "HierarchyInfo",
+        "BudgetBreakdown",
+        "WorkforceAnalysis",
+        "OrganizationalChart",
+        "ContactDetails",
+        "EmployeeInfo"
+      ],
+      "count": 18
+    },
+    "app/schemas/location.py": {
+      "classes": [
+        "LocationBase",
+        "LocationCreate",
+        "LocationUpdate",
+        "LocationResponse",
+        "LocationListResponse",
+        "LocationInDB",
+        "LocationWithDetails",
+        "LocationGeoJSON",
+        "LocationTypeEnum",
+        "AccessibilityEnum",
+        "TreeSpecies",
+        "VisitorFacilities",
+        "MaintenanceStatus",
+        "FireRiskStatus",
+        "TreeSpeciesSummary",
+        "ManagementSummary",
+        "VisitorInfo"
+      ],
+      "count": 17
+    },
+    "app/schemas/supplier.py": {
+      "classes": [
+        "SupplierBase",
+        "SupplierCreate",
+        "SupplierUpdate",
+        "SupplierResponse"
+      ],
+      "count": 4
+    },
+    "app/schemas/permission.py": {
+      "classes": [
+        "PermissionBase",
+        "PermissionCreate",
+        "PermissionUpdate",
+        "PermissionResponse"
+      ],
+      "count": 4
+    }
+  },
+  "issues": []
+}

@@ -1,0 +1,173 @@
+[
+  {
+    "user_id": "alexsh",
+    "username": "alexsh",
+    "user_name": "שכטמן-ג.תחתון-אפליקציה",
+    "region": "ג.תחתון",
+    "role": "work_manager",
+    "email": "alexsh@kkl.co.il"
+  },
+  {
+    "user_id": "arafatn",
+    "username": "arafatn",
+    "user_name": "ערפאת נג'אר-ג.תחתון-אפליקציה",
+    "region": "ג.תחתון",
+    "role": "work_manager",
+    "email": "arafatn@kkl.co.il"
+  },
+  {
+    "user_id": "bhaas",
+    "username": "bhaas",
+    "user_name": "בהא סעד-צפון-אפליקציה",
+    "region": "צפון",
+    "role": "work_manager",
+    "email": "bhaas@kkl.co.il"
+  },
+  {
+    "user_id": "ereza",
+    "username": "ereza",
+    "user_name": "ארז אביטל - מרכז",
+    "region": "מרכז",
+    "role": "work_manager",
+    "email": "ereza@kkl.co.il"
+  },
+  {
+    "user_id": "fyadf",
+    "username": "fyadf",
+    "user_name": "פיאד פיאד-צפון-אפליקציה",
+    "region": "צפון",
+    "role": "work_manager",
+    "email": "fyadf@kkl.co.il"
+  },
+  {
+    "user_id": "igala",
+    "username": "igala",
+    "user_name": "יגאל אזולאי-דרום",
+    "region": "דרום",
+    "role": "work_manager",
+    "email": "igala@kkl.co.il"
+  },
+  {
+    "user_id": "levanak",
+    "username": "levanak",
+    "user_name": "לבנה קלגל",
+    "region": "כללי",
+    "role": "work_manager",
+    "email": "levanak@kkl.co.il"
+  },
+  {
+    "user_id": "michelb",
+    "username": "michelb",
+    "user_name": "מיכאל ביטון-דרום-אפליקציה",
+    "region": "דרום",
+    "role": "work_manager",
+    "email": "michelb@kkl.co.il"
+  },
+  {
+    "user_id": "muhamadk",
+    "username": "ab1234",
+    "user_name": "מחמאד קריני-נ.מערבי-אפליקציה",
+    "region": "נ.מערבי",
+    "role": "work_manager",
+    "email": "muhamadk@kkl.co.il"
+  },
+  {
+    "user_id": "nahumg",
+    "username": "nahumg",
+    "user_name": "נחום גולוב-ג. עליון-אפליקציה",
+    "region": "ג. עליון",
+    "role": "work_manager",
+    "email": "nahumg@kkl.co.il"
+  },
+  {
+    "user_id": "nataliab",
+    "username": "nataliab",
+    "user_name": "נטליה קליבנר-מרחב צפון",
+    "region": "מרחב צפון",
+    "role": "area_manager",
+    "email": "nataliab@kkl.co.il"
+  },
+  {
+    "user_id": "natalic",
+    "username": "natalic",
+    "user_name": "נטלי כהן- מנהלת חשבונות- מנשה",
+    "region": "מנשה",
+    "role": "accounting_manager",
+    "email": "natalic@kkl.co.il"
+  },
+  {
+    "user_id": "tzahib",
+    "username": "tzahib",
+    "user_name": "צחי ביטון-כברי",
+    "region": "כברי",
+    "role": "work_manager",
+    "email": "tzahib@kkl.co.il"
+  },
+  {
+    "user_id": "yaakovb",
+    "username": "yaakovb",
+    "user_name": "יעקב בן.יאיר-דרום-אפליקציה",
+    "region": "דרום",
+    "role": "work_manager",
+    "email": "yaakovb@kkl.co.il"
+  },
+  {
+    "user_id": "yoavsar",
+    "username": "yoavsar",
+    "user_name": "יואב סרור-ש.קרקע ד-אפליקציה",
+    "region": "ש.קרקע ד",
+    "role": "work_manager",
+    "email": "yoavsar@kkl.co.il"
+  },
+  {
+    "user_id": "yosia",
+    "username": "yosia",
+    "user_name": "יוסי אוטומזגין-דרום-אפליקציה",
+    "region": "דרום",
+    "role": "work_manager",
+    "email": "yosia@kkl.co.il"
+  },
+  {
+    "user_id": "yossim",
+    "username": "yossim",
+    "user_name": "יוסי ממן-א.גליל תחתון-אפליקציה",
+    "region": "א.גליל תחתון",
+    "role": "work_manager",
+    "email": "yossim@kkl.co.il"
+  },
+  {
+    "user_id": "zionb",
+    "username": "zionb",
+    "user_name": "ציון ביטון - מרכז",
+    "region": "מרכז",
+    "role": "work_manager",
+    "email": "zionb@kkl.co.il"
+  },
+  {
+    "user_id": "yaira",
+    "username": "yaira",
+    "user_name": "יאיר אבוטבול - מנהל מרחב מרכז",
+    "region": "מרחב מרכז",
+    "role": "space_manager",
+    "email": "yaira@kkl.co.il"
+  },
+  {
+    "user_id": "nira",
+    "username": "nira",
+    "user_name": "מנהל מערכת אדמין",
+    "region": "כללי",
+    "role": "admin",
+    "email": "nirabutbul41@gmail.com"
+  }
+]
+
+
+
+
+
+
+
+
+
+
+

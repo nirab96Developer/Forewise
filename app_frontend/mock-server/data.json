@@ -1,0 +1,342 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "username": "admin",
+      "email": "admin@kkl.co.il",
+      "firstName": "מנהל",
+      "lastName": "מערכת",
+      "role": "admin",
+      "isActive": true
+    },
+    {
+      "id": "2",
+      "username": "work_manager",
+      "email": "work@kkl.co.il",
+      "firstName": "רחל",
+      "lastName": "גולדברג",
+      "role": "work_manager",
+      "isActive": true
+    },
+    {
+      "id": "3",
+      "username": "area_manager",
+      "email": "area@kkl.co.il",
+      "firstName": "משה",
+      "lastName": "לוי",
+      "role": "area_manager",
+      "isActive": true
+    },
+    {
+      "id": "4",
+      "username": "space_manager",
+      "email": "space@kkl.co.il",
+      "firstName": "דוד",
+      "lastName": "כהן",
+      "role": "space_manager",
+      "isActive": true
+    },
+    {
+      "id": "5",
+      "username": "accounting_manager",
+      "email": "accounting@kkl.co.il",
+      "firstName": "שרה",
+      "lastName": "לוי",
+      "role": "accounting_manager",
+      "isActive": true
+    }
+  ],
+  "spaces": [
+    {
+      "id": "1",
+      "name": "צפון",
+      "description": "מרחב צפון",
+      "budget": 50000000
+    },
+    {
+      "id": "3",
+      "name": "מרכז",
+      "description": "מרחב מרכז",
+      "budget": 40000000
+    },
+    {
+      "id": "4",
+      "name": "דרום",
+      "description": "מרחב דרום",
+      "budget": 30000000
+    }
+  ],
+  "areas": [
+    {
+      "id": "3",
+      "name": "יח' בצוע דרום",
+      "spaceId": "4",
+      "budget": 10000000
+    },
+    {
+      "id": "5",
+      "name": "יח' בצוע צפון",
+      "spaceId": "1",
+      "budget": 15000000
+    },
+    {
+      "id": "7",
+      "name": "יח' בצוע מרכז",
+      "spaceId": "3",
+      "budget": 12000000
+    },
+    {
+      "id": "12",
+      "name": "ג. עליון ורמת הגולן",
+      "spaceId": "1",
+      "budget": 8000000
+    },
+    {
+      "id": "13",
+      "name": "ג. מערבי-כרמל",
+      "spaceId": "1",
+      "budget": 6000000
+    },
+    {
+      "id": "34",
+      "name": "מנשה שרון",
+      "spaceId": "3",
+      "budget": 7000000
+    },
+    {
+      "id": "41",
+      "name": "נגב צפוני",
+      "spaceId": "4",
+      "budget": 5000000
+    }
+  ],
+  "projects": [
+    {
+      "id": "201661",
+      "name": "שבי דרום",
+      "description": "פרויקט נטיעות ופיתוח באזור דרום",
+      "areaId": "3",
+      "spaceId": "4",
+      "budget": 1000000,
+      "startDate": "2024-01-15",
+      "endDate": "2024-06-15",
+      "status": "active",
+      "workManagerId": "2",
+      "coordinates": {
+        "lat": 31.2518,
+        "lng": 34.7915
+      }
+    },
+    {
+      "id": "201662",
+      "name": "יער אשכול",
+      "description": "פרויקט נטיעות יער באזור אשכול",
+      "areaId": "5",
+      "spaceId": "1",
+      "budget": 4000000,
+      "startDate": "2024-02-01",
+      "endDate": "2024-08-31",
+      "status": "active",
+      "workManagerId": "2",
+      "coordinates": {
+        "lat": 33.2774,
+        "lng": 35.5018
+      }
+    },
+    {
+      "id": "201663",
+      "name": "חולדה",
+      "description": "פרויקט שיקום ופיתוח באזור חולדה",
+      "areaId": "7",
+      "spaceId": "3",
+      "budget": 2000000,
+      "startDate": "2024-03-01",
+      "endDate": "2024-09-30",
+      "status": "planning",
+      "workManagerId": "2",
+      "coordinates": {
+        "lat": 32.0853,
+        "lng": 34.7818
+      }
+    },
+    {
+      "id": "201664",
+      "name": "גולן עליון",
+      "description": "פרויקט נטיעות בגולן העליון",
+      "areaId": "12",
+      "spaceId": "1",
+      "budget": 3000000,
+      "startDate": "2024-04-01",
+      "endDate": "2024-10-31",
+      "status": "active",
+      "workManagerId": "2",
+      "coordinates": {
+        "lat": 33.0000,
+        "lng": 35.8000
+      }
+    },
+    {
+      "id": "201665",
+      "name": "כרמל מערבי",
+      "description": "פרויקט שימור ופיתוח בכרמל המערבי",
+      "areaId": "13",
+      "spaceId": "1",
+      "budget": 1500000,
+      "startDate": "2024-05-01",
+      "endDate": "2024-11-30",
+      "status": "completed",
+      "workManagerId": "2",
+      "coordinates": {
+        "lat": 32.7500,
+        "lng": 35.0000
+      }
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "1",
+      "name": "חברת כלי עבודה צפון",
+      "email": "north@tools.co.il",
+      "phone": "04-1234567",
+      "equipment": ["טרקטור", "מחפרון", "מפלס"],
+      "isActive": true
+    },
+    {
+      "id": "2",
+      "name": "מכונות דרום בע\"מ",
+      "email": "south@machines.co.il",
+      "phone": "08-7654321",
+      "equipment": ["דחפור", "מפלס", "מחפרון"],
+      "isActive": true
+    },
+    {
+      "id": "3",
+      "name": "ציוד מרכז",
+      "email": "center@equipment.co.il",
+      "phone": "03-9876543",
+      "equipment": ["טרקטור", "דחפור", "מפלס", "מחפרון"],
+      "isActive": true
+    },
+    {
+      "id": "4",
+      "name": "כלי עבודה מתקדמים",
+      "email": "advanced@tools.co.il",
+      "phone": "02-5555555",
+      "equipment": ["מחפרון", "מפלס", "טרקטור"],
+      "isActive": true
+    }
+  ],
+  "equipment": [
+    {
+      "id": "1",
+      "name": "טרקטור",
+      "type": "heavy",
+      "licenseNumber": "TR-001",
+      "supplierId": "1",
+      "projectId": "201661",
+      "status": "in_use"
+    },
+    {
+      "id": "2",
+      "name": "מחפרון",
+      "type": "heavy",
+      "licenseNumber": "EX-002",
+      "supplierId": "2",
+      "projectId": "201662",
+      "status": "available"
+    },
+    {
+      "id": "3",
+      "name": "מפלס",
+      "type": "medium",
+      "licenseNumber": "GR-003",
+      "supplierId": "3",
+      "projectId": "201663",
+      "status": "in_use"
+    },
+    {
+      "id": "4",
+      "name": "דחפור",
+      "type": "heavy",
+      "licenseNumber": "BU-004",
+      "supplierId": "4",
+      "projectId": "201664",
+      "status": "available"
+    }
+  ],
+  "work_reports": [
+    {
+      "id": "1",
+      "projectId": "201661",
+      "workManagerId": "2",
+      "equipmentId": "1",
+      "date": "2024-01-20",
+      "workType": "גיזום",
+      "workHours": 8,
+      "breakHours": 1.5,
+      "totalHours": 9.5,
+      "isStandard": true,
+      "notes": "עבודה רגילה",
+      "status": "submitted"
+    },
+    {
+      "id": "2",
+      "projectId": "201662",
+      "workManagerId": "2",
+      "equipmentId": "2",
+      "date": "2024-01-21",
+      "workType": "חפירה",
+      "workHours": 6,
+      "breakHours": 1,
+      "totalHours": 7,
+      "isStandard": false,
+      "notes": "עבודה מיוחדת - תנאי שטח קשים",
+      "status": "pending_approval"
+    }
+  ],
+  "supplier_orders": [
+    {
+      "id": "1",
+      "projectId": "201661",
+      "supplierId": "1",
+      "equipmentType": "טרקטור",
+      "days": 10,
+      "totalHours": 90,
+      "orderType": "fair_round",
+      "status": "pending",
+      "createdAt": "2024-01-15T10:00:00Z",
+      "expiresAt": "2024-01-15T13:00:00Z"
+    },
+    {
+      "id": "2",
+      "projectId": "201662",
+      "supplierId": "2",
+      "equipmentType": "מחפרון",
+      "days": 5,
+      "totalHours": 45,
+      "orderType": "forced",
+      "forcedReason": "הספק כבר עובד בשטח",
+      "status": "approved",
+      "createdAt": "2024-01-16T09:00:00Z",
+      "expiresAt": "2024-01-16T12:00:00Z"
+    }
+  ],
+  "activity_logs": [
+    {
+      "id": "1",
+      "userId": "2",
+      "date": "2024-01-20",
+      "type": "work_report",
+      "description": "דיווח שעות עבור פרויקט שבי דרום",
+      "projectId": "201661"
+    },
+    {
+      "id": "2",
+      "userId": "2",
+      "date": "2024-01-21",
+      "type": "equipment_order",
+      "description": "הזמנת ציוד לפרויקט יער אשכול",
+      "projectId": "201662"
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+"""
+Invoice model - חשבוניות
+Invoice management and billing
+"""
+
+from __future__ import annotations
+
+import enum
+from datetime import date
+from typing import TYPE_CHECKING, Optional, List
+
+from sqlalchemy import Date, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base_simple import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.invoice_item import InvoiceItem
+    from app.models.invoice_payment import InvoicePayment
+    # from app.models.project import Project
+    from app.models.supplier import Supplier
+    from app.models.user import User
+
+
+class InvoiceStatus(str, enum.Enum):
+    """Invoice status enum"""
+    DRAFT = "draft"
+    SENT = "sent"
+    PAID = "paid"
+    PARTIAL = "partial"
+    OVERDUE = "overdue"
+    CANCELLED = "cancelled"
+
+
+class Invoice(BaseModel):
+    """Invoice model - חשבונית"""
+
+    __tablename__ = "invoices"
+
+    # Basic info
+    invoice_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+
+    # Foreign keys
+    supplier_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("suppliers.id"), nullable=False, index=True
+    )
+    project_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("projects.id"), nullable=True, index=True
+    )
+    created_by: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True
+    )
+
+    # Dates
+    issue_date: Mapped[date] = mapped_column(Date, nullable=False)
+    due_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    # Amounts
+    subtotal: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
+    tax_amount: Mapped[float] = mapped_column(Numeric(15, 2), default=0.0)
+    total_amount: Mapped[float] = mapped_column(Numeric(15, 2), nullable=False)
+    paid_amount: Mapped[float] = mapped_column(Numeric(15, 2), default=0.0)
+
+    # Status
+    status: Mapped[InvoiceStatus] = mapped_column(
+        SQLAlchemyEnum(InvoiceStatus),
+        default=InvoiceStatus.DRAFT,
+        nullable=False,
+        index=True
+    )
+
+    # Additional info
+    payment_method: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pdf_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    # Relationships - רק עם string references
+    # supplier: Mapped["Supplier"] = relationship("Supplier", back_populates="invoices")
+    # project: Mapped[Optional["Project"]] = relationship("Project", back_populates="invoices")
+    # creator: Mapped[Optional["User"]] = relationship("User", back_populates="created_invoices")
+    # items: Mapped[List["InvoiceItem"]] = relationship("InvoiceItem", back_populates="invoice")
+    # payments: Mapped[List["InvoicePayment"]] = relationship("InvoicePayment", back_populates="invoice")
+
+    @property
+    def balance_due(self) -> float:
+        """Calculate remaining balance"""
+        return float(self.total_amount) - float(self.paid_amount)
+
+    @property
+    def is_fully_paid(self) -> bool:
+        """Check if invoice is fully paid"""
+        return self.balance_due <= 0
+
+    def __repr__(self):
+        return f"<Invoice(id={self.id}, number='{self.invoice_number}', total={self.total_amount})>"

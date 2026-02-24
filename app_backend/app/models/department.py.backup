@@ -1,0 +1,32 @@
+"""
+Department model
+"""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, List
+
+from sqlalchemy import ForeignKey, Integer, Unicode
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.user import User
+
+
+class Department(BaseModel):
+    """Department model"""
+    __tablename__ = "departments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    code: Mapped[Optional[str]] = mapped_column(Unicode(50), nullable=True, unique=True, index=True)
+    name: Mapped[str] = mapped_column(Unicode(200), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
+    manager_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    parent_department_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('departments.id'), nullable=True)
+
+    parent: Mapped[Optional["Department"]] = relationship("Department", remote_side=[id], foreign_keys=[parent_department_id], lazy="select")
+    users: Mapped[List["User"]] = relationship("User", foreign_keys="User.department_id", lazy="select")
+
+    def __repr__(self):
+        return f"<Department(id={self.id}, name='{self.name}')>"

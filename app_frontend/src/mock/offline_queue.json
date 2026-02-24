@@ -1,0 +1,25 @@
+{
+  "queue": [
+    {
+      "op": "CREATE_REPORT",
+      "payload": {
+        "project_id": "201661",
+        "date": "2024-09-18",
+        "standard": true,
+        "hours": 10.5
+      },
+      "temp_id": "tmp-1",
+      "ts": 1695026400000
+    },
+    {
+      "op": "SCAN_EQUIPMENT",
+      "payload": {
+        "plate": "123-45-678",
+        "project_id": "201661"
+      },
+      "temp_id": "tmp-2",
+      "ts": 1695028200000
+    }
+  ]
+}
+

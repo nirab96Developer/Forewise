@@ -1,0 +1,155 @@
+# /root/app_backend/app/schemas/invoice_payment.py - חדש
+"""Invoice payment schemas - Aligned with database model."""
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class PaymentMethod(str, Enum):
+    """Payment method enum - matches model."""
+
+    BANK_TRANSFER = "bank_transfer"
+    CHECK = "check"
+    CASH = "cash"
+    CREDIT_CARD = "credit_card"
+    OTHER = "other"
+
+
+class PaymentStatus(str, Enum):
+    """Payment status enum - matches model."""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class InvoicePaymentBase(BaseModel):
+    """Base invoice payment schema."""
+
+    invoice_id: int = Field(..., gt=0, description="Invoice ID")
+
+    # Payment details
+    payment_date: date = Field(..., description="Payment date")
+    amount: Decimal = Field(..., gt=0, description="Payment amount")
+
+    # Method
+    method: PaymentMethod = Field(..., description="Payment method")
+
+    # Reference and notes
+    reference_number: Optional[str] = Field(
+        None, max_length=100, description="Payment reference"
+    )
+    notes: Optional[str] = Field(None, description="Payment notes")
+
+    @field_validator("amount")
+    @classmethod
+    def validate_amount(cls, v):
+        """Ensure amount is positive."""
+        if v <= 0:
+            raise ValueError("Payment amount must be positive")
+        return v
+
+
+class InvoicePaymentCreate(InvoicePaymentBase):
+    """Create invoice payment schema."""
+
+    status: PaymentStatus = PaymentStatus.PENDING
+
+
+class InvoicePaymentUpdate(BaseModel):
+    """Update invoice payment schema."""
+
+    payment_date: Optional[date] = None
+    amount: Optional[Decimal] = Field(None, gt=0)
+    method: Optional[PaymentMethod] = None
+    status: Optional[PaymentStatus] = None
+    reference_number: Optional[str] = Field(None, max_length=100)
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class InvoicePaymentProcess(BaseModel):
+    """Process payment schema."""
+
+    action: str = Field(..., pattern="^(complete|fail|cancel)$")
+    notes: Optional[str] = None
+
+
+class InvoicePaymentResponse(InvoicePaymentBase):
+    """Invoice payment response schema."""
+
+    id: int
+    status: PaymentStatus
+
+    # Processing info
+    processed_at: Optional[datetime] = None
+    processed_by_id: Optional[int] = None
+
+    # Timestamps
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    is_active: bool = True
+
+    # Computed properties
+    is_completed: bool = False
+    is_pending: bool = True
+
+    # From relationships
+    invoice_number: Optional[str] = None
+    invoice_total: Optional[Decimal] = None
+    processed_by_name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    def model_post_init(self, __context):
+        """Calculate computed fields."""
+        self.is_completed = self.status == PaymentStatus.COMPLETED
+        self.is_pending = self.status == PaymentStatus.PENDING
+
+
+class InvoicePaymentFilter(BaseModel):
+    """Filter for invoice payments."""
+
+    invoice_id: Optional[int] = None
+    invoice_ids: Optional[list[int]] = None
+    method: Optional[PaymentMethod] = None
+    methods: Optional[list[PaymentMethod]] = None
+    status: Optional[PaymentStatus] = None
+    statuses: Optional[list[PaymentStatus]] = None
+    payment_date_from: Optional[date] = None
+    payment_date_to: Optional[date] = None
+    min_amount: Optional[Decimal] = None
+    max_amount: Optional[Decimal] = None
+    processed_by_id: Optional[int] = None
+    reference_number: Optional[str] = None
+
+
+class InvoicePaymentSummary(BaseModel):
+    """Invoice payment summary statistics."""
+
+    total_payments: int = 0
+    total_amount: Decimal = Decimal("0")
+
+    # By status
+    pending_count: int = 0
+    pending_amount: Decimal = Decimal("0")
+    completed_count: int = 0
+    completed_amount: Decimal = Decimal("0")
+    failed_count: int = 0
+    cancelled_count: int = 0
+
+    # By method
+    by_method: dict = Field(default_factory=dict)
+
+    # Period
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None
+
+    # Averages
+    average_payment: Decimal = Decimal("0")
+    average_processing_time_hours: float = 0.0

@@ -1,0 +1,133 @@
+"""
+Budget schemas - SYNCED WITH DB MODEL - 17.11.2025
+budget_type and status are String, not Enum
+"""
+from datetime import datetime, date
+from typing import Optional
+from decimal import Decimal
+
+from pydantic import BaseModel, Field, ConfigDict
+
+
+class BudgetBase(BaseModel):
+    """Base budget schema - SYNCED WITH DB"""
+    
+    # Basic fields
+    code: Optional[str] = Field(None, max_length=50, description="Budget code")
+    name: str = Field(..., min_length=1, max_length=100, description="Budget name")
+    description: Optional[str] = Field(None, description="Budget description")
+    
+    # Type and status - String, not Enum!
+    budget_type: str = Field(..., max_length=255, description="Budget type")
+    status: str = Field(..., max_length=255, description="Budget status")
+    
+    # Hierarchy
+    parent_budget_id: Optional[int] = Field(None, description="Parent budget ID")
+    
+    # Target entities
+    region_id: Optional[int] = Field(None, description="Region ID")
+    area_id: Optional[int] = Field(None, description="Area ID")
+    project_id: Optional[int] = Field(None, description="Project ID")
+    
+    # Amounts
+    total_amount: Decimal = Field(..., description="Total amount")
+    allocated_amount: Optional[Decimal] = Field(None, description="Allocated amount")
+    spent_amount: Optional[Decimal] = Field(None, description="Spent amount")
+    committed_amount: Optional[Decimal] = Field(None, description="Committed amount")
+    
+    # Fiscal info
+    fiscal_year: Optional[int] = Field(None, description="Fiscal year")
+    start_date: Optional[date] = Field(None, description="Start date")
+    end_date: Optional[date] = Field(None, description="End date")
+    
+    # Notes
+    notes: Optional[str] = Field(None, description="Notes")
+
+
+class BudgetCreate(BudgetBase):
+    """Create budget schema."""
+    pass
+
+
+class BudgetUpdate(BaseModel):
+    """Update budget schema - all fields optional."""
+    
+    code: Optional[str] = Field(None, max_length=50)
+    name: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = None
+    budget_type: Optional[str] = Field(None, max_length=255)
+    status: Optional[str] = Field(None, max_length=255)
+    parent_budget_id: Optional[int] = None
+    region_id: Optional[int] = None
+    area_id: Optional[int] = None
+    project_id: Optional[int] = None
+    total_amount: Optional[Decimal] = None
+    allocated_amount: Optional[Decimal] = None
+    spent_amount: Optional[Decimal] = None
+    committed_amount: Optional[Decimal] = None
+    fiscal_year: Optional[int] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class BudgetResponse(BudgetBase):
+    """Budget response schema."""
+    
+    id: int
+    created_by: Optional[int] = None
+    is_active: bool
+    
+    # Timestamps
+    created_at: datetime
+    updated_at: datetime
+    version: int
+    
+    # Computed
+    available_amount: Optional[float] = None
+    utilization_percentage: Optional[float] = None
+    
+    # From relationships
+    region_name: Optional[str] = None
+    area_name: Optional[str] = None
+    project_name: Optional[str] = None
+    parent_budget_name: Optional[str] = None
+    creator_name: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BudgetFilter(BaseModel):
+    """Filter for budgets - types are String!"""
+    
+    search: Optional[str] = Field(None, description="Search in code, name")
+    budget_type: Optional[str] = Field(None, max_length=255)
+    status: Optional[str] = Field(None, max_length=255)
+    region_id: Optional[int] = None
+    area_id: Optional[int] = None
+    project_id: Optional[int] = None
+    fiscal_year: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class BudgetAllocationRequest(BaseModel):
+    """Schema for budget allocation request"""
+    
+    from_budget_id: int
+    to_budget_id: int
+    amount: Decimal
+    reason: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BudgetSpendRequest(BaseModel):
+    """Schema for budget spend request"""
+    
+    budget_id: int
+    amount: Decimal
+    project_id: Optional[int] = None
+    description: Optional[str] = None
+    
+    model_config = ConfigDict(from_attributes=True)

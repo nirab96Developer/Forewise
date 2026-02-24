@@ -1,0 +1,51 @@
+"""
+Supplier Service
+"""
+from typing import Optional, List, Tuple
+from sqlalchemy.orm import Session
+
+from app.models.supplier import Supplier
+from app.schemas.supplier import SupplierCreate, SupplierUpdate, SupplierSearch
+from app.services.base_service import BaseService
+from app.core.exceptions import DuplicateException
+
+
+class SupplierService(BaseService[Supplier]):
+    
+    def __init__(self):
+        super().__init__(Supplier)
+    
+    def get_by_code(self, db: Session, code: str) -> Optional[Supplier]:
+        query = self._base_query(db).where(Supplier.code == code.upper())
+        return db.execute(query).scalar_one_or_none()
+    
+    def list_with_filters(self, db: Session, filters: SupplierSearch) -> Tuple[List[Supplier], int]:
+        query = self._base_query(db)
+        
+        if filters.code:
+            query = query.where(Supplier.code.ilike(f"%{filters.code}%"))
+        if filters.name:
+            query = query.where(Supplier.name.ilike(f"%{filters.name}%"))
+        if filters.status:
+            query = query.where(Supplier.status == filters.status)
+        if filters.is_active is not None:
+            query = query.where(Supplier.is_active == filters.is_active)
+        
+        total = self.count(db, is_active=filters.is_active)
+        
+        offset = (filters.page - 1) * filters.page_size
+        suppliers = db.execute(query.offset(offset).limit(filters.page_size)).scalars().all()
+        
+        return suppliers, total
+    
+    def create_supplier(self, db: Session, supplier_data: SupplierCreate) -> Supplier:
+        if self.get_by_code(db, supplier_data.code):
+            raise DuplicateException(f"Supplier with code {supplier_data.code} already exists")
+        
+        return self.create(db, supplier_data.model_dump())
+    
+    def update_supplier(self, db: Session, supplier_id: int, supplier_data: SupplierUpdate) -> Supplier:
+        return self.update(db, supplier_id, supplier_data.model_dump(exclude_unset=True, exclude_none=True))
+
+
+supplier_service = SupplierService()

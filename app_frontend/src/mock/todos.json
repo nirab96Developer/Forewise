@@ -1,0 +1,51 @@
+[
+  {
+    "id": "todo-1",
+    "title": "לחדש רישיון כלי #202133 (שופל 950)",
+    "due_at": "2024-09-29T09:00:00Z",
+    "priority": "high",
+    "target_url": "/equipment/202133"
+  },
+  {
+    "id": "todo-2",
+    "title": "להאריך מכרז #16073 - 31.03.2025",
+    "due_at": "2025-03-25T12:00:00Z",
+    "priority": "high",
+    "target_url": "/tenders/16073"
+  },
+  {
+    "id": "todo-3",
+    "title": "לתקן נתוני כלי #180677 (תאריך לא תקין)",
+    "due_at": "2024-09-20T18:00:00Z",
+    "priority": "medium",
+    "target_url": "/equipment/180677"
+  },
+  {
+    "id": "todo-4",
+    "title": "לבדוק מחירים שונים לספק 514980051",
+    "due_at": "2024-09-25T14:00:00Z",
+    "priority": "low",
+    "target_url": "/suppliers/514980051"
+  },
+  {
+    "id": "todo-5",
+    "title": "לאשר דיווח שעות לפרויקט גילת",
+    "due_at": "2024-09-20T10:00:00Z",
+    "priority": "medium",
+    "target_url": "/projects/19094/reports"
+  },
+  {
+    "id": "todo-6",
+    "title": "לבדוק תוקף רישיון #205571 (יעה אופני)",
+    "due_at": "2025-03-15T09:00:00Z",
+    "priority": "medium",
+    "target_url": "/equipment/205571"
+  },
+  {
+    "id": "todo-7",
+    "title": "לעדכן פרטי ספק א.ג. הובלות יתיר",
+    "due_at": "2024-09-22T16:00:00Z",
+    "priority": "low",
+    "target_url": "/suppliers/514809805"
+  }
+]

@@ -1,0 +1,47 @@
+{
+  "today_scans": [
+    {
+      "at": "2024-09-18T06:45:00Z",
+      "project_id": "201661",
+      "plate": "123-45-678",
+      "lat": 31.41,
+      "lng": 34.71
+    },
+    {
+      "at": "2024-09-18T08:10:00Z",
+      "project_id": "201662",
+      "plate": "98-765-432",
+      "lat": 31.35,
+      "lng": 34.59
+    }
+  ],
+  "today_reports": [
+    {
+      "at": "2024-09-18T16:59:00Z",
+      "project_id": "201661",
+      "hours": 10.5,
+      "standard": true
+    },
+    {
+      "at": "2024-09-18T17:15:00Z",
+      "project_id": "201662",
+      "hours": 8.0,
+      "standard": false
+    }
+  ],
+  "pending_orders": [
+    {
+      "order_id": "9001",
+      "project_id": "201661",
+      "supplier": "אלון ציוד",
+      "expires_at": "2024-09-18T12:00:00Z"
+    },
+    {
+      "order_id": "9002",
+      "project_id": "201664",
+      "supplier": "גולן מכשור",
+      "expires_at": "2024-09-18T14:30:00Z"
+    }
+  ]
+}
+

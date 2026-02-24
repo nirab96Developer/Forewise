@@ -1,0 +1,54 @@
+{
+  "missing_uniques": [
+    [
+      "roles",
+      "code"
+    ],
+    [
+      "permissions",
+      "code"
+    ],
+    [
+      "users",
+      "email"
+    ],
+    [
+      "users",
+      "username"
+    ],
+    [
+      "regions",
+      "code"
+    ],
+    [
+      "areas",
+      "code"
+    ],
+    [
+      "projects",
+      "code"
+    ],
+    [
+      "suppliers",
+      "code"
+    ],
+    [
+      "equipment_categories",
+      "code"
+    ]
+  ],
+  "fk_actions": {
+    "cascade": [],
+    "no_action_count": 110
+  },
+  "lookup_tables": [
+    "roles",
+    "work_order_statuses",
+    "worklog_statuses",
+    "activity_types",
+    "equipment_types",
+    "equipment_categories",
+    "supplier_constraint_reasons",
+    "supplier_rejection_reasons"
+  ]
+}

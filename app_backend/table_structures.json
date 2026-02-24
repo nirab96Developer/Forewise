@@ -1,0 +1,6268 @@
+{
+  "users": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "username",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "email",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "full_name",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "password_hash",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "phone",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "role_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "department_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "region_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "area_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "is_locked",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "locked_until",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "two_factor_enabled",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "must_change_password",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "last_login",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "manager_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scope_level",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": false,
+        "default": "('ACTIVE')",
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_users_manager",
+        "column": "manager_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_users_role_id",
+        "column": "role_id",
+        "ref_table": "roles",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_users_idx_users_area",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "area_id"
+      },
+      {
+        "name": "IX_users_idx_users_department",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "department_id"
+      },
+      {
+        "name": "IX_users_idx_users_last_login",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "last_login"
+      },
+      {
+        "name": "IX_users_idx_users_role",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "role_id"
+      },
+      {
+        "name": "IX_users_manager_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "manager_id"
+      },
+      {
+        "name": "IX_users_users_username_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "username"
+      },
+      {
+        "name": "PK_users",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UX_users_email_norm",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "email"
+      },
+      {
+        "name": "UX_users_username",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "username"
+      }
+    ]
+  },
+  "roles": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "display_order",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": "((99))",
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [],
+    "indexes": [
+      {
+        "name": "IX_roles_roles_code_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "PK_roles",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "permissions": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "resource",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "action",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [],
+    "indexes": [
+      {
+        "name": "IX_permissions_permissions_code_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "PK_permissions",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "role_permissions": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "role_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "permission_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_role_permissions_permission_id",
+        "column": "permission_id",
+        "ref_table": "permissions",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_role_permissions_role_id",
+        "column": "role_id",
+        "ref_table": "roles",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_role_permissions_role_permissions_role_id_permission_id_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "role_id, permission_id"
+      },
+      {
+        "name": "PK_role_permissions",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UX_role_permissions_role_permission",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "role_id, permission_id"
+      }
+    ]
+  },
+  "role_assignments": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "user_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "role_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scope_type",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scope_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "assigned_by",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "assigned_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "valid_from",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "valid_until",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_ra_assigned_by",
+        "column": "assigned_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_ra_role",
+        "column": "role_id",
+        "ref_table": "roles",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_ra_user",
+        "column": "user_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_ra_user",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "user_id, is_active"
+      },
+      {
+        "name": "IX_role_assignments_assigned_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "assigned_by"
+      },
+      {
+        "name": "PK__role_ass__3213E83F895DFA37",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UX_ra_user_role_scope",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "user_id, role_id, scope_type, scope_id"
+      }
+    ]
+  },
+  "regions": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "manager_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_regions_manager",
+        "column": "manager_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_regions_manager_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "manager_id"
+      },
+      {
+        "name": "PK__regions__3213E83FF72E8870",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "areas": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "region_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "manager_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "total_area_hectares",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": "((1))",
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_areas_manager_user",
+        "column": "manager_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_areas_manager_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "manager_id"
+      },
+      {
+        "name": "PK__areas__3213E83F6E571822",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "projects": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 400,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "manager_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "region_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "area_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "location_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "budget_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": "(sysdatetime())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_projects_area",
+        "column": "area_id",
+        "ref_table": "areas",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_projects_budget",
+        "column": "budget_id",
+        "ref_table": "budgets",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_projects_location",
+        "column": "location_id",
+        "ref_table": "locations",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_projects_manager",
+        "column": "manager_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_projects_region",
+        "column": "region_id",
+        "ref_table": "regions",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_projects_manager_active",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "name, code, region_id, area_id, location_id, budget_id, manager_id, is_active"
+      },
+      {
+        "name": "IX_projects_region_area_active",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "name, code, manager_id, location_id, budget_id, region_id, area_id, is_active"
+      },
+      {
+        "name": "PK__projects__3213E83F61B2B814",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UQ_projects_code",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "code"
+      }
+    ]
+  },
+  "departments": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "manager_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "parent_department_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_departments_manager",
+        "column": "manager_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_departments_parent",
+        "column": "parent_department_id",
+        "ref_table": "departments",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_departments_code",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "name, is_active, code"
+      },
+      {
+        "name": "IX_departments_departments_code_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "IX_departments_manager_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "manager_id"
+      },
+      {
+        "name": "IX_departments_parent_department_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "parent_department_id"
+      },
+      {
+        "name": "PK_departments",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UQ_departments_code",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "code"
+      }
+    ]
+  },
+  "suppliers": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "tax_id",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "contact_name",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "phone",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "email",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "address",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "supplier_type",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "rating",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "priority_score",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "last_selected",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "average_response_time",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": "((1))",
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [],
+    "indexes": [
+      {
+        "name": "IX_suppliers_status_rating",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "id, name, email, is_active, rating"
+      },
+      {
+        "name": "PK__supplier__3213E83F3EA5E107",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UX_suppliers_name",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "name"
+      }
+    ]
+  },
+  "supplier_rotations": {
+    "columns": [
+      {
+        "name": "supplier_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "rotation_date",
+        "type": "date",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "priority",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "sequence_number",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "last_used_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "usage_count",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "skip_count",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "equipment_type",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [],
+    "indexes": [
+      {
+        "name": "IX_supplier_rotations_ix_supplier_rotations_priority",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "priority"
+      },
+      {
+        "name": "IX_supplier_rotations_ix_supplier_rotations_queue",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status, priority, sequence_number"
+      },
+      {
+        "name": "IX_supplier_rotations_ix_supplier_rotations_rotation_date",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "rotation_date"
+      },
+      {
+        "name": "IX_supplier_rotations_ix_supplier_rotations_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "IX_supplier_rotations_ix_supplier_rotations_supplier_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "supplier_id"
+      },
+      {
+        "name": "IX_supplier_rotations_ix_supplier_rotations_supplier_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "supplier_id, status"
+      },
+      {
+        "name": "PK_supplier_rotations",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "supplier_constraints": {
+    "columns": [],
+    "foreign_keys": [],
+    "indexes": []
+  },
+  "supplier_constraint_reasons": {
+    "columns": [
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "name_he",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "name_en",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "category",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "requires_additional_text",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "requires_approval",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "display_order",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "usage_count",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [],
+    "indexes": [
+      {
+        "name": "IX_supplier_constraint_reasons_idx_constraint_reason_active",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "is_active, category"
+      },
+      {
+        "name": "IX_supplier_constraint_reasons_idx_constraint_reason_order",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "display_order, is_active"
+      },
+      {
+        "name": "IX_supplier_constraint_reasons_ix_supplier_constraint_reasons_category",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "category"
+      },
+      {
+        "name": "IX_supplier_constraint_reasons_ix_supplier_constraint_reasons_code",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "IX_supplier_constraint_reasons_ix_supplier_constraint_reasons_is_active",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "is_active"
+      },
+      {
+        "name": "IX_supplier_constraint_reasons_uix_constraint_reason_code",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "PK_supplier_constraint_reasons",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "supplier_constraint_logs": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "work_order_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "supplier_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "constraint_reason_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "constraint_reason_text",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_by",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "justification",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "approved_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "approved_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_scl_approved_by",
+        "column": "approved_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_scl_created_by",
+        "column": "created_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_scl_reason",
+        "column": "constraint_reason_id",
+        "ref_table": "supplier_constraint_reasons",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_scl_supplier",
+        "column": "supplier_id",
+        "ref_table": "suppliers",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_scl_work_order",
+        "column": "work_order_id",
+        "ref_table": "work_orders",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_scl_supplier",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "supplier_id"
+      },
+      {
+        "name": "IX_scl_work_order",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "work_order_id"
+      },
+      {
+        "name": "IX_supplier_constraint_logs_approved_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "approved_by"
+      },
+      {
+        "name": "IX_supplier_constraint_logs_constraint_reason_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "constraint_reason_id"
+      },
+      {
+        "name": "IX_supplier_constraint_logs_created_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "created_by"
+      },
+      {
+        "name": "PK__supplier__3213E83F87E6DB0A",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "equipment": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "equipment_type",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "category_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "manufacturer",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "model",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "license_plate",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "qr_code",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": true,
+        "default": "('available')",
+        "is_identity": false
+      },
+      {
+        "name": "location_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "assigned_to_user_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "assigned_project_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "purchase_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "purchase_price",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "last_maintenance",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "next_maintenance",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "length": 2147483647,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "fuel_type",
+        "type": "varchar",
+        "length": 20,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "supplier_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "hourly_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "daily_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "type_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "storage_hourly_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_equipment_type",
+        "column": "type_id",
+        "ref_table": "equipment_types",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_equipment_type_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "type_id"
+      },
+      {
+        "name": "IX_equipment_type_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "id, name, code, location_id, equipment_type, status"
+      },
+      {
+        "name": "PK__equipmen__3213E83F950DAEE5",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "equipment_types": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "default_hourly_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "default_daily_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "default_storage_hourly_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": "(sysdatetime())",
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "category",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "sort_order",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [],
+    "indexes": [
+      {
+        "name": "PK__equipmen__3213E83FEF306A86",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UQ__equipmen__357D4CF9416D7A1C",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "code"
+      }
+    ]
+  },
+  "equipment_categories": {
+    "columns": [
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "parent_category_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "requires_license",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "license_type",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "requires_certification",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "default_hourly_rate",
+        "type": "float",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "default_daily_rate",
+        "type": "float",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "maintenance_interval_hours",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "maintenance_interval_days",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [],
+    "indexes": [
+      {
+        "name": "IX_equipment_categories_equipment_categories_code_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "IX_equipment_categories_equipment_categories_name_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "name"
+      },
+      {
+        "name": "PK_equipment_categories",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UX_eqcat_name",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "name"
+      }
+    ]
+  },
+  "equipment_assignments": {
+    "columns": [
+      {
+        "name": "equipment_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "project_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "assigned_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "start_date",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "end_date",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "planned_hours",
+        "type": "float",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "actual_hours",
+        "type": "float",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "hourly_rate",
+        "type": "float",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "daily_rate",
+        "type": "float",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_equipment_assignments_assigned_by",
+        "column": "assigned_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_equipment_assignments_assigned_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "assigned_by"
+      },
+      {
+        "name": "IX_equipment_assignments_equipment_id_from_to",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "id, project_id, status, equipment_id, start_date, end_date"
+      },
+      {
+        "name": "IX_equipment_assignments_ix_equipment_assignments_equipment_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "equipment_id"
+      },
+      {
+        "name": "IX_equipment_assignments_ix_equipment_assignments_project_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "project_id"
+      },
+      {
+        "name": "IX_equipment_assignments_ix_equipment_assignments_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "PK_equipment_assignments",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UX_ea_one_active_assignment_per_equipment",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "equipment_id"
+      }
+    ]
+  },
+  "equipment_maintenance": {
+    "columns": [
+      {
+        "name": "equipment_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "performed_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scheduled_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "maintenance_type",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scheduled_date",
+        "type": "date",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "performed_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "next_maintenance_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "findings",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "actions_taken",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "parts_replaced",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "hours_spent",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "labor_cost",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "parts_cost",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "total_cost",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "completed_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_equipment_maintenance_performed_by",
+        "column": "performed_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_equipment_maintenance_scheduled_by",
+        "column": "scheduled_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_equipment_maintenance_ix_equipment_maintenance_equipment_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "equipment_id"
+      },
+      {
+        "name": "IX_equipment_maintenance_ix_equipment_maintenance_maintenance_type",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "maintenance_type"
+      },
+      {
+        "name": "IX_equipment_maintenance_performed_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "performed_by"
+      },
+      {
+        "name": "IX_equipment_maintenance_scheduled_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "scheduled_by"
+      },
+      {
+        "name": "PK_equipment_maintenance",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "equipment_scans": {
+    "columns": [
+      {
+        "name": "equipment_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scanned_by",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "location_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scan_type",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scan_value",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "scan_timestamp",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "latitude",
+        "type": "float",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "longitude",
+        "type": "float",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "device_info",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "purpose",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "work_order_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_equipment_scans_location_id",
+        "column": "location_id",
+        "ref_table": "locations",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_equipment_scans_scanned_by",
+        "column": "scanned_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_equipment_scans_work_order",
+        "column": "work_order_id",
+        "ref_table": "work_orders",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_equipment_scans_ix_equipment_scans_equipment_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "equipment_id"
+      },
+      {
+        "name": "IX_equipment_scans_ix_equipment_scans_scanned_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "scanned_by"
+      },
+      {
+        "name": "IX_equipment_scans_location_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "location_id"
+      },
+      {
+        "name": "IX_equipment_scans_work_order_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "work_order_id"
+      },
+      {
+        "name": "PK_equipment_scans",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "work_orders": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "order_number",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "title",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "project_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "supplier_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "equipment_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "equipment_type",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "work_start_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "work_end_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": "('pending')",
+        "is_identity": false
+      },
+      {
+        "name": "priority",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": true,
+        "default": "('medium')",
+        "is_identity": false
+      },
+      {
+        "name": "portal_token",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "portal_token_expires",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "estimated_hours",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "actual_hours",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "hourly_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "total_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_by_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "location_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "portal_expiry",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "response_received_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "token_expires_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "supplier_response_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "constraint_reason_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "constraint_notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "rejection_reason_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "rejection_notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_forced_selection",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "frozen_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "charged_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "remaining_frozen_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_wo_suppliers",
+        "column": "supplier_id",
+        "ref_table": "suppliers",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_work_orders_constraint_reason",
+        "column": "constraint_reason_id",
+        "ref_table": "supplier_constraint_reasons",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_work_orders_created_by",
+        "column": "created_by_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_work_orders_equipment",
+        "column": "equipment_id",
+        "ref_table": "equipment",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_work_orders_location",
+        "column": "location_id",
+        "ref_table": "locations",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_work_orders_project",
+        "column": "project_id",
+        "ref_table": "projects",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_work_orders_rejection_reason",
+        "column": "rejection_reason_id",
+        "ref_table": "supplier_rejection_reasons",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_work_orders_status_code",
+        "column": "status",
+        "ref_table": "work_order_statuses",
+        "ref_column": "code"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_work_orders_constraint_reason_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "constraint_reason_id"
+      },
+      {
+        "name": "IX_work_orders_created_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "created_by_id"
+      },
+      {
+        "name": "IX_work_orders_equipment",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "equipment_id"
+      },
+      {
+        "name": "IX_work_orders_equipment_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "equipment_id"
+      },
+      {
+        "name": "IX_work_orders_location",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "location_id"
+      },
+      {
+        "name": "IX_work_orders_order_number",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "order_number"
+      },
+      {
+        "name": "IX_work_orders_project",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "project_id"
+      },
+      {
+        "name": "IX_work_orders_project_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "project_id"
+      },
+      {
+        "name": "IX_work_orders_project_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "project_id, status"
+      },
+      {
+        "name": "IX_work_orders_project_status_dates",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "project_id, status, work_start_date, work_end_date"
+      },
+      {
+        "name": "IX_work_orders_rejection_reason_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "rejection_reason_id"
+      },
+      {
+        "name": "IX_work_orders_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "IX_work_orders_status_created_at",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "id, project_id, supplier_id, priority, status, created_at"
+      },
+      {
+        "name": "IX_work_orders_supplier",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "supplier_id"
+      },
+      {
+        "name": "IX_work_orders_supplier_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "supplier_id"
+      },
+      {
+        "name": "PK__work_ord__3213E83FBE1A52C5",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UQ_work_orders_order_number",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "order_number"
+      }
+    ]
+  },
+  "worklogs": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "work_order_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "user_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "project_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "report_date",
+        "type": "date",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "start_time",
+        "type": "time",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "end_time",
+        "type": "time",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "work_hours",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "break_hours",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "total_hours",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "work_type",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "activity_description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_standard",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "non_standard_reason",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": "('pending')",
+        "is_identity": false
+      },
+      {
+        "name": "approved_by_user_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "approved_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "report_number",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": "((1))",
+        "is_identity": false
+      },
+      {
+        "name": "equipment_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "supplier_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "area_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "equipment_type",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "submitted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "submitted_by_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "rejection_reason",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "sent_to_supplier",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "sent_to_supplier_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "sent_to_accountant",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "sent_to_accountant_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "sent_to_area_manager",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "sent_to_area_manager_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "equipment_scanned",
+        "type": "bit",
+        "length": null,
+        "nullable": true,
+        "default": "((0))",
+        "is_identity": false
+      },
+      {
+        "name": "scan_time",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "activity_type_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "equipment_type_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "hourly_rate_snapshot",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "rate_source",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "rate_source_name",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "cost_before_vat",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "vat_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": "((0.17))",
+        "is_identity": false
+      },
+      {
+        "name": "cost_with_vat",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "report_type",
+        "type": "varchar",
+        "length": 20,
+        "nullable": false,
+        "default": "('STANDARD')",
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK__worklogs__activi__4AD81681",
+        "column": "activity_type_id",
+        "ref_table": "activity_types",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_wl_users",
+        "column": "user_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_worklogs_equipment",
+        "column": "equipment_id",
+        "ref_table": "equipment",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_worklogs_project",
+        "column": "project_id",
+        "ref_table": "projects",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_worklogs_status_code",
+        "column": "status",
+        "ref_table": "worklog_statuses",
+        "ref_column": "code"
+      },
+      {
+        "name": "FK_worklogs_work_order",
+        "column": "work_order_id",
+        "ref_table": "work_orders",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_worklogs_activity_type_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "activity_type_id"
+      },
+      {
+        "name": "IX_worklogs_equipment_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "equipment_id"
+      },
+      {
+        "name": "IX_worklogs_project_date_user",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "project_id, report_date, user_id"
+      },
+      {
+        "name": "IX_worklogs_project_id_report_date",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "id, user_id, total_hours, status, project_id, report_date"
+      },
+      {
+        "name": "IX_worklogs_report_date",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "report_date"
+      },
+      {
+        "name": "IX_worklogs_report_number",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "report_number"
+      },
+      {
+        "name": "IX_worklogs_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "IX_worklogs_workorder_user_date",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "work_order_id, user_id, report_date"
+      },
+      {
+        "name": "PK__worklogs__3213E83F5A38304F",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      },
+      {
+        "name": "UQ_worklogs_report_number",
+        "is_unique": true,
+        "is_primary_key": false,
+        "columns": "report_number"
+      }
+    ]
+  },
+  "budgets": {
+    "columns": [
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "budget_type",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "parent_budget_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "region_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "area_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "project_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "total_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "allocated_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "spent_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "committed_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "fiscal_year",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "start_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "end_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_budgets_created_by",
+        "column": "created_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_budgets_parent_budget_id",
+        "column": "parent_budget_id",
+        "ref_table": "budgets",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_budgets_budgets_code_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "IX_budgets_created_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "created_by"
+      },
+      {
+        "name": "IX_budgets_ix_budgets_area_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "area_id"
+      },
+      {
+        "name": "IX_budgets_ix_budgets_budget_type",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "budget_type"
+      },
+      {
+        "name": "IX_budgets_ix_budgets_project_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "project_id"
+      },
+      {
+        "name": "IX_budgets_ix_budgets_region_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "region_id"
+      },
+      {
+        "name": "IX_budgets_ix_budgets_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "IX_budgets_parent_budget_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "parent_budget_id"
+      },
+      {
+        "name": "PK_budgets",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "budget_allocations": {
+    "columns": [
+      {
+        "name": "budget_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "allocated_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "approved_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "recipient_type",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "region_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "area_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "project_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "purpose",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 20,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "allocation_date",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "approved_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "rejection_reason",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_budget_allocations_allocated_by",
+        "column": "allocated_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_budget_allocations_approved_by",
+        "column": "approved_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_budget_allocations_area",
+        "column": "area_id",
+        "ref_table": "areas",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_budget_allocations_budget",
+        "column": "budget_id",
+        "ref_table": "budgets",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_budget_allocations_project",
+        "column": "project_id",
+        "ref_table": "projects",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_budget_allocations_region",
+        "column": "region_id",
+        "ref_table": "regions",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_budget_allocations_approved_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "approved_by"
+      },
+      {
+        "name": "IX_budget_allocations_budget_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "id, amount, allocation_date, approved_at, budget_id, status"
+      },
+      {
+        "name": "IX_budget_allocations_ix_budget_allocations_allocated_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "allocated_by"
+      },
+      {
+        "name": "IX_budget_allocations_ix_budget_allocations_budget_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "budget_id"
+      },
+      {
+        "name": "IX_budget_allocations_ix_budget_allocations_recipient_type",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "recipient_type"
+      },
+      {
+        "name": "IX_budget_allocations_ix_budget_allocations_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "IX_budget_allocations_status_date",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "budget_id, amount, region_id, area_id, project_id, approved_at, status, allocation_date"
+      },
+      {
+        "name": "PK_budget_allocations",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "budget_items": {
+    "columns": [
+      {
+        "name": "budget_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "item_name",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "item_code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "item_type",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "category",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "planned_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "approved_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "committed_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "actual_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "priority",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_budget_items_budget_id",
+        "column": "budget_id",
+        "ref_table": "budgets",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_budget_items_ix_budget_items_budget_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "budget_id"
+      },
+      {
+        "name": "IX_budget_items_ix_budget_items_category",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "category"
+      },
+      {
+        "name": "IX_budget_items_ix_budget_items_item_code",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "item_code"
+      },
+      {
+        "name": "IX_budget_items_ix_budget_items_item_type",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "item_type"
+      },
+      {
+        "name": "IX_budget_items_ix_budget_items_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "PK_budget_items",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "budget_transfers": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "from_budget_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "to_budget_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "transfer_type",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "reason",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": "('PENDING')",
+        "is_identity": false
+      },
+      {
+        "name": "requested_by",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "approved_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "requested_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "approved_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "executed_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_bt_approved_by",
+        "column": "approved_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_bt_from_budget",
+        "column": "from_budget_id",
+        "ref_table": "budgets",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_bt_requested_by",
+        "column": "requested_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_bt_to_budget",
+        "column": "to_budget_id",
+        "ref_table": "budgets",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_bt_budgets",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "from_budget_id, to_budget_id"
+      },
+      {
+        "name": "IX_bt_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "IX_budget_transfers_approved_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "approved_by"
+      },
+      {
+        "name": "IX_budget_transfers_requested_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "requested_by"
+      },
+      {
+        "name": "PK__budget_t__3213E83F05AD3E6F",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "balance_releases": {
+    "columns": [
+      {
+        "name": "budget_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "approved_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "release_type",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "release_date",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "condition_description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "rejection_reason",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "executed_at",
+        "type": "date",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "actual_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_balance_releases_approved_by",
+        "column": "approved_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_balance_releases_budget_id",
+        "column": "budget_id",
+        "ref_table": "budgets",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_balance_releases_created_by",
+        "column": "created_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_balance_releases_approved_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "approved_by"
+      },
+      {
+        "name": "IX_balance_releases_ix_balance_releases_budget_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "budget_id"
+      },
+      {
+        "name": "IX_balance_releases_ix_balance_releases_created_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "created_by"
+      },
+      {
+        "name": "IX_balance_releases_ix_balance_releases_release_date",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "release_date"
+      },
+      {
+        "name": "IX_balance_releases_ix_balance_releases_release_type",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "release_type"
+      },
+      {
+        "name": "IX_balance_releases_ix_balance_releases_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "PK_balance_releases",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "invoices": {
+    "columns": [
+      {
+        "name": "invoice_number",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "supplier_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "project_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "issue_date",
+        "type": "date",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "due_date",
+        "type": "date",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "subtotal",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "tax_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "total_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "paid_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "payment_method",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "pdf_path",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_invoices_created_by",
+        "column": "created_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_invoices_project",
+        "column": "project_id",
+        "ref_table": "projects",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_invoices_created_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "created_by"
+      },
+      {
+        "name": "IX_invoices_invoices_invoice_number_key",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "invoice_number"
+      },
+      {
+        "name": "IX_invoices_ix_invoices_project_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "project_id"
+      },
+      {
+        "name": "IX_invoices_ix_invoices_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "IX_invoices_ix_invoices_supplier_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "supplier_id"
+      },
+      {
+        "name": "PK_invoices",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "invoice_items": {
+    "columns": [
+      {
+        "name": "invoice_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "worklog_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "line_number",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "item_code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "quantity",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "unit_price",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "discount_percent",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "discount_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "subtotal",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "tax_rate",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "tax_amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "total",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_invoice_items_invoice_id",
+        "column": "invoice_id",
+        "ref_table": "invoices",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_invoice_items_ix_invoice_items_invoice_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "invoice_id"
+      },
+      {
+        "name": "PK_invoice_items",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "invoice_payments": {
+    "columns": [
+      {
+        "name": "invoice_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "processed_by",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "payment_date",
+        "type": "date",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "amount",
+        "type": "decimal",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "payment_method",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "reference_number",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "transaction_id",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "bank_name",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "account_number",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "notes",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_invoice_payments_invoice_id",
+        "column": "invoice_id",
+        "ref_table": "invoices",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_invoice_payments_processed_by",
+        "column": "processed_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_invoice_payments_ix_invoice_payments_invoice_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "invoice_id"
+      },
+      {
+        "name": "IX_invoice_payments_processed_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "processed_by"
+      },
+      {
+        "name": "PK_invoice_payments",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "reports": {
+    "columns": [
+      {
+        "name": "code",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "name",
+        "type": "nvarchar",
+        "length": 200,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "description",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "type",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 255,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "template_path",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "parameters",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_scheduled",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "schedule_cron",
+        "type": "nvarchar",
+        "length": 100,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "last_run",
+        "type": "datetimeoffset",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "requires_approval",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "max_execution_time",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_by_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "owner_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "custom_metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "created_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "version",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "is_active",
+        "type": "bit",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "deleted_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "metadata_json",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "FK_reports_created_by_id",
+        "column": "created_by_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_reports_owner_id",
+        "column": "owner_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_reports_created_by_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "created_by_id"
+      },
+      {
+        "name": "IX_reports_ix_reports_code",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "IX_reports_ix_reports_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status"
+      },
+      {
+        "name": "IX_reports_ix_reports_type",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "type"
+      },
+      {
+        "name": "IX_reports_owner_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "owner_id"
+      },
+      {
+        "name": "IX_reports_uq_reports_code",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "code"
+      },
+      {
+        "name": "PK_reports",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  },
+  "report_runs": {
+    "columns": [
+      {
+        "name": "id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": true
+      },
+      {
+        "name": "report_id",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "run_by",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "status",
+        "type": "nvarchar",
+        "length": 50,
+        "nullable": false,
+        "default": "('RUNNING')",
+        "is_identity": false
+      },
+      {
+        "name": "parameters",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "started_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "completed_at",
+        "type": "datetime2",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "execution_time_ms",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "result_count",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "result_data",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "error_message",
+        "type": "nvarchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "file_path",
+        "type": "nvarchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "created_at",
+        "type": "datetime",
+        "length": null,
+        "nullable": false,
+        "default": "(getdate())",
+        "is_identity": false
+      },
+      {
+        "name": "updated_at",
+        "type": "datetime",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "custom_metadata",
+        "type": "varchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "duration_seconds",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "error_details",
+        "type": "varchar",
+        "length": -1,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "parent_run_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "queued_at",
+        "type": "datetime",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "result_format",
+        "type": "varchar",
+        "length": 50,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "result_path",
+        "type": "varchar",
+        "length": 500,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "result_rows",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "result_size_bytes",
+        "type": "bigint",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      },
+      {
+        "name": "retry_count",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": "('0')",
+        "is_identity": false
+      },
+      {
+        "name": "run_number",
+        "type": "int",
+        "length": null,
+        "nullable": false,
+        "default": "('1')",
+        "is_identity": false
+      },
+      {
+        "name": "triggered_by_id",
+        "type": "int",
+        "length": null,
+        "nullable": true,
+        "default": null,
+        "is_identity": false
+      }
+    ],
+    "foreign_keys": [
+      {
+        "name": "fk_report_runs_parent",
+        "column": "parent_run_id",
+        "ref_table": "report_runs",
+        "ref_column": "id"
+      },
+      {
+        "name": "fk_report_runs_triggered_by",
+        "column": "triggered_by_id",
+        "ref_table": "users",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_rr_report",
+        "column": "report_id",
+        "ref_table": "reports",
+        "ref_column": "id"
+      },
+      {
+        "name": "FK_rr_user",
+        "column": "run_by",
+        "ref_table": "users",
+        "ref_column": "id"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "IX_report_runs_parent_run_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "parent_run_id"
+      },
+      {
+        "name": "IX_report_runs_run_by",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "run_by"
+      },
+      {
+        "name": "IX_report_runs_triggered_by_id",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "triggered_by_id"
+      },
+      {
+        "name": "IX_rr_report",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "report_id"
+      },
+      {
+        "name": "IX_rr_status",
+        "is_unique": false,
+        "is_primary_key": false,
+        "columns": "status, started_at"
+      },
+      {
+        "name": "PK__report_r__3213E83F4E0AB5FC",
+        "is_unique": true,
+        "is_primary_key": true,
+        "columns": "id"
+      }
+    ]
+  }
+}

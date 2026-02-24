@@ -1,0 +1,63 @@
+{
+  "database": {
+    "status": true,
+    "details": {
+      "tables_count": 10,
+      "tables_required": 40,
+      "users": 2,
+      "missing_tables": [
+        "user_scopes",
+        "otp_tokens",
+        "locations",
+        "departments",
+        "project_assignments",
+        "project_milestones",
+        "equipment_categories",
+        "equipment_assignments",
+        "equipment_scans",
+        "equipment_maintenance",
+        "budgets",
+        "budget_items",
+        "balance_releases",
+        "invoices",
+        "invoice_items",
+        "invoice_payments",
+        "reports",
+        "report_runs",
+        "work_orders",
+        "supplier_rotation",
+        "supplier_constraint_logs",
+        "worklogs",
+        "worklog_segments",
+        "daily_work_reports",
+        "work_breaks",
+        "audit_logs",
+        "activity_logs",
+        "files",
+        "notifications",
+        "support_tickets",
+        "system_messages"
+      ]
+    }
+  },
+  "backend": {
+    "status": true,
+    "details": {
+      "auth": false,
+      "working_endpoints": 9,
+      "broken_endpoints": 11
+    }
+  },
+  "frontend": {
+    "status": false,
+    "details": {
+      "api_configured": false
+    }
+  },
+  "integration": {
+    "status": false,
+    "details": {
+      "cors": false
+    }
+  }
+}
