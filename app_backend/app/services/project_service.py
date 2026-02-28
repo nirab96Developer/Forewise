@@ -40,8 +40,22 @@ class ProjectService:
         """Create"""
         item_dict = data.model_dump(exclude_unset=True)
         if not item_dict.get("code"):
-            # DB schema requires non-null project code.
             item_dict["code"] = f"PRJ-{int(time.time() * 1000)}"
+
+        # ── Required-field validation (Fix 7) ──────────────────────────────
+        missing = []
+        if not item_dict.get("region_id"):
+            missing.append("מרחב (region_id)")
+        if not item_dict.get("area_id"):
+            missing.append("אזור (area_id)")
+        if not item_dict.get("manager_id"):
+            missing.append("מנהל עבודה (manager_id)")
+        if missing:
+            raise ValidationException(
+                f"שדות חובה חסרים: {', '.join(missing)}. "
+                "פרויקט חייב לכלול מרחב, אזור ומנהל עבודה."
+            )
+        # ───────────────────────────────────────────────────────────────────
 
         # Validate UNIQUE: code (if provided)
         if item_dict.get("code"):
@@ -55,7 +69,7 @@ class ProjectService:
         # Validate FK: manager_id
         manager = db.query(User).filter(User.id == data.manager_id).first()
         if not manager:
-            raise ValidationException(f"Manager (user) {data.manager_id} not found")
+            raise ValidationException(f"מנהל עבודה עם ID {data.manager_id} לא נמצא")
         
         # Validate FK: region_id
         region = db.query(Region).filter(
@@ -107,7 +121,14 @@ class ProjectService:
             raise DuplicateException("Item was modified by another user")
         
         update_dict = data.model_dump(exclude_unset=True, exclude={'version'})
-        
+
+        # ── Required-field validation on update (Fix 7) ──────────────────
+        # If the user is explicitly nullifying required fields, block it
+        for field, label in [("region_id", "מרחב"), ("area_id", "אזור"), ("manager_id", "מנהל עבודה")]:
+            if field in update_dict and not update_dict[field]:
+                raise ValidationException(f"לא ניתן להסיר {label} מפרויקט. שדה זה הוא חובה.")
+        # ──────────────────────────────────────────────────────────────────
+
         # Validate UNIQUE: code (if changed)
         if 'code' in update_dict and update_dict['code'] and update_dict['code'] != item.code:
             existing = db.query(Project).filter(
@@ -174,8 +195,7 @@ class ProjectService:
             joinedload(Project.location),
             joinedload(Project.region),
             joinedload(Project.area),
-            joinedload(Project.manager),
-            joinedload(Project.budget)
+            joinedload(Project.manager)
         )
         
         # Build filter conditions for count query

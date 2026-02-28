@@ -210,6 +210,16 @@ class WorkOrder(BaseModel):
         comment="האם בחירת ספק כפויה (עקוף rotation)"
     )
 
+    # Overnight guard (שמירת לילה)
+    requires_guard: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        comment="האם נדרשת שמירת לילה"
+    )
+    guard_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0,
+        comment="מספר לילות שמירה"
+    )
+
     # Relationships - Enabled for eager loading optimization
     project: Mapped[Optional["Project"]] = relationship(
         "Project", 

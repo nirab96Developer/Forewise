@@ -52,8 +52,9 @@ ROUTER_MODULES = [
     "pricing",
     "pdf_preview",
     "supplier_portal",
-    "supplier_distribution",
-    "geo"
+    "geo",
+    "settings",
+    # "supplier_distribution",  # removed — file deleted, not in use
 ]
 
 # Load routers dynamically

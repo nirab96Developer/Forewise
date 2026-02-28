@@ -168,18 +168,21 @@ app = FastAPI(
 # For now using IP address - replace with your actual domain when you have one
 
 if settings.is_production():
-    # Production - strict CORS (only your production server)
     allowed_origins = [
+        "https://forewise.co",
+        "https://www.forewise.co",
+        "http://forewise.co",
         "http://167.99.228.10",
         "http://167.99.228.10:3000",
         "http://167.99.228.10:5173",
-        # TODO: Add your actual domain when available
-        # "https://yourdomain.com",
     ]
 else:
-    # Development - more permissive
     allowed_origins = [
-        # Production server
+        # Production domain
+        "https://forewise.co",
+        "https://www.forewise.co",
+        "http://forewise.co",
+        # Production server IP
         "http://167.99.228.10",
         "http://167.99.228.10:3000",
         "http://167.99.228.10:5173",

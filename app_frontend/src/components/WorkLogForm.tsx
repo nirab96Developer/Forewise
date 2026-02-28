@@ -108,7 +108,7 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
           onChange={handleChange}
           required
           disabled={!!projectId}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent"
+          className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent min-h-[44px]"
         >
           <option value="">בחר פרויקט</option>
           {projects.map(project => (
@@ -131,7 +131,7 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
           value={formData.work_date}
           onChange={handleChange}
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent"
+          className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent min-h-[44px]"
         />
       </div>
 
@@ -148,7 +148,7 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
             value={formData.start_time}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent"
+            className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent min-h-[44px]"
           />
         </div>
 
@@ -164,7 +164,7 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
             value={formData.end_time}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent"
+            className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent min-h-[44px]"
           />
         </div>
       </div>
@@ -180,7 +180,7 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
           value={formData.work_type}
           onChange={handleChange}
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+          className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
         >
           <option value="">בחר סוג פעולה</option>
           {activityTypes.map(type => (
@@ -202,7 +202,7 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
           value={formData.description}
           onChange={handleChange}
           rows={4}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent"
+          className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-hillan-green focus:border-transparent min-h-[44px]"
         />
       </div>
 
@@ -224,7 +224,7 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary flex-1 flex items-center justify-center gap-2"
+          className="btn-primary flex-1 flex items-center justify-center gap-2 min-h-[44px] text-base"
         >
           <Save className="w-4 h-4" />
           {loading ? 'שומר...' : 'שמור'}

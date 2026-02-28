@@ -33,6 +33,30 @@ def list_regions(
     return RegionList(items=regions, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
 
+@router.get("/statistics", response_model=RegionStatistics)
+def get_statistics(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get statistics"""
+    require_permission(current_user, "regions.read")
+    return region_service.get_statistics(db)
+
+
+@router.get("/by-code/{code}", response_model=RegionResponse)
+def get_by_code(
+    code: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get by code"""
+    require_permission(current_user, "regions.read")
+    region = region_service.get_by_code(db, code)
+    if not region:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Region '{code}' not found")
+    return region
+
+
 @router.get("/{region_id}", response_model=RegionResponse)
 def get_region(
     region_id: int,
@@ -101,28 +125,4 @@ def restore_region(
     """Restore region"""
     require_permission(current_user, "regions.restore")
     region = region_service.restore(db, region_id, current_user.id)
-    return region
-
-
-@router.get("/statistics", response_model=RegionStatistics)
-def get_statistics(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """Get statistics"""
-    require_permission(current_user, "regions.read")
-    return region_service.get_statistics(db)
-
-
-@router.get("/by-code/{code}", response_model=RegionResponse)
-def get_by_code(
-    code: str,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """Get by code"""
-    require_permission(current_user, "regions.read")
-    region = region_service.get_by_code(db, code)
-    if not region:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Region '{code}' not found")
     return region

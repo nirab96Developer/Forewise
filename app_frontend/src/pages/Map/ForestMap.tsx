@@ -25,7 +25,8 @@ const ForestMap = () => {
   const [myProjectIds, setMyProjectIds] = useState(new Set());
   const [layerVis, setLayerVis] = useState({ regions: true, areas: true, projects: true, myProjects: false });
 
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  let userData: any = {};
+  try { userData = JSON.parse(localStorage.getItem('user') || '{}'); } catch { /* corrupted storage */ }
   const userAreaId = userData.area_id;
 
   useEffect(() => {

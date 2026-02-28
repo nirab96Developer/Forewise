@@ -1037,3 +1037,340 @@ async def delete_biometric_credential(
     logger.info(f"Biometric credential {credential_id} deleted for user {current_user.id}")
     
     return {"message": "Credential deleted successfully"}
+
+
+# ============================================================
+# NEW DEVICE-BASED AUTH ENDPOINTS (Spec v2)
+# ============================================================
+
+from app.models.device_token import DeviceToken
+import uuid as uuid_module
+
+MAX_DEVICES_PER_USER = 5
+DEVICE_TOKEN_EXPIRE_DAYS = 90
+OTP_MAX_ATTEMPTS = 3
+OTP_RATE_LIMIT_SECONDS = 60
+
+
+def _hash_value(value: str) -> str:
+    """SHA-256 hex digest of a string."""
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _mask_identifier(identifier: str) -> str:
+    """Mask phone/email for response."""
+    if "@" in identifier:
+        parts = identifier.split("@")
+        local = parts[0]
+        return local[:2] + "***" + local[-1:] + "@" + parts[1]
+    # phone
+    return identifier[:3] + "****" + identifier[-3:]
+
+
+@router.post("/request-otp")
+def request_otp(data: dict, db: Session = Depends(get_db)):
+    """
+    Step 1 — request a 6-digit OTP via phone or email.
+    Spec: rate-limit 60s, hash stored, masked identifier in response.
+    """
+    identifier: str = data.get("identifier", "").strip()
+    identifier_type: str = data.get("identifier_type", "email").strip().lower()
+
+    if not identifier:
+        raise HTTPException(status_code=400, detail="identifier is required")
+
+    # Find user
+    if identifier_type == "phone":
+        user = db.query(User).filter(User.phone == identifier, User.is_active == True).first()
+    else:
+        user = db.query(User).filter(User.email == identifier, User.is_active == True).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="משתמש לא נמצא")
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="חשבון המשתמש חסום")
+
+    # Rate limit: block if an unused OTP was sent in the last 60 seconds
+    recent = db.query(OTPToken).filter(
+        OTPToken.user_id == user.id,
+        OTPToken.is_used == False,
+        OTPToken.is_active == True,
+        OTPToken.created_at > datetime.now() - timedelta(seconds=OTP_RATE_LIMIT_SECONDS),
+    ).first()
+    if recent:
+        wait = int((recent.created_at + timedelta(seconds=OTP_RATE_LIMIT_SECONDS) - datetime.now()).total_seconds())
+        raise HTTPException(status_code=429, detail=f"נשלח קוד לאחרונה. המתן {max(wait, 1)} שניות")
+
+    # Invalidate previous unused OTPs
+    db.query(OTPToken).filter(
+        OTPToken.user_id == user.id,
+        OTPToken.is_used == False,
+        OTPToken.is_active == True,
+    ).update({"is_active": False, "updated_at": datetime.now()})
+
+    # Generate 6-digit code
+    code = "".join(secrets.choice(string.digits) for _ in range(6))
+    code_hash = _hash_value(code)
+    expires_at = datetime.now() + timedelta(minutes=5)
+
+    otp = OTPToken(
+        user_id=user.id,
+        token=code,          # kept for backward compat with existing verify-otp
+        token_hash=code_hash,
+        code_hash=code_hash,
+        purpose="login",
+        expires_at=expires_at,
+        is_used=False,
+        is_active=True,
+        attempts=0,
+    )
+    db.add(otp)
+    db.commit()
+
+    # Send OTP (email for now; SMS hook ready)
+    try:
+        from app.core.email import send_email
+        send_email(
+            to=user.email,
+            subject="קוד כניסה למערכת",
+            body=f"קוד הכניסה שלך: {code}\nהקוד תקף ל-5 דקות.",
+        )
+    except Exception as e:
+        logger.warning(f"Failed to send OTP email to {user.email}: {e}")
+
+    logger.info(f"[OTP] request-otp for user {user.id} ({identifier_type}:{identifier})")
+    return {
+        "message": "קוד נשלח",
+        "expires_in": 300,
+        "masked_identifier": _mask_identifier(identifier),
+    }
+
+
+@router.post("/verify-otp-v2")
+def verify_otp_v2(data: dict, db: Session = Depends(get_db)):
+    """
+    Step 2 — verify OTP + register device.
+    Spec: hash compare, max 3 attempts, device_token issued.
+    """
+    identifier: str = data.get("identifier", "").strip()
+    code: str = str(data.get("code", "")).strip()
+    device_id_raw: str = data.get("device_id", "")
+    device_name: str = data.get("device_name", "Unknown device")
+    device_os: str = data.get("device_os", "Unknown OS")
+
+    if not identifier or not code:
+        raise HTTPException(status_code=400, detail="identifier and code are required")
+
+    # Find user
+    user = db.query(User).filter(
+        (User.email == identifier) | (User.phone == identifier),
+        User.is_active == True,
+    ).options(selectinload(User.role).selectinload(Role.permissions)).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="משתמש לא נמצא")
+
+    # Find valid OTP
+    otp = db.query(OTPToken).filter(
+        OTPToken.user_id == user.id,
+        OTPToken.is_used == False,
+        OTPToken.is_active == True,
+        OTPToken.expires_at > datetime.now(),
+    ).order_by(OTPToken.created_at.desc()).first()
+
+    if not otp:
+        raise HTTPException(status_code=400, detail="קוד פג תוקף. בקש קוד חדש")
+
+    if otp.attempts >= OTP_MAX_ATTEMPTS:
+        otp.is_active = False
+        db.commit()
+        raise HTTPException(status_code=429, detail="חרגת מ-3 ניסיונות. בקש קוד חדש")
+
+    code_hash = _hash_value(code)
+    if otp.code_hash != code_hash:
+        otp.attempts = (otp.attempts or 0) + 1
+        remaining = OTP_MAX_ATTEMPTS - otp.attempts
+        db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail=f"קוד שגוי. נותרו {remaining} ניסיונות" if remaining > 0 else "קוד שגוי. בקש קוד חדש",
+        )
+
+    # Mark OTP used
+    otp.is_used = True
+    otp.is_active = False
+
+    # Device registration
+    try:
+        device_id = uuid_module.UUID(device_id_raw)
+    except (ValueError, AttributeError):
+        device_id = uuid_module.uuid4()
+
+    # Evict oldest device if user has too many
+    active_devices = db.query(DeviceToken).filter(
+        DeviceToken.user_id == user.id,
+        DeviceToken.is_active == True,
+    ).order_by(DeviceToken.last_used_at.asc()).all()
+
+    if len(active_devices) >= MAX_DEVICES_PER_USER:
+        active_devices[0].is_active = False
+        logger.info(f"Evicted oldest device {active_devices[0].device_id} for user {user.id}")
+
+    raw_device_token = "dvc_" + secrets.token_urlsafe(32)
+    device_token_hash = _hash_value(raw_device_token)
+    device_expires = datetime.now() + timedelta(days=DEVICE_TOKEN_EXPIRE_DAYS)
+
+    # Upsert device record
+    existing_device = db.query(DeviceToken).filter(
+        DeviceToken.user_id == user.id,
+        DeviceToken.device_id == device_id,
+    ).first()
+
+    if existing_device:
+        existing_device.token_hash = device_token_hash
+        existing_device.is_active = True
+        existing_device.expires_at = device_expires
+        existing_device.last_used_at = datetime.now()
+        existing_device.device_name = device_name
+        existing_device.device_os = device_os
+    else:
+        db.add(DeviceToken(
+            user_id=user.id,
+            token_hash=device_token_hash,
+            device_id=device_id,
+            device_name=device_name,
+            device_os=device_os,
+            is_active=True,
+            last_used_at=datetime.now(),
+            expires_at=device_expires,
+        ))
+
+    # Issue JWT tokens
+    user.last_login = datetime.now()
+    access_token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role.code if user.role else ""})
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+
+    db.commit()
+
+    # Send new-device notification (async-safe best-effort)
+    try:
+        from app.core.email import send_email
+        send_email(
+            to=user.email,
+            subject="כניסה ממכשיר חדש",
+            body=f"כניסה חדשה למערכת ממכשיר: {device_name} ({device_os}).\nאם זה לא אתה, פנה לתמיכה מיד.",
+        )
+    except Exception:
+        pass
+
+    logger.info(f"[DeviceAuth] verify-otp-v2 success user={user.id} device={device_id}")
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "device_token": raw_device_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "name": user.full_name or user.username,
+            "role": user.role.code if user.role else "",
+        },
+    }
+
+
+@router.post("/device-login")
+def device_login(data: dict, db: Session = Depends(get_db)):
+    """
+    Biometric re-login — client already has device_token in Keychain.
+    Spec: hash lookup, expiry check, issue new tokens.
+    """
+    raw_token: str = data.get("device_token", "").strip()
+    if not raw_token:
+        raise HTTPException(status_code=401, detail="device_token is required")
+
+    token_hash = _hash_value(raw_token)
+    device = db.query(DeviceToken).filter(
+        DeviceToken.token_hash == token_hash,
+        DeviceToken.is_active == True,
+    ).first()
+
+    if not device:
+        raise HTTPException(status_code=401, detail="מכשיר לא מזוהה או שהוסר")
+
+    if device.expires_at < datetime.now():
+        device.is_active = False
+        db.commit()
+        raise HTTPException(status_code=401, detail="token_expired — נדרש אימות OTP מחדש")
+
+    user = db.query(User).options(
+        selectinload(User.role).selectinload(Role.permissions)
+    ).filter(User.id == device.user_id, User.is_active == True).first()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="משתמש לא פעיל")
+
+    device.last_used_at = datetime.now()
+    user.last_login = datetime.now()
+
+    access_token = create_access_token({"sub": str(user.id), "email": user.email, "role": user.role.code if user.role else ""})
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    db.commit()
+
+    logger.info(f"[DeviceAuth] device-login success user={user.id} device={device.device_id}")
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
+
+
+@router.delete("/devices/{device_id}")
+def revoke_device(
+    device_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Revoke a trusted device. Only the owning user can remove it.
+    """
+    try:
+        did = uuid_module.UUID(device_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="device_id invalid UUID")
+
+    device = db.query(DeviceToken).filter(
+        DeviceToken.device_id == did,
+        DeviceToken.user_id == current_user.id,
+    ).first()
+
+    if not device:
+        raise HTTPException(status_code=404, detail="מכשיר לא נמצא")
+
+    device.is_active = False
+    db.commit()
+
+    logger.info(f"[DeviceAuth] device {device_id} revoked by user {current_user.id}")
+    return {"message": "מכשיר הוסר בהצלחה"}
+
+
+@router.get("/devices")
+def list_devices(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """List all active trusted devices for the current user."""
+    devices = db.query(DeviceToken).filter(
+        DeviceToken.user_id == current_user.id,
+        DeviceToken.is_active == True,
+    ).order_by(DeviceToken.last_used_at.desc()).all()
+
+    return [
+        {
+            "device_id": str(d.device_id),
+            "device_name": d.device_name,
+            "device_os": d.device_os,
+            "last_used_at": d.last_used_at.isoformat() if d.last_used_at else None,
+            "expires_at": d.expires_at.isoformat(),
+        }
+        for d in devices
+    ]

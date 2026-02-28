@@ -16,7 +16,7 @@ from app.models.work_order import WorkOrder
 from app.models.equipment import Equipment
 from app.models.project import Project
 
-router = APIRouter(prefix="/api/v1/sync", tags=["sync"])
+router = APIRouter(prefix="/sync", tags=["sync"])
 
 class SyncOperation(BaseModel):
     """Single sync operation"""

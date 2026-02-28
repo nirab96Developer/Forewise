@@ -201,7 +201,7 @@ const WorklogFormUnified: React.FC = () => {
   // Calculate totals
   const calculateTotals = () => {
     if (!isNonStandard) {
-      // תקן: קבוע - 9 שעות עבודה, 1.5 שעות מנוחה
+      // תקן: קבוע - 9 שעות עבודה נטו + 1.5 שעות מנוחה = 10.5 שעות משמרת
       return {
         totalPresence: 10.5,
         totalBillable: 9,
@@ -236,6 +236,10 @@ const WorklogFormUnified: React.FC = () => {
     
     if (!formData.project_id) {
       setError('יש לבחור פרויקט');
+      return;
+    }
+    if (!formData.activity) {
+      setError('יש לבחור פעילות — שדה חובה בשני סוגי הדיווח');
       return;
     }
     
@@ -327,25 +331,40 @@ const WorklogFormUnified: React.FC = () => {
             </div>
           )}
           
-          {/* Project Selection */}
+          {/* Project Selection — locked when project_id/code comes from URL */}
           <div className="border border-gray-200 rounded-lg p-4">
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
               <Building2 className="w-4 h-4" />
               פרויקט
             </label>
-            <select
-              value={formData.project_id || ''}
-              onChange={(e) => handleProjectChange(parseInt(e.target.value))}
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-200 text-sm"
-              required
-            >
-              <option value="">בחר פרויקט</option>
-              {projects.map(project => (
-                <option key={project.id} value={project.id}>
-                  {project.name} ({project.code})
-                </option>
-              ))}
-            </select>
+            {(projectIdParam || projectCodeParam) ? (
+              /* Locked display when project comes from URL */
+              <div>
+                <div className="w-full p-2.5 border border-gray-200 bg-gray-50 rounded-lg text-sm flex items-center justify-between">
+                  <span className="font-medium text-gray-800">
+                    {projects.find(p => p.id === formData.project_id)?.name || '...'}
+                  </span>
+                  <span className="text-gray-400 text-xs">
+                    {projects.find(p => p.id === formData.project_id)?.code || projectCodeParam}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">הפרויקט נקבע אוטומטית</p>
+              </div>
+            ) : (
+              <select
+                value={formData.project_id || ''}
+                onChange={(e) => handleProjectChange(parseInt(e.target.value))}
+                className="w-full p-2.5 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-1 focus:ring-green-200 text-sm"
+                required
+              >
+                <option value="">בחר פרויקט</option>
+                {projects.map(project => (
+                  <option key={project.id} value={project.id}>
+                    {project.name} ({project.code})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           
           {/* תקן / לא תקן Toggle */}
@@ -420,7 +439,7 @@ const WorklogFormUnified: React.FC = () => {
               <div className="text-center mb-3">
                 <div className="text-sm text-green-700">דיווח תקן</div>
                 <div className="text-2xl font-bold text-green-800">10.5 שעות</div>
-                <div className="text-xs text-green-600">9 שעות עבודה + 1.5 שעות מנוחה</div>
+                <div className="text-xs text-green-600">9 שעות עבודה נטו + 1.5 שעות מנוחה = 10.5 שעות משמרת</div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center text-sm">
                 <div className="bg-white rounded-lg p-2">

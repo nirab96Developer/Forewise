@@ -134,7 +134,7 @@ const UpdateSupplierEquipmentRate: React.FC = () => {
                     placeholder="0.00"
                     required
                   />
-                  <p className="mt-1 text-xs text-gray-500">תעריף ליום עבודה (9 שעות)</p>
+                  <p className="mt-1 text-xs text-gray-500">תעריף ליום עבודה (10.5 שעות משמרת)</p>
                 </div>
               </div>
 

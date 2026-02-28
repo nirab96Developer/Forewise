@@ -84,11 +84,13 @@ const NewWorkOrder: React.FC = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [_touched, setTouched] = useState<Record<string, boolean>>({});
-  
-  // Calculate total hours (9 hours per day)
+  const [overnightGuardRate, setOvernightGuardRate] = useState<number>(250); // fetched from API
+
+  // Billable hours = 9h/day net (shift is 10.5h total, but 1.5h break is excluded from billing)
+  const BILLABLE_HOURS_PER_DAY = 9;
   const workDaysNumber = formData.work_days === '' ? null : Number(formData.work_days);
   const quantityNumber = formData.quantity === '' ? null : Number(formData.quantity);
-  const totalHours = workDaysNumber && workDaysNumber > 0 ? workDaysNumber * 9 : 0;
+  const totalHours = workDaysNumber && workDaysNumber > 0 ? workDaysNumber * BILLABLE_HOURS_PER_DAY : 0;
   
   // Calculate end date
   const endDate = formData.start_date && workDaysNumber && workDaysNumber > 0 ? (() => {
@@ -170,6 +172,16 @@ const NewWorkOrder: React.FC = () => {
       setError('שגיאה בטעינת נתונים');
     }
     
+    // Fetch overnight guard rate from work_hour_settings
+    try {
+      const whRes = await api.get('/settings/work-hours').catch(() => null);
+      if (whRes?.data?.overnight_guard_rate !== undefined) {
+        setOvernightGuardRate(Number(whRes.data.overnight_guard_rate) || 250);
+      }
+    } catch {
+      // keep default 250
+    }
+
     // Always stop loading
     setLoadingData(false);
   };
@@ -287,6 +299,8 @@ const NewWorkOrder: React.FC = () => {
           ? parseInt(formData.constraint_reason_id.toString())
           : undefined,
         constraint_notes: formData.constraint_explanation?.trim() || undefined,
+        requires_guard: formData.requires_guard,
+        guard_days: formData.guard_days,
       };
 
       await workOrderService.createWorkOrder(workOrderData);
@@ -344,8 +358,18 @@ const NewWorkOrder: React.FC = () => {
               פרטי עבודה
             </SectionTitle>
 
-            {/* Project Selection (if not from project page) */}
-            {!projectCode && (
+            {/* Project Selection — locked when coming from project page */}
+            {projectCode ? (
+              /* Locked project display */
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-kkl-text mb-2">פרויקט</label>
+                <div className="w-full pr-4 pl-4 py-2.5 border border-kkl-border bg-gray-50 rounded-lg text-sm text-kkl-text flex items-center justify-between">
+                  <span className="font-medium">{selectedProject?.name || '...'}</span>
+                  <span className="text-gray-400 text-xs">{selectedProject?.code || projectCode}</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">הפרויקט נקבע אוטומטית מהסביבה הנוכחית</p>
+              </div>
+            ) : (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-kkl-text mb-2">
                   פרויקט *
@@ -357,8 +381,7 @@ const NewWorkOrder: React.FC = () => {
                     setSelectedProject(project || null);
                   }}
                   required
-                  className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
-                  
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
                 >
                   <option value="">בחר פרויקט</option>
                   {projects.map(project => (
@@ -416,7 +439,7 @@ const NewWorkOrder: React.FC = () => {
                   value={formData.start_date}
                   onChange={handleChange}
                   required
-                  className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
                 />
               </div>
 
@@ -432,7 +455,7 @@ const NewWorkOrder: React.FC = () => {
                   onChange={handleChange}
                   required
                   min="1"
-                  className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
                 />
               </div>
 
@@ -444,7 +467,21 @@ const NewWorkOrder: React.FC = () => {
                     סה"כ שעות עבודה
                   </div>
                   <div className="text-2xl font-bold text-kkl-green">{totalHours} שעות</div>
-                  <p className="text-xs text-gray-500 mt-1">מחושב לפי 9 שעות ביום</p>
+                  {workDaysNumber && workDaysNumber > 0 ? (
+                    <p className="text-xs text-gray-500 mt-1 leading-tight max-w-full break-words">
+                      {totalHours} שעות ({BILLABLE_HOURS_PER_DAY} שעות נטו × {workDaysNumber} ימים)
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1 leading-tight max-w-full break-words">
+                      מחושב לפי {BILLABLE_HOURS_PER_DAY} שעות עבודה נטו ביום
+                    </p>
+                  )}
+                  {/* Guard cost inline */}
+                  {formData.requires_guard && formData.guard_days > 0 && overnightGuardRate > 0 && (
+                    <p className="text-xs text-indigo-600 mt-1 font-medium">
+                      🌙 שמירה: {formData.guard_days} לילות × ₪{overnightGuardRate} = ₪{(formData.guard_days * overnightGuardRate).toLocaleString('he-IL')}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -466,7 +503,7 @@ const NewWorkOrder: React.FC = () => {
                   value={selectedCategoryId?.toString() || ''}
                   onChange={handleCategoryChange}
                   required
-                  className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
                 >
                   <option value="">בחר סוג כלי...</option>
                   {equipmentCategories.map((category) => (
@@ -490,7 +527,7 @@ const NewWorkOrder: React.FC = () => {
                   required
                   min="1"
                   max="5"
-                  className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
                 />
               </div>
             </div>
@@ -551,6 +588,24 @@ const NewWorkOrder: React.FC = () => {
                       <Info className="w-3 h-3" />
                       בדיווח השעות תוכל לסמן האם בוצעה שמירה בפועל
                     </p>
+
+                    {/* ✅ תחזית עלות שמירה */}
+                    {formData.guard_days > 0 && overnightGuardRate > 0 && (
+                      <div className="mt-3 p-3 bg-indigo-100 border border-indigo-200 rounded-lg">
+                        <p className="text-xs font-semibold text-indigo-800 mb-1">תחזית עלות שמירת לילה</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-indigo-700">
+                            {formData.guard_days} לילות × ₪{overnightGuardRate.toLocaleString('he-IL')}
+                          </span>
+                          <span className="text-base font-bold text-indigo-900">
+                            = ₪{(formData.guard_days * overnightGuardRate).toLocaleString('he-IL')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-indigo-500 mt-1">
+                          תעריף לפי הגדרות מערכת (₪{overnightGuardRate}/לילה)
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -624,7 +679,7 @@ const NewWorkOrder: React.FC = () => {
                       value={formData.supplier_id}
                       onChange={handleChange}
                       required
-                      className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                      className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
                     >
                       <option value="">בחר ספק...</option>
                       {filteredSuppliers.map(supplier => (
@@ -650,7 +705,7 @@ const NewWorkOrder: React.FC = () => {
                       value={formData.constraint_reason_id}
                       onChange={handleChange}
                       required
-                      className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                      className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
                     >
                       <option value="">בחר סיבת אילוץ...</option>
                       {constraintReasons.map(reason => (

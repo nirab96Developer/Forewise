@@ -1,6 +1,6 @@
 """Admin management endpoints - ניהול מלא למנהל המערכת"""
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
@@ -18,7 +18,7 @@ from app.schemas.user import UserCreate, UserUpdate
 from app.schemas.project import ProjectUpdate
 from app.core.security import get_password_hash
 
-router = APIRouter(prefix="/api/v1/admin", tags=["Admin Management"])
+router = APIRouter(prefix="/admin", tags=["Admin Management"])
 
 
 def verify_admin(current_user: User) -> None:
@@ -588,7 +588,10 @@ async def update_region_manager(
     region.manager_id = manager.id
     
     # Update manager's role and region
-    manager.role_id = db.query(Role).filter(Role.code == "REGION_MANAGER").first().id
+    region_mgr_role = db.query(Role).filter(Role.code == "REGION_MANAGER").first()
+    if not region_mgr_role:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Role REGION_MANAGER not found")
+    manager.role_id = region_mgr_role.id
     manager.region_id = region.id
     manager.area_id = None
     
@@ -632,7 +635,10 @@ async def update_area_manager(
     area.manager_id = manager.id
     
     # Update manager's role and area
-    manager.role_id = db.query(Role).filter(Role.code == "AREA_MANAGER").first().id
+    area_mgr_role = db.query(Role).filter(Role.code == "AREA_MANAGER").first()
+    if not area_mgr_role:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Role AREA_MANAGER not found")
+    manager.role_id = area_mgr_role.id
     manager.area_id = area.id
     manager.region_id = area.region_id
     
@@ -662,7 +668,8 @@ async def get_system_health(
     
     try:
         # Test database connection
-        db.execute("SELECT 1")
+        from sqlalchemy import text as sa_text
+        db.execute(sa_text("SELECT 1"))
         db_status = "healthy"
     except:
         db_status = "unhealthy"

@@ -148,7 +148,7 @@ class SupplierService(BaseService[Supplier]):
         search: SupplierSearch
     ) -> Tuple[List[Supplier], int]:
         """List suppliers with filters"""
-        query = self._base_query(db, include_deleted=search.include_deleted)
+        query = self._base_query(db, include_deleted=False)
         
         # Free text search
         if search.q:
@@ -401,3 +401,17 @@ class SupplierService(BaseService[Supplier]):
         db.commit()
         db.refresh(row)
         return row
+
+    # ── Alias methods for backward-compat with older router ──────
+    def list_with_filters(self, db, filters):
+        return self.list(db, filters)
+
+    def create_supplier(self, db, data):
+        return self.create(db, data)
+
+    def update_supplier(self, db, supplier_id, data):
+        return self.update(db, supplier_id, data, current_user_id=None)
+
+
+# Module-level singleton instance
+supplier_service = SupplierService()

@@ -33,6 +33,30 @@ def list_budgets(
     return BudgetList(items=budgets, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
 
+@router.get("/statistics", response_model=BudgetStatistics)
+def get_statistics(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get statistics"""
+    require_permission(current_user, "budgets.read")
+    return budget_service.get_statistics(db)
+
+
+@router.get("/by-code/{code}", response_model=BudgetResponse)
+def get_by_code(
+    code: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get by code"""
+    require_permission(current_user, "budgets.read")
+    budget = budget_service.get_by_code(db, code)
+    if not budget:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Budget '{code}' not found")
+    return budget
+
+
 @router.get("/{budget_id}", response_model=BudgetResponse)
 def get_budget(
     budget_id: int,
@@ -101,30 +125,6 @@ def restore_budget(
     """Restore budget"""
     require_permission(current_user, "budgets.restore")
     budget = budget_service.restore(db, budget_id, current_user.id)
-    return budget
-
-
-@router.get("/statistics", response_model=BudgetStatistics)
-def get_statistics(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """Get statistics"""
-    require_permission(current_user, "budgets.read")
-    return budget_service.get_statistics(db)
-
-
-@router.get("/by-code/{code}", response_model=BudgetResponse)
-def get_by_code(
-    code: str,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """Get by code"""
-    require_permission(current_user, "budgets.read")
-    budget = budget_service.get_by_code(db, code)
-    if not budget:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Budget '{code}' not found")
     return budget
 
 

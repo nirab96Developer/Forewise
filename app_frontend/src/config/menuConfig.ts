@@ -336,6 +336,7 @@ export const DASHBOARD_CONFIG: Record<UserRole, DashboardConfig> = {
     primaryWidget: "financial-overview",
     widgets: ["pending-invoices", "budget-summary", "cost-reports"],
     quickActions: [
+      { id: "accountant-inbox", label: "תיבת נכנסים", path: "/accountant-inbox", icon: "FileText", permission: PERMISSIONS.WORKLOGS_APPROVE },
       { id: "invoices", label: "חשבוניות", path: "/invoices", icon: "Receipt", permission: PERMISSIONS.INVOICES_VIEW },
       { id: "reports", label: "דוחות", path: "/reports/pricing", icon: "BarChart3", permission: PERMISSIONS.REPORTS_VIEW },
     ],

@@ -109,7 +109,7 @@ def create_notification(
 ):
     """Create new notification."""
     # Only allow creating notifications for the current user or if user is admin
-    if notification.user_id != current_user.id and not current_user.is_admin:
+    if notification.user_id != current_user.id and not (current_user.role and current_user.role.code == "ADMIN"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to create notifications for other users"
@@ -253,7 +253,7 @@ def cleanup_old_notifications(
     current_user: User = Depends(get_current_active_user)
 ):
     """Clean up old notifications (admin only)."""
-    if not current_user.is_admin:
+    if not (current_user.role and current_user.role.code == "ADMIN"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"

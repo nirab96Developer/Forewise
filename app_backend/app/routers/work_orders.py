@@ -71,6 +71,37 @@ def list_work_orders(
         )
 
 
+@router.get("/statistics", response_model=WorkOrderStatistics)
+def get_work_order_statistics(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    project_id: Optional[int] = Query(None, description="Filter by project"),
+    supplier_id: Optional[int] = Query(None, description="Filter by supplier")
+):
+    """
+    Get work order statistics
+
+    Permissions: work_orders.read
+    """
+    require_permission(current_user, "work_orders.read")
+
+    try:
+        filters = {}
+        if project_id:
+            filters['project_id'] = project_id
+        if supplier_id:
+            filters['supplier_id'] = supplier_id
+
+        stats = work_order_service.get_statistics(db, filters)
+        return stats
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get statistics: {str(e)}"
+        )
+
+
 @router.get("/{work_order_id}", response_model=WorkOrderResponse)
 def get_work_order(
     work_order_id: int,
@@ -79,11 +110,11 @@ def get_work_order(
 ):
     """
     Get work order by ID
-    
+
     Permissions: work_orders.read
     """
     require_permission(current_user, "work_orders.read")
-    
+
     try:
         query = (
             select(WorkOrder)
@@ -102,7 +133,7 @@ def get_work_order(
             raise NotFoundException("WorkOrder not found")
 
         return work_order
-    
+
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
@@ -127,9 +158,10 @@ def create_work_order(
     
     try:
         work_order = work_order_service.create(db, data, current_user_id=current_user.id)
-        # Activity log is handled in service
         return work_order
     
+    except HTTPException:
+        raise  # pass-through 400/422/404 etc from service layer
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except DuplicateException as e:
@@ -334,11 +366,11 @@ def close_work_order(
 ):
     """
     Close/Complete work order
-    
+
     Permissions: work_orders.close
     """
     require_permission(current_user, "work_orders.close")
-    
+
     try:
         from decimal import Decimal
         actual_hours_decimal = Decimal(str(actual_hours)) if actual_hours else None
@@ -355,37 +387,6 @@ def close_work_order(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to close work order: {str(e)}"
-        )
-
-
-@router.get("/statistics", response_model=WorkOrderStatistics)
-def get_work_order_statistics(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    project_id: Optional[int] = Query(None, description="Filter by project"),
-    supplier_id: Optional[int] = Query(None, description="Filter by supplier")
-):
-    """
-    Get work order statistics
-    
-    Permissions: work_orders.read
-    """
-    require_permission(current_user, "work_orders.read")
-    
-    try:
-        filters = {}
-        if project_id:
-            filters['project_id'] = project_id
-        if supplier_id:
-            filters['supplier_id'] = supplier_id
-        
-        stats = work_order_service.get_statistics(db, filters)
-        return stats
-    
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get statistics: {str(e)}"
         )
 
 
@@ -488,23 +489,30 @@ def complete_work_order(
 # For Order Coordinator role
 # ============================================
 
-@router.post("/{work_order_id}/send-to-supplier", response_model=WorkOrderResponse)
+@router.post("/{work_order_id}/send-to-supplier")
 def send_work_order_to_supplier(
     work_order_id: int,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Send work order to supplier via portal link
-    Generates portal token and sends notification
-    
-    Permissions: work_orders.coordinate
+    Send work order to supplier via portal link.
+    Generates portal_token (3h TTL) and sends email.
+    Returns: { portal_token, portal_url, expires_at, work_order_id, status }
     """
     require_permission(current_user, "work_orders.update")
-    
+
     try:
-        work_order = work_order_service.send_to_supplier(db, work_order_id, current_user.id)
-        return work_order
+        result = work_order_service.send_to_supplier(db, work_order_id, current_user.id)
+        wo = result["work_order"]
+        return {
+            "portal_token": result["portal_token"],
+            "portal_url": result["portal_url"],
+            "expires_at": result["expires_at"],
+            "work_order_id": wo.id,
+            "status": wo.status,
+            "message": f"ההזמנה נשלחה לספק. הקישור תקף ל-3 שעות.",
+        }
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:

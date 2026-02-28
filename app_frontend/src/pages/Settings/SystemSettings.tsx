@@ -73,7 +73,7 @@ const settingsCategories: SettingsCategory[] = [
         title: 'ציוד ספקים',
         description: 'ניהול הכלים של כל ספק',
         icon: <Wrench className="w-5 h-5" />,
-        path: '/equipment',
+        path: '/equipment/inventory',
       },
     ],
   },

@@ -33,6 +33,30 @@ def list_reports(
     return {"items": reports, "total": total, "page": search.page, "page_size": search.page_size, "total_pages": total_pages}
 
 
+@router.get("/statistics", response_model=ReportStatistics)
+def get_statistics(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get statistics"""
+    require_permission(current_user, "reports.read")
+    return report_service.get_statistics(db)
+
+
+@router.get("/by-code/{code}", )
+def get_by_code(
+    code: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get by code"""
+    require_permission(current_user, "reports.read")
+    report = report_service.get_by_code(db, code)
+    if not report:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Report '{code}' not found")
+    return report
+
+
 @router.get("/{report_id}", )
 def get_report(
     report_id: int,
@@ -101,28 +125,4 @@ def restore_report(
     """Restore report"""
     require_permission(current_user, "reports.restore")
     report = report_service.restore(db, report_id, current_user.id)
-    return report
-
-
-@router.get("/statistics", response_model=ReportStatistics)
-def get_statistics(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """Get statistics"""
-    require_permission(current_user, "reports.read")
-    return report_service.get_statistics(db)
-
-
-@router.get("/by-code/{code}", )
-def get_by_code(
-    code: str,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """Get by code"""
-    require_permission(current_user, "reports.read")
-    report = report_service.get_by_code(db, code)
-    if not report:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Report '{code}' not found")
     return report

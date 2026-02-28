@@ -26,6 +26,7 @@ assignment_service = ProjectAssignmentService()
 activity_log_service = ActivityLogService()
 
 
+@router.get("")
 def get_assignments(
     db: Session = Depends(get_db),
     pagination: PaginationParams = Depends(get_pagination_params),

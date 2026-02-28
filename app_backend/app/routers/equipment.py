@@ -669,7 +669,7 @@ def assign_equipment(
     try:
         # Validate that project_id is provided in request
         if not request.project_id:
-            raise ValidationError("project_id is required")
+            raise ValidationException("project_id is required")
         
         # Create assignment
         assignment = equipment_service.assign_to_project(

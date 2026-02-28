@@ -88,11 +88,32 @@ def get_by_code_alias(
     from sqlalchemy import text as sa_text
     
     result = {}
-    # Copy basic fields
+    # Copy basic fields — skip geometry/binary types that aren't JSON serializable
+    from datetime import datetime, date
+    _geo_types = set()
+    try:
+        from geoalchemy2 import WKBElement
+        _geo_types.add(WKBElement)
+    except ImportError:
+        pass
+
     for col in item.__table__.columns:
         val = getattr(item, col.name, None)
-        if val is not None:
-            result[col.name] = val
+        if val is None:
+            continue
+        if _geo_types and isinstance(val, tuple(_geo_types)):
+            continue  # skip PostGIS geometry columns
+        if isinstance(val, datetime):
+            result[col.name] = val.isoformat()
+        elif isinstance(val, date):
+            result[col.name] = val.isoformat()
+        else:
+            try:
+                import json as _json
+                _json.dumps(val)  # test serializability
+                result[col.name] = val
+            except (TypeError, ValueError):
+                result[col.name] = str(val)
     
     # Add relationships
     if item.region:

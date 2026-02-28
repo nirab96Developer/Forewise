@@ -33,6 +33,17 @@ def list_report_runs(
     return ReportRunList(items=runs, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
 
+@router.get("/statistics", response_model=ReportRunStatistics)
+def get_statistics(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    report_id: Optional[int] = Query(None)
+):
+    """Get statistics"""
+    require_permission(current_user, "report_runs.read")
+    return report_run_service.get_statistics(db, report_id)
+
+
 @router.get("/{run_id}", response_model=ReportRunResponse)
 def get_report_run(
     run_id: int,
@@ -76,14 +87,3 @@ def update_report_run(
         return run
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-
-
-@router.get("/statistics", response_model=ReportRunStatistics)
-def get_statistics(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    report_id: Optional[int] = Query(None)
-):
-    """Get statistics"""
-    require_permission(current_user, "report_runs.read")
-    return report_run_service.get_statistics(db, report_id)

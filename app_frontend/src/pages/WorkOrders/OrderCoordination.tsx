@@ -101,16 +101,23 @@ const OrderCoordination: React.FC = () => {
   const handleSendToSupplier = async (orderId: number) => {
     try {
       setProcessing(orderId);
-      const resp = await api.post('/supplier-distribution/distribute', { work_order_id: orderId });
+      const resp = await api.post(`/work-orders/${orderId}/send-to-supplier`);
       const data = resp.data;
       if ((window as any).showToast) {
-        (window as any).showToast('נשלח ל' + (data.supplier_name || 'ספק') + ' בהצלחה!', 'success');
+        (window as any).showToast(
+          data.message || 'ההזמנה נשלחה לספק! הקישור תקף ל-3 שעות.',
+          'success'
+        );
+      }
+      // Show portal link in console for easy access during testing
+      if (data.portal_url) {
+        console.info('[Supplier Portal]', data.portal_url);
       }
       await loadOrders();
     } catch (err: any) {
-      console.error('Error distributing:', err);
+      console.error('Error sending to supplier:', err);
       if ((window as any).showToast) {
-        (window as any).showToast(err.response?.data?.detail || 'שגיאה בהפצה לספק', 'error');
+        (window as any).showToast(err.response?.data?.detail || 'שגיאה בשליחה לספק', 'error');
       }
     } finally {
       setProcessing(null);
@@ -229,8 +236,12 @@ const OrderCoordination: React.FC = () => {
     return <span className={'px-3 py-1 rounded-full text-xs font-medium ' + cfg.color}>{cfg.text}</span>;
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('he-IL');
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return 'לא הוגדר';
+    const d = new Date(dateStr);
+    // Epoch (null stored as 0 / 1970) → show fallback
+    if (d.getFullYear() <= 1970) return 'לא הוגדר';
+    return d.toLocaleDateString('he-IL');
   };
 
   if (loading && orders.length === 0) {

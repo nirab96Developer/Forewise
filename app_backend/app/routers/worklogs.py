@@ -178,8 +178,8 @@ def create_standard_worklog(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Create standard worklog - 10.5 hours (9 work + 1.5 break)
-    תקן: 9 שעות עבודה + 1.5 שעות הפסקה = 10.5 שעות
+    Create standard worklog - 9 net work hours (+ 1.5 break, not counted)
+    תקן: 9 שעות עבודה נטו. הפסקה 1.5 שעות לא נספרת.
     """
     require_permission(current_user, "worklogs.create")
 
@@ -190,14 +190,14 @@ def create_standard_worklog(
         # Parse date
         parsed_date = date_type.fromisoformat(report_date)
 
-        # Create standard worklog data
+        # Create standard worklog data — total_hours = net work hours only (×9)
         data = WorklogCreate(
             work_order_id=work_order_id,
             report_date=parsed_date,
             report_type="standard",
             work_hours=Decimal("9.0"),
             break_hours=Decimal("1.5"),
-            total_hours=Decimal("10.5"),
+            total_hours=Decimal("9"),
             is_standard=True,
             notes=notes
         )

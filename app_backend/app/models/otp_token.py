@@ -1,52 +1,27 @@
-"""
-OTPToken model - טוקנים חד-פעמיים (2FA)
-SYNCED WITH DB - 17.11.2025
-"""
+"""OTPToken model — one-time password tokens for login / 2FA."""
 
-from __future__ import annotations
-from typing import TYPE_CHECKING, Optional
-from datetime import datetime
-
-from sqlalchemy import Integer, String, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.models.base import BaseModel
-
-if TYPE_CHECKING:
-    from app.models.user import User
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, text
+from sqlalchemy.orm import relationship
+from app.models.base import Base
 
 
-class OTPToken(BaseModel):
-    """OTPToken model - טוקן חד-פעמי - SYNCED WITH DB"""
-
+class OTPToken(Base):
     __tablename__ = "otp_tokens"
 
-    __table_args__ = {"extend_existing": True}
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token = Column(String(64))            # plain code (legacy, kept for compat)
+    token_hash = Column(String(128))      # sha256 of token (legacy)
+    code_hash = Column(String(128))       # sha256 of 6-digit OTP (new spec)
+    purpose = Column(String(50), nullable=False, default="login")
+    expires_at = Column(DateTime, nullable=False)
+    used_at = Column(DateTime)
+    is_used = Column(Boolean, nullable=False, default=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    attempts = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, server_default=text("NOW()"))
+    updated_at = Column(DateTime, nullable=False, server_default=text("NOW()"), onupdate=text("NOW()"))
+    deleted_at = Column(DateTime)
+    version = Column(Integer, nullable=False, default=1)
 
-    # Primary Key
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-
-    # Basic fields - DB: int, NO / nvarchar(255), NO / nvarchar(100), NO
-    user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id"), nullable=False
-    )
-    token: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    token_hash: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
-    purpose: Mapped[str] = mapped_column(String(100), nullable=False)
-
-    # Expiry - DB: datetime2, NO
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-
-    # Status - DB: bit, NO
-    is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
-    # DB: int, NO
-    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-
-    # Relationships
-    user: Mapped["User"] = relationship("User")
-
-    def __repr__(self):
-        return f"<OTPToken(id={self.id}, user_id={self.user_id}, purpose='{self.purpose}')>"
+    user = relationship("User", back_populates="otp_tokens")

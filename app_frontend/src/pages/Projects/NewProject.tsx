@@ -130,8 +130,24 @@ const NewProject: React.FC = () => {
     }
   };
 
+  // Fix 7: client-side validation before submit
+  const getValidationErrors = () => {
+    const errs: string[] = [];
+    if (!formData.region_id) errs.push('מרחב');
+    if (!formData.area_id) errs.push('אזור');
+    if (!formData.manager_id) errs.push('מנהל עבודה');
+    return errs;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const missing = getValidationErrors();
+    if (missing.length > 0) {
+      const msg = `שדות חובה חסרים: ${missing.join(', ')}`;
+      setError(msg);
+      if ((window as any).showToast) (window as any).showToast(msg, 'error');
+      return;
+    }
     setLoading(true);
     setError(null);
 
@@ -410,7 +426,8 @@ const NewProject: React.FC = () => {
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || getValidationErrors().length > 0}
+                title={getValidationErrors().length > 0 ? `חסרים: ${getValidationErrors().join(', ')}` : undefined}
                 className="flex-1 bg-kkl-green hover:bg-kkl-green-hover text-white px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (

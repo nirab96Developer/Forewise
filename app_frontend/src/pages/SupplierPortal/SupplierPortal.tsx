@@ -71,6 +71,9 @@ const SupplierPortal: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [actionComplete, setActionComplete] = useState<'accepted' | 'rejected' | null>(null);
   const [licensePlate, setLicensePlate] = useState('');
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState<number | null>(null);
+  const [availableEquipment, setAvailableEquipment] = useState<any[]>([]);
+  const [loadingEquipment, setLoadingEquipment] = useState(false);
   const [notes, setNotes] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
@@ -118,6 +121,24 @@ const SupplierPortal: React.FC = () => {
     loadOrderData();
   }, [loadOrderData]);
 
+  // Load available equipment once order is loaded
+  useEffect(() => {
+    if (!portalToken || !order || order.is_expired || order.already_responded) return;
+    const loadEquipment = async () => {
+      setLoadingEquipment(true);
+      try {
+        const res = await api.get(`/supplier-portal/${portalToken}/available-equipment`);
+        setAvailableEquipment(res.data?.equipment || []);
+      } catch (err) {
+        console.error('Error loading available equipment:', err);
+        setAvailableEquipment([]);
+      } finally {
+        setLoadingEquipment(false);
+      }
+    };
+    loadEquipment();
+  }, [portalToken, order]);
+
   // Countdown timer
   useEffect(() => {
     if (timeRemaining === null || timeRemaining <= 0) return;
@@ -145,13 +166,19 @@ const SupplierPortal: React.FC = () => {
 
   const handleAccept = async () => {
     if (!portalToken) return;
+    if (!selectedEquipmentId) {
+      alert('חובה לבחור כלי מהרשימה לפני האישור');
+      return;
+    }
     
     try {
       setIsProcessing(true);
+      const chosenEq = availableEquipment.find(e => e.id === selectedEquipmentId);
       
       await api.post(`/supplier-portal/${portalToken}/accept`, {
         notes: notes,
-        license_plate: licensePlate
+        license_plate: chosenEq?.license_plate || licensePlate,
+        equipment_id: selectedEquipmentId,
       });
       
       setActionComplete('accepted');
@@ -381,7 +408,7 @@ const SupplierPortal: React.FC = () => {
           
           {showDetails && (
             <div className="border-t border-slate-100 p-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
                   <Building className="w-5 h-5 text-slate-400 mt-0.5" />
                   <div>
@@ -467,18 +494,46 @@ const SupplierPortal: React.FC = () => {
           </h3>
           
           <div className="space-y-4">
+            {/* Equipment dropdown — only matching category + this supplier + available */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                מספר רישוי הכלי <span className="text-slate-400">(אופציונלי)</span>
+                בחר כלי לשליחה <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                value={licensePlate}
-                onChange={(e) => setLicensePlate(e.target.value)}
-                placeholder="לדוגמה: 12-345-67"
-                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                dir="ltr"
-              />
+              {loadingEquipment ? (
+                <div className="flex items-center gap-2 text-slate-500 text-sm py-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  טוען כלים זמינים...
+                </div>
+              ) : availableEquipment.length === 0 ? (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+                  ⚠️ לא נמצאו כלים זמינים מהסוג המבוקש. אנא פנה למנהל העבודה.
+                </div>
+              ) : (
+                <select
+                  value={selectedEquipmentId ?? ''}
+                  onChange={e => {
+                    const id = e.target.value ? parseInt(e.target.value) : null;
+                    setSelectedEquipmentId(id);
+                    const eq = availableEquipment.find(x => x.id === id);
+                    setLicensePlate(eq?.license_plate || '');
+                  }}
+                  className="w-full p-3 text-base border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[44px]"
+                  required
+                >
+                  <option value="">— בחר כלי —</option>
+                  {availableEquipment.map(eq => (
+                    <option key={eq.id} value={eq.id}>
+                      {eq.model_name || 'כלי'} | לוחית: {eq.license_plate || 'לא רשומה'}
+                      {eq.hourly_rate ? ` | ₪${eq.hourly_rate}/שעה` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {selectedEquipmentId && (
+                <p className="text-xs text-emerald-700 mt-1">
+                  ✅ לוחית רישוי: {availableEquipment.find(e=>e.id===selectedEquipmentId)?.license_plate || '—'}
+                </p>
+              )}
             </div>
             
             <div>
@@ -490,7 +545,7 @@ const SupplierPortal: React.FC = () => {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="הערות נוספות למנהל העבודה..."
                 rows={2}
-                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full p-3 text-base border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[44px]"
               />
             </div>
           </div>
@@ -510,7 +565,7 @@ const SupplierPortal: React.FC = () => {
             <select
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full p-3 text-base border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[44px]"
             >
               <option value="">בחר סיבה...</option>
               <option value="לא זמין בתאריכים המבוקשים">לא זמין בתאריכים המבוקשים</option>

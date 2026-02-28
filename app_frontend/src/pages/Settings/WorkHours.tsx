@@ -3,7 +3,7 @@
 // הגדרות זמני עבודה - שעות תקן, חריגות ומנוחה
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Clock, Save, Loader2, Sun, Moon, Coffee, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Clock, Save, Loader2, Sun, Moon, Coffee, AlertTriangle, Shield } from 'lucide-react';
 import api from '../../services/api';
 
 interface WorkHoursSettings {
@@ -16,6 +16,7 @@ interface WorkHoursSettings {
   min_break_after_hours: number;
   weekend_days: string[];
   holidays: string[];
+  overnight_guard_rate: number;  // ✅ מחיר שמירת לילה
 }
 
 const defaultSettings: WorkHoursSettings = {
@@ -28,6 +29,7 @@ const defaultSettings: WorkHoursSettings = {
   min_break_after_hours: 6,
   weekend_days: ['friday', 'saturday'],
   holidays: [],
+  overnight_guard_rate: 0,
 };
 
 const WorkHours: React.FC = () => {
@@ -65,9 +67,7 @@ const WorkHours: React.FC = () => {
       setMessage({ type: 'success', text: 'ההגדרות נשמרו בהצלחה' });
     } catch (err) {
       console.error('Error saving settings:', err);
-      // Show success anyway - settings are stored locally for now
-      setMessage({ type: 'success', text: 'ההגדרות נשמרו' });
-      localStorage.setItem('work_hours_settings', JSON.stringify(settings));
+      setMessage({ type: 'error', text: 'שגיאה בשמירת ההגדרות. נסה שוב.' });
     } finally {
       setSaving(false);
       setTimeout(() => setMessage(null), 3000);
@@ -282,10 +282,39 @@ const WorkHours: React.FC = () => {
           <p className="text-xs text-gray-500 mt-2">בחר את הימים שבהם לא עובדים</p>
         </div>
 
+        {/* ✅ Overnight Guard Rate — Fix 3 */}
+        <div className="bg-white rounded-xl shadow-sm border p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="w-5 h-5 text-indigo-600" />
+            <h2 className="font-semibold text-gray-900">שמירת לילה (לינת שטח)</h2>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">
+              מחיר שמירת לילה (₪ ללילה)
+            </label>
+            <div className="relative">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₪</span>
+              <input
+                type="number"
+                value={settings.overnight_guard_rate ?? 0}
+                onChange={(e) => updateSetting('overnight_guard_rate', parseFloat(e.target.value) || 0)}
+                min={0}
+                step={10}
+                className="w-full pr-8 pl-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                placeholder="0"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              סכום קבוע לחיוב ללילה אחד של שמירת ציוד בשטח. ברירת מחדל: 0 (ללא חיוב)
+            </p>
+          </div>
+        </div>
+
         {/* Info Box */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
           <p className="text-sm text-blue-800">
             <strong>שים לב:</strong> הגדרות אלו משפיעות על חישוב שעות העבודה, שעות נוספות והתראות על חריגות בדיווחי העבודה.
+            מחיר שמירת לילה יתווסף אוטומטית לחישוב עלות ההזמנה כאשר סומן checkbox "שמירה".
           </p>
         </div>
 

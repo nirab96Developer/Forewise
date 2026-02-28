@@ -33,6 +33,30 @@ def list_areas(
     return AreaList(items=areas, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
 
+@router.get("/statistics", response_model=AreaStatistics)
+def get_statistics(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get statistics"""
+    require_permission(current_user, "areas.read")
+    return area_service.get_statistics(db)
+
+
+@router.get("/by-code/{code}", response_model=AreaResponse)
+def get_by_code(
+    code: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get by code"""
+    require_permission(current_user, "areas.read")
+    area = area_service.get_by_code(db, code)
+    if not area:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Area '{code}' not found")
+    return area
+
+
 @router.get("/{area_id}", response_model=AreaResponse)
 def get_area(
     area_id: int,
@@ -101,28 +125,4 @@ def restore_area(
     """Restore area"""
     require_permission(current_user, "areas.restore")
     area = area_service.restore(db, area_id, current_user.id)
-    return area
-
-
-@router.get("/statistics", response_model=AreaStatistics)
-def get_statistics(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """Get statistics"""
-    require_permission(current_user, "areas.read")
-    return area_service.get_statistics(db)
-
-
-@router.get("/by-code/{code}", response_model=AreaResponse)
-def get_by_code(
-    code: str,
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
-):
-    """Get by code"""
-    require_permission(current_user, "areas.read")
-    area = area_service.get_by_code(db, code)
-    if not area:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Area '{code}' not found")
     return area

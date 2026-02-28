@@ -121,9 +121,9 @@ async def get_dashboard_summary(
         # Get total hours this month
         current_month = datetime.now().month
         current_year = datetime.now().year
-        hours_result = db.query(func.sum(Worklog.hours)).filter(
-            extract('month', Worklog.work_date) == current_month,
-            extract('year', Worklog.work_date) == current_year
+        hours_result = db.query(func.sum(Worklog.work_hours)).filter(
+            extract('month', Worklog.report_date) == current_month,
+            extract('year', Worklog.report_date) == current_year
         ).scalar()
         hours_this_month = float(hours_result) if hours_result else 0
     except Exception as e:
@@ -242,9 +242,9 @@ async def get_dashboard_map(
     
     # Get locations
     locations = []
-    if current_user.role.name == "REGION_MANAGER" and current_user.region:
+    if current_user.role.code == "REGION_MANAGER" and current_user.region:
         locs = db.query(Location).filter(Location.region_id == current_user.region_id).limit(50).all()
-    elif current_user.role.name == "AREA_MANAGER" and current_user.area:
+    elif current_user.role.code == "AREA_MANAGER" and current_user.area:
         locs = db.query(Location).filter(Location.area_id == current_user.area_id).limit(50).all()
     else:
         locs = db.query(Location).limit(50).all()
@@ -261,9 +261,9 @@ async def get_dashboard_map(
     
     # Get projects  
     projects = []
-    if current_user.role.name == "REGION_MANAGER" and current_user.region:
+    if current_user.role.code == "REGION_MANAGER" and current_user.region:
         projs = db.query(Project).filter(Project.region_id == current_user.region_id).limit(50).all()
-    elif current_user.role.name == "AREA_MANAGER" and current_user.area:
+    elif current_user.role.code == "AREA_MANAGER" and current_user.area:
         projs = db.query(Project).filter(Project.area_id == current_user.area_id).limit(50).all()
     else:
         projs = db.query(Project).limit(50).all()
@@ -297,11 +297,11 @@ async def get_dashboard_projects(
     """Get recent projects for dashboard"""
     
     # Build query with eager loading to prevent lazy loading issues
+    # NOTE: budget_id is an Integer column on Project, not a relationship — load Budget separately
     query = db.query(Project).options(
         selectinload(Project.manager),
         selectinload(Project.region),
         selectinload(Project.area),
-        selectinload(Project.budget)
     )
     
     # Apply role-based filtering
@@ -315,23 +315,30 @@ async def get_dashboard_projects(
     
     # Get recent projects
     projects = query.order_by(desc(Project.updated_at)).limit(limit).all()
-    
+
+    # Load budgets separately to avoid selectinload on Integer column
+    budget_ids = [p.budget_id for p in projects if p.budget_id]
+    budgets = {}
+    if budget_ids:
+        for b in db.query(Budget).filter(Budget.id.in_(budget_ids)).all():
+            budgets[b.id] = b
+
     return [
         {
             "id": p.id,
             "name": p.name,
             "code": p.code,
             "status": "active" if p.is_active else "completed",
-            "priority": "medium",  # Project model has no priority field
-            "progress": 0,  # Project model has no progress_percentage field
+            "priority": "medium",
+            "progress": 0,
             "manager_name": p.manager.full_name if p.manager else None,
             "region_name": p.region.name if p.region else None,
             "area_name": p.area.name if p.area else None,
-            "allocated_budget": float(p.budget.total_amount if p.budget else 0),
-            "spent_budget": float(p.budget.spent_amount if p.budget else 0),
+            "allocated_budget": float(budgets[p.budget_id].total_amount or 0) if p.budget_id and p.budget_id in budgets else 0.0,
+            "spent_budget": float(budgets[p.budget_id].spent_amount or 0) if p.budget_id and p.budget_id in budgets else 0.0,
             "start_date": p.created_at.isoformat() if p.created_at else None,
-            "end_date": None,  # Project model has no planned_end_date field
-            "updated_at": p.updated_at.isoformat() if p.updated_at else None
+            "end_date": None,
+            "updated_at": p.updated_at.isoformat() if p.updated_at else None,
         }
         for p in projects
     ]
@@ -603,3 +610,142 @@ async def get_financial_summary(
         "invoices": invoices,
         "invoices_total": sum(v["amount"] for v in invoices.values()),
     }
+
+
+# ============================================
+# Missing endpoints called by frontend
+# ============================================
+
+@router.get("/stats")
+async def get_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Alias for /summary — frontend calls /dashboard/stats."""
+    return await get_dashboard_summary(db=db, current_user=current_user)
+
+
+@router.get("/activity")
+async def get_dashboard_activity(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    limit: int = 20
+) -> List[Dict[str, Any]]:
+    """Recent activity feed for dashboard."""
+    from app.models.activity_log import ActivityLog
+
+    query = db.query(ActivityLog).order_by(desc(ActivityLog.created_at))
+
+    if current_user.role and current_user.role.code not in ("ADMIN", "SYSTEM_ADMIN"):
+        query = query.filter(ActivityLog.user_id == current_user.id)
+
+    logs = query.limit(limit).all()
+
+    return [
+        {
+            "id": log.id,
+            "action": log.action if hasattr(log, "action") else getattr(log, "activity_type", None),
+            "description": getattr(log, "description", None) or getattr(log, "details", None),
+            "entity_type": getattr(log, "entity_type", None),
+            "entity_id": getattr(log, "entity_id", None),
+            "user_id": log.user_id,
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+        }
+        for log in logs
+    ]
+
+
+@router.get("/hours")
+async def get_dashboard_hours(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    period: str = "month"
+) -> Dict[str, Any]:
+    """Work-hours summary for dashboard."""
+    from app.models import Worklog
+
+    now = datetime.now()
+    if period == "week":
+        start = now - timedelta(days=now.weekday())
+    elif period == "year":
+        start = now.replace(month=1, day=1)
+    else:
+        start = now.replace(day=1)
+
+    start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    query = db.query(
+        func.coalesce(func.sum(Worklog.work_hours), 0).label("total_work_hours"),
+        func.coalesce(func.sum(Worklog.break_hours), 0).label("total_break_hours"),
+        func.coalesce(func.sum(Worklog.total_hours), 0).label("total_hours"),
+        func.count(Worklog.id).label("worklog_count"),
+    ).filter(Worklog.report_date >= start.date())
+
+    if current_user.role and current_user.role.code not in ("ADMIN", "SYSTEM_ADMIN"):
+        query = query.filter(Worklog.user_id == current_user.id)
+
+    row = query.one()
+    return {
+        "period": period,
+        "start_date": start.date().isoformat(),
+        "total_work_hours": float(row.total_work_hours),
+        "total_break_hours": float(row.total_break_hours),
+        "total_hours": float(row.total_hours),
+        "worklog_count": row.worklog_count,
+    }
+
+
+@router.get("/equipment/active")
+async def get_dashboard_active_equipment(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    limit: int = 20
+) -> List[Dict[str, Any]]:
+    """Active equipment for dashboard widget."""
+    from app.models.equipment import Equipment
+
+    equipment_list = (
+        db.query(Equipment)
+        .filter(Equipment.status == "in_use", Equipment.is_active == True)
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "id": e.id,
+            "name": getattr(e, "name", None) or getattr(e, "description", ""),
+            "code": getattr(e, "code", None),
+            "status": e.status,
+            "supplier_id": getattr(e, "supplier_id", None),
+        }
+        for e in equipment_list
+    ]
+
+
+@router.get("/suppliers/active")
+async def get_dashboard_active_suppliers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    limit: int = 20
+) -> List[Dict[str, Any]]:
+    """Active suppliers for dashboard widget."""
+    from app.models.supplier import Supplier
+
+    suppliers = (
+        db.query(Supplier)
+        .filter(Supplier.is_active == True)
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "contact_name": getattr(s, "contact_name", None),
+            "phone": getattr(s, "phone", None),
+            "is_active": s.is_active,
+        }
+        for s in suppliers
+    ]

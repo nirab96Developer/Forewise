@@ -63,6 +63,7 @@ class User(BaseModel):
     subordinates: Mapped[List["User"]] = relationship("User", foreign_keys=[manager_id], lazy="select")
     sessions: Mapped[List["Session"]] = relationship("Session", cascade="all, delete-orphan", lazy="select")
     otp_tokens: Mapped[List["OTPToken"]] = relationship("OTPToken", cascade="all, delete-orphan", lazy="select")
+    device_tokens: Mapped[List["DeviceToken"]] = relationship("DeviceToken", cascade="all, delete-orphan", lazy="select")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

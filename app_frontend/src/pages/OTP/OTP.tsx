@@ -248,7 +248,11 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
     setIsLoading(true);
     
     try {
-      await otpService.resendOTP(userId || 31);
+      if (!userId) {
+        setError('לא נמצא מזהה משתמש');
+        return;
+      }
+      await otpService.resendOTP(userId);
       setTimeLeft(300);
       setCanResend(false);
       setOtpCode(['', '', '', '', '', '']);

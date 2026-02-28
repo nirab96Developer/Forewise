@@ -1,73 +1,80 @@
-const CACHE_NAME = "kkl-app-shell-v2";
-const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest"];
+// KKL Forest Management - Service Worker
+// Caches app shell for offline support
 
-self.addEventListener("install", (event) => {
+const CACHE_NAME = 'kkl-forest-v1';
+const STATIC_ASSETS = [
+  '/',
+  '/index.html',
+  '/logo-kkl-transparent.png',
+  '/icons/icon-192.svg',
+];
+
+// Install: cache static shell
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch(() => {});
+    })
   );
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
+// Activate: clean old caches
+self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-          return Promise.resolve();
-        })
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
       )
     )
   );
   self.clients.claim();
 });
 
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-
+// Fetch: network-first for API, cache-first for assets
+self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
 
-  // Never cache dev/hot-reload internals or API calls.
-  if (
-    url.pathname.startsWith("/api") ||
-    url.pathname.startsWith("/@vite") ||
-    url.pathname.startsWith("/src/") ||
-    url.pathname.includes("hot-update") ||
-    url.pathname.endsWith(".map")
-  ) {
-    return;
-  }
+  // Skip non-GET and API requests
+  if (event.request.method !== 'GET') return;
+  if (url.pathname.startsWith('/api/')) return;
 
-  // HTML navigations: network first, fallback to app shell.
-  if (event.request.mode === "navigate") {
+  // Supplier portal pages — always network first (token-sensitive)
+  if (url.pathname.startsWith('/supplier-portal/')) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", clone));
-          return response;
-        })
-        .catch(async () => {
-          const cached = await caches.match("/index.html");
-          return cached || Response.error();
-        })
+      fetch(event.request).catch(() => caches.match('/index.html'))
     );
     return;
   }
 
-  // Static assets: cache first, then network.
+  // Navigation requests — return cached index.html for SPA routing
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((res) => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+          return res;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Static assets — cache first
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200) return response;
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
-      });
-    })
+    caches.match(event.request).then(
+      (cached) =>
+        cached ||
+        fetch(event.request).then((res) => {
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+          }
+          return res;
+        })
+    )
   );
 });

@@ -41,6 +41,7 @@ const WorkLogs = lazy(() => import("../pages/WorkLogs/WorkLogs"));
 const WorklogCreateNew = lazy(() => import("../pages/WorkLogs/WorklogCreateNew"));
 const WorklogDetail = lazy(() => import("../pages/WorkLogs/WorklogDetail"));
 const WorklogApproval = lazy(() => import("../pages/WorkLogs/WorklogApproval"));
+const AccountantInbox = lazy(() => import("../pages/WorkLogs/AccountantInbox"));
 
 // Equipment
 const EquipmentScan = lazy(() => import("../pages/Equipment/EquipmentScan"));
@@ -58,6 +59,7 @@ const UpdateSupplierEquipmentRate = lazy(() => import("../pages/Suppliers/Update
 
 // Invoices & Reports
 const Invoices = lazy(() => import("../pages/Invoices/Invoices"));
+const InvoiceDetail = lazy(() => import("../pages/Invoices/InvoiceDetail"));
 const PricingReports = lazy(() => import("../pages/Reports/PricingReports"));
 
 // Notifications & Support
@@ -195,6 +197,8 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/work-logs/approvals" element={<Navigate to="/projects" replace />} />
 
         {/* Legacy worklog routes */}
+        {/* Accountant Inbox */}
+        <Route path="/accountant-inbox" element={<Guarded permission={PERMISSIONS.WORKLOGS_APPROVE}><AccountantInbox /></Guarded>} />
         <Route path="/worklogs" element={<Navigate to="/projects" replace />} />
         <Route path="/worklogs/new" element={<Navigate to="/projects" replace />} />
         <Route path="/worklogs/standard" element={<Navigate to="/projects" replace />} />
@@ -230,6 +234,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
               INVOICES & REPORTS
           ============================================ */}
         <Route path="/invoices" element={<Guarded permission={PERMISSIONS.INVOICES_VIEW}><Invoices /></Guarded>} />
+        <Route path="/invoices/:id" element={<Guarded permission={PERMISSIONS.INVOICES_VIEW}><InvoiceDetail /></Guarded>} />
         <Route path="/reports" element={<Navigate to="/reports/pricing" replace />} />
         <Route path="/reports/pricing" element={<Guarded permission={PERMISSIONS.REPORTS_VIEW}><PricingReports /></Guarded>} />
 

@@ -29,6 +29,7 @@ export interface WorkOrderCreate {
   project_id: number;
   supplier_id?: number;
   equipment_type: string;
+  requested_equipment_model_id?: number;
   work_start_date: string;
   work_end_date: string;
   priority: 'low' | 'medium' | 'high';
@@ -37,6 +38,8 @@ export interface WorkOrderCreate {
   is_forced_selection?: boolean;
   constraint_reason_id?: number;
   constraint_notes?: string;
+  requires_guard?: boolean;
+  guard_days?: number;
 }
 
 export interface WorkOrderUpdate {

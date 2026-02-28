@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field
 from app.core.database import get_db
 from app.models.work_order import WorkOrder
 from app.models.supplier import Supplier
+from app.models.supplier_equipment import SupplierEquipment
+from app.models.equipment_model import EquipmentModel
 from app.models.project import Project
 from app.models.equipment import Equipment
 from app.models.region import Region
@@ -125,7 +127,7 @@ def check_token_valid(work_order: WorkOrder) -> tuple[bool, str]:
         return False, "כבר נענית להזמנה זו."
     
     # Check status - should be in a state waiting for supplier
-    valid_statuses = ['PENDING', 'APPROVED', 'sent_to_supplier']
+    valid_statuses = ['PENDING', 'APPROVED', 'sent_to_supplier', 'DISTRIBUTING']
     if work_order.status and work_order.status not in valid_statuses:
         return False, f"ההזמנה כבר בסטטוס: {work_order.status}"
     
@@ -213,6 +215,69 @@ def get_supplier_portal_view(
     return response
 
 
+@router.get("/{portal_token}/available-equipment")
+def get_available_equipment(
+    portal_token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    מחזיר רשימת ציוד זמין לספק שתואם לסוג הכלי שהוזמן.
+    תנאים:
+    1. equipment_model_id → category_id = work_order.requested_equipment_model.category_id
+    2. supplier_id = work_order.supplier_id
+    3. status = 'available' (לא משויך להזמנה פעילה אחרת)
+    """
+    work_order = get_work_order_by_token(db, portal_token)
+    if not work_order:
+        raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+
+    is_valid, err = check_token_valid(work_order)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=err)
+
+    # Determine the required category_id from the requested model
+    required_category_id = None
+    if work_order.requested_equipment_model_id:
+        model = db.query(EquipmentModel).filter(
+            EquipmentModel.id == work_order.requested_equipment_model_id
+        ).first()
+        if model:
+            required_category_id = model.category_id
+
+    supplier_id = work_order.supplier_id
+
+    # Query supplier_equipment filtered by category + supplier + available
+    query = db.query(SupplierEquipment, EquipmentModel).join(
+        EquipmentModel, EquipmentModel.id == SupplierEquipment.equipment_model_id, isouter=True
+    ).filter(
+        SupplierEquipment.supplier_id == supplier_id,
+        SupplierEquipment.status == 'available',
+        SupplierEquipment.is_active == True,
+    )
+
+    if required_category_id:
+        query = query.filter(EquipmentModel.category_id == required_category_id)
+
+    rows = query.all()
+
+    return {
+        "required_category_id": required_category_id,
+        "supplier_id": supplier_id,
+        "equipment": [
+            {
+                "id": se.id,
+                "equipment_model_id": se.equipment_model_id,
+                "model_name": em.name if em else None,
+                "category_id": em.category_id if em else None,
+                "license_plate": se.license_plate,
+                "status": se.status,
+                "hourly_rate": float(se.hourly_rate) if se.hourly_rate else None,
+            }
+            for se, em in rows
+        ]
+    }
+
+
 @router.post("/{portal_token}/accept", response_model=SupplierResponseResult)
 def accept_work_order(
     portal_token: str,
@@ -239,6 +304,48 @@ def accept_work_order(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=error_message
         )
+
+    # ── Tool-match enforcement (Fix 2) ────────────────────────────────────
+    if request.equipment_id:
+        chosen = db.query(SupplierEquipment).filter(
+            SupplierEquipment.id == request.equipment_id
+        ).first()
+
+        if not chosen:
+            raise HTTPException(status_code=400, detail="הכלי שנבחר אינו קיים במערכת")
+
+        # supplier must match
+        if chosen.supplier_id != work_order.supplier_id:
+            raise HTTPException(
+                status_code=400,
+                detail="הכלי שנבחר אינו שייך לספק הנוכחי"
+            )
+
+        # category must match requested model's category
+        if work_order.requested_equipment_model_id:
+            req_model = db.query(EquipmentModel).filter(
+                EquipmentModel.id == work_order.requested_equipment_model_id
+            ).first()
+            if req_model and chosen.equipment_model_id:
+                chosen_model = db.query(EquipmentModel).filter(
+                    EquipmentModel.id == chosen.equipment_model_id
+                ).first()
+                if chosen_model and chosen_model.category_id != req_model.category_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            f"הכלי שנבחר ({chosen_model.name}) אינו מהסוג שהוזמן. "
+                            f"נדרש: {req_model.name} (קטגוריה {req_model.category_id})"
+                        )
+                    )
+
+        # must be available
+        if chosen.status != 'available':
+            raise HTTPException(
+                status_code=400,
+                detail="הכלי שנבחר אינו פנוי כרגע — משויך להזמנה אחרת"
+            )
+    # ──────────────────────────────────────────────────────────────────────
     
     try:
         # Update work order status
@@ -246,11 +353,16 @@ def accept_work_order(
         work_order.supplier_response_at = datetime.utcnow()
         work_order.response_received_at = datetime.utcnow()
         
-        # Update equipment if provided
+        # Update supplier_equipment record
         if request.equipment_id:
-            work_order.equipment_id = request.equipment_id
-            
-            # Update equipment status
+            se = db.query(SupplierEquipment).filter(
+                SupplierEquipment.id == request.equipment_id
+            ).first()
+            if se:
+                se.status = 'busy'
+                work_order.equipment_id = se.id   # link WO to supplier_equipment row
+
+            # Also update legacy equipment table if mapped
             equipment = db.query(Equipment).filter(Equipment.id == request.equipment_id).first()
             if equipment:
                 equipment.status = "assigned"
@@ -276,6 +388,8 @@ def accept_work_order(
             order_number=work_order.order_number
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(

@@ -544,3 +544,12 @@ select {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* PWA Install Banner */
+.animate-slide-up {
+  animation: pwaSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes pwaSlideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}

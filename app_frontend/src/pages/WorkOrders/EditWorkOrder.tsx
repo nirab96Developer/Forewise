@@ -76,8 +76,10 @@ const EditWorkOrder: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'project_id' || name === 'supplier_id' || name === 'estimated_hours' || name === 'hourly_rate'
+      [name]: name === 'project_id' || name === 'supplier_id'
         ? (value ? parseInt(value) : undefined)
+        : name === 'estimated_hours' || name === 'hourly_rate'
+        ? (value ? parseFloat(value) : undefined)
         : value
     }));
   };

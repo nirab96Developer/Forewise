@@ -33,6 +33,17 @@ def list_budget_items(
     return BudgetItemList(items=items, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
 
+@router.get("/statistics", response_model=BudgetItemStatistics)
+def get_statistics(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    budget_id: Optional[int] = Query(None, description="Filter by budget")
+):
+    """Get statistics"""
+    require_permission(current_user, "budget_items.read")
+    return budget_item_service.get_statistics(db, budget_id)
+
+
 @router.get("/{item_id}", response_model=BudgetItemResponse)
 def get_budget_item(
     item_id: int,
@@ -102,14 +113,3 @@ def restore_budget_item(
     require_permission(current_user, "budget_items.restore")
     item = budget_item_service.restore(db, item_id, current_user.id)
     return item
-
-
-@router.get("/statistics", response_model=BudgetItemStatistics)
-def get_statistics(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    budget_id: Optional[int] = Query(None, description="Filter by budget")
-):
-    """Get statistics"""
-    require_permission(current_user, "budget_items.read")
-    return budget_item_service.get_statistics(db, budget_id)

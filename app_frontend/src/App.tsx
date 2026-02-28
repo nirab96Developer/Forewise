@@ -16,6 +16,7 @@ import HumanSupportChat from "./components/HelpWidget/HumanSupportChat";
 import { FullScreenLoader } from "./components/common/UnifiedLoader";
 import { debugLogger } from "./utils/debug";
 import { useIsMobile } from "./hooks/useIsMobile";
+import PWAInstallBanner from "./components/PWAInstallBanner";
 
 const App: React.FC = () => {
   const [globalLoading, setGlobalLoading] = useState(false);
@@ -126,6 +127,9 @@ const App: React.FC = () => {
         <div className={isLoggedIn && !isPublicPage ? "pt-16 md:mr-64 min-h-screen bg-gray-50" : ""}>
           <AppRoutes setGlobalLoading={setGlobalLoading} />
         </div>
+
+        {/* iOS PWA Install Banner */}
+        <PWAInstallBanner />
 
         {/* Debug Panel Toggle Button */}
         {import.meta.env.DEV && (

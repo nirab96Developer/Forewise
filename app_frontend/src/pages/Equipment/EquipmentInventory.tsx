@@ -80,9 +80,10 @@ const EquipmentInventory: React.FC = () => {
     return acc;
   }, {} as Record<number, Equipment[]>);
 
-  const getSupplierName = (supplierId: number) => {
+  const getSupplierName = (supplierId: number | null | undefined) => {
+    if (!supplierId) return 'לא שויך ספק';
     const supplier = suppliers.find(s => s.id === supplierId);
-    return supplier?.name || `ספק #${supplierId}`;
+    return supplier?.name ?? 'לא שויך ספק';
   };
 
   if (loading) {
@@ -210,7 +211,7 @@ const EquipmentInventory: React.FC = () => {
                       </div>
                       <div>
                         <div className="text-xs text-blue-600">ספק</div>
-                        <div className="font-medium text-gray-900">{eq.supplier_name || getSupplierName(eq.supplier_id)}</div>
+                        <div className="font-medium text-gray-900">{eq.supplier_name || getSupplierName(eq.supplier_id) || '—'}</div>
                       </div>
                     </div>
 

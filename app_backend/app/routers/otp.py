@@ -95,9 +95,12 @@ async def verify_otp(
 
 @router.post("/cleanup")
 async def cleanup_expired_tokens(
+    current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Clean up expired OTP tokens (admin only)"""
+    if not (current_user.role and current_user.role.code == "ADMIN"):
+        raise HTTPException(status_code=403, detail="Admin access required")
     try:
         count = otp_service.cleanup_expired_tokens(db)
         return {

@@ -18,11 +18,13 @@ import app.models.role_permission
 import app.models.role_assignment
 import app.models.session
 import app.models.otp_token
+import app.models.device_token
 import app.models.region
 import app.models.area
 import app.models.department
 import app.models.location
 import app.models.supplier
+import app.models.supplier_equipment
 import app.models.equipment
 import app.models.equipment_model
 import app.models.equipment_type
@@ -51,11 +53,13 @@ from app.models.role_permission import RolePermission
 from app.models.role_assignment import RoleAssignment
 from app.models.session import Session
 from app.models.otp_token import OTPToken
+from app.models.device_token import DeviceToken
 from app.models.region import Region
 from app.models.area import Area
 from app.models.department import Department
 from app.models.location import Location
 from app.models.supplier import Supplier
+from app.models.supplier_equipment import SupplierEquipment
 from app.models.equipment import Equipment
 from app.models.equipment_model import EquipmentModel
 from app.models.equipment_type import EquipmentType

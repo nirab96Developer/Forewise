@@ -191,6 +191,11 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
             userName: userObject.name,
             rememberMe,
           });
+
+          // שמירת device_token אם הוחזר מהשרת (2FA remember device)
+          if (data.device_token) {
+            localStorage.setItem('device_token', data.device_token);
+          }
           
           // שמירת זכור אותי אם נבחר
           if (rememberMe) {
@@ -376,18 +381,32 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
               >
                 שכחת סיסמה?
               </a>
-              <label className="flex items-center cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-kkl-green rounded border-2 border-gray-300 focus:ring-kkl-green/50 transition-colors"
-                  disabled={isLoading}
-                />
-                <span className="mr-2 text-sm text-gray-600 group-hover:text-gray-800 transition-colors">
-                  זכור אותי
+              {/* Remember me — large touch target for mobile (44px Apple HIG) */}
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={rememberMe}
+                data-testid="login-remember"
+                disabled={isLoading}
+                onClick={() => setRememberMe(prev => !prev)}
+                className="flex items-center gap-2 min-h-[44px] px-2 touch-manipulation select-none
+                           focus:outline-none focus:ring-2 focus:ring-kkl-green/40 rounded-lg
+                           disabled:opacity-50"
+              >
+                {/* Custom checkbox visual */}
+                <span className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  rememberMe
+                    ? 'bg-kkl-green border-kkl-green'
+                    : 'bg-white border-gray-300'
+                }`}>
+                  {rememberMe && (
+                    <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
                 </span>
-              </label>
+                <span className="text-sm text-gray-600">זכור אותי</span>
+              </button>
             </div>
 
             {error && (

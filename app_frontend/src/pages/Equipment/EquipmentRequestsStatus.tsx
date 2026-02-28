@@ -236,11 +236,11 @@ const EquipmentRequestsStatus: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2 space-x-reverse">
-                        <button className="text-blue-600 hover:text-blue-900">צפייה</button>
+                        <button className="text-blue-600 hover:text-blue-900" onClick={() => window.location.href = `/equipment/${request.id}`}>צפייה</button>
                         {request.status === 'pending' && (
                           <>
-                            <button className="text-green-600 hover:text-green-900">אישור</button>
-                            <button className="text-red-600 hover:text-red-900">דחייה</button>
+                            <button className="text-green-600 hover:text-green-900" onClick={async () => { try { await api.put(`/equipment/${request.id}/status`, { status: 'approved' }); fetchRequests(); } catch { (window as any).showToast?.('שגיאה באישור', 'error'); } }}>אישור</button>
+                            <button className="text-red-600 hover:text-red-900" onClick={async () => { try { await api.put(`/equipment/${request.id}/status`, { status: 'rejected' }); fetchRequests(); } catch { (window as any).showToast?.('שגיאה בדחייה', 'error'); } }}>דחייה</button>
                           </>
                         )}
                       </div>
