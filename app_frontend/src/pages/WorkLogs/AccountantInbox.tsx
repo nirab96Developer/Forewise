@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/WorkLogs/AccountantInbox.tsx
 // תיבת נכנסים מנהלת חשבונות — אישורי השקעה יומיים
 
@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, CheckCircle, XCircle, Clock, Loader2, Search,
-  Filter, Calendar, Truck, Building2, FileText, ReceiptText,
+  Calendar, Building2, FileText, ReceiptText,
   AlertCircle, RefreshCw
 } from 'lucide-react';
 import api from '../../services/api';

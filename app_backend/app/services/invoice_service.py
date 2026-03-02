@@ -81,7 +81,18 @@ class InvoiceService(BaseService[Invoice]):
         db.add(invoice)
         db.commit()
         db.refresh(invoice)
-        
+
+        # Notify accountants about new invoice
+        project_name = ""
+        if invoice.project_id:
+            try:
+                from app.models.project import Project as _Proj
+                p = db.query(_Proj).filter(_Proj.id == invoice.project_id).first()
+                if p: project_name = p.name or ""
+            except Exception:
+                pass
+        _notify_accountants_invoice(db, invoice.id, invoice.invoice_number or str(invoice.id), project_name)
+
         return invoice
     
     def update(self, db: Session, invoice_id: int, data: InvoiceUpdate, current_user_id: int) -> Invoice:
@@ -177,14 +188,19 @@ class InvoiceService(BaseService[Invoice]):
 
 # ── Missing methods required by router ──────────────────────
 def approve(self, db, invoice_id: int, user_id: int):
-    """Mark invoice as approved."""
+    """Mark invoice as approved + update budget spent_amount."""
     invoice = self.get_by_id_or_404(db, invoice_id)
-    invoice.status = 'approved'
+    invoice.status = 'APPROVED'
     import datetime
     invoice.approved_at = datetime.datetime.now()
     invoice.approved_by = user_id
     db.commit()
     db.refresh(invoice)
+    # Update budget
+    if invoice.project_id:
+        _update_budget_spent(db, invoice.project_id)
+    # Audit log
+    _audit(db, user_id, 'invoices', invoice.id, 'APPROVE', {'status': 'APPROVED'})
     return invoice
 
 def send_to_supplier(self, db, invoice_id: int, user_id: int):
@@ -194,3 +210,137 @@ def send_to_supplier(self, db, invoice_id: int, user_id: int):
     db.commit()
     db.refresh(invoice)
     return invoice
+
+
+# ── Budget helpers ────────────────────────────────────────────────────────────
+
+def _update_budget_spent(db, project_id: int):
+    """Recalculate and update budget.spent_amount from approved invoices."""
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        from sqlalchemy import text
+        from app.models.budget import Budget
+        # Sum all APPROVED invoices for the project
+        result = db.execute(text("""
+            SELECT COALESCE(SUM(total_amount), 0) as total
+            FROM invoices
+            WHERE project_id = :pid AND UPPER(status) = 'APPROVED'
+              AND deleted_at IS NULL AND is_active = true
+        """), {"pid": project_id}).scalar()
+        budget = db.query(Budget).filter(
+            Budget.project_id == project_id, Budget.is_active == True
+        ).first()
+        if budget:
+            budget.spent_amount = result
+            db.commit()
+            # Budget alert if > 90%
+            if budget.total_amount and budget.total_amount > 0:
+                pct = float(result) / float(budget.total_amount) * 100
+                if pct >= 90:
+                    _send_budget_alert(db, project_id, pct, budget.id)
+    except Exception as e:
+        log.warning(f"update_budget_spent failed for project {project_id}: {e}")
+
+
+def _send_budget_alert(db, project_id: int, pct: float, budget_id: int):
+    """Send BUDGET_ALERT notification to area manager and region manager."""
+    import logging, json
+    log = logging.getLogger(__name__)
+    try:
+        from sqlalchemy import text
+        from app.services.notification_service import notification_service
+        from app.schemas.notification import NotificationCreate
+
+        # Get project name + manager ids
+        row = db.execute(text("""
+            SELECT p.name, p.manager_id, u.region_id, u.area_id
+            FROM projects p LEFT JOIN users u ON p.manager_id = u.id
+            WHERE p.id = :pid
+        """), {"pid": project_id}).first()
+        if not row:
+            return
+        project_name = row[0]
+        recipient_ids = set()
+        if row[1]: recipient_ids.add(row[1])  # project manager
+
+        # Also notify region/area managers
+        area_managers = db.execute(text("""
+            SELECT DISTINCT u.id FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE r.code IN ('AREA_MANAGER','REGION_MANAGER','ADMIN')
+              AND u.is_active = true
+              AND (u.area_id = :aid OR u.region_id = :rid)
+        """), {"aid": row[3], "rid": row[2]}).fetchall()
+        for m in area_managers:
+            recipient_ids.add(m[0])
+
+        for uid in recipient_ids:
+            notif = NotificationCreate(
+                user_id=uid,
+                title=f"⚠️ חריגת תקציב — {project_name}",
+                message=f"הפרויקט {project_name} הגיע ל-{pct:.0f}% מהתקציב המאושר.",
+                notification_type="BUDGET_ALERT",
+                priority="high",
+                channel="in_app",
+                entity_type="budget",
+                entity_id=budget_id,
+                data=json.dumps({"project_id": project_id, "pct": pct}),
+                action_url=f"/projects/{project_id}",
+            )
+            notification_service.create_notification(db, notif)
+    except Exception as e:
+        log.warning(f"Budget alert notification failed: {e}")
+
+
+def _audit(db, user_id, table_name: str, record_id: int, action: str, new_values: dict):
+    """Insert a row into audit_logs (best-effort)."""
+    import logging, json
+    try:
+        from sqlalchemy import text
+        db.execute(text("""
+            INSERT INTO audit_logs (user_id, table_name, record_id, action, new_values)
+            VALUES (:uid, :tbl, :rid, :act, :nv::jsonb)
+        """), {
+            "uid": user_id,
+            "tbl": table_name,
+            "rid": record_id,
+            "act": action,
+            "nv": json.dumps(new_values),
+        })
+        db.commit()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Audit log failed [{table_name}/{action}]: {e}")
+
+
+def _notify_accountants_invoice(db, invoice_id: int, invoice_number: str, project_name: str = ""):
+    """Notify all accountant-role users about a new pending invoice."""
+    import logging, json
+    log = logging.getLogger(__name__)
+    try:
+        from sqlalchemy import text
+        from app.services.notification_service import notification_service
+        from app.schemas.notification import NotificationCreate
+
+        accountants = db.execute(text("""
+            SELECT u.id FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE r.code IN ('ACCOUNTANT','ADMIN') AND u.is_active = true
+        """)).fetchall()
+
+        for row in accountants:
+            notif = NotificationCreate(
+                user_id=row[0],
+                title=f"חשבונית חדשה ממתינה לאישור — {invoice_number}",
+                message=f"חשבונית {invoice_number} {('בפרויקט ' + project_name) if project_name else ''} ממתינה לאישורך.",
+                notification_type="INVOICE_PENDING",
+                priority="medium",
+                channel="in_app",
+                entity_type="invoice",
+                entity_id=invoice_id,
+                data=json.dumps({"invoice_id": invoice_id}),
+                action_url=f"/invoices/{invoice_id}",
+            )
+            notification_service.create_notification(db, notif)
+    except Exception as e:
+        log.warning(f"Invoice notification failed: {e}")

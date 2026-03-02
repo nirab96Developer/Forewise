@@ -6,7 +6,7 @@ from typing import Optional, List
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 class WorkOrderFilters(BaseModel):
@@ -152,8 +152,11 @@ class WorkOrderResponse(WorkOrderBase):
     supplier_name: Optional[str] = None
     equipment_name: Optional[str] = None
     location_name: Optional[str] = None
-    
+    area_name: Optional[str] = None
+    region_name: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)
+
 
 
 class WorkOrderFilter(BaseModel):
@@ -196,8 +199,10 @@ class WorkOrderSearch(BaseModel):
     priority: Optional[str] = None
     project_id: Optional[int] = None
     supplier_id: Optional[int] = None
+    area_id: Optional[int] = None
     page: int = 1
     page_size: int = 50
+    per_page: Optional[int] = None  # alias for page_size (frontend compatibility)
 
 
 class WorkOrderStatusUpdate(BaseModel):

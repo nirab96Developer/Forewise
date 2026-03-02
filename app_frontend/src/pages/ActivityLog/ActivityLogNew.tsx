@@ -1,13 +1,13 @@
-// @ts-nocheck
+
 // src/pages/ActivityLog/ActivityLogNew.tsx
 // יומן פעילות - עיצוב נקי בסגנון קק"ל
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Calendar as CalendarIcon, Clock, ChevronRight, ChevronLeft,
-  Truck, FileText, Plus, X, PenLine, TreePine, Briefcase, Hammer,
-  CheckCircle, AlertTriangle, User, Send, Filter, List, Grid3X3,
-  Bell, Activity, ClipboardList, Settings
+  Truck, Plus, X, PenLine, TreePine, Briefcase, Hammer,
+  User, Send, List, Grid3X3,
+  Bell, Activity, Settings
 } from "lucide-react";
 
 // Services
@@ -180,8 +180,7 @@ const ActivityLogNew: React.FC = () => {
         
         const startDate = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
         const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
-        const token = localStorage.getItem('token');
-        
+
         // טעינת הזמנות עבודה
         try {
           const workOrdersData = await workOrderService.getWorkOrdersForCalendar(startDate, endDate);

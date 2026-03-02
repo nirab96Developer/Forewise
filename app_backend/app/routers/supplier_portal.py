@@ -349,7 +349,7 @@ def accept_work_order(
     
     try:
         # Update work order status
-        work_order.status = "APPROVED"  # Supplier accepted
+        work_order.status = "SUPPLIER_ACCEPTED_PENDING_COORDINATOR"  # Supplier accepted, awaiting coordinator approval
         work_order.supplier_response_at = datetime.utcnow()
         work_order.response_received_at = datetime.utcnow()
         
@@ -358,16 +358,36 @@ def accept_work_order(
             se = db.query(SupplierEquipment).filter(
                 SupplierEquipment.id == request.equipment_id
             ).first()
-            if se:
-                se.status = 'busy'
-                work_order.equipment_id = se.id   # link WO to supplier_equipment row
+            if not se:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"הציוד שנבחר (id={request.equipment_id}) אינו קיים במערכת"
+                )
+            se.status = 'busy'
 
-            # Also update legacy equipment table if mapped
-            equipment = db.query(Equipment).filter(Equipment.id == request.equipment_id).first()
-            if equipment:
-                equipment.status = "assigned"
-                if request.license_plate:
-                    equipment.license_plate = request.license_plate
+            # If supplier_equipment has a license_plate and we got a new one — update it
+            if request.license_plate and request.license_plate != se.license_plate:
+                se.license_plate = request.license_plate
+
+            # Link work_order.equipment_id → equipment.id via license_plate
+            effective_plate = se.license_plate or request.license_plate
+            if effective_plate:
+                matched_equipment = db.query(Equipment).filter(
+                    Equipment.license_plate == effective_plate
+                ).first()
+                if matched_equipment:
+                    work_order.equipment_id = matched_equipment.id
+                    import logging
+                    logging.getLogger(__name__).info(
+                        f"WO {work_order.id}: linked equipment_id={matched_equipment.id} "
+                        f"(license_plate={effective_plate})"
+                    )
+                else:
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        f"WO {work_order.id}: supplier_equipment.license_plate={effective_plate} "
+                        f"has no match in equipment table — equipment_id left NULL"
+                    )
         
         # Store notes in constraint_notes (reusing field)
         if request.notes:

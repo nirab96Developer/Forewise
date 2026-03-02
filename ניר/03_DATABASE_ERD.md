@@ -1,0 +1,412 @@
+# Database — ERD מלא (PostgreSQL + PostGIS)
+
+**Database:** `kkl_forest_prod`  
+**Engine:** PostgreSQL 16 + PostGIS  
+**Tables:** 54  
+
+---
+
+## ERD ראשי — ישויות עיקריות
+
+```mermaid
+erDiagram
+    users {
+        int id PK
+        string username UK
+        string email UK
+        string full_name
+        string password_hash
+        int role_id FK
+        int region_id FK
+        int area_id FK
+        int department_id FK
+        int manager_id FK
+        bool is_active
+        bool two_factor_enabled
+        datetime last_login
+    }
+
+    roles {
+        int id PK
+        string code UK
+        string name
+        bool is_active
+        int display_order
+    }
+
+    permissions {
+        int id PK
+        string code UK
+        string name
+        string module
+        string action
+    }
+
+    role_permissions {
+        int id PK
+        int role_id FK
+        int permission_id FK
+    }
+
+    regions {
+        int id PK
+        string code UK
+        string name
+        geometry geom "PostGIS MULTIPOLYGON"
+        numeric total_budget
+    }
+
+    areas {
+        int id PK
+        string code UK
+        string name
+        int region_id FK
+        geometry geom "PostGIS MULTIPOLYGON"
+    }
+
+    projects {
+        int id PK
+        string code UK
+        string name
+        text description
+        int region_id FK
+        int area_id FK
+        int budget_id FK
+        int manager_id FK
+        int location_id FK
+        string status
+        numeric budget
+        date start_date
+        date end_date
+        geometry location_geom "PostGIS POINT"
+        bigint forest_polygon_id FK
+        bool is_active
+    }
+
+    budgets {
+        int id PK
+        string code UK
+        string name
+        string budget_type
+        numeric total_amount
+        numeric allocated_amount
+        numeric spent_amount
+        numeric committed_amount
+        int project_id FK
+        int area_id FK
+        string status
+        bool is_active
+    }
+
+    work_orders {
+        int id PK
+        int order_number UK
+        string title
+        text description
+        int project_id FK
+        int supplier_id FK
+        int equipment_id FK
+        string status
+        string priority
+        date work_start_date
+        date work_end_date
+        numeric estimated_hours
+        numeric hourly_rate
+        numeric frozen_amount
+        string portal_token UK
+        datetime portal_expiry
+        bool is_active
+    }
+
+    suppliers {
+        int id PK
+        string code UK
+        string name
+        string contact_name
+        string phone
+        string email
+        int region_id FK
+        int area_id FK
+        numeric rating
+        int total_jobs
+        bool is_active
+    }
+
+    supplier_equipment {
+        int id PK
+        int supplier_id FK
+        int equipment_model_id FK
+        string license_plate
+        string status
+        bool is_active
+    }
+
+    equipment {
+        int id PK
+        string code UK
+        string name
+        int category_id FK
+        int equipment_type_id FK
+        int supplier_id FK
+        string status
+        bool is_active
+    }
+
+    equipment_models {
+        int id PK
+        string name
+        int category_id FK
+        bool is_active
+    }
+
+    equipment_categories {
+        int id PK
+        string code UK
+        string name
+        int parent_category_id FK
+    }
+
+    worklogs {
+        int id PK
+        int work_order_id FK
+        int project_id FK
+        int user_id FK
+        int equipment_id FK
+        string status
+        datetime start_time
+        datetime end_time
+        numeric total_hours
+        numeric break_hours
+        numeric hourly_rate
+        numeric total_cost
+        bool is_approved
+    }
+
+    invoices {
+        int id PK
+        string invoice_number UK
+        int supplier_id FK
+        string status
+        numeric total_amount
+        numeric paid_amount
+        date due_date
+        bool is_approved
+    }
+
+    invoice_items {
+        int id PK
+        int invoice_id FK
+        int worklog_id FK
+        string description
+        numeric quantity
+        numeric unit_price
+        numeric total_price
+    }
+
+    device_tokens {
+        uuid id PK
+        int user_id FK
+        string token_hash UK
+        uuid device_id
+        string device_name
+        string device_os
+        bool is_active
+        datetime last_used_at
+        datetime expires_at
+    }
+
+    otp_tokens {
+        int id PK
+        int user_id FK
+        string code_hash
+        string purpose
+        datetime expires_at
+        bool is_used
+        int attempts
+    }
+
+    sessions {
+        int id PK
+        int user_id FK
+        string session_id UK
+        string ip_address
+        datetime expires_at
+    }
+
+    notifications {
+        int id PK
+        int user_id FK
+        string title
+        text message
+        string type
+        bool is_read
+        datetime read_at
+    }
+
+    activity_logs {
+        int id PK
+        int user_id FK
+        string activity_type
+        string action
+        string entity_type
+        int entity_id
+        text metadata_json
+        datetime created_at
+    }
+
+    forests {
+        bigint id PK
+        string code UK
+        string name
+        geometry geom "PostGIS MULTIPOLYGON"
+        numeric area_km2
+    }
+
+    forest_polygons {
+        bigint id PK
+        geometry geom "PostGIS MULTIPOLYGON"
+        string geom_hash UK
+        datetime created_at
+    }
+
+    supplier_rotations {
+        int id PK
+        int supplier_id FK
+        int area_id FK
+        int rotation_position
+        int total_assignments
+        int successful_completions
+        int rejection_count
+        datetime last_assigned_at
+    }
+
+    supplier_invitations {
+        int id PK
+        int work_order_id FK
+        int supplier_id FK
+        string status
+        string portal_token
+        datetime expires_at
+        datetime responded_at
+    }
+
+    system_rates {
+        int id PK
+        string rate_type
+        string equipment_category
+        numeric rate_value
+        bool is_active
+    }
+
+    users ||--o{ role_permissions : ""
+    roles ||--o{ role_permissions : ""
+    roles ||--o{ permissions : ""
+    users ||--o{ sessions : ""
+    users ||--o{ otp_tokens : ""
+    users ||--o{ device_tokens : ""
+    users ||--o{ activity_logs : ""
+    users ||--o{ notifications : ""
+    regions ||--o{ areas : ""
+    areas ||--o{ projects : ""
+    regions ||--o{ projects : ""
+    projects ||--o{ work_orders : ""
+    projects ||--o{ worklogs : ""
+    projects ||--|| budgets : ""
+    suppliers ||--o{ work_orders : ""
+    suppliers ||--o{ supplier_equipment : ""
+    suppliers ||--o{ supplier_rotations : ""
+    equipment_models ||--o{ supplier_equipment : ""
+    equipment_categories ||--o{ equipment_models : ""
+    equipment ||--o{ worklogs : ""
+    work_orders ||--o{ worklogs : ""
+    work_orders ||--o{ supplier_invitations : ""
+    invoices ||--o{ invoice_items : ""
+    worklogs ||--o{ invoice_items : ""
+```
+
+---
+
+## טבלאות לפי קטגוריה עם ספירת שורות
+
+### 👤 Identity & Access
+| טבלה | שורות | תיאור |
+|------|-------|--------|
+| `users` | 8 | משתמשים אמיתיים (8 roles) |
+| `roles` | 13 | תפקידים (ADMIN, WORK_MANAGER וכו') |
+| `permissions` | 267 | הרשאות granular |
+| `role_permissions` | 359 | מיפוי role → permissions |
+| `sessions` | 405 | sessions פעילות |
+| `otp_tokens` | 3 | קודי OTP ל-login |
+| `device_tokens` | 1 | מכשירים trusted (biometric) |
+| `role_assignments` | 0 | הקצאות role נוספות |
+| `refresh_tokens` | 0 | refresh tokens |
+
+### 🌍 Geography
+| טבלה | שורות | תיאור |
+|------|-------|--------|
+| `regions` | 19 | מרחבים (צפון/מרכז/דרום + test) |
+| `areas` | 21 | אזורים בתוך מרחבים |
+| `locations` | 22 | נקודות מיקום פיזיות |
+| `departments` | 7 | מחלקות ארגוניות |
+| `forests` | 3 | יערות עם PostGIS geometry |
+| `forest_polygons` | 273 | פוליגוני יער מפורטים |
+
+### 🌲 Projects
+| טבלה | שורות | תיאור |
+|------|-------|--------|
+| `projects` | 60 | פרויקטי יער (YR-001 עד YR-060) |
+| `project_assignments` | 12 | שיוך עובדים לפרויקטים |
+| `budgets` | 147 | תקציבים לפרויקטים |
+| `budget_items` | 87 | פריטי תקציב |
+| `budget_allocations` | 110 | הקצאות תקציביות |
+| `budget_transfers` | 98 | העברות בין תקציבים |
+| `balance_releases` | 144 | שחרורי יתרה |
+
+### 🔧 Work Execution
+| טבלה | שורות | תיאור |
+|------|-------|--------|
+| `work_orders` | 10 | הזמנות עבודה |
+| `work_order_statuses` | 72 | סטטוסים (PENDING/DISTRIBUTING וכו') |
+| `worklogs` | 14 | דיווחי שעות |
+| `worklog_statuses` | 61 | סטטוסי worklog |
+| `equipment_scans` | 58 | סריקות ציוד בשטח |
+
+### 👷 Suppliers
+| טבלה | שורות | תיאור |
+|------|-------|--------|
+| `suppliers` | 17 | ספקים |
+| `supplier_equipment` | 37 | מלאי ציוד לכל ספק |
+| `supplier_rotations` | 12 | Fair Rotation state |
+| `supplier_invitations` | 2 | הזמנות שנשלחו לספקים |
+| `supplier_constraint_reasons` | 16 | סיבות אילוץ |
+| `supplier_constraint_logs` | 0 | לוג אילוצים |
+| `supplier_rejection_reasons` | 9 | סיבות דחייה |
+
+### 🔩 Equipment
+| טבלה | שורות | תיאור |
+|------|-------|--------|
+| `equipment` | 47 | יחידות ציוד |
+| `equipment_models` | 11 | דגמי ציוד |
+| `equipment_categories` | 10 | קטגוריות |
+| `equipment_types` | 23 | סוגי ציוד |
+| `equipment_maintenance` | 78 | תחזוקה |
+| `equipment_assignments` | 0 | שיוכי ציוד |
+
+### 💰 Finance
+| טבלה | שורות | תיאור |
+|------|-------|--------|
+| `invoices` | 27 | חשבוניות |
+| `invoice_items` | 2 | פריטי חשבונית |
+| `invoice_payments` | 1 | תשלומים |
+| `system_rates` | 6 | תעריפי מערכת |
+
+### 📊 Reporting & Ops
+| טבלה | שורות | תיאור |
+|------|-------|--------|
+| `activity_logs` | 731 | לוג פעילות מלא |
+| `activity_types` | 245 | סוגי פעילויות |
+| `notifications` | 7 | התראות |
+| `reports` | 12 | דוחות שמורים |
+| `report_runs` | 0 | הרצות דוחות |
+| `support_tickets` | 12 | כרטיסי תמיכה |
+| `support_ticket_comments` | 4 | תגובות |

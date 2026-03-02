@@ -1,11 +1,11 @@
-// @ts-nocheck
+
 // src/pages/Settings/SupplierSettings.tsx
 // הגדרות ספקים - ניהול ספקים, ציוד ותמחור
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowRight, Truck, Plus, Search, Edit, Trash2,
-  DollarSign, Wrench, Filter, Eye, History,
+  DollarSign, Wrench, Filter, Eye,
   CheckCircle, XCircle, AlertCircle, X, Save, RotateCcw
 } from 'lucide-react';
 import api from '../../services/api';
@@ -114,7 +114,7 @@ const SupplierModal: React.FC<{
             { key: 'address', label: 'כתובת', placeholder: 'כתובת הספק' },
           ].map(f => (
             <div key={f.key}>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{f.label}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{f.label}</label>
               <input
                 value={(form as any)[f.key]}
                 onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}

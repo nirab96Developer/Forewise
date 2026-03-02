@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Fingerprint, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';

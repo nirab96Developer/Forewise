@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Settings/WorkHours.tsx
 // הגדרות זמני עבודה - שעות תקן, חריגות ומנוחה
 import React, { useState, useEffect } from 'react';
@@ -139,7 +139,7 @@ const WorkHours: React.FC = () => {
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">שעת התחלה</label>
+              <label className="block text-sm text-gray-600 mb-1.5">שעת התחלה</label>
               <input
                 type="time"
                 value={settings.standard_start_time}
@@ -148,7 +148,7 @@ const WorkHours: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">שעת סיום</label>
+              <label className="block text-sm text-gray-600 mb-1.5">שעת סיום</label>
               <input
                 type="time"
                 value={settings.standard_end_time}
@@ -169,7 +169,7 @@ const WorkHours: React.FC = () => {
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-600 mb-1">מקסימום שעות ביום</label>
+                <label className="block text-sm text-gray-600 mb-1.5">מקסימום שעות ביום</label>
                 <input
                   type="number"
                   value={settings.max_daily_hours}
@@ -180,7 +180,7 @@ const WorkHours: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-1">מקסימום שעות בשבוע</label>
+                <label className="block text-sm text-gray-600 mb-1.5">מקסימום שעות בשבוע</label>
                 <input
                   type="number"
                   value={settings.max_weekly_hours}
@@ -193,7 +193,7 @@ const WorkHours: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm text-gray-600 mb-1">סף שעות נוספות (שעות ביום)</label>
+              <label className="block text-sm text-gray-600 mb-1.5">סף שעות נוספות (שעות ביום)</label>
               <input
                 type="number"
                 value={settings.overtime_threshold}
@@ -216,7 +216,7 @@ const WorkHours: React.FC = () => {
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">משך הפסקה (דקות)</label>
+              <label className="block text-sm text-gray-600 mb-1.5">משך הפסקה (דקות)</label>
               <input
                 type="number"
                 value={settings.break_duration_minutes}
@@ -227,7 +227,7 @@ const WorkHours: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">הפסקה אחרי (שעות)</label>
+              <label className="block text-sm text-gray-600 mb-1.5">הפסקה אחרי (שעות)</label>
               <input
                 type="number"
                 value={settings.min_break_after_hours}
@@ -289,7 +289,7 @@ const WorkHours: React.FC = () => {
             <h2 className="font-semibold text-gray-900">שמירת לילה (לינת שטח)</h2>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
+            <label className="block text-sm text-gray-600 mb-1.5">
               מחיר שמירת לילה (₪ ללילה)
             </label>
             <div className="relative">

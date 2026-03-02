@@ -183,7 +183,7 @@ class WorklogService:
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
         
-        worklog.status = 'submitted'
+        worklog.status = 'SUBMITTED'
         db.commit()
         db.refresh(worklog)
         
@@ -195,7 +195,10 @@ class WorklogService:
             project_id=worklog.project_id,
             work_order_id=worklog.work_order_id
         )
-        
+
+        # Notify area/region managers
+        _notify_managers_worklog_submitted(db, worklog)
+
         return worklog
     
     def approve(self, db: Session, worklog_id: int, current_user_id: int) -> Worklog:
@@ -204,7 +207,7 @@ class WorklogService:
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
         
-        worklog.status = 'approved'
+        worklog.status = 'APPROVED'
         db.commit()
         db.refresh(worklog)
         
@@ -217,7 +220,10 @@ class WorklogService:
             project_id=worklog.project_id,
             work_order_id=worklog.work_order_id
         )
-        
+
+        # Audit log
+        _audit_worklog(db, current_user_id, worklog.id, 'APPROVE')
+
         return worklog
     
     def reject(self, db: Session, worklog_id: int, current_user_id: int, reason: str = None) -> Worklog:
@@ -226,7 +232,7 @@ class WorklogService:
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
         
-        worklog.status = 'rejected'
+        worklog.status = 'REJECTED'
         db.commit()
         db.refresh(worklog)
         
@@ -293,3 +299,72 @@ class WorklogService:
         stats.by_status = by_status
         
         return stats
+
+
+# ── Notification helpers ──────────────────────────────────────────────────────
+
+def _notify_managers_worklog_submitted(db, worklog):
+    """Notify area/region managers when a worklog is submitted for approval."""
+    import logging, json
+    log = logging.getLogger(__name__)
+    try:
+        from sqlalchemy import text
+        from app.services.notification_service import notification_service
+        from app.schemas.notification import NotificationCreate
+
+        if not worklog.project_id:
+            return
+
+        # Get project info
+        proj = db.execute(text("""
+            SELECT p.name, p.area_id, a.region_id
+            FROM projects p LEFT JOIN areas a ON p.area_id = a.id
+            WHERE p.id = :pid
+        """), {"pid": worklog.project_id}).first()
+        if not proj:
+            return
+
+        project_name = proj[0] or f"פרויקט {worklog.project_id}"
+        area_id = proj[1]
+        region_id = proj[2]
+
+        # Find managers
+        managers = db.execute(text("""
+            SELECT DISTINCT u.id FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE r.code IN ('AREA_MANAGER','REGION_MANAGER','ADMIN','ORDER_COORDINATOR')
+              AND u.is_active = true
+              AND (u.area_id = :aid OR u.region_id = :rid OR r.code = 'ADMIN')
+        """), {"aid": area_id, "rid": region_id}).fetchall()
+
+        for row in managers:
+            notif = NotificationCreate(
+                user_id=row[0],
+                title=f"דיווח שעות ממתין לאישור — {project_name}",
+                message=f"דיווח שעות חדש בפרויקט {project_name} ממתין לאישורך.",
+                notification_type="WORKLOG_PENDING",
+                priority="medium",
+                channel="in_app",
+                entity_type="worklog",
+                entity_id=worklog.id,
+                data=json.dumps({"worklog_id": worklog.id, "project_id": worklog.project_id}),
+                action_url=f"/worklogs/{worklog.id}",
+            )
+            notification_service.create_notification(db, notif)
+    except Exception as e:
+        log.warning(f"Worklog submit notification failed: {e}")
+
+
+def _audit_worklog(db, user_id: int, worklog_id: int, action: str):
+    """Insert audit log for worklog status change."""
+    import logging, json
+    try:
+        from sqlalchemy import text
+        db.execute(text("""
+            INSERT INTO audit_logs (user_id, table_name, record_id, action, new_values)
+            VALUES (:uid, 'worklogs', :rid, :act, :nv::jsonb)
+        """), {"uid": user_id, "rid": worklog_id, "act": action,
+               "nv": json.dumps({"action": action, "worklog_id": worklog_id})})
+        db.commit()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Worklog audit log failed: {e}")

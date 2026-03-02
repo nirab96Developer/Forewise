@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/WorkOrders/EditWorkOrder.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -188,7 +188,7 @@ const EditWorkOrder: React.FC = () => {
                 value={formData.project_id || ''}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
               >
                 <option value="">בחר פרויקט</option>
                 {projects.map(project => (
@@ -209,7 +209,7 @@ const EditWorkOrder: React.FC = () => {
                 name="supplier_id"
                 value={formData.supplier_id || ''}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
               >
                 <option value="">בחר ספק (אופציונלי)</option>
                 {suppliers.map(supplier => (
@@ -278,7 +278,7 @@ const EditWorkOrder: React.FC = () => {
                 name="priority"
                 value={formData.priority || 'medium'}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
               >
                 <option value="low">נמוכה</option>
                 <option value="medium">בינונית</option>

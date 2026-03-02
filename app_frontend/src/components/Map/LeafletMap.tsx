@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/components/Map/LeafletMap.tsx
 // Universal Leaflet map - robust, mobile-friendly, no API key
 import React, { useEffect, useRef, useState } from 'react';
@@ -212,7 +212,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const pixelHeight = height === '100%' ? 'calc(100vh - 250px)' : height;
 
   return (
-    <div className={className} style={{ position: 'relative', minHeight: '300px' }}>
+    <div className={className} style={{ position: 'relative', minHeight: '300px', overflow: 'hidden', isolation: 'isolate' }}>
       {/* Map type buttons */}
       <div style={{
         position: 'absolute', top: 10, left: 10, zIndex: 1000,

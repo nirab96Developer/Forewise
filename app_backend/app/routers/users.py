@@ -77,7 +77,7 @@ def create_user(
 ):
     """יצירת משתמש חדש"""
     require_permission(current_user, "users.create")
-    
+
     user = user_service.create_user(db, user_data)
     return user
 

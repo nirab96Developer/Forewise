@@ -240,20 +240,40 @@ def get_project_forest_map(
 _geo_cache = {}
 
 def _get_project_coordinates(db, project_ids):
-    """Get lat/lng for projects from location_geom (PostGIS)."""
+    """Get lat/lng for projects — PostGIS location_geom first, then locations table fallback."""
     if not project_ids:
         return {}
     from sqlalchemy import text
+    result = {}
+    # Primary: PostGIS geometry
     try:
         rows = db.execute(text("""
             SELECT id, ST_Y(location_geom) as lat, ST_X(location_geom) as lng
-            FROM projects 
+            FROM projects
             WHERE id = ANY(:ids) AND location_geom IS NOT NULL
         """), {"ids": project_ids}).fetchall()
-        return {r.id: {"latitude": r.lat, "longitude": r.lng} for r in rows}
+        result = {r.id: {"latitude": r.lat, "longitude": r.lng} for r in rows}
     except Exception as e:
-        print(f"Warning: Could not get coordinates: {e}")
-        return {}
+        print(f"Warning: PostGIS coordinates unavailable: {e}")
+    # Fallback: locations table
+    missing = [pid for pid in project_ids if pid not in result]
+    if missing:
+        try:
+            rows2 = db.execute(text("""
+                SELECT p.id, l.latitude, l.longitude, l.polygon, l.geojson, l.center_lat, l.center_lng
+                FROM projects p JOIN locations l ON p.location_id = l.id
+                WHERE p.id = ANY(:ids) AND l.latitude IS NOT NULL
+            """), {"ids": missing}).fetchall()
+            for r in rows2:
+                result[r.id] = {
+                    "latitude": float(r.latitude) if r.latitude else None,
+                    "longitude": float(r.longitude) if r.longitude else None,
+                    "polygon": r.polygon,
+                    "geojson": r.geojson,
+                }
+        except Exception as e:
+            print(f"Warning: locations coordinates fallback failed: {e}")
+    return result
 
 
 @router.get("/{item_id}/geo")
@@ -273,6 +293,8 @@ def get_project_geo(
         "code": project.code,
         "latitude": geo.get("latitude"),
         "longitude": geo.get("longitude"),
+        "polygon": geo.get("polygon"),
+        "geojson": geo.get("geojson"),
         "region_id": project.region_id,
         "area_id": project.area_id,
     }

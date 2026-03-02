@@ -1,18 +1,14 @@
-// @ts-nocheck
+
 // src/components/HelpWidget/HumanSupportChat.tsx
 // בוט תמיכה אנושי - מרגיש כמו נציג אמיתי
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  Phone,
+import { useLocation } from 'react-router-dom';
+import {
+  MessageCircle,
+  X,
+  Send,
   Mail,
   Loader2,
-  CheckCircle,
-  User,
-  Bot,
   ArrowLeft,
   Sparkles,
 } from 'lucide-react';
@@ -363,7 +359,6 @@ const BOT_FLOWS: Record<string, ConversationStep[]> = {
 
 const HumanSupportChat: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // State
@@ -530,7 +525,7 @@ const HumanSupportChat: React.FC = () => {
     
     try {
       const token = localStorage.getItem('access_token');
-      const response = await fetch('/api/v1/support-tickets/from-widget', {
+      await fetch('/api/v1/support-tickets/from-widget', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -542,7 +537,7 @@ const HumanSupportChat: React.FC = () => {
           userRole: userInfo.role,
           currentRoute: location.pathname,
           category: currentFlow.split('_')[0].toUpperCase(),
-          stepsWalked: conversationHistory.map((text, i) => ({ stepId: `step_${i}`, helped: false })),
+          stepsWalked: conversationHistory.map((_text, i) => ({ stepId: `step_${i}`, helped: false })),
           userMessage,
           clientContext: {
             url: window.location.href,

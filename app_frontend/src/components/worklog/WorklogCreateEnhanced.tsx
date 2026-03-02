@@ -1,11 +1,11 @@
-// @ts-nocheck
+
 /**
  * WorklogCreateEnhanced - טופס דיווח שעות משופר
  * כולל: סוג עבודה, סוג כלי, חישוב תעריף בזמן אמת
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Truck, Building2, Calendar, Clock, DollarSign,
+  Truck, Calendar, Clock,
   Warehouse, FileText, CheckCircle, AlertCircle,
   Calculator, Info, Send
 } from 'lucide-react';
@@ -344,7 +344,7 @@ const WorklogCreateEnhanced: React.FC<Props> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Date */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">תאריך</label>
+              <label className="block text-xs text-gray-500 mb-1.5">תאריך</label>
               <input
                 type="date"
                 value={formData.report_date}
@@ -355,7 +355,7 @@ const WorklogCreateEnhanced: React.FC<Props> = ({
 
             {/* Days */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">ימים</label>
+              <label className="block text-xs text-gray-500 mb-1.5">ימים</label>
               <input
                 type="number"
                 min={1}
@@ -372,7 +372,7 @@ const WorklogCreateEnhanced: React.FC<Props> = ({
 
             {/* Hours per day */}
             <div>
-              <label className="block text-xs text-gray-500 mb-1">שעות ליום</label>
+              <label className="block text-xs text-gray-500 mb-1.5">שעות ליום</label>
               <input
                 type="number"
                 min={0.5}

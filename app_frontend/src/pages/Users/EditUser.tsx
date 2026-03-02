@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, AlertCircle, User, Mail, Phone, Lock } from 'lucide-react';
@@ -292,7 +292,7 @@ const EditUser: React.FC = () => {
                 <select
                   value={formData.role_id}
                   onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   disabled={loadingData}
                 >
                   <option value="">בחר תפקיד</option>
@@ -311,7 +311,7 @@ const EditUser: React.FC = () => {
                 <select
                   value={formData.department_id}
                   onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   disabled={loadingData}
                 >
                   <option value="">בחר מחלקה</option>
@@ -332,7 +332,7 @@ const EditUser: React.FC = () => {
                 <select
                   value={formData.region_id}
                   onChange={(e) => setFormData({ ...formData, region_id: e.target.value, area_id: '' })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   disabled={loadingData}
                 >
                   <option value="">בחר מרחב</option>
@@ -351,7 +351,7 @@ const EditUser: React.FC = () => {
                 <select
                   value={formData.area_id}
                   onChange={(e) => setFormData({ ...formData, area_id: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   disabled={loadingData || !formData.region_id}
                 >
                   <option value="">בחר אזור</option>

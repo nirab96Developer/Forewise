@@ -1,10 +1,10 @@
-// @ts-nocheck
+
 // src/pages/Equipment/EquipmentInventory.tsx
 // מלאי כלים - רשימת כל הכלים עם מספר רישוי, ספק ומחיר
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, Search, Truck, DollarSign, Filter, Eye,
+  ArrowRight, Search, Truck, DollarSign, Eye,
   Package, Building2, ChevronDown
 } from 'lucide-react';
 import api from '../../services/api';

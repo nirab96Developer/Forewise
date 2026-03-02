@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Projects/EditProject.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';

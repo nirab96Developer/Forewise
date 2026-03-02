@@ -1,12 +1,12 @@
-// @ts-nocheck
+
 // src/pages/Settings/FairRotation.tsx
 // ניהול סבב הוגן של ספקים
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, RotateCcw, Plus, Search, Edit, Trash2,
-  ChevronUp, ChevronDown, GripVertical, Calendar, Hash,
-  CheckCircle, XCircle, Info, Save, X, Truck
+  ChevronUp, ChevronDown,
+  Info, Save, X, Truck
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -423,7 +423,7 @@ const FairRotation: React.FC = () => {
                 <select
                   value={formData.supplier_id}
                   onChange={(e) => setFormData({ ...formData, supplier_id: parseInt(e.target.value) })}
-                  className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                 >
                   <option value={0}>בחר ספק...</option>
                   {suppliers.filter(s => s.is_active).map(supplier => (

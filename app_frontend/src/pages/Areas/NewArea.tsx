@@ -1,7 +1,7 @@
-// @ts-nocheck
+
 // src/pages/Areas/NewArea.tsx
 // יצירת אזור חדש עם זיהוי מיקום אוטומטי
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, MapPin, Save, Loader2, Building2, 
@@ -32,17 +32,6 @@ interface LocationResult {
   formatted_address: string;
 }
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-const GOOGLE_MAPS_LIBRARIES: ("places" | "geometry" | "drawing")[] = ["places", "geometry"];
-
-const mapContainerStyle = {
-  width: '100%',
-  height: '300px',
-  borderRadius: '12px'
-};
-
-const defaultCenter = { lat: 31.5, lng: 34.8 };
-
 const NewArea: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -65,7 +54,6 @@ const NewArea: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LocationResult[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [polygonPath, setPolygonPath] = useState<{ lat: number; lng: number }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const isLoaded = true; // Leaflet always loaded
 
@@ -96,55 +84,37 @@ const NewArea: React.FC = () => {
     }
   };
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    setMapRef(map);
-  }, []);
-
-  // Search for location using Google Places API
+  // Search for location using Nominatim (OpenStreetMap) API
   const searchLocation = async () => {
     if (!searchQuery.trim() || !isLoaded) return;
-    
+
     setIsSearching(true);
     setSearchResults([]);
-    
+
     try {
-      const service = new google.maps.places.PlacesService(mapRef!);
-      
-      const request = {
-        query: searchQuery + ' Israel',
-        fields: ['name', 'geometry', 'formatted_address'],
-      };
-      
-      service.textSearch(request, (results, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-          const locationResults: LocationResult[] = results.slice(0, 5).map(place => ({
-            name: place.name || '',
-            geometry: {
-              location: {
-                lat: place.geometry?.location?.lat() || 0,
-                lng: place.geometry?.location?.lng() || 0
-              },
-              bounds: place.geometry?.viewport ? {
-                northeast: {
-                  lat: place.geometry.viewport.getNorthEast().lat(),
-                  lng: place.geometry.viewport.getNorthEast().lng()
-                },
-                southwest: {
-                  lat: place.geometry.viewport.getSouthWest().lat(),
-                  lng: place.geometry.viewport.getSouthWest().lng()
-                }
-              } : undefined
-            },
-            formatted_address: place.formatted_address || ''
-          }));
-          setSearchResults(locationResults);
-        }
-        setIsSearching(false);
-      });
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery + ' Israel')}&format=json&limit=5&addressdetails=1`
+      );
+      const data = await response.json();
+      const locationResults: LocationResult[] = (data || []).map((place: any) => ({
+        name: place.display_name?.split(',')[0] || '',
+        geometry: {
+          location: {
+            lat: parseFloat(place.lat),
+            lng: parseFloat(place.lon)
+          },
+          bounds: place.boundingbox ? {
+            northeast: { lat: parseFloat(place.boundingbox[1]), lng: parseFloat(place.boundingbox[3]) },
+            southwest: { lat: parseFloat(place.boundingbox[0]), lng: parseFloat(place.boundingbox[2]) }
+          } : undefined
+        },
+        formatted_address: place.display_name || ''
+      }));
+      setSearchResults(locationResults);
     } catch (err) {
       console.error('Search error:', err);
-      setIsSearching(false);
     }
+    setIsSearching(false);
   };
 
   // Select a location from search results
@@ -152,51 +122,27 @@ const NewArea: React.FC = () => {
     const location = result.geometry.location;
     setSelectedLocation(location);
     setSearchResults([]);
-    
+
     // Set the name if empty
     if (!name) {
       setName(result.name);
     }
-    
-    // Create a simple polygon around the location
+
+    // Calculate approximate area in hectares
     if (result.geometry.bounds) {
       const { northeast, southwest } = result.geometry.bounds;
-      setPolygonPath([
-        { lat: northeast.lat, lng: southwest.lng },
-        { lat: northeast.lat, lng: northeast.lng },
-        { lat: southwest.lat, lng: northeast.lng },
-        { lat: southwest.lat, lng: southwest.lng },
-      ]);
-      
-      // Calculate approximate area in hectares
-      const area = google.maps.geometry.spherical.computeArea([
-        new google.maps.LatLng(northeast.lat, southwest.lng),
-        new google.maps.LatLng(northeast.lat, northeast.lng),
-        new google.maps.LatLng(southwest.lat, northeast.lng),
-        new google.maps.LatLng(southwest.lat, southwest.lng),
-      ]);
-      setTotalAreaHectares(Math.round(area / 10000)); // m² to hectares
+      // Approximate area using lat/lng deltas
+      const latDiff = Math.abs(northeast.lat - southwest.lat);
+      const lngDiff = Math.abs(northeast.lng - southwest.lng);
+      const avgLat = (northeast.lat + southwest.lat) / 2;
+      const latKm = latDiff * 111.32;
+      const lngKm = lngDiff * 111.32 * Math.cos(avgLat * Math.PI / 180);
+      const areaKm2 = latKm * lngKm;
+      setTotalAreaHectares(Math.round(areaKm2 * 100)); // km² to hectares
     } else {
-      // Create a 5km radius polygon
+      // Default 5km radius
       const radiusKm = 5;
-      const earthRadius = 6371; // km
-      const latDelta = (radiusKm / earthRadius) * (180 / Math.PI);
-      const lngDelta = latDelta / Math.cos(location.lat * Math.PI / 180);
-      
-      setPolygonPath([
-        { lat: location.lat + latDelta, lng: location.lng - lngDelta },
-        { lat: location.lat + latDelta, lng: location.lng + lngDelta },
-        { lat: location.lat - latDelta, lng: location.lng + lngDelta },
-        { lat: location.lat - latDelta, lng: location.lng - lngDelta },
-      ]);
-      
-      setTotalAreaHectares(Math.round(Math.PI * radiusKm * radiusKm * 100)); // ~7850 hectares for 5km radius
-    }
-    
-    // Pan map to location
-    if (mapRef) {
-      mapRef.panTo(location);
-      mapRef.setZoom(12);
+      setTotalAreaHectares(Math.round(Math.PI * radiusKm * radiusKm * 100));
     }
   };
 
@@ -354,14 +300,14 @@ const NewArea: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border p-4 space-y-4">
           {/* Region - Required */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               <Map className="w-4 h-4 inline ml-1" />
               מרחב *
             </label>
             <select
               value={regionId || ''}
               onChange={(e) => setRegionId(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm"
+              className="w-full pr-4 pl-10 py-2 border border-gray-200 rounded-lg text-sm"
               required
             >
               <option value="">בחר מרחב...</option>
@@ -373,7 +319,7 @@ const NewArea: React.FC = () => {
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               שם האזור *
             </label>
             <input
@@ -388,7 +334,7 @@ const NewArea: React.FC = () => {
 
           {/* Code */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               קוד אזור (אופציונלי)
             </label>
             <input
@@ -402,14 +348,14 @@ const NewArea: React.FC = () => {
 
           {/* Manager - Optional */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               <Users className="w-4 h-4 inline ml-1" />
               מנהל אזור (אופציונלי)
             </label>
             <select
               value={managerId || ''}
               onChange={(e) => setManagerId(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm"
+              className="w-full pr-4 pl-10 py-2 border border-gray-200 rounded-lg text-sm"
             >
               <option value="">ללא מנהל (יוקצה מאוחר יותר)</option>
               {managers.map(manager => (
@@ -420,7 +366,7 @@ const NewArea: React.FC = () => {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               תיאור (אופציונלי)
             </label>
             <textarea
@@ -434,7 +380,7 @@ const NewArea: React.FC = () => {
 
           {/* Total Area */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
               שטח כולל (הקטר)
             </label>
             <input

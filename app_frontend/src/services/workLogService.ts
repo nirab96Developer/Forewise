@@ -166,6 +166,7 @@ export interface WorkLogFilters {
   q?: string;          // Backend uses q for search
   page?: number;       // Backend uses page, not skip
   page_size?: number;  // Backend uses page_size, not limit
+  limit?: number;      // Alias for page_size
 }
 
 export interface WorkLogResponse {

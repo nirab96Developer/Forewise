@@ -88,24 +88,6 @@ const Navigation: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
-  const getPageTitle = () => {
-    const activeItem = menuItems.find(item => isActive(item.path));
-    if (activeItem) return activeItem.label;
-    if (location.pathname.startsWith("/projects/") && location.pathname !== "/projects") {
-      return "פרטי פרויקט";
-    }
-    return "ראשי";
-  };
-
-  const getPageIcon = () => {
-    const activeItem = menuItems.find(item => isActive(item.path));
-    if (activeItem) {
-      const IconComponent = activeItem.icon;
-      return <IconComponent size={20} />;
-    }
-    return null;
-  };
-
   if (!isLoaded) return null;
 
   return (
@@ -190,16 +172,6 @@ const Navigation: React.FC = () => {
         aria-label="תפריט ניווט ראשי"
       >
         <div className="h-full flex flex-col overflow-hidden bg-gradient-to-b from-white via-gray-50/30 to-white">
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-200 flex-shrink-0 bg-gradient-to-r from-gray-50 to-white">
-            <div className="flex items-center gap-2 text-gray-700 animate-fadeIn">
-              <div className="p-1.5 bg-kkl-green/10 rounded-lg">
-                {getPageIcon()}
-              </div>
-              <h2 className="text-base font-semibold">{getPageTitle()}</h2>
-            </div>
-          </div>
-
           {/* Navigation Links - Dynamic based on role */}
           <nav className="p-4 flex-1 overflow-y-auto custom-scrollbar">
             <div className="space-y-1">
@@ -265,12 +237,9 @@ const Navigation: React.FC = () => {
               })}
             </div>
           </nav>
-          
-          {/* Divider before logout */}
-          <div className="flex-1"></div>
-          
-          {/* Logout Button */}
-          <div className="p-4 border-t border-gray-200 flex-shrink-0 bg-gradient-to-t from-white to-gray-50">
+
+          {/* Logout Button — mt-auto pushes it to bottom without extra spacer */}
+          <div className="p-4 border-t border-gray-200 flex-shrink-0 bg-gradient-to-t from-white to-gray-50 mt-auto">
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-red-50 hover:text-red-600 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-md group"

@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/SupplierPortal/SupplierPortal.tsx
 // פורטל ספקים חיצוני - דף נחיתה לספקים לצפייה ואישור הזמנות
 // הספק לא מחובר לאפליקציה - מקבל לינק ייחודי
@@ -12,8 +12,6 @@ import {
   XCircle,
   Clock,
   Truck,
-  Phone,
-  Mail,
   FileText,
   AlertCircle,
   Check,
@@ -496,7 +494,7 @@ const SupplierPortal: React.FC = () => {
           <div className="space-y-4">
             {/* Equipment dropdown — only matching category + this supplier + available */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 בחר כלי לשליחה <span className="text-red-500">*</span>
               </label>
               {loadingEquipment ? (
@@ -537,7 +535,7 @@ const SupplierPortal: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 הערות <span className="text-slate-400">(אופציונלי)</span>
               </label>
               <textarea
@@ -559,7 +557,7 @@ const SupplierPortal: React.FC = () => {
           </h3>
           
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
               סיבת הדחייה <span className="text-red-500">*</span>
             </label>
             <select

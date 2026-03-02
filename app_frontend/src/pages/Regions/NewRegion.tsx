@@ -1,11 +1,10 @@
-// @ts-nocheck
+
 // src/pages/Regions/NewRegion.tsx
 // יצירת מרחב חדש עם תקציב
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Map, Save, DollarSign, User } from 'lucide-react';
 import api from '../../services/api';
-import TreeLoader from '../../components/common/TreeLoader';
 
 interface User {
   id: number;

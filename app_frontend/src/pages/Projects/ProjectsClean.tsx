@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Projects/ProjectsClean.tsx
 // רשימת פרויקטים עם עיצוב נקי לבן וירוק
 
@@ -155,7 +155,7 @@ const ProjectsClean: React.FC = () => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                className="pr-4 pl-10 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
               >
                 <option value="all">כל הפרויקטים</option>
                 <option value="active">פעילים</option>
@@ -175,20 +175,20 @@ const ProjectsClean: React.FC = () => {
 
         {/* Projects Grid */}
         {filteredProjects.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
             <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
               {searchTerm || filterStatus !== 'all' ? 'לא נמצאו פרויקטים' : 'אין פרויקטים'}
             </h2>
             <p className="text-gray-600 mb-6">
-              {searchTerm || filterStatus !== 'all' 
+              {searchTerm || filterStatus !== 'all'
                 ? 'נסה לחפש במונחים אחרים או לשנות את הסינון'
                 : 'התחל ביצירת פרויקט חדש'}
             </p>
             {!searchTerm && filterStatus === 'all' && (
               <Link
                 to="/projects/new"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium"
               >
                 <Plus className="w-5 h-5" />
                 צור פרויקט ראשון
@@ -196,112 +196,107 @@ const ProjectsClean: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
-              <div 
-                key={project.id} 
-                className="bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredProjects.map((project) => {
+              const statusConfig = getStatusConfig(project.status);
+              const isActive = (project.status || 'active').toLowerCase() === 'active';
+              return (
+              <div
+                key={project.id}
+                className={`bg-white rounded-2xl border-2 flex flex-col hover:shadow-lg transition-all duration-200 cursor-pointer group ${
+                  isActive ? 'border-green-100 hover:border-green-300' : 'border-gray-100 hover:border-gray-300'
+                }`}
                 onClick={() => navigate(`/projects/${project.code}/workspace`)}
               >
-                {/* Card Header */}
-                <div className="p-6 pb-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-green-600 transition-colors">
+                {/* Colored top strip */}
+                <div className={`h-1.5 rounded-t-2xl ${isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
+
+                {/* Card Body — grows to fill height */}
+                <div className="flex flex-col flex-1 p-5">
+                  {/* Header row: name + status badge */}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-gray-900 group-hover:text-green-700 transition-colors leading-tight truncate">
                         {project.name}
                       </h3>
-                      <span className="text-sm text-gray-500 mt-1">#{project.code}</span>
+                      <span className="text-xs text-gray-400 font-mono">{project.code}</span>
                     </div>
-                    {(() => {
-                      const statusConfig = getStatusConfig(project.status);
-                      return (
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.textColor}`}>
-                          {statusConfig.text}
-                        </span>
-                      );
-                    })()}
+                    <span className={`flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusConfig.bg} ${statusConfig.textColor}`}>
+                      {statusConfig.text}
+                    </span>
                   </div>
-                  
-                  {project.description && (
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                      {project.description}
-                    </p>
-                  )}
-                  
-                  {/* Project Info */}
-                  <div className="space-y-2">
+
+                  {/* Description — fixed 2 lines, fills space */}
+                  <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1 leading-relaxed">
+                    {project.description || '—'}
+                  </p>
+
+                  {/* Metadata chips */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-500 mb-4">
                     {project.manager_name && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <User className="w-4 h-4 text-gray-400 ml-2" />
+                      <span className="flex items-center gap-1">
+                        <User className="w-3.5 h-3.5 text-gray-400" />
                         {project.manager_name}
-                      </div>
+                      </span>
                     )}
-                    
                     {(project.area_name || project.region_name) && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="w-4 h-4 text-gray-400 ml-2" />
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
                         {project.area_name || project.region_name}
-                      </div>
+                      </span>
                     )}
-                    
                     {project.planned_start_date && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="w-4 h-4 text-gray-400 ml-2" />
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
                         {new Date(project.planned_start_date).toLocaleDateString('he-IL')}
-                        {project.planned_end_date && (
-                          <span> - {new Date(project.planned_end_date).toLocaleDateString('he-IL')}</span>
-                        )}
-                      </div>
+                      </span>
                     )}
                   </div>
+
+                  {/* Progress bar (if available) */}
+                  {project.progress_percentage !== undefined && project.progress_percentage !== null && (
+                    <div className="mb-4">
+                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                        <span>התקדמות</span>
+                        <span className="font-medium text-gray-700">{project.progress_percentage}%</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-1.5">
+                        <div
+                          className="bg-green-500 h-1.5 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, project.progress_percentage)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Progress Bar */}
-                {project.progress_percentage !== undefined && (
-                  <div className="px-6 pb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-gray-600">התקדמות</span>
-                      <span className="text-xs font-medium text-gray-900">{project.progress_percentage}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${project.progress_percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Card Footer */}
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-lg">
+                {/* Card Footer — always at bottom */}
+                <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/70 rounded-b-2xl">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/projects/${project.code}`);
-                        }}
-                        className="text-green-600 hover:text-green-700 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.code}/workspace`); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
                         title="צפה בפרויקט"
                       >
-                        <Eye className="w-5 h-5" />
+                        <Eye className="w-3.5 h-3.5" />
+                        צפייה
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/projects/${project.code}/edit`);
-                        }}
-                        className="text-gray-600 hover:text-gray-700 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.code}/edit`); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                         title="ערוך פרויקט"
                       >
-                        <Edit className="w-5 h-5" />
+                        <Edit className="w-3.5 h-3.5" />
+                        עריכה
                       </button>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
 

@@ -1,14 +1,14 @@
-// @ts-nocheck
+
 // src/pages/Map/ForestMap.tsx
 // Map Intelligence - responsive: mobile overlay sidebar, desktop side panel
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layers, Eye, EyeOff, Loader2, Home, Building2, ChevronLeft, Map as MapIcon, X } from 'lucide-react';
 import LeafletMap from '../../components/Map/LeafletMap';
 import api from '../../services/api';
-import { getUserRole, normalizeRole, UserRole } from '../../utils/permissions';
+// permissions utils available if needed
 
-const REGION_COLORS = {
+const REGION_COLORS: Record<number, { fill: string; stroke: string; name: string }> = {
   1: { fill: '#059669', stroke: '#047857', name: 'צפון' },
   2: { fill: '#2563eb', stroke: '#1d4ed8', name: 'מרכז' },
   3: { fill: '#d97706', stroke: '#b45309', name: 'דרום' },
@@ -18,12 +18,12 @@ const AREA_COLORS = ['#10b981','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#ec4899'
 const ForestMap = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [layerData, setLayerData] = useState(null);
-  const [selectedRegion, setSelectedRegion] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [layerData, setLayerData] = useState<any>(null);
+  const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [myProjectIds, setMyProjectIds] = useState(new Set());
-  const [layerVis, setLayerVis] = useState({ regions: true, areas: true, projects: true, myProjects: false });
+  const [layerVis, setLayerVis] = useState<Record<string, boolean>>({ regions: true, areas: true, projects: true, myProjects: false });
 
   let userData: any = {};
   try { userData = JSON.parse(localStorage.getItem('user') || '{}'); } catch { /* corrupted storage */ }
@@ -37,7 +37,7 @@ const ForestMap = () => {
           api.get('/project-assignments/my-assignments').catch(() => ({ data: { projects: [] } })),
         ]);
         setLayerData(lr.data);
-        setMyProjectIds(new Set((mr.data.projects || []).map(p => p.project_id || p.id)));
+        setMyProjectIds(new Set((mr.data.projects || []).map((p: any) => p.project_id || p.id)));
       } catch (e) { console.error(e); }
       setLoading(false);
     })();
@@ -53,16 +53,16 @@ const ForestMap = () => {
   );
 
   // Build layers
-  const mapPolygons = [];
+  const mapPolygons: any[] = [];
   let maskPoly;
 
   if (selectedRegion && layerData?.regions?.features) {
-    const feat = layerData.regions.features.find(f => f.properties.id === selectedRegion);
+    const feat = layerData.regions.features.find((f: any) => f.properties.id === selectedRegion);
     if (feat) maskPoly = { id: -1, name: '', geometry: feat.geometry, strokeColor: REGION_COLORS[selectedRegion]?.stroke || '#047857', strokeWeight: 3 };
   }
 
   if (layerVis.regions && !selectedRegion && layerData?.regions?.features) {
-    layerData.regions.features.forEach(f => {
+    layerData.regions.features.forEach((f: any) => {
       const rid = f.properties.id;
       const c = REGION_COLORS[rid] || { fill: '#6b7280', stroke: '#4b5563' };
       mapPolygons.push({ id: rid, name: c.name, geometry: f.geometry, fillColor: c.fill, strokeColor: c.stroke, fillOpacity: 0.12, strokeWeight: 2, onClick: () => { setSelectedRegion(rid); setSidebarOpen(false); } });
@@ -70,19 +70,19 @@ const ForestMap = () => {
   }
 
   if (layerVis.areas && layerData?.areas?.features) {
-    layerData.areas.features.forEach((f, idx) => {
+    layerData.areas.features.forEach((f: any, idx: any) => {
       if (selectedRegion && f.properties.region_id !== selectedRegion) return;
       const color = AREA_COLORS[idx % AREA_COLORS.length];
       mapPolygons.push({ id: f.properties.id, name: f.properties.name, geometry: f.geometry, fillColor: color, strokeColor: color, fillOpacity: f.properties.id === userAreaId ? 0.20 : 0.06, strokeWeight: f.properties.id === userAreaId ? 3 : 1.5 });
     });
   }
 
-  let mapPoints = [];
+  let mapPoints: any[] = [];
   if (layerVis.projects && layerData?.projects) {
     let projs = layerData.projects;
-    if (layerVis.myProjects && myProjectIds.size > 0) projs = projs.filter(p => myProjectIds.has(p.id));
-    if (selectedRegion) projs = projs.filter(p => p.region_id === selectedRegion);
-    mapPoints = projs.filter(p => p.lat && p.lng).map(p => ({
+    if (layerVis.myProjects && myProjectIds.size > 0) projs = projs.filter((p: any) => myProjectIds.has(p.id));
+    if (selectedRegion) projs = projs.filter((p: any) => p.region_id === selectedRegion);
+    mapPoints = projs.filter((p: any) => p.lat && p.lng).map((p: any) => ({
       id: p.id, name: p.name, code: p.code, lat: p.lat, lng: p.lng,
       color: myProjectIds.has(p.id) ? '#f59e0b' : '#16a34a',
       popupContent:
@@ -102,7 +102,7 @@ const ForestMap = () => {
   }
 
   const stats = { regions: layerData?.regions?.features?.length || 0, areas: layerData?.areas?.features?.length || 0, projects: layerData?.projects?.length || 0 };
-  const toggleLayer = key => setLayerVis(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleLayer = (key: string) => setLayerVis((prev: any) => ({ ...prev, [key]: !prev[key] }));
   const goBackToMenu = () => navigate('/');
 
   return (
@@ -164,7 +164,7 @@ const ForestMap = () => {
               className={`w-full flex items-center gap-3 px-4.5 py-2.5 rounded-lg text-sm mb-0.5 touch-manipulation ${selectedRegion === Number(id) ? 'bg-green-100 font-bold text-green-800' : 'hover:bg-gray-50'}`}>
               <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.fill }} />
               <span>{cfg.name}</span>
-              <span className="mr-auto text-xs text-gray-400">{layerData?.projects?.filter(p => p.region_id === Number(id)).length || 0}</span>
+              <span className="mr-auto text-xs text-gray-400">{layerData?.projects?.filter((p: any) => p.region_id === Number(id)).length || 0}</span>
             </button>
           ))}
         </div>

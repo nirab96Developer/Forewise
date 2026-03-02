@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, AlertCircle, Package, DollarSign } from 'lucide-react';
@@ -116,7 +116,7 @@ const AddSupplierEquipment: React.FC = () => {
                 <select
                   value={formData.equipment_category_id}
                   onChange={(e) => setFormData({ ...formData, equipment_category_id: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   required
                 >
                   <option value="">בחר קטגוריית ציוד</option>

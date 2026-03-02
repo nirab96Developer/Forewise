@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { clearAuthSession, readUserFromStorage, getRefreshTokenWithStorage } from '../utils/authStorage';
@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { storage } = getRefreshTokenWithStorage();
       storage.setItem('access_token', newAccessToken);
       window.dispatchEvent(new Event('auth-change'));
-    } catch (e) {
+    } catch (_e) {
       clearAuthSession();
     }
   }, []);
@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Listen for storage changes (from Login component or other tabs)
   useEffect(() => {
-    const handleStorageChange = (e?: StorageEvent) => {
+    const handleStorageChange = (_e?: StorageEvent) => {
       console.log('[AuthContext] Storage event detected');
       loadUserFromStorage();
     };
@@ -115,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [loadUserFromStorage]);
 
-  const login = async (credentials: any) => {
+  const login = async (_credentials: any) => {
     // Login is handled by the Login component
     // This is a placeholder for the interface
   };

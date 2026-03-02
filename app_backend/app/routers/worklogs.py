@@ -82,7 +82,7 @@ def get_pending_approval_endpoint(
     Permissions: worklogs.approve
     """
     require_permission(current_user, "worklogs.approve")
-    search = WorklogSearch(status="submitted", page=page, page_size=page_size)
+    search = WorklogSearch(status="SUBMITTED", page=page, page_size=page_size)
     worklogs, total = worklog_service.list(db, search)
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
     return WorklogList(items=worklogs, total=total, page=page, page_size=page_size, total_pages=total_pages)

@@ -1,13 +1,11 @@
-// @ts-nocheck
+
 import React, { useState, useEffect } from "react";
 import {
-  MessageCircle, Send, Search, Plus, 
-  AlertCircle, CheckCircle, Clock, User,
-  Paperclip, X, Minimize2,
-  Maximize2, HelpCircle, Phone, Mail,
-  MessageSquare, Zap, Shield, ChevronDown
+  Send, Plus,
+  CheckCircle, Clock,
+  X, HelpCircle, Mail,
+  MessageSquare, ChevronDown
 } from "lucide-react";
-import { hasAccessToSupportChat } from "../../utils/permissions";
 import supportTicketService from "../../services/supportTicketService";
 
 interface Ticket {
@@ -18,7 +16,7 @@ interface Ticket {
   priority: 'low' | 'medium' | 'high' | 'critical';
   category: string;
   created_at: string;
-  messages: { text: string; sender: 'user' | 'support'; time: string }[];
+  messages: { text: string; sender: 'user' | 'support'; time: string; userName?: string }[];
 }
 
 interface NewTicketForm {
@@ -33,7 +31,6 @@ const Support: React.FC = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const [userRole, setUserRole] = useState("");
   const [userName, setUserName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -51,10 +48,6 @@ const Support: React.FC = () => {
     if (userStr) {
       try {
         const userData = JSON.parse(userStr);
-        const role = typeof userData.role === 'string' 
-          ? userData.role 
-          : userData.role?.name || "USER";
-        setUserRole(role);
         setUserName(userData.name || userData.full_name || "משתמש");
       } catch (error) {
         console.error("Error parsing user data:", error);

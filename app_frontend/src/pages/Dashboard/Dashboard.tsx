@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Dashboard/Dashboard.tsx
 // מרכיב ראשי - דשבורד מותאם לפי תפקיד המשתמש
 import React from "react";

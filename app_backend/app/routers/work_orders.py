@@ -211,14 +211,40 @@ def delete_work_order(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Delete work order (soft delete)
+    Delete work order (soft delete) + activity log
     
     Permissions: work_orders.delete
     """
     require_permission(current_user, "work_orders.delete")
     
     try:
+        # Fetch order details before deletion for activity log
+        work_order = work_order_service.get_work_order(db, work_order_id)
+        if not work_order:
+            raise NotFoundException(f"Work order {work_order_id} not found")
+        
+        order_number = getattr(work_order, 'order_number', work_order_id)
+        admin_name = getattr(current_user, 'full_name', None) or getattr(current_user, 'username', f'User {current_user.id}')
+        
+        # Soft delete
         work_order_service.soft_delete(db, work_order_id, current_user_id=current_user.id)
+        
+        # Write activity log (non-critical)
+        try:
+            from sqlalchemy import text as sql_text
+            db.execute(sql_text("""
+                INSERT INTO activity_logs (action, activity_type, entity_type, entity_id, user_id, description)
+                VALUES ('WORK_ORDER_DELETED', 'delete', 'work_order', :entity_id, :user_id, :description)
+            """), {
+                "entity_id": work_order_id,
+                "user_id": current_user.id,
+                "description": f"הזמנה מספר {order_number} נמחקה על ידי {admin_name}",
+            })
+            db.commit()
+        except Exception as log_err:
+            import logging
+            logging.getLogger(__name__).warning(f"Activity log failed for delete {work_order_id}: {log_err}")
+        
         return None
     
     except NotFoundException as e:

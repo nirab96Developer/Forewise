@@ -1,10 +1,10 @@
-// @ts-nocheck
+
 // src/pages/WorkOrders/WorkOrderDetail.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, Calendar, Clock, User, Wrench, Edit, CheckCircle, XCircle, Loader2,
-  Send, Truck, FileText, AlertTriangle, Play, CircleDot, Package
+  Send, Truck, FileText, Play, CircleDot, Package
 } from 'lucide-react';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
 import activityLogService, { ActivityLog } from '../../services/activityLogService';

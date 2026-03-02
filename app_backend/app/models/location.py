@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Optional
 from datetime import datetime
 
 from sqlalchemy import Integer, Unicode, Float, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -66,6 +67,27 @@ class Location(Base):
     address: Mapped[Optional[str]] = mapped_column(
         Unicode(500), nullable=True,
         comment="כתובת"
+    )
+
+    # Polygon / GeoJSON boundary
+    polygon: Mapped[Optional[dict]] = mapped_column(
+        JSONB, nullable=True,
+        comment="פוליגון GeoJSON של גבולות המיקום"
+    )
+
+    geojson: Mapped[Optional[dict]] = mapped_column(
+        JSONB, nullable=True,
+        comment="GeoJSON מלא (Feature/FeatureCollection)"
+    )
+
+    center_lat: Mapped[Optional[float]] = mapped_column(
+        Float, nullable=True,
+        comment="נקודת מרכז — קו רוחב"
+    )
+
+    center_lng: Mapped[Optional[float]] = mapped_column(
+        Float, nullable=True,
+        comment="נקודת מרכז — קו אורך"
     )
 
     # Status

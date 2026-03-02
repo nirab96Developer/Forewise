@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/components/HelpWidget/SmartHelpWidget.tsx
 // בוט תמיכה חכם - עוזר לבד ופותח טיקט רק כשצריך
 import React, { useState, useEffect } from 'react';
@@ -14,21 +14,17 @@ import {
   XCircle,
   ExternalLink,
   Phone,
-  Mail,
   Clock,
-  User,
   Loader2,
   ThumbsUp,
   ThumbsDown,
   ArrowLeft,
   Headphones,
 } from 'lucide-react';
-import { 
-  supportArticles, 
-  supportCategories, 
+import {
+  supportCategories,
   getArticleByCategory,
   SupportArticle,
-  SupportStep 
 } from '../../data/supportKnowledgeBase';
 
 // Types
@@ -409,7 +405,7 @@ const SmartHelpWidget: React.FC = () => {
                 {stepsWalked.length > 0 && (
                   <div className="bg-gray-50 rounded-lg p-3 mb-4">
                     <p className="text-xs text-gray-500 mb-2">מה כבר ניסינו:</p>
-                    {stepsWalked.map((step, index) => (
+                    {stepsWalked.map((_step, index) => (
                       <div key={index} className="flex items-center gap-2 text-xs text-gray-600">
                         <XCircle className="w-3 h-3 text-red-400" />
                         <span>שלב {index + 1}</span>

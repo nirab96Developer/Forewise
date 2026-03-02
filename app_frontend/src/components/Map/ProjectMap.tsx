@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/components/Map/ProjectMap.tsx
 // Project map using Leaflet - shows project point + forest polygon
 import React from 'react';

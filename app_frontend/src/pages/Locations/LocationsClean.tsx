@@ -1,25 +1,23 @@
-// @ts-nocheck
+
 // src/pages/Locations/LocationsClean.tsx
 // דף מיקומים עם עיצוב נקי לבן וירוק
 
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Plus, 
-  Search, 
-  Eye, 
-  Edit, 
-  MapPin, 
-  Loader2, 
+import {
+  Plus,
+  Search,
+  Eye,
+  Edit,
+  MapPin,
+  Loader2,
   Navigation,
   Map,
   Home,
-  MoreVertical,
   Filter,
   ChevronRight,
   Globe,
   Target,
-  Trash2
 } from 'lucide-react';
 import api from '../../services/api';
 

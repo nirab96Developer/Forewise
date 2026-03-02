@@ -1,10 +1,10 @@
-// @ts-nocheck
+
 // src/components/DebugPanel.tsx
 // פאנל debug לצפייה בלוגים ומידע מערכת
 
 import React, { useState, useEffect, useRef } from 'react';
 import { debugLogger, LogEntry } from '../utils/debug';
-import { X, Download, Trash2, Filter, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Download, Trash2, Search, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface DebugPanelProps {
   isOpen: boolean;
@@ -27,7 +27,7 @@ const DebugPanel: React.FC<DebugPanelProps> = ({ isOpen, onClose }) => {
     // טעינה ראשונית
     setLogs(debugLogger.getLogs(filter));
 
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, [filter]);
 
   useEffect(() => {

@@ -1,8 +1,8 @@
-// @ts-nocheck
+
 // src/pages/Regions/Regions.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Eye, Edit, Map, Users, TreePine, MapPin, Building2, ChevronLeft, DollarSign } from 'lucide-react';
+import { Plus, Search, Map, TreePine, MapPin, Building2, ChevronLeft, DollarSign } from 'lucide-react';
 import api from '../../services/api';
 import TreeLoader from '../../components/common/TreeLoader';
 

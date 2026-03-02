@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Dashboard/HilanDashboard.tsx
 // דשבורד בסגנון חילן - נקי, מודרני, צבעי קק"ל
 import React, { useState, useEffect } from "react";
@@ -13,18 +13,11 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  Clock,
   MapPin,
-  Users,
-  FileText,
-  Truck,
   CheckCircle,
-  AlertCircle,
   TrendingUp,
   Building2,
   User,
-  Settings,
-  LogOut,
 } from "lucide-react";
 import dashboardService, { DashboardProject } from "../../services/dashboardService";
 

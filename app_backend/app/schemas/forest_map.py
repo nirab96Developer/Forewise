@@ -35,6 +35,7 @@ class ForestMapResponse(BaseModel):
     forest: Optional[ForestInfo] = None
     has_forest: bool = False
     has_location: bool = False
+    reason: Optional[str] = None  # e.g. "polygon_too_far" / "no_polygon"
     
     class Config:
         from_attributes = True

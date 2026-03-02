@@ -101,7 +101,7 @@ async def get_dashboard_summary(
     completed_work_orders = 0
     try:
         pending_work_orders = db.query(WorkOrder).filter(
-            or_(WorkOrder.status == "pending", WorkOrder.status == "PENDING")
+            WorkOrder.status == "PENDING"
         ).count()
         completed_work_orders = db.query(WorkOrder).filter(
             or_(WorkOrder.status == "completed", WorkOrder.status == "COMPLETED")
@@ -115,7 +115,7 @@ async def get_dashboard_summary(
     try:
         from app.models import Worklog
         pending_worklogs = db.query(Worklog).filter(
-            or_(Worklog.status == "pending", Worklog.status == "PENDING")
+            Worklog.status == "PENDING"
         ).count()
         
         # Get total hours this month
@@ -167,7 +167,7 @@ async def get_dashboard_summary(
     try:
         from app.models import Invoice
         pending_invoices = db.query(Invoice).filter(
-            or_(Invoice.status == "pending", Invoice.status == "PENDING")
+            Invoice.status == "PENDING"
         ).count()
     except:
         pass
@@ -383,7 +383,7 @@ async def get_dashboard_alerts(
     # Check for pending work orders
     try:
         pending_wo_count = db.query(WorkOrder).filter(
-            or_(WorkOrder.status == "pending", WorkOrder.status == "PENDING")
+            WorkOrder.status == "PENDING"
         ).count()
         if pending_wo_count > 5:
             alerts.append({
@@ -546,8 +546,8 @@ async def get_live_counts(
     # Invoices by status
     try:
         counts["invoices_total"] = db.execute(text("SELECT COUNT(*) FROM invoices WHERE is_active = true")).scalar() or 0
-        counts["invoices_pending"] = db.execute(text("SELECT COUNT(*) FROM invoices WHERE status = 'pending' AND is_active = true")).scalar() or 0
-        counts["invoices_paid"] = db.execute(text("SELECT COUNT(*) FROM invoices WHERE status = 'paid' AND is_active = true")).scalar() or 0
+        counts["invoices_pending"] = db.execute(text("SELECT COUNT(*) FROM invoices WHERE UPPER(status) = 'PENDING' AND is_active = true")).scalar() or 0
+        counts["invoices_paid"] = db.execute(text("SELECT COUNT(*) FROM invoices WHERE UPPER(status) = 'PAID' AND is_active = true")).scalar() or 0
     except:
         counts["invoices_total"] = 0
         counts["invoices_pending"] = 0
@@ -749,3 +749,94 @@ async def get_dashboard_active_suppliers(
         }
         for s in suppliers
     ]
+
+
+@router.get("/monthly-costs")
+async def get_monthly_costs(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    months: int = 6
+) -> List[Dict[str, Any]]:
+    """Monthly cost breakdown for dashboard chart."""
+    from app.models import Worklog
+
+    user = db.query(User).options(selectinload(User.role)).filter(User.id == current_user.id).first()
+
+    results = []
+    now = datetime.now()
+    for i in range(months - 1, -1, -1):
+        month_date = (now.replace(day=1) - timedelta(days=i * 30)).replace(day=1)
+        m = month_date.month
+        y = month_date.year
+
+        query = db.query(
+            func.coalesce(func.sum(Worklog.cost_before_vat), 0).label("cost"),
+            func.coalesce(func.sum(Worklog.total_hours), 0).label("hours"),
+            func.count(Worklog.id).label("count"),
+        ).filter(
+            extract('month', Worklog.report_date) == m,
+            extract('year', Worklog.report_date) == y,
+        )
+
+        if user.role and user.role.code == "REGION_MANAGER" and user.region_id:
+            query = query.filter(Worklog.area_id.in_(
+                db.query(Area.id).filter(Area.region_id == user.region_id)
+            ))
+        elif user.role and user.role.code == "AREA_MANAGER" and user.area_id:
+            query = query.filter(Worklog.area_id == user.area_id)
+
+        row = query.one()
+        results.append({
+            "month": f"{y}-{m:02d}",
+            "month_name": month_date.strftime("%b"),
+            "cost": float(row.cost),
+            "hours": float(row.hours),
+            "count": row.count,
+        })
+
+    return results
+
+
+@router.get("/region-areas")
+async def get_region_areas_breakdown(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[Dict[str, Any]]:
+    """Area breakdown for region manager dashboard."""
+    from app.models import Worklog
+
+    user = db.query(User).options(selectinload(User.role)).filter(User.id == current_user.id).first()
+
+    if not user.region_id:
+        return []
+
+    areas = db.query(Area).filter(Area.region_id == user.region_id).all()
+    result = []
+    for area in areas:
+        project_count = db.query(func.count(Project.id)).filter(
+            Project.area_id == area.id, Project.is_active == True
+        ).scalar() or 0
+
+        wo_count = db.query(func.count(WorkOrder.id)).filter(
+            WorkOrder.area_id == area.id,
+            WorkOrder.status.in_(["PENDING", "IN_PROGRESS", "PENDING_SUPPLIER"]),
+            WorkOrder.is_active == True,
+        ).scalar() or 0
+
+        hours = db.query(func.coalesce(func.sum(Worklog.total_hours), 0)).filter(
+            Worklog.area_id == area.id,
+            extract('month', Worklog.report_date) == datetime.now().month,
+            extract('year', Worklog.report_date) == datetime.now().year,
+        ).scalar() or 0
+
+        result.append({
+            "id": area.id,
+            "name": area.name,
+            "code": area.code,
+            "manager_name": area.manager.full_name if area.manager else None,
+            "active_projects": project_count,
+            "open_work_orders": wo_count,
+            "hours_this_month": float(hours),
+        })
+
+    return result

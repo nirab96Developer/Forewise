@@ -1,7 +1,7 @@
-// @ts-nocheck
+
 // src/App.tsx
 import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Bug } from "lucide-react";
 
 // שירותים
@@ -21,7 +21,6 @@ import PWAInstallBanner from "./components/PWAInstallBanner";
 const App: React.FC = () => {
   const [globalLoading, setGlobalLoading] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(authService.isAuthenticated());
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
@@ -78,7 +77,7 @@ const App: React.FC = () => {
       setErrorCount(errors);
     });
 
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -88,9 +87,6 @@ const App: React.FC = () => {
     
     // אם המשתמש לא מחובר ומנסה לגשת לעמוד מוגן, מעבירים אותו לדף התחברות
     // אבל רק אם הוא לא בדף login או OTP
-    const isLoginPage = location.pathname === "/login" || location.pathname === "/#/login";
-    const isOTPPage = location.pathname === "/otp" || location.pathname === "/#/otp";
-    
     // רק אם המשתמש לא מחובר ולא בדף login/otp, נפנה אותו ל-login
     // ה-ProtectedRoute יטפל בזה, אז אנחנו לא צריכים לעשות את זה כאן
     // זה יוצר לופ אינסופי

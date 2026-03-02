@@ -109,7 +109,10 @@ class UserService(BaseService[User]):
         db: Session,
         user_data: UserCreate
     ) -> User:
-        """יצירת משתמש חדש"""
+        """יצירת משתמש חדש + שליחת welcome email עם סיסמה זמנית"""
+        import logging
+        log = logging.getLogger(__name__)
+
         # Validate email unique
         if self.get_by_email(db, user_data.email):
             raise DuplicateException("Email already exists")
@@ -117,15 +120,80 @@ class UserService(BaseService[User]):
         # Validate username unique
         if user_data.username and self.get_by_username(db, user_data.username):
             raise DuplicateException("Username already exists")
-        
+
+        plain_password = user_data.password  # save before hashing
+
         # Hash password
-        password_hash = get_password_hash(user_data.password)
-        
-        # Create
-        user_dict = user_data.model_dump(exclude={'password'})
+        password_hash = get_password_hash(plain_password)
+
+        # Create — exclude fields that don't exist on the User model
+        user_dict = user_data.model_dump(exclude={'password', 'project_ids'})
         user_dict['password_hash'] = password_hash
-        
-        return self.create(db, user_dict)
+
+        user = self.create(db, user_dict)
+
+        # ── Project assignments ───────────────────────────────────────────
+        project_ids = getattr(user_data, 'project_ids', None) or []
+        if project_ids:
+            try:
+                from sqlalchemy import text
+                import datetime as _dt
+                for pid in project_ids:
+                    db.execute(text("""
+                        INSERT INTO project_assignments
+                            (project_id, user_id, role, status, is_active, created_at, updated_at)
+                        VALUES (:pid, :uid, 'member', 'active', true, :now, :now)
+                        ON CONFLICT DO NOTHING
+                    """), {"pid": pid, "uid": user.id, "now": _dt.datetime.utcnow()})
+                db.commit()
+            except Exception as e:
+                log.warning(f"Failed to create project assignments for user {user.id}: {e}")
+
+        # ── Send welcome email with temp password ─────────────────────────
+        try:
+            from app.core.email import send_email
+            from app.core.config import settings
+            login_url = getattr(settings, "FRONTEND_URL", "http://167.99.228.10")
+            full_name = getattr(user_data, "full_name", "") or user_data.email
+            subject = "ברוך הבא למערכת קק\"ל — פרטי כניסה"
+            body = (
+                f"שלום {full_name},\n\n"
+                f"נוצר עבורך חשבון חדש במערכת קק\"ל.\n\n"
+                f"פרטי כניסה:\n"
+                f"  אימייל:  {user_data.email}\n"
+                f"  סיסמה:  {plain_password}\n\n"
+                f"קישור לכניסה:\n{login_url}\n\n"
+                f"מומלץ לשנות את הסיסמה לאחר הכניסה הראשונה.\n\n"
+                "קק\"ל"
+            )
+            html_body = f"""
+<div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
+  <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
+    <h2 style="margin:0;">ברוך הבא למערכת קק&quot;ל 🌲</h2>
+  </div>
+  <div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+    <p>שלום <strong>{full_name}</strong>,</p>
+    <p>נוצר עבורך חשבון חדש במערכת ניהול ההזמנות של קק&quot;ל.</p>
+    <table style="background:#f9fafb;border-radius:8px;padding:16px;width:100%;border-collapse:collapse;margin:16px 0;">
+      <tr><td style="padding:6px 8px;color:#6b7280;">אימייל</td><td style="padding:6px 8px;font-weight:bold;">{user_data.email}</td></tr>
+      <tr><td style="padding:6px 8px;color:#6b7280;">סיסמה זמנית</td><td style="padding:6px 8px;font-weight:bold;font-family:monospace;font-size:16px;">{plain_password}</td></tr>
+    </table>
+    <a href="{login_url}" style="display:inline-block;background:#2d6a2d;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:15px;margin:8px 0;">
+      כניסה למערכת →
+    </a>
+    <p style="color:#6b7280;font-size:13px;margin-top:20px;">מומלץ לשנות את הסיסמה לאחר הכניסה הראשונה.</p>
+    <p style="color:#6b7280;font-size:13px;">קק&quot;ל</p>
+  </div>
+</div>"""
+            send_email(to=user_data.email, subject=subject, body=body, html_body=html_body)
+            log.info(f"Welcome email sent to {user_data.email}")
+        except Exception as e:
+            log.warning(f"Failed to send welcome email to {user_data.email}: {e}")
+
+        # Audit log
+        _audit_user(db, None, user.id, 'CREATE', {}, {'email': user.email, 'username': user.username})
+
+        return user
     
     def update_user(
         self,
@@ -209,3 +277,19 @@ class UserService(BaseService[User]):
 
 # Singleton instance
 user_service = UserService()
+
+
+def _audit_user(db, user_id, record_id, action, old_values=None, new_values=None):
+    import logging, json
+    try:
+        from sqlalchemy import text
+        db.execute(text("""
+            INSERT INTO audit_logs (user_id, table_name, record_id, action, old_values, new_values)
+            VALUES (:uid, 'users', :rid, :act, :ov::jsonb, :nv::jsonb)
+        """), {
+            "uid": user_id, "rid": record_id, "act": action,
+            "ov": json.dumps(old_values or {}), "nv": json.dumps(new_values or {})
+        })
+        db.commit()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"User audit log failed: {e}")

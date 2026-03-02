@@ -38,8 +38,11 @@ class WorkOrderService:
         status: Optional[str] = None,
         equipment_type: Optional[str] = None,
     ) -> List[WorkOrder]:
-        """Get list of work orders with filters."""
-        query = db.query(WorkOrder)
+        """Get list of work orders with filters — excludes soft-deleted."""
+        query = db.query(WorkOrder).filter(
+            WorkOrder.deleted_at.is_(None),
+            WorkOrder.is_active.is_(True),
+        )
 
         if project_id:
             query = query.filter(WorkOrder.project_id == project_id)
@@ -66,7 +69,8 @@ class WorkOrderService:
         # Build dict, exclude None values and auto-generated fields
         wo_dict = {k: v for k, v in work_order.dict().items()
                    if v is not None and k not in ("order_number",)}
-        wo_dict.setdefault("status", "PENDING")
+        # Normalize status to UPPERCASE
+        wo_dict['status'] = (wo_dict.get('status') or 'PENDING').upper()
 
         # ── Auto-resolve requested_equipment_model_id from equipment_type name ──
         # FK constraint fk_work_orders_req_model requires a valid equipment_models.id
@@ -137,13 +141,15 @@ class WorkOrderService:
         return db_work_order
 
     def delete_work_order(self, db: Session, work_order_id: int) -> bool:
-        """Soft delete work order."""
+        """Soft delete work order — sets is_active=False and deleted_at."""
         db_work_order = self.get_work_order(db, work_order_id)
         if not db_work_order:
             return False
 
         db_work_order.is_active = False
         db_work_order.updated_at = datetime.utcnow()
+        if hasattr(db_work_order, 'deleted_at'):
+            db_work_order.deleted_at = datetime.utcnow()
         db.commit()
         return True
 
@@ -417,9 +423,98 @@ class WorkOrderService:
 
     # ── Alias/bridge methods for router compatibility ────────────
     def list(self, db, search=None, current_user=None):
-        """Alias → get_work_orders() returning (items, total) tuple"""
-        items = self.get_work_orders(db)
-        return items, len(items)
+        """List work orders with enriched data (supplier, project, area, region names)."""
+        from sqlalchemy import text as sa_text
+
+        # Build base filters
+        status_filter = ""
+        area_filter = ""
+        project_filter = ""
+        supplier_filter = ""
+        params: dict = {}
+
+        if search:
+            if getattr(search, 'status', None):
+                status_filter = "AND wo.status = :status"
+                params['status'] = search.status
+            if getattr(search, 'area_id', None):
+                area_filter = "AND a.id = :area_id"
+                params['area_id'] = search.area_id
+            if getattr(search, 'project_id', None):
+                project_filter = "AND wo.project_id = :project_id"
+                params['project_id'] = search.project_id
+            if getattr(search, 'supplier_id', None):
+                supplier_filter = "AND wo.supplier_id = :supplier_id"
+                params['supplier_id'] = search.supplier_id
+
+        page = getattr(search, 'page', 1) or 1
+        page_size = getattr(search, 'page_size', None) or getattr(search, 'per_page', 50) or 50
+        offset = (page - 1) * page_size
+        params['limit'] = page_size
+        params['offset'] = offset
+
+        sql = sa_text(f"""
+            SELECT
+                wo.*,
+                s.name  AS supplier_name,
+                p.name  AS project_name,
+                a.name  AS area_name,
+                r.name  AS region_name
+            FROM work_orders wo
+            LEFT JOIN suppliers s  ON s.id = wo.supplier_id
+            LEFT JOIN projects  p  ON p.id = wo.project_id
+            LEFT JOIN areas     a  ON a.id = p.area_id
+            LEFT JOIN regions   r  ON r.id = a.region_id
+            WHERE wo.deleted_at IS NULL
+              AND wo.is_active = TRUE
+              {status_filter}
+              {area_filter}
+              {project_filter}
+              {supplier_filter}
+            ORDER BY wo.created_at DESC
+            LIMIT :limit OFFSET :offset
+        """)
+
+        count_sql = sa_text(f"""
+            SELECT COUNT(*)
+            FROM work_orders wo
+            LEFT JOIN projects p ON p.id = wo.project_id
+            LEFT JOIN areas    a ON a.id = p.area_id
+            WHERE wo.deleted_at IS NULL
+              AND wo.is_active = TRUE
+              {status_filter}
+              {area_filter}
+              {project_filter}
+              {supplier_filter}
+        """)
+
+        rows = db.execute(sql, params).mappings().all()
+        count_params = {k: v for k, v in params.items() if k not in ('limit', 'offset')}
+        total = db.execute(count_sql, count_params).scalar() or 0
+
+        # Convert mapping rows to WorkOrder ORM objects augmented with name fields
+        wo_ids = [row['id'] for row in rows]
+        if not wo_ids:
+            return [], total
+
+        orm_map = {
+            wo.id: wo
+            for wo in db.query(WorkOrder).filter(WorkOrder.id.in_(wo_ids)).all()
+        }
+
+        items = []
+        for row in rows:
+            wo = orm_map.get(row['id'])
+            if wo:
+                # Set extra name fields as instance attributes (not mapped columns)
+                wo.__dict__.setdefault('supplier_name', None)
+                wo.__dict__['supplier_name'] = row.get('supplier_name')
+                wo.__dict__['project_name'] = row.get('project_name')
+                wo.__dict__['area_name'] = row.get('area_name')
+                wo.__dict__['region_name'] = row.get('region_name')
+                items.append(wo)
+
+        return items, total
 
     def create(self, db, data, current_user=None, current_user_id=None):
         """Alias → create_work_order()"""
@@ -458,15 +553,181 @@ class WorkOrderService:
         return wo
 
     def approve(self, db, wo_id, request=None, current_user=None, current_user_id=None, notes=None):
-        """Approve a work order — DISTRIBUTING → approved."""
+        """Approve a work order by coordinator — APPROVED_AND_SENT + emails + notifications."""
         from app.models.work_order import WorkOrder
-        import datetime
+        import datetime, logging
+        log = logging.getLogger(__name__)
+
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
-        if wo:
-            wo.status = 'approved'
-            wo.updated_at = datetime.datetime.now()
+        if not wo:
+            return wo
+
+        wo.status = 'APPROVED_AND_SENT'
+        wo.updated_at = datetime.datetime.now()
+        db.commit()
+        db.refresh(wo)
+
+        uid = current_user_id or (current_user.id if current_user else None)
+        admin_name = (current_user.full_name or current_user.username) if current_user else 'מתאם'
+        order_label = wo.order_number or str(wo_id)
+
+        # ── Activity log ─────────────────────────────────────────────────
+        try:
+            from sqlalchemy import text
+            db.execute(text("""
+                INSERT INTO activity_logs (action, description, user_id, entity_type, entity_id)
+                VALUES ('WORK_ORDER_APPROVED', :desc, :uid, 'work_order', :wid)
+            """), {
+                "desc": f"הזמנה מספר {order_label} אושרה לביצוע על ידי {admin_name}",
+                "uid": uid,
+                "wid": wo_id,
+            })
             db.commit()
-            db.refresh(wo)
+        except Exception as e:
+            log.warning(f"Activity log failed for approve WO {wo_id}: {e}")
+
+        # ── Build location info + Waze link ───────────────────────────────
+        location_text = ""
+        waze_link = ""
+        try:
+            if wo.location:
+                loc = wo.location
+                location_text = loc.name or loc.address or ""
+                if loc.address:
+                    location_text = f"{loc.name} — {loc.address}" if loc.name else loc.address
+                if loc.latitude and loc.longitude:
+                    waze_link = f"https://waze.com/ul?ll={loc.latitude},{loc.longitude}&navigate=yes"
+            elif wo.location_id:
+                from app.models.location import Location
+                loc = db.query(Location).filter(Location.id == wo.location_id).first()
+                if loc:
+                    location_text = loc.address or loc.name or ""
+                    if loc.name and loc.address:
+                        location_text = f"{loc.name} — {loc.address}"
+                    if loc.latitude and loc.longitude:
+                        waze_link = f"https://waze.com/ul?ll={loc.latitude},{loc.longitude}&navigate=yes"
+        except Exception as e:
+            log.warning(f"Failed to build location info for WO {wo_id}: {e}")
+
+        location_line = f"\nמיקום: {location_text}" if location_text else ""
+        waze_line = f"\nניווט Waze: {waze_link}" if waze_link else ""
+
+        # ── Email to supplier ─────────────────────────────────────────────
+        try:
+            if wo.supplier_id:
+                from app.models.supplier import Supplier
+                supplier = db.query(Supplier).filter(Supplier.id == wo.supplier_id).first()
+                if supplier:
+                    to_email = supplier.email or supplier.contact_email
+                    supplier_name = supplier.name or "ספק"
+                    if to_email:
+                        from app.core.email import send_email
+                        subject = f"הזמנה {order_label} אושרה לביצוע — פרטי מיקום"
+                        body = (
+                            f"שלום {supplier_name},\n\n"
+                            f"הזמנת העבודה מספר {order_label} אושרה סופית על ידי מתאם ההזמנות.\n"
+                            f"ניתן לצאת לביצוע."
+                            f"{location_line}"
+                            f"{waze_line}\n\n"
+                            f"לפרטים נוספים יש לפנות למתאם.\n\n"
+                            "קק\"ל"
+                        )
+                        html_body = f"""
+<div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+  <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
+    <h2 style="margin:0;">✅ הזמנה אושרה לביצוע</h2>
+  </div>
+  <div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+    <p>שלום <strong>{supplier_name}</strong>,</p>
+    <p>הזמנת עבודה מספר <strong>{order_label}</strong> אושרה סופית.</p>
+    {"<p>📍 <strong>מיקום:</strong> " + location_text + "</p>" if location_text else ""}
+    {"<p><a href='" + waze_link + "' style='background:#00b4e8;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:8px;'>🧭 נווט ב-Waze</a></p>" if waze_link else ""}
+    <hr style="margin:20px 0;border:none;border-top:1px solid #e5e7eb;"/>
+    <p style="color:#6b7280;font-size:13px;">לפרטים נוספים יש לפנות למתאם ההזמנות.</p>
+    <p style="color:#6b7280;font-size:13px;">קק"ל</p>
+  </div>
+</div>"""
+                        send_email(to=to_email, subject=subject, body=body, html_body=html_body)
+                        log.info(f"Approval email sent to supplier {to_email} for WO {wo_id}")
+        except Exception as e:
+            log.warning(f"Failed to send supplier approval email for WO {wo_id}: {e}")
+
+        # ── Email to work order creator (work manager) ────────────────────
+        try:
+            recipient_user = None
+            recipient_label = ""
+            if wo.created_by:
+                recipient_user = wo.created_by
+                recipient_label = wo.created_by.full_name or wo.created_by.username or "מנהל עבודה"
+            elif wo.created_by_id:
+                from app.models.user import User
+                recipient_user = db.query(User).filter(User.id == wo.created_by_id).first()
+                if recipient_user:
+                    recipient_label = recipient_user.full_name or recipient_user.username or "מנהל עבודה"
+            # Fallback: project manager
+            if not recipient_user and wo.project and wo.project.manager_id:
+                from app.models.user import User
+                recipient_user = db.query(User).filter(User.id == wo.project.manager_id).first()
+                if recipient_user:
+                    recipient_label = recipient_user.full_name or "מנהל פרויקט"
+
+            if recipient_user and recipient_user.email:
+                from app.core.email import send_email
+                supplier_name_str = ""
+                if wo.supplier_id:
+                    from app.models.supplier import Supplier
+                    s = db.query(Supplier).filter(Supplier.id == wo.supplier_id).first()
+                    if s:
+                        supplier_name_str = s.name or ""
+
+                subject = f"הזמנה {order_label} אושרה לביצוע"
+                body = (
+                    f"שלום {recipient_label},\n\n"
+                    f"הזמנת העבודה מספר {order_label} אושרה על ידי מתאם ההזמנות ונשלחה לביצוע.\n"
+                    f"{'ספק: ' + supplier_name_str + chr(10) if supplier_name_str else ''}"
+                    f"{location_line}"
+                    f"{waze_line}\n\n"
+                    f"אושר על ידי: {admin_name}\n\n"
+                    "קק\"ל"
+                )
+                send_email(to=recipient_user.email, subject=subject, body=body)
+                log.info(f"Approval email sent to work manager {recipient_user.email} for WO {wo_id}")
+        except Exception as e:
+            log.warning(f"Failed to send work manager approval email for WO {wo_id}: {e}")
+
+        # ── In-app notification ───────────────────────────────────────────
+        try:
+            from app.services.notification_service import notification_service
+            from app.schemas.notification import NotificationCreate
+
+            notif_user_ids = set()
+            if uid:
+                pass  # don't notify the approver themselves
+            if wo.created_by_id:
+                notif_user_ids.add(wo.created_by_id)
+            if wo.project and wo.project.manager_id:
+                notif_user_ids.add(wo.project.manager_id)
+
+            for nuid in notif_user_ids:
+                if nuid == uid:
+                    continue  # skip the person who approved
+                import json as _json
+                notif = NotificationCreate(
+                    user_id=nuid,
+                    title=f"הזמנה {order_label} אושרה ✅",
+                    message=f"הזמנת עבודה {order_label} אושרה לביצוע על ידי {admin_name}.",
+                    notification_type="work_order_approved",
+                    priority="high",
+                    channel="in_app",
+                    entity_type="work_order",
+                    entity_id=wo_id,
+                    data=_json.dumps({"work_order_id": wo_id, "approved_by": admin_name}),
+                    action_url=f"/work-orders/{wo_id}",
+                )
+                notification_service.create_notification(db, notif)
+        except Exception as e:
+            log.warning(f"Failed to create approval notification for WO {wo_id}: {e}")
+
         return wo
 
     def reject(self, db, wo_id, request=None, reason=None, current_user=None, current_user_id=None):
@@ -475,7 +736,7 @@ class WorkOrderService:
         import datetime
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
         if wo:
-            wo.status = 'rejected'
+            wo.status = 'REJECTED'
             wo.updated_at = datetime.datetime.now()
             db.commit()
             db.refresh(wo)
@@ -487,7 +748,7 @@ class WorkOrderService:
         import datetime
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
         if wo:
-            wo.status = 'cancelled'
+            wo.status = 'CANCELLED'
             wo.updated_at = datetime.datetime.now()
             db.commit()
             db.refresh(wo)
@@ -499,7 +760,7 @@ class WorkOrderService:
         import datetime
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
         if wo:
-            wo.status = 'active'
+            wo.status = 'ACTIVE'
             wo.updated_at = datetime.datetime.now()
             db.commit()
             db.refresh(wo)

@@ -1,14 +1,13 @@
-// @ts-nocheck
+
 // src/pages/Regions/RegionDetail.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowRight, Map, TreePine, Building2, Users, Edit, 
-  Loader2, MapPin, Eye, ChevronLeft, Layers, DollarSign
+import {
+  ArrowRight, Map, TreePine, Building2, Users, Edit,
+  MapPin, Eye, ChevronLeft, DollarSign
 } from 'lucide-react';
 import api from '../../services/api';
 import LeafletMap from '../../components/Map/LeafletMap';
-import type { MapPoint, MapPolygon } from '../../components/Map/LeafletMap';
 import TreeLoader from '../../components/common/TreeLoader';
 
 interface Region {
@@ -31,21 +30,10 @@ interface Area {
   projects_count?: number;
 }
 
-// API key loaded via index.html script tag - no need for useLoadScript
-const defaultCenter = { lat: 31.5, lng: 34.8 };
-
 // צבעים יפים לאזורים
 const areaColors = [
   '#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', 
   '#EF4444', '#EC4899', '#06B6D4', '#84CC16',
-];
-
-// סוגי מפה
-const mapTypes = [
-  { id: 'roadmap', label: 'רגיל', icon: '🗺️' },
-  { id: 'satellite', label: 'לוויין', icon: '🛰️' },
-  { id: 'hybrid', label: 'היברידי', icon: '🌍' },
-  { id: 'terrain', label: 'טופוגרפי', icon: '⛰️' },
 ];
 
 const RegionDetail: React.FC = () => {

@@ -1,11 +1,11 @@
-// @ts-nocheck
+
 // src/pages/Settings/EquipmentCatalog.tsx
 // קטלוג כלים - ניהול סוגי הכלים המאושרים בקק"ל
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, Wrench, Plus, Search, Edit, Trash2,
-  CheckCircle, XCircle, Save, X, Info, DollarSign,
+  CheckCircle, Save, X, Info, DollarSign,
   Clock, Shield, Layers
 } from 'lucide-react';
 import api from '../../services/api';
@@ -170,7 +170,6 @@ const EquipmentCatalog: React.FC = () => {
 
   // Group by parent
   const rootCategories = filteredCategories.filter(c => !c.parent_category_id);
-  const childCategories = filteredCategories.filter(c => c.parent_category_id);
 
   return (
     <div className="min-h-screen bg-kkl-bg" dir="rtl">
@@ -418,7 +417,7 @@ const EquipmentCatalog: React.FC = () => {
                 <select
                   value={formData.parent_category_id || ''}
                   onChange={(e) => setFormData({ ...formData, parent_category_id: e.target.value ? parseInt(e.target.value) : null })}
-                  className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                 >
                   <option value="">ללא (קטגוריה ראשית)</option>
                   {categories

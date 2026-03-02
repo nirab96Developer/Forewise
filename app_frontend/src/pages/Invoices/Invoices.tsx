@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Invoices/Invoices.tsx
 // דף חשבוניות - רשימת חשבוניות וניהול
 import React, { useState, useEffect } from "react";

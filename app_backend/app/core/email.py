@@ -4,6 +4,7 @@ import smtplib
 import requests
 import os
 import base64
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -11,15 +12,20 @@ from typing import Optional, List, Tuple
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load .env file
+logger = logging.getLogger(__name__)
+
+# Load .env file (override=True to ensure values are set even if env was clean)
 env_path = Path(__file__).parent.parent.parent / ".env"
-load_dotenv(env_path)
+load_dotenv(env_path, override=True)
 
 from app.core.config import settings
 
+# Cache the API key at module load time (after load_dotenv)
+_BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+
 def get_brevo_api_key():
     """Get Brevo API key from environment"""
-    return os.getenv("BREVO_API_KEY", "")
+    return _BREVO_API_KEY or os.getenv("BREVO_API_KEY", "")
 
 def get_sendgrid_api_key():
     """Get SendGrid API key from environment"""
@@ -43,22 +49,22 @@ def send_via_sendgrid(to: str, subject: str, body: str) -> dict:
     
     response = requests.post(url, headers=headers, json=data, timeout=30)
     if response.status_code in [200, 201, 202]:
-        print(f"[OK] Email sent via SendGrid to {to}: {subject}")
+        logger.info(f"[OK] Email sent via SendGrid to {to}: {subject}")
         return {"message": "Email sent via SendGrid", "recipient": to}
     else:
         raise Exception(f"SendGrid error: {response.status_code} - {response.text}")
 
 
 def send_via_brevo(
-    to: str, 
-    subject: str, 
+    to: str,
+    subject: str,
     body: str,
     html_body: Optional[str] = None,
     attachments: Optional[List[Tuple[str, bytes, str]]] = None
 ) -> dict:
     """
     Send email via Brevo (Sendinblue) HTTP API
-    
+
     Args:
         to: Recipient email
         subject: Email subject
@@ -67,6 +73,8 @@ def send_via_brevo(
         attachments: Optional list of (filename, content_bytes, content_type) tuples
     """
     api_key = get_brevo_api_key()
+    if not api_key:
+        raise Exception("No Brevo API key available")
     url = "https://api.brevo.com/v3/smtp/email"
     headers = {
         "api-key": api_key,
@@ -78,11 +86,11 @@ def send_via_brevo(
         "subject": subject,
         "textContent": body
     }
-    
+
     # Add HTML body if provided
     if html_body:
         data["htmlContent"] = html_body
-    
+
     # Add attachments if provided
     if attachments:
         data["attachment"] = []
@@ -92,11 +100,11 @@ def send_via_brevo(
                 "name": filename,
                 "content": encoded,
             })
-    
+
     response = requests.post(url, headers=headers, json=data, timeout=30)
     if response.status_code in [200, 201, 202]:
         attachment_info = f" with {len(attachments)} attachment(s)" if attachments else ""
-        print(f"[OK] Email sent via Brevo to {to}: {subject}{attachment_info}")
+        logger.info(f"[OK] Email sent via Brevo to {to}: {subject}{attachment_info}")
         return {"message": "Email sent via Brevo", "recipient": to}
     else:
         raise Exception(f"Brevo error: {response.status_code} - {response.text}")
@@ -109,52 +117,53 @@ def send_via_smtp(to: str, subject: str, body: str) -> dict:
     msg['To'] = to
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
-    
+
     server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
     server.starttls()
     server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
     server.sendmail(settings.EMAIL_FROM, to, msg.as_string())
     server.quit()
-    
-    print(f"[OK] Email sent via SMTP to {to}: {subject}")
+
+    logger.info(f"[OK] Email sent via SMTP to {to}: {subject}")
     return {"message": "Email sent via SMTP", "recipient": to}
 
 
 def send_email(to=None, subject="", body="", email_to=None, **kwargs):
     """
     Send email - tries multiple methods:
-    1. SendGrid API (if SENDGRID_API_KEY configured)
-    2. Brevo API (if BREVO_API_KEY configured)
+    1. Brevo API (if BREVO_API_KEY configured)
+    2. SendGrid API (if SENDGRID_API_KEY configured)
     3. SMTP (direct connection)
     4. Console fallback
     """
     recipient = to or email_to or "unknown"
-    
+
     # Try Brevo first (if configured)
     brevo_key = get_brevo_api_key()
     if brevo_key:
         try:
             return send_via_brevo(recipient, subject, body)
         except Exception as e:
-            print(f"[WARN] Brevo failed: {e}")
-    
+            logger.warning(f"Brevo failed for {recipient}: {e}")
+    else:
+        logger.warning(f"No Brevo API key - skipping Brevo for {recipient}")
+
     # Try SendGrid second (if configured)
     sendgrid_key = get_sendgrid_api_key()
     if sendgrid_key:
         try:
             return send_via_sendgrid(recipient, subject, body)
         except Exception as e:
-            print(f"[WARN] SendGrid failed: {e}")
-    
+            logger.warning(f"SendGrid failed for {recipient}: {e}")
+
     # Try SMTP
     try:
         return send_via_smtp(recipient, subject, body)
     except Exception as e:
-        print(f"[ERROR] SMTP failed: {e}")
-    
+        logger.error(f"SMTP failed for {recipient}: {e}")
+
     # Fallback to console
-    print(f"[FALLBACK] Email to {recipient}: {subject}")
-    print(f"{body}")
+    logger.error(f"[FALLBACK] All email methods failed for {recipient}: {subject}")
     return {"message": "Email printed to console (all methods failed)", "recipient": recipient}
 
 

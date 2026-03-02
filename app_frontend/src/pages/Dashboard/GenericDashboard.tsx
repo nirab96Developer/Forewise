@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Dashboard/GenericDashboard.tsx
 // דשבורד גנרי עם עיצוב נקי לבן וירוק
 
@@ -15,7 +15,6 @@ import {
   Users,
   Download,
   ArrowUpRight,
-  Calendar,
   Target,
   TrendingUp,
   Activity,
@@ -23,16 +22,22 @@ import {
   Eye
 } from "lucide-react";
 import dashboardService from "../../services/dashboardService";
-import projectService from "../../services/projectService";
-import authService from "../../services/authService";
 
 // Types
 interface DashboardSummary {
-  active_projects: number;
-  pending_work_logs: number;
-  equipment_in_use: number;
-  hours_this_month: number;
+  active_projects?: number;
+  active_projects_count?: number;
+  pending_work_logs?: number;
+  equipment_in_use?: number;
+  hours_this_month?: number;
   hours_month_total?: number;
+  avg_progress_pct?: number;
+  open_alerts_count?: number;
+  can_report_hours?: boolean;
+  can_create_order?: boolean;
+  can_scan_equipment?: boolean;
+  can_open_ticket?: boolean;
+  [key: string]: any;
 }
 
 interface DashboardProject {
@@ -63,14 +68,6 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, trend, color }) => {
-  const colorClasses = {
-    green: 'bg-green-50 text-green-600 border-green-200',
-    blue: 'bg-blue-50 text-blue-600 border-blue-200',
-    orange: 'bg-orange-50 text-orange-600 border-orange-200',
-    red: 'bg-red-50 text-red-600 border-red-200',
-    purple: 'bg-purple-50 text-purple-600 border-purple-200'
-  };
-
   const iconBgClasses = {
     green: 'bg-green-100',
     blue: 'bg-blue-100',
@@ -143,8 +140,7 @@ const GenericDashboard: React.FC<{title?: string}> = ({ title }) => {
   const [projects, setProjects] = useState<DashboardProject[]>([]);
   const [myTasks, setMyTasks] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const user = authService.getCurrentUser();
-  
+
   const loadDashboardData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -171,8 +167,6 @@ const GenericDashboard: React.FC<{title?: string}> = ({ title }) => {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
-
-  const firstProject = projects.length > 0 ? projects[0] : null;
 
   // Recent Activities - נטענות מה-API בעתיד
   const activities: Activity[] = [];

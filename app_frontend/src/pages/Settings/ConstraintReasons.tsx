@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Settings/ConstraintReasons.tsx
 // ניהול סיבות אילוץ ספק
 import React, { useState, useEffect } from 'react';
@@ -355,7 +355,7 @@ const ConstraintReasons: React.FC = () => {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                    className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   >
                     <option value="technical">טכני</option>
                     <option value="availability">זמינות</option>

@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Settings/SystemSettings.tsx
 // הגדרות מערכת - מסך ראשי עם ניווט לכל ההגדרות
 import React, { useState, useEffect } from 'react';
@@ -51,6 +51,13 @@ const settingsCategories: SettingsCategory[] = [
         description: 'ניהול תפקידים והרשאות גישה',
         icon: <Shield className="w-5 h-5" />,
         path: '/settings/admin/roles',
+      },
+      {
+        id: 'suppliers-manage',
+        title: 'ניהול ספקים',
+        description: 'הוספה, עריכה והפעלת ספקים',
+        icon: <Truck className="w-5 h-5" />,
+        path: '/suppliers',
       },
     ],
   },

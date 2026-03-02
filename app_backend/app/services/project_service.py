@@ -110,6 +110,24 @@ class ProjectService:
         db.add(item)
         db.commit()
         db.refresh(item)
+
+        # Auto-create budget for new project
+        try:
+            from app.models.budget import Budget
+            import datetime as _dt
+            budget = Budget(
+                project_id=item.id,
+                total_amount=0,
+                spent_amount=0,
+                committed_amount=0,
+                status='ACTIVE',
+            )
+            db.add(budget)
+            db.commit()
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to auto-create budget for project {item.id}: {e}")
+
         return item
     
     def update(self, db: Session, item_id: int, data: ProjectUpdate, current_user_id: int) -> Project:
@@ -177,6 +195,9 @@ class ProjectService:
             if not budget:
                 raise ValidationException(f"Budget {update_dict['budget_id']} not found")
         
+        # Capture old status for audit
+        old_status = item.status
+
         # Update
         for field, value in update_dict.items():
             setattr(item, field, value)
@@ -186,6 +207,12 @@ class ProjectService:
         
         db.commit()
         db.refresh(item)
+
+        # Audit log if status changed
+        if 'status' in update_dict and update_dict['status'] != old_status:
+            _audit_project(db, current_user_id, item.id, 'STATUS_CHANGE',
+                           {'status': old_status}, {'status': item.status})
+
         return item
     
     def list(self, db: Session, search: ProjectSearch) -> Tuple[List[Project], int]:
@@ -289,3 +316,19 @@ class ProjectService:
             total=len(items),
             active_count=sum(1 for i in items if i.is_active)
         )
+
+
+def _audit_project(db, user_id, record_id, action, old_values=None, new_values=None):
+    import logging, json
+    try:
+        from sqlalchemy import text
+        db.execute(text("""
+            INSERT INTO audit_logs (user_id, table_name, record_id, action, old_values, new_values)
+            VALUES (:uid, 'projects', :rid, :act, :ov::jsonb, :nv::jsonb)
+        """), {
+            "uid": user_id, "rid": record_id, "act": action,
+            "ov": json.dumps(old_values or {}), "nv": json.dumps(new_values or {})
+        })
+        db.commit()
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Project audit log failed: {e}")

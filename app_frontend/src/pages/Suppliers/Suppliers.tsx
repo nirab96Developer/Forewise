@@ -1,20 +1,8 @@
-// @ts-nocheck
+
 // src/pages/Suppliers/Suppliers.tsx
-// דף ספקים - רשימת ספקים וניהול
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Loader2, 
-  AlertCircle, 
-  Building2,
-  Search,
-  Filter,
-  Plus,
-  Eye,
-  Edit,
-  CheckCircle,
-  XCircle
-} from "lucide-react";
+import { Truck, Search, Plus, Eye, Edit, X } from "lucide-react";
 import supplierService from "../../services/supplierService";
 
 interface Supplier {
@@ -38,45 +26,42 @@ const Suppliers: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  useEffect(() => {
-    loadSuppliers();
-  }, []);
+  useEffect(() => { loadSuppliers(); }, []);
 
   const loadSuppliers = async () => {
     try {
       setIsLoading(true);
       setError(null);
-
       const response = await supplierService.getSuppliers({});
-      const suppliersList = response.suppliers || [];
-      setSuppliers(suppliersList);
-      setIsLoading(false);
+      setSuppliers(response.suppliers || []);
     } catch (err: any) {
       console.error('Error loading suppliers:', err);
       setError('שגיאה בטעינת ספקים');
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
-  const filteredSuppliers = suppliers.filter(supplier => {
-    const matchesSearch = !searchTerm || 
-      supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      supplier.contact_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || 
-      (statusFilter === "active" && supplier.is_active) ||
-      (statusFilter === "inactive" && !supplier.is_active);
-    
-    return matchesSearch && matchesStatus;
-  });
+  const filteredSuppliers = useMemo(() => suppliers.filter(s => {
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      if (!s.name?.toLowerCase().includes(q) &&
+          !s.code?.toLowerCase().includes(q) &&
+          !s.contact_name?.toLowerCase().includes(q)) return false;
+    }
+    if (statusFilter === 'active' && !s.is_active) return false;
+    if (statusFilter === 'inactive' && s.is_active) return false;
+    return true;
+  }), [suppliers, searchTerm, statusFilter]);
+
+  const hasFilters = searchTerm || statusFilter !== 'all';
+  const activeCount = suppliers.filter(s => s.is_active).length;
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-2 bg-white p-4 rounded-lg shadow-sm">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>טוען ספקים...</span>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">טוען ספקים...</p>
         </div>
       </div>
     );
@@ -84,207 +69,156 @@ const Suppliers: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-white p-6 rounded-lg shadow-sm max-w-md">
-          <div className="flex items-center gap-2 text-red-600 mb-2">
-            <AlertCircle className="w-5 h-5" />
-            <h2 className="font-medium">שגיאה</h2>
-          </div>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadSuppliers}
-            className="w-full px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors"
-          >
-            נסה שוב
-          </button>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-white p-6 rounded-xl shadow-sm max-w-sm text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button onClick={loadSuppliers} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">נסה שוב</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">ניהול ספקים</h1>
-              <p className="text-gray-600">ניהול ועקיבה אחר ספקי המערכת</p>
-            </div>
-            <button
-              onClick={() => navigate("/suppliers/new")}
-              className="flex items-center gap-2 px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              ספק חדש
-            </button>
-          </div>
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4" dir="rtl">
+      <div className="max-w-5xl mx-auto">
 
-          {/* Search and Filters */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="חיפוש ספקים..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
-              />
-            </div>
-            <div className="relative">
-              <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="pr-10 pl-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent appearance-none bg-white"
-              >
-                <option value="all">כל הסטטוסים</option>
-                <option value="active">פעיל</option>
-                <option value="inactive">לא פעיל</option>
-              </select>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">ניהול ספקים</h1>
+            <p className="text-sm text-gray-500 mt-0.5">{suppliers.length} ספקים · {activeCount} פעילים</p>
           </div>
+          <button
+            onClick={() => navigate('/suppliers/new')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 font-medium shadow-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            ספק חדש
+          </button>
         </div>
 
-        {/* Suppliers List */}
-        {filteredSuppliers.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-            <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">לא נמצאו ספקים</h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm || statusFilter !== "all"
-                ? "לא נמצאו ספקים המתאימים לחיפוש שלך"
-                : "אין ספקים במערכת"}
-            </p>
-            {(searchTerm || statusFilter !== "all") && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("all");
-                }}
-                className="px-4 py-2 text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
-              >
-                נקה מסננים
+        {/* Search + filter bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative flex-1 min-w-[180px]">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="חיפוש שם / קוד / איש קשר..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+            </div>
+
+            {/* Status chips */}
+            <div className="flex gap-1.5">
+              {([['all', 'הכל'], ['active', 'פעילים'], ['inactive', 'לא פעילים']] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setStatusFilter(v)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    statusFilter === v
+                      ? v === 'active' ? 'bg-green-600 text-white' : v === 'inactive' ? 'bg-gray-600 text-white' : 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {hasFilters && (
+              <button onClick={() => { setSearchTerm(''); setStatusFilter('all'); }} className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                <X className="w-3.5 h-3.5" /> נקה
               </button>
             )}
           </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      שם ספק
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      קוד
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      איש קשר
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      דירוג
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      הזמנות
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      סטטוס
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      פעולות
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredSuppliers.map((supplier) => (
-                    <tr key={supplier.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{supplier.name}</div>
-                        {supplier.email && (
-                          <div className="text-sm text-gray-500">{supplier.email}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{supplier.code || "-"}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{supplier.contact_name || "-"}</div>
-                        {supplier.phone && (
-                          <div className="text-sm text-gray-500">{supplier.phone}</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          {supplier.rating != null && typeof supplier.rating === 'number' ? (
-                            <>
-                              <span className="text-sm font-medium text-gray-900">
-                                {supplier.rating.toFixed(1)}
-                              </span>
-                              <span className="text-sm text-gray-500">/5</span>
-                            </>
-                          ) : (
-                            <span className="text-sm text-gray-400">-</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {supplier.completed_work_orders || 0} / {supplier.total_work_orders || 0}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {supplier.is_active ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <CheckCircle className="w-3 h-3" />
-                            פעיל
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            <XCircle className="w-3 h-3" />
-                            לא פעיל
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => navigate(`/suppliers/${supplier.id}`)}
-                            className="text-kkl-green hover:text-kkl-green-dark"
-                            title="צפייה"
-                          >
-                            <Eye className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/suppliers/${supplier.id}/edit`)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="עריכה"
-                          >
-                            <Edit className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        </div>
+
+        {hasFilters && (
+          <p className="text-xs text-gray-500 mb-3 px-1">מציג {filteredSuppliers.length} מתוך {suppliers.length} ספקים</p>
         )}
 
-        {/* Summary */}
-        {filteredSuppliers.length > 0 && (
-          <div className="mt-6 bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>סה"כ ספקים: {filteredSuppliers.length}</span>
-              <span>
-                פעילים: {filteredSuppliers.filter(s => s.is_active).length} | 
-                לא פעילים: {filteredSuppliers.filter(s => !s.is_active).length}
-              </span>
-            </div>
+        {/* Suppliers list */}
+        {filteredSuppliers.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <Truck className="w-14 h-14 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-700 mb-1">
+              {hasFilters ? 'לא נמצאו ספקים' : 'אין ספקים'}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {hasFilters ? 'נסה לשנות את הפילטרים' : 'הוסף ספק ראשון'}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {filteredSuppliers.map((supplier, idx) => (
+              <div
+                key={supplier.id}
+                className={`flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors ${
+                  idx !== filteredSuppliers.length - 1 ? 'border-b border-gray-100' : ''
+                }`}
+              >
+                {/* Icon */}
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  supplier.is_active ? 'bg-green-100' : 'bg-gray-100'
+                }`}>
+                  <Truck className={`w-4 h-4 ${supplier.is_active ? 'text-green-600' : 'text-gray-400'}`} />
+                </div>
+
+                {/* Name + contact */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-900 text-sm">{supplier.name}</div>
+                  <div className="text-xs text-gray-400 truncate">
+                    {supplier.contact_name && <span>{supplier.contact_name}</span>}
+                    {supplier.contact_name && supplier.email && <span className="mx-1">·</span>}
+                    {supplier.email && <span>{supplier.email}</span>}
+                    {!supplier.contact_name && !supplier.email && <span>—</span>}
+                  </div>
+                </div>
+
+                {/* Code */}
+                {supplier.code && (
+                  <span className="hidden sm:inline-flex px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-mono flex-shrink-0">
+                    {supplier.code}
+                  </span>
+                )}
+
+                {/* Orders count */}
+                <div className="hidden md:block text-xs text-gray-500 flex-shrink-0 min-w-[80px] text-center">
+                  <div className="font-medium text-gray-700">{supplier.completed_work_orders || 0} / {supplier.total_work_orders || 0}</div>
+                  <div>הזמנות</div>
+                </div>
+
+                {/* Status badge */}
+                <span className={`hidden sm:inline-flex px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                  supplier.is_active
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {supplier.is_active ? 'פעיל' : 'לא פעיל'}
+                </span>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => navigate(`/suppliers/${supplier.id}`)}
+                    className="p-1.5 hover:bg-blue-50 rounded-lg text-gray-400 hover:text-blue-600 transition-colors"
+                    title="צפייה"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => navigate(`/suppliers/${supplier.id}/edit`)}
+                    className="p-1.5 hover:bg-green-50 rounded-lg text-gray-400 hover:text-green-600 transition-colors"
+                    title="עריכה"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

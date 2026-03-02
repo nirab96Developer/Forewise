@@ -59,33 +59,48 @@ class ForestMapService:
         
         # Priority: 1) forest_polygon_id (clean, accurate) 2) forest_id (with names) 3) spatial search
         forest_info = None
-        
+        reason = None
+
         # First check forest_polygon_id (clean polygon table - most accurate)
+        # _get_polygon_for_project returns None if distance > 10km
         polygon_info = ForestMapService._get_polygon_for_project(db, project_id)
         if polygon_info:
             forest_info = polygon_info
-        
+        else:
+            # Check if we have a polygon assigned but it was rejected (too far)
+            has_far_polygon = db.execute(text("""
+                SELECT 1 FROM projects p
+                JOIN forest_polygons fp ON p.forest_polygon_id = fp.id
+                WHERE p.id = :pid
+                  AND p.location_geom IS NOT NULL
+                  AND ST_Distance(p.location_geom::geography, fp.geom::geography) > 10000
+            """), {"pid": project_id}).fetchone()
+            if has_far_polygon:
+                reason = "polygon_too_far"
+
         # If no clean polygon, try forest_id (old table with names)
         if not forest_info and result.forest_id:
             forest_info = ForestMapService._get_forest_by_id(db, result.forest_id)
-        
+
         # If still no forest and has location, try to find polygon containing this point
         if not forest_info and has_location:
-            # First try clean polygons
             forest_info = ForestMapService._find_polygon_for_point(
                 db, result.longitude, result.latitude
             )
-            # Then try old forests table
             if not forest_info:
                 forest_info = ForestMapService._find_forest_for_point(
                     db, result.longitude, result.latitude
                 )
-        
+
+        if not forest_info and not reason:
+            reason = "no_polygon"
+
         return ForestMapResponse(
             project=project_data,
             forest=forest_info,
             has_forest=forest_info is not None,
-            has_location=has_location
+            has_location=has_location,
+            reason=reason if not forest_info else None,
         )
     
     @staticmethod
@@ -120,15 +135,18 @@ class ForestMapService:
     
     @staticmethod
     def _get_polygon_for_project(db: Session, project_id: int) -> Optional[ForestInfo]:
-        """Get forest polygon linked to project via forest_polygon_id"""
-        
+        """Get forest polygon linked to project via forest_polygon_id.
+        Returns None if polygon centroid is > 10km from project point (bad assignment).
+        """
         query = text("""
             SELECT 
                 fp.id,
-                fp.geom,
                 ST_Area(fp.geom::geography)/1000000 as area_km2,
                 ST_AsGeoJSON(fp.geom) as geojson_full,
-                ST_AsGeoJSON(ST_SimplifyPreserveTopology(fp.geom, 0.0002)) as geojson_preview
+                ST_AsGeoJSON(ST_SimplifyPreserveTopology(fp.geom, 0.0002)) as geojson_preview,
+                CASE WHEN p.location_geom IS NOT NULL THEN
+                    ST_Distance(p.location_geom::geography, fp.geom::geography)
+                ELSE 0 END as dist_meters
             FROM projects p
             JOIN forest_polygons fp ON p.forest_polygon_id = fp.id
             WHERE p.id = :project_id
@@ -138,10 +156,14 @@ class ForestMapService:
         
         if not result:
             return None
+
+        # Reject polygon if it's more than 10km from the project point
+        if result.dist_meters and result.dist_meters > 10000:
+            return None
         
         return ForestInfo(
             id=result.id,
-            name=f"יער #{result.id}",  # Clean polygon has no name
+            name=f"יער #{result.id}",
             code=None,
             area_km2=float(result.area_km2) if result.area_km2 else None,
             geojson_full=json.loads(result.geojson_full),

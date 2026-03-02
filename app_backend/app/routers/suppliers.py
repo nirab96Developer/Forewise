@@ -1,9 +1,9 @@
 """
 Suppliers Router
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import Annotated
+from typing import Annotated, Optional, List
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_permission
@@ -24,6 +24,60 @@ def list_suppliers(
     suppliers, total = supplier_service.list_with_filters(db, filters)
     total_pages = (total + filters.page_size - 1) // filters.page_size
     return SupplierListResponse(items=suppliers, total=total, page=filters.page, page_size=filters.page_size, total_pages=total_pages)
+
+
+@router.get("/active")
+def get_active_suppliers(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    equipment_category_id: Optional[int] = Query(None, description="Filter by equipment category ID"),
+    category: Optional[int] = Query(None, description="Alias for equipment_category_id"),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Return active suppliers, optionally filtered by equipment category."""
+    from sqlalchemy import text as sa_text
+
+    cat_id = equipment_category_id or category
+
+    if cat_id:
+        # The frontend sends equipment_types.id, but supplier_equipment links
+        # through equipment_models → equipment_categories (different table, different IDs).
+        # We resolve by matching either the category ID directly OR by name-based
+        # cross-reference between equipment_types and equipment_categories.
+        sql = sa_text("""
+            SELECT DISTINCT s.id, s.code, s.name, s.contact_name, s.contact_phone,
+                   s.contact_email, s.supplier_type, s.rating, s.is_active,
+                   s.region_id, s.area_id, s.total_jobs, s.priority_score
+            FROM suppliers s
+            JOIN supplier_equipment se ON se.supplier_id = s.id
+            JOIN equipment_models em ON em.id = se.equipment_model_id
+            JOIN equipment_categories ec ON ec.id = em.category_id
+            WHERE (
+                em.category_id = :cat_id
+                OR ec.name IN (
+                    SELECT name FROM equipment_types WHERE id = :cat_id
+                )
+            )
+              AND s.is_active = TRUE
+              AND s.deleted_at IS NULL
+            ORDER BY s.name
+            LIMIT :limit OFFSET :offset
+        """)
+        rows = db.execute(sql, {"cat_id": cat_id, "limit": limit, "offset": (page - 1) * limit}).mappings().all()
+    else:
+        sql = sa_text("""
+            SELECT id, code, name, contact_name, contact_phone,
+                   contact_email, supplier_type, rating, is_active,
+                   region_id, area_id, total_jobs, priority_score
+            FROM suppliers
+            WHERE is_active = TRUE AND deleted_at IS NULL
+            ORDER BY name
+            LIMIT :limit OFFSET :offset
+        """)
+        rows = db.execute(sql, {"limit": limit, "offset": (page - 1) * limit}).mappings().all()
+
+    return [dict(r) for r in rows]
 
 
 @router.get("/by-code/{code}", response_model=SupplierResponse)

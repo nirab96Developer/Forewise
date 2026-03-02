@@ -1,8 +1,8 @@
-// @ts-nocheck
+
 // OTP Page - אימות דו-שלבי (ללא כפילות שליחה)
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Fingerprint, ArrowRight, AlertCircle, Mail, Clock, CheckCircle } from 'lucide-react';
+import { Fingerprint, ArrowRight, AlertCircle, Mail, Clock } from 'lucide-react';
 import otpService from '../../services/otpService';
 import { getRememberPreference, setAuthSession } from '../../utils/authStorage';
 
@@ -16,7 +16,6 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(300); // 5 דקות
   const [canResend, setCanResend] = useState(false);
@@ -205,9 +204,6 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         localStorage.removeItem('otp_username');
         localStorage.removeItem('otp_user_id');
         localStorage.removeItem('otp_token');
-        
-        // Show success state
-        setIsSuccess(true);
         
         // Wait for animation (max 500ms, not 1500)
         await new Promise(resolve => setTimeout(resolve, 500));

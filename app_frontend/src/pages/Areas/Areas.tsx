@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Areas/Areas.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -145,7 +145,7 @@ const Areas: React.FC = () => {
             <select
               value={filterRegionId}
               onChange={(e) => setFilterRegionId(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-sm min-w-[100px]"
+              className="pr-3 pl-10 py-2 border border-gray-200 rounded-lg text-sm min-w-[100px]"
             >
               <option value="all">כל המרחבים</option>
               {regions.map(region => (

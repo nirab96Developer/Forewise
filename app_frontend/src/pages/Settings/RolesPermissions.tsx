@@ -1,11 +1,11 @@
-// @ts-nocheck
+
 // src/pages/Settings/RolesPermissions.tsx
 // ניהול תפקידים והרשאות
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, Shield, Plus, Search, Edit, Trash2,
-  CheckCircle, XCircle, Save, X, Info, Users, Lock, Eye
+  CheckCircle, XCircle, Save, X, Info, Users, Lock
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -171,10 +171,6 @@ const RolesPermissions: React.FC = () => {
     r.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredPermissions = (permissions || []).filter(p =>
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.code?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="min-h-screen bg-kkl-bg" dir="rtl">

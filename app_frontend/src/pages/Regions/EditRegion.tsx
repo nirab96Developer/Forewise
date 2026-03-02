@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Regions/EditRegion.tsx
 // עריכת מרחב עם תקציב
 import React, { useState, useEffect } from 'react';

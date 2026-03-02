@@ -1,8 +1,8 @@
-// @ts-nocheck
+
 // Worklog Form - דיווח שעות תקן/לא תקן
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
-import { CheckCircle, XCircle, Clock, Calendar, Save, X, Building2, AlertCircle, Loader2, Plus, Trash2, Moon, Shield } from 'lucide-react';
+import { CheckCircle, XCircle, Calendar, Save, Building2, AlertCircle, Loader2, Plus, Trash2, Moon } from 'lucide-react';
 import api from '../../services/api';
 import projectService from '../../services/projectService';
 
@@ -53,7 +53,7 @@ const WorklogFormUnified: React.FC = () => {
   const [success, setSuccess] = useState(false);
   
   const [projects, setProjects] = useState<Project[]>([]);
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [_workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [scannedEquipment, setScannedEquipment] = useState<{id: number; code: string; name: string} | null>(null);
   
@@ -290,7 +290,7 @@ const WorklogFormUnified: React.FC = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-20 pb-8 px-4 md:pr-72 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4  flex items-center justify-center" dir="rtl">
         <div className="text-center bg-white rounded-xl shadow-lg p-8 max-w-md">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
@@ -303,7 +303,7 @@ const WorklogFormUnified: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 pb-8 px-4 md:pr-72" dir="rtl">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4 " dir="rtl">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">דיווח שעות</h1>
         
@@ -401,7 +401,7 @@ const WorklogFormUnified: React.FC = () => {
           {/* Date & Activity */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 <Calendar className="w-3.5 h-3.5 inline ml-1" />
                 תאריך
               </label>
@@ -414,7 +414,7 @@ const WorklogFormUnified: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">פעילות</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">פעילות</label>
               <select
                 value={formData.activity}
                 onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
@@ -490,7 +490,7 @@ const WorklogFormUnified: React.FC = () => {
                   
                   <div className="grid grid-cols-4 gap-2">
                     <div className="col-span-2">
-                      <label className="block text-xs text-gray-500 mb-1">סוג פעילות</label>
+                      <label className="block text-xs text-gray-500 mb-1.5">סוג פעילות</label>
                       <select
                         value={segment.type}
                         onChange={(e) => updateSegment(segment.id, 'type', e.target.value)}
@@ -504,7 +504,7 @@ const WorklogFormUnified: React.FC = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">התחלה</label>
+                      <label className="block text-xs text-gray-500 mb-1.5">התחלה</label>
                       <input
                         type="time"
                         value={segment.start_time}
@@ -513,7 +513,7 @@ const WorklogFormUnified: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">סיום</label>
+                      <label className="block text-xs text-gray-500 mb-1.5">סיום</label>
                       <input
                         type="time"
                         value={segment.end_time}
@@ -554,7 +554,7 @@ const WorklogFormUnified: React.FC = () => {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">הערות (אופציונלי)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">הערות (אופציונלי)</label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}

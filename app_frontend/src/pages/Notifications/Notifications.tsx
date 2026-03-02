@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/Notifications/Notifications.tsx
 import React, { useState, useEffect } from 'react';
 import { Bell, AlertTriangle, Info, CheckCircle, XCircle, Loader2, Eye, Trash2 } from 'lucide-react';
@@ -17,7 +17,7 @@ const Notifications: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -32,7 +32,7 @@ const Notifications: React.FC = () => {
       // Handle both array and object response
       const notificationsList = Array.isArray(response) 
         ? response 
-        : (response.notifications || response.items || []);
+        : (response.notifications || []);
       
       // Transform API response to component format
       const transformed: Notification[] = notificationsList.map((notif: any) => ({
@@ -182,7 +182,7 @@ const Notifications: React.FC = () => {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow min-w-[200px]"
+              className="pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow min-w-[200px]"
             >
               <option value="all">כל ההתראות</option>
               <option value="info">מידע</option>

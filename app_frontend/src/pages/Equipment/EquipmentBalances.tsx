@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
@@ -6,13 +6,10 @@ import {
   Loader2,
   AlertCircle,
   Search,
-  Wrench,
   Package,
   CheckCircle,
-  XCircle,
   Clock,
   TrendingUp,
-  Filter,
 } from "lucide-react";
 import equipmentService, { Equipment } from "../../services/equipmentService";
 
@@ -152,7 +149,7 @@ const EquipmentBalances: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 pb-8 px-4 md:pr-72" dir="rtl">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4 " dir="rtl">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -217,7 +214,7 @@ const EquipmentBalances: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm min-w-[130px]"
+              className="pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm min-w-[130px]"
             >
               <option value="all">כל הסטטוסים</option>
               <option value="active">פעיל</option>
@@ -230,7 +227,7 @@ const EquipmentBalances: React.FC = () => {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm min-w-[130px]"
+                className="pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm min-w-[130px]"
               >
                 <option value="all">כל הסוגים</option>
                 {types.map((t) => (

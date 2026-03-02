@@ -1,13 +1,13 @@
-// @ts-nocheck
+
 // src/pages/Invoices/InvoiceDetail.tsx
 // דף פרטי חשבונית — /invoices/{id}
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, FileText, Loader2, CheckCircle, AlertCircle,
+  ArrowRight, FileText, Loader2, AlertCircle,
   Printer, Mail, ReceiptText, Building2, Calendar,
-  Clock, DollarSign, Truck, CreditCard
+  DollarSign, Truck, CreditCard
 } from 'lucide-react';
 import api from '../../services/api';
 

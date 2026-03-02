@@ -1,10 +1,10 @@
-// @ts-nocheck
+
 // src/pages/Areas/AreaDetail.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowRight, Map, TreePine, MapPin, Users, Edit, 
-  Loader2, Eye, ChevronLeft, Building2, Layers
+import {
+  ArrowRight, Map, TreePine, MapPin, Users, Edit,
+  Eye, ChevronLeft, Building2, Layers
 } from 'lucide-react';
 import api from '../../services/api';
 import LeafletMap from '../../components/Map/LeafletMap';
@@ -32,9 +32,6 @@ interface Project {
   work_type?: string;
 }
 
-const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-const defaultCenter = { lat: 31.5, lng: 34.8 };
-
 // צבעים לפי סטטוס
 const statusColors: Record<string, string> = {
   active: '#10B981',
@@ -61,6 +58,8 @@ const AreaDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [showMapTypes, setShowMapTypes] = useState(false);
+  const [mapType, setMapType] = useState('satellite');
 
   useEffect(() => {
     fetchData();
@@ -97,28 +96,6 @@ const AreaDetail: React.FC = () => {
     }
     setLoading(false);
   };
-
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    setMapRef(map);
-  }, []);
-
-  useEffect(() => {
-    if (mapRef && projects.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      let hasValid = false;
-      
-      projects.forEach(p => {
-        if (p.location?.latitude && p.location?.longitude) {
-          bounds.extend({ lat: p.location.latitude, lng: p.location.longitude });
-          hasValid = true;
-        }
-      });
-      
-      if (hasValid) {
-        mapRef.fitBounds(bounds, 80);
-      }
-    }
-  }, [mapRef, projects]);
 
   const getStatusColor = (status: string) => statusColors[status] || statusColors.default;
   

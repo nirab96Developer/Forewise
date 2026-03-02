@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/WorkOrders/NewWorkOrder.tsx
 // דרישת כלים - עיצוב נקי בסגנון קק"ל עם 4 בלוקים ברורים
 import React, { useState, useEffect } from 'react';
@@ -56,8 +56,9 @@ const NewWorkOrder: React.FC = () => {
   const navigate = useNavigate();
   const { code: urlProjectCode } = useParams<{ code: string }>();
   const [searchParams] = useSearchParams();
-  // Support both URL path (/projects/:code/...) and query param (?project_code=)
+  // Support URL path (/projects/:code/...), ?project_code=CODE, or ?project=ID
   const projectCode = urlProjectCode || searchParams.get('project_code');
+  const projectIdFromUrl = searchParams.get('project');
   
   const [formData, setFormData] = useState({
     tool_type: '',
@@ -104,13 +105,16 @@ const NewWorkOrder: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (projectCode && projects.length > 0) {
+    if (projects.length === 0) return;
+    // Priority: URL path code > ?project_code= > ?project=ID
+    if (projectCode) {
       const project = projects.find(p => p.code === projectCode);
-      if (project) {
-        setSelectedProject(project);
-      }
+      if (project) setSelectedProject(project);
+    } else if (projectIdFromUrl) {
+      const project = projects.find(p => p.id === parseInt(projectIdFromUrl));
+      if (project) setSelectedProject(project);
     }
-  }, [projectCode, projects]);
+  }, [projectCode, projectIdFromUrl, projects]);
 
   // Load suppliers based on selected category ID
   useEffect(() => {
@@ -268,14 +272,8 @@ const NewWorkOrder: React.FC = () => {
       return;
     }
 
-    if (formData.allocation_method === 'supplier_selection' && (!formData.constraint_explanation || formData.constraint_explanation.trim().length < 10)) {
-      setError('בחירת ספק באילוץ מחייבת נימוק (לפחות 10 תווים)');
-      setLoading(false);
-      return;
-    }
-
-    if (selectedConstraintReason?.requires_additional_text && !formData.constraint_explanation) {
-      setError('יש לספק הסבר לסיבת האילוץ');
+    if (selectedConstraintReason?.requires_additional_text && (!formData.constraint_explanation || formData.constraint_explanation.trim().length < 10)) {
+      setError('יש לספק הסבר לסיבת האילוץ (לפחות 10 תווים)');
       setLoading(false);
       return;
     }
@@ -566,7 +564,7 @@ const NewWorkOrder: React.FC = () => {
                     <h4 className="text-sm font-medium text-indigo-900 mb-2">הגדרות שמירה</h4>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs text-indigo-700 mb-1">מספר ימי שמירה</label>
+                        <label className="block text-xs text-indigo-700 mb-1.5">מספר ימי שמירה</label>
                         <input
                           type="number"
                           name="guard_days"

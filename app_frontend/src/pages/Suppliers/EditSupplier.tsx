@@ -1,8 +1,8 @@
-// @ts-nocheck
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, AlertCircle, Building2, Mail, Phone, MapPin, Plus, Pencil } from 'lucide-react';
-import supplierService from '../../services/supplierService';
+import supplierService, { SupplierEquipmentStatus } from '../../services/supplierService';
 import api from '../../services/api';
 
 const EditSupplier: React.FC = () => {
@@ -195,14 +195,14 @@ const EditSupplier: React.FC = () => {
     try {
       if (editingEquipmentId) {
         await supplierService.updateSupplierEquipment(Number(id), editingEquipmentId, {
-          status: equipmentFormData.status,
+          status: equipmentFormData.status as SupplierEquipmentStatus,
           quantity_available: Number(equipmentFormData.quantity_available || 0),
         });
       } else {
         await supplierService.addSupplierEquipment(Number(id), {
           equipment_model_id: Number(equipmentFormData.equipment_model_id),
           license_plate: equipmentFormData.license_plate.trim().toUpperCase(),
-          status: equipmentFormData.status,
+          status: equipmentFormData.status as SupplierEquipmentStatus,
           quantity_available: Number(equipmentFormData.quantity_available || 0),
         });
       }
@@ -369,7 +369,7 @@ const EditSupplier: React.FC = () => {
                     <select
                       value={formData.supplier_type}
                       onChange={(e) => setFormData({ ...formData, supplier_type: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                      className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                     >
                       <option value="">בחר סוג</option>
                       <option value="equipment">ציוד</option>
@@ -384,7 +384,7 @@ const EditSupplier: React.FC = () => {
                       <select
                         value={formData.region_id}
                         onChange={(e) => setFormData({ ...formData, region_id: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                        className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                       >
                         <option value="">בחר מרחב</option>
                         {regions.map((region) => (
@@ -399,7 +399,7 @@ const EditSupplier: React.FC = () => {
                       <select
                         value={formData.area_id}
                         onChange={(e) => setFormData({ ...formData, area_id: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                        className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                       >
                         <option value="">בחר אזור</option>
                         {areas
@@ -518,7 +518,7 @@ const EditSupplier: React.FC = () => {
                 <select
                   value={equipmentFormData.equipment_model_id}
                   onChange={(e) => setEquipmentFormData({ ...equipmentFormData, equipment_model_id: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   disabled={!!editingEquipmentId}
                   required
                 >
@@ -546,7 +546,7 @@ const EditSupplier: React.FC = () => {
                 <select
                   value={equipmentFormData.status}
                   onChange={(e) => setEquipmentFormData({ ...equipmentFormData, status: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                 >
                   <option value="available">available</option>
                   <option value="busy">busy</option>

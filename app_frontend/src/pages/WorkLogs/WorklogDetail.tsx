@@ -1,9 +1,8 @@
-// @ts-nocheck
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import {
   ArrowRight,
-  Calendar,
   Clock,
   User,
   Loader2,
@@ -13,7 +12,6 @@ import {
   FileText,
   Wrench,
   MapPin,
-  Hash,
   DollarSign,
   Send,
   Download,
@@ -212,7 +210,7 @@ const WorklogDetail: React.FC = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20 pb-8 px-4 md:pr-72" dir="rtl">
+    <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4 " dir="rtl">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">

@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 // src/pages/WorkOrders/WorkOrders.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
@@ -160,7 +160,7 @@ const WorkOrders: React.FC = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 pr-4 pl-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow min-w-[150px]"
+              className="pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow min-w-[150px]"
             >
               <option value="all">כל הסטטוסים</option>
               <option value="pending">ממתין לתגובה</option>

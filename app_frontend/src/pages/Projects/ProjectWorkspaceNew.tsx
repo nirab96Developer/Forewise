@@ -1,19 +1,18 @@
-// @ts-nocheck
+
 // Project Workspace - עיצוב קומפקטי עם נתונים אמיתיים
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  ArrowRight, Eye, Map, ClipboardList, Clock, 
-  Loader2, AlertCircle, DollarSign, CheckCircle2, AlertTriangle,
-  Calendar, User, TreeDeciduous, MapPin, ExternalLink, Package, 
+import {
+  ArrowRight, Eye, Map, ClipboardList, Clock,
+  Loader2, AlertCircle, DollarSign, CheckCircle2,
+  Calendar, User, TreeDeciduous, MapPin, ExternalLink, Package,
   FileText, Plus, ChevronLeft
 } from 'lucide-react';
 import projectService from '../../services/projectService';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
 import workLogService, { WorkLog } from '../../services/workLogService';
-import ProjectMap from '../../components/Map/ProjectMap';
 import TreeLoader from '../../components/common/TreeLoader';
-import { parseLocationMetadata, GeoFeature } from '../../services/locationService';
+// locationService available if needed
 
 interface ProjectLocation {
   id: number;
@@ -187,7 +186,7 @@ const ProjectWorkspaceNew: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
       {/* Header + Tabs קבועים למעלה */}
-      <div className="sticky top-0 z-20 bg-white shadow-sm">
+      <div className="sticky top-0 z-[1100] bg-white shadow-sm">
         {/* Header קומפקטי */}
         <div className="border-b">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
@@ -240,7 +239,7 @@ const ProjectWorkspaceNew: React.FC = () => {
       </div>
 
       {/* Content - גולל בנפרד */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" style={{ isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
           {activeTab === 'overview' && <OverviewTab project={project} stats={stats} />}
           {activeTab === 'map' && <MapTab project={project} />}
@@ -377,7 +376,6 @@ class MapErrorBoundary extends React.Component<{children: React.ReactNode}, {has
 const MapTab: React.FC<{ project: Project }> = ({ project }) => {
   const [mapData, setMapData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
 
   const location = project.location;
   const defaultLat = location?.latitude || 31.7683;
@@ -447,7 +445,7 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
   }
 
   // No nearby projects in project view - keep it clean and fast
-  const nearbyPoints = [];
+  const nearbyPoints: any[] = [];
 
   // Main project point (gold, prominent)
   const projectPoint = {
@@ -515,8 +513,20 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
         </div>
       )}
 
+      {/* Graceful fallback when polygon unavailable */}
+      {mapData && !mapData.forest?.has_forest && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-2 text-sm text-gray-500">
+          <TreeDeciduous className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <span>
+            {mapData.forest?.reason === 'polygon_too_far'
+              ? 'גבולות יער לא תואמים למיקום הפרויקט — מוצגת נקודת מיקום בלבד'
+              : 'מיפוי שטח לא זמין לפרויקט זה — מוצגת נקודת מיקום בלבד'}
+          </span>
+        </div>
+      )}
+
       {/* Map */}
-      <div className="rounded-xl overflow-hidden shadow-lg border-2 border-gray-200">
+      <div className="rounded-xl overflow-hidden shadow-lg border-2 border-gray-200 isolate" style={{ isolation: 'isolate' }}>
         <MapErrorBoundary>
           <React.Suspense fallback={<div className="h-[400px] flex items-center justify-center bg-gray-50"><Loader2 className="w-8 h-8 text-green-600 animate-spin" /></div>}>
             <LazyLeafletMap
@@ -572,8 +582,8 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
 };
 
 // טאב הזמנות - נתונים אמיתיים
-const OrdersTab: React.FC<{ projectCode: string; projectId: number; orders: WorkOrder[] }> = 
-  ({ projectCode, projectId, orders }) => {
+const OrdersTab: React.FC<{ projectCode: string; projectId: number; orders: WorkOrder[] }> =
+  ({ projectId, orders }) => {
   const navigate = useNavigate();
   
   const getStatusColor = (status: string) => {

@@ -1,9 +1,8 @@
-// @ts-nocheck
+
 // src/hooks/useApi.ts
 // Hook לשימוש ב-API עם טיפול בשגיאות וטעינה
 
 import { useState, useCallback } from 'react';
-import api from '../services/api';
 
 interface UseApiOptions {
   onSuccess?: (data: any) => void;

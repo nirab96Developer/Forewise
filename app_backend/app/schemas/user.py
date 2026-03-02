@@ -31,6 +31,8 @@ class UserCreate(UserBase):
     area_id: Optional[int] = None
     scope_level: Optional[str] = None
     two_factor_enabled: bool = False
+    is_active: Optional[bool] = True
+    project_ids: Optional[List[int]] = Field(default=[], description="רשימת פרויקטים לשיוך אוטומטי")
 
 
 # ============================================================================

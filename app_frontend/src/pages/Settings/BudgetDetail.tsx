@@ -1,7 +1,7 @@
-// @ts-nocheck
+
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { DollarSign, ChevronLeft, FileText, Truck, Clock, TrendingUp, AlertTriangle, Download } from "lucide-react";
+import { DollarSign, ChevronLeft, Truck, Clock } from "lucide-react";
 import api from "../../services/api";
 
 const BudgetDetail: React.FC = () => {

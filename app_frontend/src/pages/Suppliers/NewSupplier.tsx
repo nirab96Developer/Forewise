@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, AlertCircle, Building2, Mail, Phone, MapPin } from 'lucide-react';
@@ -203,7 +203,7 @@ const NewSupplier: React.FC = () => {
               <select
                 value={formData.supplier_type}
                 onChange={(e) => setFormData({ ...formData, supplier_type: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
               >
                 <option value="">בחר סוג</option>
                 <option value="equipment">ציוד</option>
@@ -218,7 +218,7 @@ const NewSupplier: React.FC = () => {
                 <select
                   value={formData.region_id}
                   onChange={(e) => setFormData({ ...formData, region_id: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   required
                 >
                   <option value="">בחר מרחב</option>
@@ -234,7 +234,7 @@ const NewSupplier: React.FC = () => {
                 <select
                   value={formData.area_id}
                   onChange={(e) => setFormData({ ...formData, area_id: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
                   required
                 >
                   <option value="">בחר אזור</option>

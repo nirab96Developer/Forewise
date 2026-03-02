@@ -20,6 +20,10 @@ class LocationCreate(LocationBase):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address: Optional[str] = Field(None, max_length=500)
+    polygon: Optional[dict] = None
+    geojson: Optional[dict] = None
+    center_lat: Optional[float] = None
+    center_lng: Optional[float] = None
 
 
 class LocationUpdate(BaseModel):
@@ -31,6 +35,10 @@ class LocationUpdate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address: Optional[str] = Field(None, max_length=500)
+    polygon: Optional[dict] = None
+    geojson: Optional[dict] = None
+    center_lat: Optional[float] = None
+    center_lng: Optional[float] = None
     is_active: Optional[bool] = None
     version: Optional[int] = None
 
@@ -41,6 +49,10 @@ class LocationResponse(LocationBase):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address: Optional[str] = None
+    polygon: Optional[dict] = None
+    geojson: Optional[dict] = None
+    center_lat: Optional[float] = None
+    center_lng: Optional[float] = None
     is_active: Optional[bool] = True
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

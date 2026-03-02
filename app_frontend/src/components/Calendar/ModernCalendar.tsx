@@ -1,8 +1,8 @@
-// @ts-nocheck
+
 // src/components/Calendar/ModernCalendar.tsx
 // לוח שנה מודרני בעיצוב קק"ל - נקי, מעוגל, ירוק-לבן
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock, ClipboardList, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Calendar as CalendarIcon } from 'lucide-react';
 
 // Types
 interface CalendarEvent {

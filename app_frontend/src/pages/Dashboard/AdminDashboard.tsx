@@ -1,65 +1,25 @@
-// @ts-nocheck
+
 // src/pages/Dashboard/AdminDashboard.tsx
 // דשבורד מנהל מערכת - כל הפרויקטים והנתונים
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Loader2, 
+import {
+  Loader2,
   Users,
-  MapPin,
   Eye,
   Edit3,
   Trees,
   FileText,
   Wrench,
-  Settings,
   Activity,
   Clock,
   ChevronLeft,
   ChevronRight,
   Calendar
 } from "lucide-react";
-import dashboardService, { 
-  DashboardSummary, 
-  DashboardProject
+import dashboardService, {
+  DashboardSummary
 } from "../../services/dashboardService";
-
-// Helper functions for status display
-const getStatusColor = (status: string): string => {
-  const statusLower = status?.toLowerCase();
-  switch (statusLower) {
-    case 'active':
-      return 'bg-green-100 text-green-700';
-    case 'planning':
-      return 'bg-blue-100 text-blue-700';
-    case 'completed':
-      return 'bg-gray-100 text-gray-700';
-    case 'on_hold':
-      return 'bg-yellow-100 text-yellow-700';
-    case 'cancelled':
-      return 'bg-red-100 text-red-700';
-    default:
-      return 'bg-gray-100 text-gray-700';
-  }
-};
-
-const getStatusText = (status: string): string => {
-  const statusLower = status?.toLowerCase();
-  switch (statusLower) {
-    case 'active':
-      return 'פעיל';
-    case 'planning':
-      return 'תכנון';
-    case 'completed':
-      return 'הושלם';
-    case 'on_hold':
-      return 'בהמתנה';
-    case 'cancelled':
-      return 'בוטל';
-    default:
-      return status || 'לא ידוע';
-  }
-};
 
 // Types for PendingTasksEngine
 interface TaskKPI {
@@ -97,7 +57,6 @@ const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [projects, setProjects] = useState<DashboardProject[]>([]);
   const [myTasks, setMyTasks] = useState<MyTasks | null>(null);
 
   useEffect(() => {
@@ -106,14 +65,13 @@ const AdminDashboard: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
-        const [summaryData, projectsData, tasksData] = await Promise.all([
+        const [summaryData, , tasksData] = await Promise.all([
           dashboardService.getSummary(),
           dashboardService.getProjects(),
           dashboardService.getMyTasks().catch(() => null),
         ]);
 
         setSummary(summaryData);
-        setProjects(projectsData || []);
         setMyTasks(tasksData);
         setIsLoading(false);
       } catch (err) {
@@ -148,10 +106,7 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
-  const totalUsers = summary?.total_users || 0;
   const activeUsers = summary?.active_users || 0;
-  const totalRegions = summary?.total_regions || 0;
-  const totalAreas = summary?.total_areas || 0;
   const activeProjects = summary?.active_projects_count || 0;
 
   return (
@@ -331,75 +286,6 @@ const AdminDashboard: React.FC = () => {
               
             </div>
 
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Unused - keeping for reference
-// StatCard Component - עיצוב רספונסיבי
-const StatCard: React.FC<{
-  title: string;
-  value: number;
-  total?: number;
-  change?: number;
-  icon: React.ReactNode;
-  iconBg: string;
-  urgent?: boolean;
-}> = ({ title, value, total, change, icon, iconBg, urgent }) => {
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-5 sm:p-6 hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-4">
-        <div className={`w-14 h-14 ${iconBg} rounded-xl flex items-center justify-center flex-shrink-0`}>
-          {icon}
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-500">{title}</p>
-          <div className="flex items-baseline gap-2 mt-1">
-            <span className="text-3xl font-bold text-gray-900">{value}</span>
-            {total !== undefined && (
-              <span className="text-sm text-gray-400">/ {total}</span>
-            )}
-          </div>
-          {change !== undefined && (
-            <p className="text-sm text-green-600 mt-1">
-              <span className="font-medium">+{change}%</span>
-              <span className="text-gray-400 mr-1">מהחודש הקודם</span>
-            </p>
-          )}
-          {urgent && (
-            <div className="flex items-center gap-2 mt-2">
-              <span className="bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full font-medium">דחוף</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ActivityItem Component - פריט יומן פעילות קומפקטי
-const ActivityItem: React.FC<{
-  icon: React.ReactNode;
-  iconBg: string;
-  iconColor: string;
-  title: string;
-  description: string;
-  time: string;
-}> = ({ icon, iconBg, iconColor, title, description, time }) => {
-  return (
-    <div className="px-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer">
-      <div className="flex items-center gap-2">
-        <div className={`w-6 h-6 ${iconBg} rounded flex items-center justify-center flex-shrink-0 ${iconColor}`}>
-          {icon}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-900">{title}</span>
-            <span className="text-xs text-gray-400">{time}</span>
-          </div>
-          <p className="text-xs text-gray-500 truncate">{description}</p>
         </div>
       </div>
     </div>

@@ -322,11 +322,11 @@ def create_invoice_from_worklogs(
         raise HTTPException(status_code=404, detail=f"Worklogs לא נמצאו: {sorted(missing)}")
 
     # 2. בדיקה שכולם מאושרים
-    non_approved = [w.id for w in worklogs if w.status != 'approved']
+    non_approved = [w.id for w in worklogs if w.status != 'APPROVED']
     if non_approved:
         raise HTTPException(
             status_code=400,
-            detail=f"Worklogs {non_approved} אינם במצב 'approved'. יש לאשר אותם קודם."
+            detail=f"Worklogs {non_approved} אינם במצב 'APPROVED'. יש לאשר אותם קודם."
         )
 
     # 3. חישוב סכום כולל — כולל עלות שמירת לילה

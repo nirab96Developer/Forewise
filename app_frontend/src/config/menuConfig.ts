@@ -142,7 +142,7 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
 const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: string[] }> = {
   [UserRole.ADMIN]: {
     items: [
-      "dashboard", "projects", "orderCoordination", "suppliers",
+      "dashboard", "projects", "orderCoordination",
       "invoices", "equipment", "reports", "map",
       "activityLog", "settings"
     ],
@@ -161,15 +161,15 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
     dividerAfter: ["dashboard", "equipmentScan"],
   },
   [UserRole.ORDER_COORDINATOR]: {
-    items: ["dashboard", "orderCoordination", "suppliers", "activityLog"],
-    dividerAfter: ["dashboard", "suppliers"],
+    items: ["dashboard", "orderCoordination", "activityLog", "settings"],
+    dividerAfter: ["dashboard"],
   },
   [UserRole.ACCOUNTANT]: {
     items: ["dashboard", "invoices", "reports"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.SUPPLIER_MANAGER]: {
-    items: ["dashboard", "suppliers", "equipment", "activityLog"],
+    items: ["dashboard", "equipment", "activityLog", "settings"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.FIELD_WORKER]: {

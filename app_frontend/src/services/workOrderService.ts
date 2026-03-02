@@ -68,6 +68,7 @@ export interface WorkOrderFilters {
 
 export interface WorkOrderResponse {
   items: WorkOrder[];
+  data?: WorkOrder[];
   total: number;
   page: number;
   page_size: number;

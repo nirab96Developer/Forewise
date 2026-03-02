@@ -214,7 +214,7 @@ const Select: React.FC<SelectProps> = ({
       {label && (
         <label 
           htmlFor={id} 
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-gray-700 mb-1.5"
         >
           {label}
           {required && <span className="text-red-500 mr-1">*</span>}

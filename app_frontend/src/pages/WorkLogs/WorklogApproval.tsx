@@ -1,4 +1,4 @@
-// @ts-nocheck
+
 import React, { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Clock, Calendar, User } from "lucide-react";
 import workLogService from "../../services/workLogService";
@@ -51,7 +51,7 @@ const WorklogApproval: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 pt-20 pb-8 px-4 md:pr-72" dir="rtl">
+        <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4 " dir="rtl">
             <div className="max-w-7xl mx-auto">
                 <h1 className="text-2xl font-bold text-gray-900 mb-6">אישור דיווחים</h1>
 
