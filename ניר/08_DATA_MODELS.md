@@ -228,6 +228,75 @@ class EquipmentType(Base):
 
 ---
 
+## Worklog Model — app/models/worklog.py (עדכני מרץ 2026)
+
+```python
+class Worklog(Base):
+    __tablename__ = "worklogs"
+    
+    id: int (PK)
+    work_order_id: int (FK → work_orders)
+    project_id: int (FK → projects)
+    supplier_id: int (FK → suppliers)
+    equipment_id: int (FK → equipment)
+    created_by_id: int (FK → users)
+    
+    # Time
+    work_date: date
+    start_time: time
+    end_time: time
+    work_hours: decimal          # רגיל (gross)
+    net_hours: decimal = 0       # שעות עבודה נטו (ללא מנוחה) — נוסף מרץ 2026
+    paid_hours: decimal = 0      # שעות לתשלום (לפי segments) — נוסף מרץ 2026
+    
+    # Financial
+    hourly_rate_snapshot: decimal   # תעריף שנשמר בזמן הדיווח
+    cost_before_vat: decimal
+    cost_with_vat: decimal
+    
+    # Overnight — נוסף מרץ 2026
+    is_overnight: bool = False
+    overnight_nights: int = 0
+    overnight_rate: decimal = 0
+    overnight_total: decimal = 0
+    
+    # Status
+    status: str  # PENDING / APPROVED / REJECTED / INVOICED
+    notes: text
+    
+    # PDF — נוסף מרץ 2026
+    pdf_path: str = NULL         # /reports/worklogs/{id}.pdf
+    pdf_generated_at: datetime = NULL
+    
+    # Relationships
+    segments → [WorklogSegment]
+
+class WorklogSegment(Base):
+    """פירוט שעות לפי סוג פעילות — נוסף מרץ 2026"""
+    __tablename__ = "worklog_segments"
+    
+    id: int (PK)
+    worklog_id: int (FK → worklogs)
+    segment_type: str   # 'work' | 'rest' | 'idle' | 'travel' | 'overnight'
+    activity_type: str  # 'נטיעה' | 'ניקוי' | 'גיזום' | 'תחזוקה' | 'הסעה' | 'פיקוח' | 'אחר'
+    start_time: time
+    end_time: time
+    duration_hours: decimal
+    payment_pct: int = 100  # 0 | 50 | 100
+    amount: decimal = 0
+    notes: text
+    created_at: datetime = NOW()
+
+# WORKLOG STATUS FLOW:
+# PENDING → APPROVED (מנהל אזור/חשבת)
+# PENDING → REJECTED (הוחזר לתיקון)
+# APPROVED → INVOICED (שויך לחשבונית חודשית)
+# 
+# VALIDATION: net_hours > 12 → ValueError
+```
+
+---
+
 ## Budget & Finance
 
 ```python
@@ -237,33 +306,75 @@ class Budget(Base):
     budget_type: str  # PROJECT/OPERATIONAL/etc
     project_id: int (FK → projects)
     area_id: int (FK → areas)
+    region_id: int (FK → regions)
     
-    total_amount: decimal
-    allocated_amount: decimal
-    spent_amount: decimal
-    committed_amount: decimal
+    total_amount: decimal        # תקציב כולל
+    allocated_amount: decimal    # מוקצה
+    spent_amount: decimal        # נוצל בפועל (חשבוניות מאושרות)
+    committed_amount: decimal    # מוקפא (הזמנות פתוחות)
+    remaining_amount: decimal    # = total - committed - spent (מחושב)
     
-    status: active/frozen/closed
+    status: 'ACTIVE' / 'FROZEN' / 'CLOSED'
     is_active: bool
+
+class BudgetTransfer(Base):
+    """בקשת העברת תקציב — נוסף מרץ 2026"""
+    __tablename__ = "budget_transfers"
+    
+    id: int (PK)
+    from_budget_id: int (FK → budgets)
+    to_budget_id: int (FK → budgets)
+    amount: decimal
+    reason: text
+    status: str  # PENDING | APPROVED | REJECTED
+    
+    requested_by: int (FK → users)
+    approved_by: int (FK → users) = NULL
+    rejected_reason: text = NULL
+    
+    requested_at: datetime = NOW()
+    approved_at: datetime = NULL
+    executed_at: datetime = NULL
+    
+    created_at, updated_at
+
+class EquipmentRateHistory(Base):
+    """היסטוריית שינויי תעריפי ציוד — נוסף מרץ 2026"""
+    __tablename__ = "equipment_rate_history"
+    
+    id: int (PK)
+    equipment_type_id: int (FK → equipment_types)
+    old_rate: decimal
+    new_rate: decimal
+    changed_by: int (FK → users)
+    reason: text
+    effective_date: date = TODAY()
+    created_at: datetime = NOW()
 
 class Invoice(Base):
     __tablename__ = "invoices"
     id, invoice_number (UNIQUE)
     supplier_id → suppliers
-    status: draft/pending/approved/paid/rejected
+    project_id → projects
+    month: int
+    year: int
+    status: 'DRAFT' / 'PENDING' / 'APPROVED' / 'PAID' / 'REJECTED'
     total_amount: decimal
     paid_amount: decimal = 0
     due_date: date
     is_approved: bool
+    created_by → users
 
 class InvoiceItem(Base):
     __tablename__ = "invoice_items"
     id
     invoice_id → invoices
-    worklog_id → worklogs
+    equipment_id → equipment
+    worklog_ids: JSONB = []      # רשימת worklog IDs
     description: str
-    quantity: decimal
-    unit_price: decimal
+    quantity: decimal            # total_paid_hours
+    unit_price: decimal          # hourly_rate_snapshot
+    overnight_amount: decimal = 0
     total_price: decimal
 ```
 
@@ -307,6 +418,85 @@ class Session(Base):
     ip_address: str
     user_agent: str
     expires_at: datetime
+```
+
+---
+
+## AuditLog & SyncQueue — טבלאות תשתית (נוסף מרץ 2026)
+
+```python
+class AuditLog(Base):
+    """רשומות ביקורת לכל שינוי קריטי"""
+    __tablename__ = "audit_logs"
+    
+    id: int (PK)
+    user_id: int (FK → users, ON DELETE SET NULL)
+    table_name: str        # 'invoices' / 'worklogs' / 'projects' / ...
+    record_id: int
+    action: str            # 'CREATE' / 'UPDATE' / 'DELETE' / 'SUSPEND' / 'ROLE_CHANGE'
+    old_values: JSONB
+    new_values: JSONB
+    ip_address: str
+    created_at: datetime = NOW()
+    
+    # Indexed: table_name, user_id, created_at
+
+class SyncQueue(Base):
+    """Audit לסנכרון offline → online"""
+    __tablename__ = "sync_queue"
+    
+    id: int (PK)
+    user_id: int (FK → users)
+    type: str              # 'worklog' / 'scan' / 'work_order'
+    payload: JSONB         # הנתונים שנשלחו
+    ip_address: str
+    synced_at: datetime = NOW()
+    
+    # נרשם כשבקשה מגיעה עם header: X-Offline-Sync: true
+
+class SupportTicket(Base):
+    """קריאות תמיכה מה-SmartHelpWidget"""
+    __tablename__ = "support_tickets"
+    
+    id: int (PK)
+    ticket_number: str (UNIQUE)  # e.g. TKT-015
+    user_id → users
+    title: str
+    description: text
+    category: str  # 'TECHNICAL' / 'BILLING' / 'GENERAL'
+    priority: str  # 'LOW' / 'MEDIUM' / 'HIGH'
+    status: str    # 'OPEN' / 'IN_PROGRESS' / 'RESOLVED'
+    source: str    # 'chat_widget' / 'manual'
+    
+    created_at, updated_at
+    # comments via support_ticket_comments table
+```
+
+---
+
+## EquipmentType — תעריפים (עדכון מרץ 2026)
+
+```python
+class EquipmentType(Base):
+    __tablename__ = "equipment_types"
+    
+    id: int (PK)
+    code: str
+    name: str
+    category_id → equipment_categories
+    
+    # תעריפים — נוסף מרץ 2026
+    hourly_rate: decimal = 0      # תעריף שעתי ברירת מחדל
+    overnight_rate: decimal = 0   # תעריף לינה ברירת מחדל
+    default_hourly_rate: decimal  # legacy field
+    
+    is_active: bool = True
+
+# RATE PRIORITY CHAIN (RateService.resolve_rate):
+# 1. supplier_equipment.hourly_rate  (הכי ספציפי)
+# 2. equipment.hourly_rate
+# 3. equipment_types.hourly_rate    (ברירת מחדל)
+# 4. missing_rate_source → cost=0, flag='missing_rate_source'
 ```
 
 ---

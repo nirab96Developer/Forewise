@@ -198,17 +198,205 @@ sequenceDiagram
 sequenceDiagram
     participant FIELD as 👷 עובד שטח
     participant APP as 📱 PWA App
+    participant IDB as 💾 IndexedDB
     participant BE as ⚙️ Backend
-    participant DB as 🗄️ DB
 
     FIELD->>APP: פותח Equipment Scan
     APP->>APP: מפעיל מצלמה (QRScanner.tsx)
     FIELD->>APP: סורק QR code של ציוד
-    APP->>BE: POST /equipment/{id}/scan {location, project_id, timestamp}
-    BE->>DB: INSERT equipment_scans
-    BE->>DB: UPDATE equipment.status
-    BE-->>APP: 200 OK
-    APP-->>FIELD: ✅ סריקה הצליחה
 
-    Note over APP,BE: גם ב-Offline:\nuseOffline hook\ncached locally\nsynced when online
+    alt Online
+        APP->>BE: POST /equipment/{id}/scan {location, project_id, timestamp}
+        BE-->>APP: 200 OK
+        APP-->>FIELD: ✅ סריקה הצליחה
+    else Offline
+        APP->>IDB: saveOfflineScan({equipment_id, timestamp, ...})
+        APP-->>FIELD: 📱 "הסריקה נשמרה — תסונכרן כשיחזור חיבור"
+        Note over APP,IDB: אירוע 'online' → auto-sync
+    end
+```
+
+---
+
+## 8. Offline-First Sync Flow
+
+```mermaid
+flowchart TD
+    ACTION["פעולת משתמש\n(worklog / scan / work_order)"]
+
+    ACTION --> ONLINE{"navigator.onLine?"}
+
+    ONLINE -->|"כן"| API["POST /api/v1/..."]
+    API -->|"200"| SUCCESS["✅ שמור בשרת"]
+    API -->|"fail"| FALLBACK["שמור ב-IndexedDB\nstatus='pending'"]
+
+    ONLINE -->|"לא"| IDB_SAVE["saveOfflineItem()\nIndexedDB → status='pending'"]
+    IDB_SAVE --> BANNER["📵 OfflineBanner מוצג\n(פס כתום בראש המסך)"]
+    IDB_SAVE --> BADGE["Badge בניווט:\n📤 N ממתינים\n(WORK_MANAGER בלבד)"]
+
+    subgraph RECONNECT["כשחיבור חוזר (online event)"]
+        DETECT["window.addEventListener('online')"]
+        DETECT --> FETCH["getPendingItems() מ-IndexedDB"]
+        FETCH --> LOOP["לכל פריט:"]
+        LOOP -->|"worklog"| S1["POST /worklogs"]
+        LOOP -->|"scan"| S2["POST /equipment/{id}/scan"]
+        LOOP -->|"work_order"| S3["POST /work-orders"]
+        S1 & S2 & S3 -->|"200"| REMOVE["removePendingItem(id)"]
+        S1 & S2 & S3 -->|"error"| FAIL["markItemFailed(id)"]
+        REMOVE --> TOAST2["Toast: ✅ X פריטים סונכרנו"]
+    end
+
+    BANNER -.->|"חיבור חזר"| DETECT
+```
+
+---
+
+## 9. Budget Freeze & Release Flow
+
+```mermaid
+sequenceDiagram
+    participant WM as 👷 מנהל עבודה
+    participant BE as ⚙️ Backend
+    participant DB as 🗄️ PostgreSQL
+
+    WM->>BE: POST /work-orders (create)
+    BE->>DB: INSERT work_order (status=PENDING)
+
+    WM->>BE: POST /work-orders/{id}/send-to-supplier
+    BE->>DB: SELECT budget WHERE project_id=X AND is_active=true
+    BE->>BE: available = total - committed - spent
+    alt מספיק תקציב
+        BE->>DB: budget.committed_amount += amount
+        BE->>DB: budget.remaining_amount = total - committed - spent
+        BE->>DB: work_order.frozen_amount = amount
+        BE-->>WM: ✅ בוצע, frozen=₪X
+    else תקציב לא מספיק
+        BE-->>WM: 400 "אין מספיק תקציב. זמין: ₪Y"
+    end
+
+    Note over BE,DB: כשהזמנה נסגרת (COMPLETED)
+    BE->>DB: budget.committed_amount -= frozen_amount
+    BE->>DB: budget.spent_amount += actual_cost
+    BE->>DB: work_order.frozen_amount = 0
+```
+
+---
+
+## 10. Budget Transfer Flow
+
+```mermaid
+sequenceDiagram
+    participant AM as 🏢 מנהל אזור
+    participant RM as 🌍 מנהל מרחב
+    participant BE as ⚙️ Backend
+    participant FE as 🖥️ BudgetTransfers.tsx
+
+    AM->>FE: "בקש תוספת תקציב"
+    FE->>BE: POST /budget-transfers/request {from_area, to_area, amount, reason}
+    BE->>DB: INSERT budget_transfers (status=PENDING)
+    BE->>RM: 🔔 notification "בקשת העברה ממתינה"
+    BE-->>FE: {transfer_id, status: PENDING}
+
+    RM->>FE: רואה בקשה → "אשר / דחה"
+
+    alt אישור (מלא או חלקי)
+        RM->>FE: approve_amount
+        FE->>BE: POST /budget-transfers/{id}/approve {approved_amount}
+        BE->>DB: from_budget.total_amount -= approved_amount
+        BE->>DB: to_budget.total_amount += approved_amount
+        BE->>DB: transfer.status = APPROVED
+        BE->>AM: 🔔 "בקשתך אושרה: ₪X"
+    else דחייה
+        RM->>FE: reason
+        FE->>BE: POST /budget-transfers/{id}/reject {reason}
+        BE->>DB: transfer.status = REJECTED
+        BE->>AM: 🔔 "בקשתך נדחתה: reason"
+    end
+```
+
+---
+
+## 11. Monthly Invoice Generation Flow
+
+```mermaid
+sequenceDiagram
+    participant ACCT as 💼 מנהלת חשבונות
+    participant FE as 🖥️ AccountantInbox
+    participant BE as ⚙️ Backend
+    participant DB as 🗄️ DB
+
+    ACCT->>FE: לוחץ "הפק חשבונית חודשית"
+    FE->>FE: modal: פרויקט, ספק, חודש, שנה
+    ACCT->>FE: בוחר: YR-001, ספק X, פברואר 2026
+    FE->>BE: POST /invoices/generate-monthly {supplier_id, project_id, month, year}
+
+    BE->>DB: SELECT worklogs WHERE status=APPROVED AND month=2 AND year=2026
+    BE->>BE: GROUP BY equipment_id
+    BE->>DB: INSERT invoices (status=DRAFT)
+    BE->>DB: INSERT invoice_items per equipment group
+    BE->>DB: UPDATE worklogs SET status=INVOICED
+
+    BE-->>FE: {invoice_id, total_amount, items_count}
+    FE-->>ACCT: ✅ "חשבונית נוצרה: ₪X ל-N דיווחים"
+```
+
+---
+
+## 12. Worklog Rate Resolution Flow
+
+```mermaid
+flowchart TD
+    WL["יצירת דיווח שעות\n(WorklogForm)"]
+    WL --> CHECK{"equipment_id + supplier_id?"}
+
+    CHECK -->|"כן"| P1["בדוק supplier_equipment.hourly_rate"]
+    P1 -->|"יש ו->0"| RATE1["✅ תעריף מ-supplier_equipment\nsource='supplier_equipment'"]
+
+    P1 -->|"אין"| P2["בדוק equipment.hourly_rate"]
+    P2 -->|"יש ו->0"| RATE2["✅ תעריף מ-equipment\nsource='equipment'"]
+
+    P2 -->|"אין"| P3["בדוק equipment_types.hourly_rate"]
+    P3 -->|"יש ו->0"| RATE3["✅ תעריף מ-equipment_type\nsource='equipment_type'"]
+
+    P3 -->|"אין"| NONE["⚠️ cost=0\nflag='missing_rate_source'\nUnverified badge בדוחות"]
+
+    CHECK -->|"equipment=NULL"| GUARD["🛑 Guard:\ncost=0\nflag='missing_rate_source'"]
+
+    RATE1 & RATE2 & RATE3 --> CALC["חישוב:\ntotal_cost = hours × rate\nVAT = cost × 1.17\nhourly_rate_snapshot נשמר"]
+```
+
+---
+
+## 13. Support Ticket Flow
+
+```mermaid
+sequenceDiagram
+    participant U as 👤 משתמש
+    participant BOT as 🤖 SmartHelpWidget
+    participant ADMIN as 👨‍💼 Admin
+    participant BE as ⚙️ Backend
+
+    U->>BOT: כותב שאלה בchat
+    BOT->>BOT: חיפוש ב-FAQ (keywords)
+
+    alt נמצאה תשובה
+        BOT-->>U: תשובה אוטומטית
+        U->>BOT: "עדיין לא פתור"
+        BOT-->>U: "אפתח קריאת שירות?"
+    else לא נמצאה
+        BOT-->>U: "לא מצאתי. רוצה שאשלח לאדמין?"
+    end
+
+    U->>BOT: "שלח לאדמין" + תיאור
+    BOT->>BE: POST /support-tickets {title, description, category, source="chat_widget"}
+    BE->>DB: INSERT support_ticket
+    BE->>ADMIN: 🔔 notification "קריאה חדשה מ-{user}"
+    BE-->>BOT: {ticket_id, ticket_number: "TKT-015"}
+    BOT-->>U: "✅ קריאה #TKT-015 נפתחה"
+
+    ADMIN->>BE: POST /support-tickets/{id}/comments {text}
+    BE->>U: 🔔 "אדמין הגיב לקריאה #TKT-015"
+
+    ADMIN->>BE: PATCH /support-tickets/{id} {status: "RESOLVED"}
+    BE->>U: 🔔 "קריאתך #TKT-015 טופלה ✅"
 ```

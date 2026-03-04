@@ -173,7 +173,79 @@ flowchart TD
 
 ---
 
-## 7. RBAC — Roles & Permissions
+## 7. must_change_password — כניסה ראשונה
+
+```mermaid
+sequenceDiagram
+    participant U as 👤 משתמש חדש
+    participant FE as 🖥️ Frontend
+    participant BE as ⚙️ Backend
+
+    Note over U,BE: משתמש מקבל סיסמה זמנית ממנהל
+    U->>FE: Login + OTP
+    BE-->>FE: {access_token, user: {must_change_password: true}}
+    FE->>FE: OTP.tsx בודק must_change_password
+    FE->>FE: navigate('/change-password') ← לא ← Dashboard
+    U->>FE: מזין סיסמה חדשה (×2)
+    FE->>BE: POST /auth/change-password {current_password, new_password}
+    BE->>DB: UPDATE user SET password_hash=bcrypt(new), must_change_password=false
+    BE-->>FE: 200 OK
+    FE->>FE: navigate('/') → Dashboard הנכון
+```
+
+---
+
+## 8. User Lifecycle — השהייה ומחיקה
+
+```mermaid
+stateDiagram-v2
+    [*] --> active : יצירת משתמש
+    active --> suspended : PUT /users/{id}/suspend\n(reason + deletion_years)
+    suspended --> active : PUT /users/{id}/reactivate
+    suspended --> deleted : CRON לילי:\nscheduled_deletion_at < NOW()\n→ anonymize PII
+
+    note right of suspended
+        suspended_at = NOW()
+        suspension_reason = reason
+        scheduled_deletion_at = NOW() + years
+        is_active = False
+        OTP tokens נמחקים
+    end note
+
+    note right of deleted
+        full_name = "משתמש לשעבר #{id}"
+        email = "deleted_{id}@removed.local"
+        phone = NULL, id_number = NULL
+        status = 'deleted'
+        deleted_at = NOW()
+    end note
+```
+
+---
+
+## 9. Role Change Flow
+
+```mermaid
+sequenceDiagram
+    participant ADMIN as 👤 Admin
+    participant FE as 🖥️ Users.tsx
+    participant BE as ⚙️ Backend
+
+    ADMIN->>FE: לוחץ "החלף תפקיד" על משתמש
+    FE->>FE: ChangeRoleModal — dropdown role/region/area
+    ADMIN->>FE: בוחר: role=AREA_MANAGER, area=גליל עליון
+    FE->>BE: PUT /users/{id}/role {role_id, region_id, area_id}
+    BE->>DB: user.previous_role_id = user.role_id (שמירה)
+    BE->>DB: user.role_id = new_role_id
+    BE->>DB: UPDATE project_assignments SET is_active=false WHERE user_id=id
+    BE->>DB: INSERT audit_logs (ROLE_CHANGE)
+    BE-->>FE: 200 OK
+    FE-->>ADMIN: ✅ תפקיד עודכן
+```
+
+---
+
+## 10. RBAC — Roles & Permissions
 
 ```mermaid
 flowchart LR
@@ -210,4 +282,21 @@ flowchart LR
     ACCT --> P6
     COORD --> P3
     FIELD --> P4
+```
+
+---
+
+## 11. Offline Auth — כניסה ללא חיבור
+
+```mermaid
+flowchart TD
+    APP["פתיחת אפליקציה"]
+    APP --> CHECK{"navigator.onLine?"}
+    CHECK -->|"online"| NORMAL["כניסה רגילה\nJWT / OTP / Device Token"]
+    CHECK -->|"offline"| CACHED{"יש tokens בlocalStorage?"}
+    CACHED -->|"כן"| USE["שימוש בcached user\noperations → IndexedDB queue"]
+    CACHED -->|"לא"| BLOCK["חסימה — חובה להתחבר"]
+    USE --> QUEUE["כל פעולה שנכשלת\n(no network)\nנשמרת ב-IndexedDB"]
+    QUEUE -->|"חיבור חזר"| SYNC["auto-sync:\nuseOfflineSync.ts\nonline event → flush queue"]
+    SYNC --> TOAST["Toast: ✅ X פריטים סונכרנו"]
 ```

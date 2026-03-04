@@ -272,11 +272,35 @@ flowchart TB
 
 ### Project Workspace
 הדף המרכזי ביותר — `ProjectWorkspaceNew.tsx`:
-- Tab: **סקירה** — פרטי פרויקט, תקציב, מנהל
-- Tab: **הזמנות עבודה** — כל ה-WOs של הפרויקט
-- Tab: **דיווחי שעות** — worklogs
-- Tab: **מפה** — ForestMap עם Leaflet
+- Tab: **סקירה** — פרטי פרויקט, תקציב (total/committed/spent/available), מנהל
+- Tab: **הזמנות עבודה** — כל ה-WOs, כולל progress bar שעות (ירוק<70% / כתום<90% / אדום>90%)
+- Tab: **דיווחי שעות** — worklogs + badge overnight
+- Tab: **מפה** — ForestMap עם Leaflet + overflow-hidden + isolation:isolate
 - Tab: **ציוד** — ציוד משויך לפרויקט
+
+### WorkManagerDashboard
+`WorkManagerDashboard.tsx` — מחובר ל-API אמיתי (מרץ 2026):
+- **Weekly Summary:** GET `/dashboard/work-manager-summary` → שעות 7 ימים / הזמנות פעילות / ציוד בשימוש
+- **פעילות אחרונה:** GET `/activity-logs?user_id=me&limit=5` → פעולה + פרויקט + שעה
+- **מפה:** Leaflet עם markers של פרויקטים משויכים (my_projects=true), לחיצה על marker → navigate לפרויקט
+- **Badge ניווט:** 📤 N ממתינים (WORK_MANAGER בלבד) → `/pending-sync`
+
+### AccountantInbox
+`AccountantInbox.tsx` — כולל:
+- רשימת חשבוניות ממתינות לאישור
+- **"הפק חשבונית חודשית"** → modal: בחר פרויקט + ספק + חודש + שנה → POST `/invoices/generate-monthly`
+
+### Users Page
+`Users/Users.tsx` — (מרץ 2026):
+- badge אדום **"מושהה"** על status=suspended
+- badge אפור **"יימחק: DD/MM/YYYY"** מ-scheduled_deletion_at
+- כפתור **⏸️ השהה** → SuspendModal (סיבה + תקופת מחיקה)
+- כפתור **🔄 החלף תפקיד** → ChangeRoleModal (role + region + area dropdown)
+
+### PricingReports
+`Reports/PricingReports.tsx` — (מרץ 2026):
+- **באנר אזהרה** אם `total_unverified_worklogs > 0`: "⚠️ X דיווחים ללא תעריף מאומת"
+- **badge per row** אם `unverified_count > 0`: "⚠️ X ללא אימות תעריף" + רקע כתום עדין
 
 ---
 
@@ -302,6 +326,7 @@ flowchart TB
 |------|--------|
 | `authStorage.ts` | **Critical** — ניהול tokens בlocalStorage+sessionStorage |
 | `permissions.ts` | בדיקת הרשאות בפרונטאנד, getUserRole/Permissions |
+| `offlineStorage.ts` | **חדש** — IndexedDB queue: saveOfflineWorklog / saveOfflineScan / saveOfflineWorkOrder / getPendingItems / removePendingItem / markItemFailed |
 | `date.ts` | פורמט תאריכים |
 | `format.ts` | פורמט מספרים ומטבע |
 | `debug.ts` | debugLogger לפיתוח |
@@ -316,3 +341,60 @@ flowchart TB
 | `AuthContext` | user state, isAuthenticated, login/logout, loadUserFromStorage |
 | `LoadingContext` | globalLoading flag |
 | `NotificationContext` | real-time notifications |
+
+---
+
+## Global CSS — קונבנציות (index.css)
+
+| כלל | ערך | הסבר |
+|-----|-----|-------|
+| `--kkl-green` | `#00994C` | ירוק ראשי (מסונכרן עם tailwind.config.js) |
+| `html[dir="rtl"] select` | padding-left: 2.5rem | מרווח לחץ dropdown RTL |
+| `select` | font-size: 16px | מונע iOS auto-zoom |
+| `@media max-width:640px select` | min-height: 44px | נגיעה נוחה באצבע במובייל |
+| `background-image (chevron)` | SVG stroke (ולא fill) | חץ דק מודרני |
+
+---
+
+## CSS Color System (Tailwind)
+
+```javascript
+// tailwind.config.js
+"kkl-green":       "#00994C",  // ירוק ראשי — כל כפתורים/badges
+"kkl-green-dark":  "#007A3B",  // hover state
+"kkl-green-light": "#DFF7EC",  // backgrounds עדינים
+"kkl-green-hover": "#007A3B",  // alias
+"kkl-bg":          "#F8FBF8",  // רקע כללי
+```
+
+---
+
+## Offline-First Architecture
+
+```mermaid
+flowchart LR
+    subgraph FE["Frontend"]
+        IDB["IndexedDB\nofflineStorage.ts"]
+        HOOK["useOfflineSync.ts\nauto-sync on 'online' event"]
+        BANNER["OfflineBanner.tsx\nפס כתום"]
+        BADGE["📤 N ממתינים\n(nav badge)"]
+    end
+
+    subgraph FORMS["Forms (offline-aware)"]
+        WLF["WorkLogForm\noffline → saveOfflineWorklog"]
+        QRS["QRScanner\noffline → saveOfflineScan"]
+        NWO["NewWorkOrder\noffline → saveOfflineWorkOrder"]
+    end
+
+    subgraph PAGE["PendingSync Page"]
+        LIST["רשימת ממתינים\n(pending/failed)"]
+        BTN["🔄 סנכרן הכל"]
+    end
+
+    IDB --> HOOK
+    IDB --> BADGE
+    HOOK --> BANNER
+    FORMS --> IDB
+    IDB --> LIST
+    HOOK -->|"online event"| SYNC["POST /api/v1/* עם X-Offline-Sync: true"]
+```

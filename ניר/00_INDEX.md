@@ -1,8 +1,8 @@
-# Forewise — תיקיית תיעוד ניר
+# Forewise — תיקיית תיעוד ניר (עדכני מרץ 2026)
 
 ## מה יש פה?
 
-תיקייה זו מכילה **11 מסמכי תיעוד** עם **תרשימי Mermaid** של כל הפרויקט.
+תיקייה זו מכילה **11 מסמכי תיעוד** עם **תרשימי Mermaid ודיאגרמות מלאות** של כל הפרויקט.
 
 ---
 
@@ -49,22 +49,63 @@ PDF:        weasyprint worklog PDFs ✅
 | `components/common/StatusBadge.tsx` | 🗑️ נמחק | קובץ ריק (6 שורות), לא יובא לשום מקום |
 | `Settings/EquipmentRates.tsx` | 🗑️ נמחק | מוזג לתוך `EquipmentCatalog.tsx` |
 
+### Frontend — נוסף
+| קובץ | נתיב | תיאור |
+|------|------|--------|
+| `Login/ChangePassword.tsx` | `/change-password` | שינוי סיסמה חובה בכניסה ראשונה (must_change_password) |
+| `Budget/BudgetTransfers.tsx` | `/budget-transfers` | בקשות העברת תקציב — AREA_MANAGER + REGION_MANAGER |
+| `PendingSync/PendingSync.tsx` | `/pending-sync` | רשימת offline items ממתינים לסנכרון + כפתור "סנכרן הכל" |
+| `OfflineBanner.tsx` | (component) | פס כתום בראש המסך כשאין חיבור |
+| `utils/offlineStorage.ts` | (util) | IndexedDB API: saveOfflineWorklog/Scan/WorkOrder + getPendingItems |
+
 ### Frontend — שינויים
 | שינוי | תיאור |
 |-------|--------|
-| `EquipmentCatalog.tsx` | מוזג עם Rates — עכשיו 2 tabs: "כרטיסים" + "תעריפים" |
-| Badge תעריף על כרטיסים | ירוק אם מוגדר, כתום "תעריף לא הוגדר" אם חסר |
+| `EquipmentCatalog.tsx` | מוזג עם Rates — עכשיו 2 tabs: "כרטיסים" + "תעריפים" + badge תעריף |
 | `tailwind.config.js` | `kkl-green` אוחד ל-`#00994C` (היה `#009557`) |
 | `/settings/equipment-rates` | Redirect → `/settings/equipment-catalog?tab=rates` |
 | `PricingReports.tsx` | Badge ⚠️ "ללא אימות תעריף" + באנר כולל |
+| `WorkManagerDashboard.tsx` | נתונים אמיתיים מ-API: שעות שבוע / הזמנות / מפה |
+| `AccountantInbox.tsx` | כפתור "הפק חשבונית חודשית" עם modal |
+| `Users.tsx` | badges מושהה/נמחק + SuspendModal + ChangeRoleModal |
+| `WorklogDetail.tsx` | badge "🌙 שמירת לילה" אם is_overnight=true |
+| `Navigation.tsx` | badge 📤 "N ממתינים" ל-WORK_MANAGER + OfflineBanner |
+| `ProjectWorkspaceNew.tsx` | Budget card: total/committed/spent/available + WO progress bar |
+| `SmartHelpWidget.tsx` | FAQ 10 שאלות בעברית + זרימה BOT → ticket |
+| `select` elements | pl-10 + font-size:16px + min-height:44px במובייל |
+| header padding | pt-20 → pt-16 בכל דפי wrapper |
 
 ### Backend — שינויים
 | שינוי | תיאור |
 |-------|--------|
-| `rate_service.py` | נוסף `get_rate_service(db)`, `resolve_rate()`, `compute_worklog_cost()` |
-| `pricing.py` router | **תוקן** — ImportError מנע טעינה. עכשיו 38/38 routers |
-| `pricing.py` reports | `unverified_count` + `total_unverified_worklogs` בכל response |
-| `compute_worklog_cost()` | Guard: equipment=None + snapshot=None → cost=0, flag=missing_rate_source |
+| `rate_service.py` | `get_rate_service(db)`, `resolve_rate()`, `compute_worklog_cost()` עם guard |
+| `pricing.py` router | **תוקן ImportError** — עכשיו 38/38 routers טוענים |
+| `pricing.py` reports | `unverified_count` + `total_unverified_worklogs` |
+| `users.py` router | `/suspend`, `/reactivate`, `/role` endpoints |
+| `budget_transfers.py` | router חדש — request/approve/reject |
+| `budget_service.py` | `freeze_budget_for_work_order`, `release_budget_freeze`, transfers |
+| `worklog_service.py` | `calculate_worklog_totals`, `save_worklog_with_segments`, 12hr guard |
+| `invoice_service.py` | `generate_monthly_invoice`, `get_uninvoiced_suppliers` |
+| `pdf_report_service.py` | `generate_and_save_worklog_pdf` (weasyprint) + email |
+| `user_lifecycle.py` | CRON: `anonymize_expired_users()` + lifespan integration |
+| `audit_logs` trigger | INSERT on suspend/role-change/invoice-status-change |
+| `sync_queue` | X-Offline-Sync header → INSERT audit record |
+
+### DB — שינויים
+| שינוי | תיאור |
+|-------|--------|
+| `users` | +4 columns: suspended_at, suspension_reason, scheduled_deletion_at, previous_role_id |
+| `worklogs` | +8 columns: is_overnight, overnight_*, net_hours, paid_hours, pdf_path, pdf_generated_at |
+| `worklog_segments` | טבלה חדשה — פירוט שעות per segment |
+| `equipment_types` | +2 columns: hourly_rate, overnight_rate |
+| `equipment_rate_history` | טבלה חדשה — היסטוריית שינויי תעריף |
+| `locations` | +4 columns: polygon, geojson, center_lat, center_lng |
+| `audit_logs` | טבלה חדשה — audit trail |
+| `sync_queue` | טבלה חדשה — offline sync audit |
+| `departments` | נוקו — נשארו 3 בלבד (הנהלה/חשבונות/מנהלי עבודה) |
+| `notifications` | נוקו — כל הישנות לפני 2026-03-01 נמחקו |
+| `roles` | נמחקו 6 test roles "Delete Test Role" |
+| `users.status` | נורמל ל-lowercase: 'active' בלבד |
 
 ### צבע ירוק — אוחד
 ```css

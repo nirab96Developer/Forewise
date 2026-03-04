@@ -172,25 +172,98 @@ erDiagram
         int project_id FK
         int user_id FK
         int equipment_id FK
+        int supplier_id FK
         string status
-        datetime start_time
-        datetime end_time
-        numeric total_hours
-        numeric break_hours
-        numeric hourly_rate
-        numeric total_cost
-        bool is_approved
+        date work_date
+        time start_time
+        time end_time
+        numeric work_hours
+        numeric net_hours
+        numeric paid_hours
+        numeric hourly_rate_snapshot
+        numeric cost_before_vat
+        numeric cost_with_vat
+        bool is_overnight
+        int overnight_nights
+        numeric overnight_rate
+        numeric overnight_total
+        string pdf_path
+        datetime pdf_generated_at
+    }
+
+    worklog_segments {
+        int id PK
+        int worklog_id FK
+        string segment_type
+        string activity_type
+        time start_time
+        time end_time
+        numeric duration_hours
+        int payment_pct
+        numeric amount
+        text notes
     }
 
     invoices {
         int id PK
         string invoice_number UK
         int supplier_id FK
+        int project_id FK
+        int month
+        int year
         string status
         numeric total_amount
         numeric paid_amount
         date due_date
         bool is_approved
+        int created_by FK
+    }
+
+    budget_transfers {
+        int id PK
+        int from_budget_id FK
+        int to_budget_id FK
+        numeric amount
+        text reason
+        string status
+        int requested_by FK
+        int approved_by FK
+        text rejected_reason
+        datetime requested_at
+        datetime approved_at
+        datetime executed_at
+    }
+
+    audit_logs {
+        int id PK
+        int user_id FK
+        string table_name
+        int record_id
+        string action
+        jsonb old_values
+        jsonb new_values
+        string ip_address
+        datetime created_at
+    }
+
+    sync_queue {
+        int id PK
+        int user_id FK
+        string type
+        jsonb payload
+        string ip_address
+        datetime synced_at
+    }
+
+    equipment_rate_history {
+        int id PK
+        int equipment_type_id FK
+        numeric old_rate
+        numeric new_rate
+        int changed_by FK
+        text reason
+        date effective_date
+        datetime created_at
     }
 
     invoice_items {
@@ -322,6 +395,12 @@ erDiagram
     work_orders ||--o{ supplier_invitations : ""
     invoices ||--o{ invoice_items : ""
     worklogs ||--o{ invoice_items : ""
+    worklogs ||--o{ worklog_segments : ""
+    budgets ||--o{ budget_transfers : "from"
+    budgets ||--o{ budget_transfers : "to"
+    equipment_types ||--o{ equipment_rate_history : ""
+    users ||--o{ audit_logs : ""
+    users ||--o{ sync_queue : ""
 ```
 
 ---
