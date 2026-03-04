@@ -557,3 +557,60 @@ def mark_invoice_paid(
     invoice.updated_at = datetime.utcnow()
     db.commit()
     return {"message": "החשבונית סומנה כשולמה", "invoice_id": invoice_id, "status": "PAID"}
+
+
+# ── Monthly Invoice Generation ────────────────────────────────────────────────
+from pydantic import BaseModel as _BaseModel
+
+
+class MonthlyInvoiceRequest(_BaseModel):
+    supplier_id: int
+    project_id: int
+    month: int
+    year: int
+
+
+@router.post("/generate-monthly", status_code=201)
+def generate_monthly_invoice_endpoint(
+    body: MonthlyInvoiceRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """
+    מנהלת חשבונות מפיקה חשבונית חודשית לספק+פרויקט.
+    מרכזת כל worklogs APPROVED של אותו חודש.
+    """
+    require_permission(current_user, "invoices.create")
+    from app.services.invoice_service import generate_monthly_invoice
+    try:
+        invoice = generate_monthly_invoice(
+            supplier_id=body.supplier_id,
+            project_id=body.project_id,
+            month=body.month,
+            year=body.year,
+            created_by=current_user.id,
+            db=db,
+        )
+        return {
+            "invoice_id": invoice.id,
+            "invoice_number": invoice.invoice_number,
+            "total_amount": float(invoice.total_amount),
+            "status": invoice.status,
+            "message": f"חשבונית {invoice.invoice_number} נוצרה בהצלחה",
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/uninvoiced-suppliers")
+def get_uninvoiced_suppliers_endpoint(
+    project_id: int,
+    month: int,
+    year: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """ספקים עם דיווחים מאושרים שלא שויכו לחשבונית"""
+    require_permission(current_user, "invoices.view")
+    from app.services.invoice_service import get_uninvoiced_suppliers
+    return get_uninvoiced_suppliers(project_id, month, year, db)

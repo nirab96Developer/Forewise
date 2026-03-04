@@ -130,6 +130,7 @@ class UserService(BaseService[User]):
         user_dict = user_data.model_dump(exclude={'password', 'project_ids'})
         user_dict['password_hash'] = password_hash
 
+        user_dict['must_change_password'] = True  # enforce password change on first login
         user = self.create(db, user_dict)
 
         # ── Project assignments ───────────────────────────────────────────

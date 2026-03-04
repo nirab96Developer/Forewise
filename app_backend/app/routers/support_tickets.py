@@ -21,6 +21,55 @@ from app.services.activity_logger import log_support_ticket_created, log_support
 ADMIN_EMAIL = "avitbulnir@gmail.com"
 
 
+def _notify_admins_new_ticket(db, ticket_id: int, ticket_number: str,
+                               title: str, description: str, user_name: str):
+    """Send in-app notification to all ADMIN users about a new support ticket."""
+    try:
+        from app.services.notification_service import notification_service
+        from app.schemas.notification import NotificationCreate
+        admins = db.query(User).join(User.role).filter(
+            User.is_active.is_(True)
+        ).all()
+        admins = [u for u in admins if getattr(getattr(u, 'role', None), 'code', '') == 'ADMIN']
+        for admin in admins:
+            notif = NotificationCreate(
+                user_id=admin.id,
+                title=f"📨 קריאת תמיכה חדשה מ-{user_name}",
+                message=description[:120] + ('...' if len(description) > 120 else ''),
+                notification_type="SUPPORT_TICKET",
+                priority="high",
+                link=f"/support",
+            )
+            notification_service.create_notification(db, notif)
+    except Exception as e:
+        print(f"[WARN] Admin support notification failed: {e}")
+
+
+def _notify_user_ticket_update(db, ticket_id: int, ticket_number: str,
+                                user_id: int, is_resolved: bool = False):
+    """Notify ticket owner when admin replies or resolves."""
+    try:
+        from app.services.notification_service import notification_service
+        from app.schemas.notification import NotificationCreate
+        if is_resolved:
+            title = f"✅ קריאתך {ticket_number} טופלה"
+            message = "הצוות טיפל בקריאתך. תוכל לראות את הפרטים בדף התמיכה."
+        else:
+            title = f"💬 תגובה חדשה על קריאה {ticket_number}"
+            message = "הצוות הגיב לקריאתך. לחץ לצפייה בתגובה."
+        notif = NotificationCreate(
+            user_id=user_id,
+            title=title,
+            message=message,
+            notification_type="SUPPORT_TICKET",
+            priority="normal",
+            link=f"/support",
+        )
+        notification_service.create_notification(db, notif)
+    except Exception as e:
+        print(f"[WARN] User ticket update notification failed: {e}")
+
+
 def _generate_ticket_number(db: Session) -> str:
     """Generate unique ticket number: TKT-YYYYMM-NNNN"""
     now = datetime.utcnow()
@@ -195,7 +244,12 @@ async def create_support_ticket(
         current_user.full_name or current_user.username,
         new_ticket.category or "general",
     )
-    
+
+    # In-app notification to all ADMINs
+    _notify_admins_new_ticket(db, new_ticket.id, new_ticket.ticket_number,
+                              new_ticket.title, new_ticket.description,
+                              current_user.full_name or current_user.username)
+
     return new_ticket
 
 
@@ -298,8 +352,17 @@ async def create_ticket_from_widget(
     
     print(f"[SUPPORT] New ticket #{new_ticket.id} ({ticket_number}) created from widget")
     print(f"[SUPPORT] Category: {data.category}, User: {data.userName} ({data.userRole})")
-    
-    return new_ticket
+
+    # In-app notification to all ADMINs
+    _notify_admins_new_ticket(db, new_ticket.id, new_ticket.ticket_number,
+                              new_ticket.title, data.userMessage,
+                              data.userName)
+
+    return {
+        "ticket_id": new_ticket.id,
+        "ticket_number": new_ticket.ticket_number,
+        "status": new_ticket.status,
+    }
 
 
 @router.put("/{ticket_id}")
@@ -451,7 +514,12 @@ async def add_ticket_comment(
             old_status=old_status,
             new_status=ticket.status,
         )
-    
+
+    # Notify ticket owner when admin replies
+    if is_staff and ticket.user_id != current_user.id:
+        _notify_user_ticket_update(db, ticket_id, ticket.ticket_number,
+                                   ticket.user_id, is_resolved=False)
+
     return {
         "id": new_comment.id,
         "ticket_id": ticket_id,
@@ -462,3 +530,42 @@ async def add_ticket_comment(
         "created_at": new_comment.created_at.isoformat() if new_comment.created_at else None,
     }
 
+
+class TicketStatusPatch(BaseModel):
+    status: str  # "open" | "in_progress" | "resolved"
+
+
+@router.patch("/{ticket_id}/status")
+async def patch_ticket_status(
+    ticket_id: int,
+    body: TicketStatusPatch,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Admin-only: change ticket status and notify owner."""
+    if current_user.role.code != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    old_status = ticket.status
+    ticket.status = body.status
+    ticket.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(ticket)
+
+    log_support_ticket_status_changed(
+        db=db, ticket_id=ticket_id, user_id=current_user.id,
+        old_status=old_status, new_status=body.status,
+    )
+
+    # Notify owner
+    if ticket.user_id != current_user.id:
+        _notify_user_ticket_update(
+            db, ticket_id, ticket.ticket_number,
+            ticket.user_id, is_resolved=(body.status == "resolved")
+        )
+
+    return {"ticket_id": ticket_id, "status": ticket.status}

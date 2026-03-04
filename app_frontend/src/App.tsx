@@ -10,7 +10,8 @@ import authService from "./services/authService";
 // דפים ורכיבים
 import Navigation from "./components/Navigation/Navigation";
 import AppRoutes from "./routes";
-import { ToastProvider, setGlobalToast } from "./components/common/Toast";
+import { ToastProvider } from "./components/common/Toast";
+import { OfflineBanner } from "./components/common/OfflineBanner";
 import DebugPanel from "./components/DebugPanel";
 import HumanSupportChat from "./components/HelpWidget/HumanSupportChat";
 import { FullScreenLoader } from "./components/common/UnifiedLoader";
@@ -42,12 +43,7 @@ const App: React.FC = () => {
     };
   }, [isMobile]);
 
-  // אתחול global toast
-  useEffect(() => {
-    setGlobalToast((_message: string, _type?: 'success' | 'error' | 'warning' | 'info', _duration?: number) => {
-      // ToastProvider יטפל בזה
-    });
-  }, []);
+  // globalShowToast is wired inside OfflineBanner (needs ToastContext)
 
   // Keyboard shortcut for debug panel (Ctrl+Shift+D or F12)
   useEffect(() => {
@@ -80,27 +76,19 @@ const App: React.FC = () => {
     return () => { unsubscribe(); };
   }, []);
 
+  // Read auth status once on mount, then only on actual storage/auth events
   useEffect(() => {
-    // עדכון סטטוס התחברות בכל שינוי נתיב
-    const authStatus = authService.isAuthenticated();
-    setIsLoggedIn(authStatus);
-    
-    // אם המשתמש לא מחובר ומנסה לגשת לעמוד מוגן, מעבירים אותו לדף התחברות
-    // אבל רק אם הוא לא בדף login או OTP
-    // רק אם המשתמש לא מחובר ולא בדף login/otp, נפנה אותו ל-login
-    // ה-ProtectedRoute יטפל בזה, אז אנחנו לא צריכים לעשות את זה כאן
-    // זה יוצר לופ אינסופי
-  }, [location.pathname]);
+    setIsLoggedIn(authService.isAuthenticated());
+  }, []);
 
-  // עדכון סטטוס התחברות כשהמשתמש מתחבר
   useEffect(() => {
-    const handleStorageChange = () => {
-      const authStatus = authService.isAuthenticated();
-      setIsLoggedIn(authStatus);
+    const handleAuthUpdate = () => setIsLoggedIn(authService.isAuthenticated());
+    window.addEventListener('storage', handleAuthUpdate);
+    window.addEventListener('auth-change', handleAuthUpdate);
+    return () => {
+      window.removeEventListener('storage', handleAuthUpdate);
+      window.removeEventListener('auth-change', handleAuthUpdate);
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // בדיקה אם הנתיב הנוכחי הוא דף ציבורי (ללא ניווט)
@@ -110,6 +98,7 @@ const App: React.FC = () => {
 
   return (
     <ToastProvider>
+      <OfflineBanner />
       <div className={`font-sans min-h-screen text-right transition-all duration-300 ${
         isMobile 
           ? 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100' 

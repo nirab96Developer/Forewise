@@ -30,6 +30,7 @@ ROUTER_MODULES = [
     "projects",
     "project_assignments",
     "budgets",
+    "budget_transfers",
     "worklogs",
     "reports",
     "dashboard",
@@ -54,6 +55,7 @@ ROUTER_MODULES = [
     "supplier_portal",
     "geo",
     "settings",
+    "equipment_rates",
     # "supplier_distribution",  # removed — file deleted, not in use
 ]
 

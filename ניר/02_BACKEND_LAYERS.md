@@ -20,11 +20,11 @@ flowchart TD
         EXCEPTIONS["exceptions.py\nNotFoundException\nValidationException\nDuplicateException\nBusinessRuleError"]
     end
 
-    subgraph ROUTERS["app/routers/ — 35 API Routers"]
+    subgraph ROUTERS["app/routers/ — 38 API Routers"]
         direction LR
         subgraph AUTH_R["Auth & Users"]
             R_AUTH["auth.py\n/auth/login\n/auth/register\n/auth/refresh\n/auth/logout\n/auth/request-otp\n/auth/verify-otp-v2\n/auth/device-login\n/auth/devices\n/auth/forgot-password\n/auth/reset-password\n/auth/biometric/*"]
-            R_USERS["users.py\n/users CRUD\n/users/{id}/role\n/users/search"]
+            R_USERS["users.py\n/users CRUD\n/users/{id}/role\n/users/{id}/suspend\n/users/{id}/reactivate\n/users/search"]
             R_ROLES["roles.py\n/roles CRUD"]
             R_PERMS["permissions.py\n/permissions CRUD"]
             R_RA["role_assignments.py\n/role-assignments"]
@@ -55,11 +55,11 @@ flowchart TD
         end
         subgraph FIN_R["Finance"]
             R_BUDG["budgets.py\n/budgets CRUD\n/budgets/{id}/detail"]
-            R_INV["invoices.py\n/invoices CRUD\n/invoices/{id}/approve"]
-            R_II["invoice_items.py"]
-            R_IP["invoice_payments.py"]
-            R_PR["pricing.py\n/pricing/reports"]
+            R_BT["budget_transfers.py\n/budget-transfers\nrequest/approve/reject"]
+            R_INV["invoices.py\n/invoices CRUD\n/invoices/{id}/approve\n/invoices/generate-monthly\n/invoices/uninvoiced-suppliers"]
+            R_PR["pricing.py\n/pricing/compute-cost\n/pricing/reports/by-project\n/pricing/reports/by-supplier\n/pricing/reports/by-equipment-type"]
             R_SR2["system_rates.py\n/system-rates"]
+            R_ER["equipment_rates.py\n/settings/equipment-rates\n/settings/equipment-rates/{id}/history"]
         end
         subgraph MISC_R["Other"]
             R_DASH["dashboard.py\n/dashboard/statistics\n/dashboard/projects\n/dashboard/map\n/dashboard/summary"]
@@ -80,15 +80,17 @@ flowchart TD
         S_WO["work_order_service.py\ncreate_work_order\nsend_to_supplier\nhandle_supplier_response\nget_work_orders"]
         S_SUPP["supplier_service.py\nlist_with_filters\nadd_supplier_equipment\nget_statistics"]
         S_EQ["equipment_service.py\nassign, release\nscan tracking"]
-        S_INV["invoice_service.py\napprove\nsend_to_supplier\nget_statistics"]
-        S_WL["worklog_service.py\ncreate, approve\ncalculate hours"]
+        S_INV["invoice_service.py\napprove, send_to_supplier\ngenerate_monthly_invoice\nget_uninvoiced_suppliers"]
+        S_WL["worklog_service.py\ncreate, approve\ncalculate_worklog_totals\nsave_worklog_with_segments\nWorklogStatus: PENDING/APPROVED/REJECTED/INVOICED"]
         S_ROT["supplier_rotation_service.py\nFair Rotation algorithm\nselect_next_supplier"]
-        S_BUDG["budget_service.py\nallocate, track spend"]
+        S_BUDG["budget_service.py\nfreeze_budget_for_work_order\nrelease_budget_freeze\nrequest/approve/reject_budget_transfer"]
+        S_RATE["rate_service.py\nget_rate_service(db)\nRateService.resolve_rate()\nRateService.compute_worklog_cost()\nguard: missing_rate_source"]
         S_NOTIF["notification_service.py\ncreate, mark_read"]
         S_ACT["activity_log_service.py\nlog_activity\nget_logs"]
-        S_PDF["pdf_report_service.py\ngenerate PDF reports"]
+        S_PDF["pdf_report_service.py\ngenerate_and_save_worklog_pdf\nsend PDF to supplier+accountant"]
         S_FOREST["forest_map_service.py\nPostGIS polygon ops"]
-        S_OTHERS["+ 10 more services..."]
+        S_LC["user_lifecycle.py (task)\nanonymize_expired_users()\nschedule_nightly_cleanup() — CRON"]
+        S_OTHERS["+ more services..."]
     end
 
     subgraph MODELS["app/models/ — SQLAlchemy ORM Models"]
@@ -131,30 +133,40 @@ flowchart TD
 
 ---
 
-## app/routers/ — כל ה-endpoints
+## app/routers/ — כל ה-38 endpoints
 
 | Router | Prefix | Endpoints עיקריים |
 |--------|--------|-------------------|
-| `auth.py` | /auth | login, logout, OTP, device-login, biometric |
-| `users.py` | /users | CRUD משתמשים |
+| `auth.py` | /auth | login, logout, OTP, device-login, biometric, change-password |
+| `users.py` | /users | CRUD, /suspend, /reactivate, /role |
 | `roles.py` | /roles | ניהול תפקידים |
 | `regions.py` | /regions | מרחבים |
 | `areas.py` | /areas | אזורים |
 | `projects.py` | /projects | פרויקטים + workspace |
 | `work_orders.py` | /work-orders | הזמנות עבודה + כל הflow |
-| `worklogs.py` | /worklogs | דיווחי שעות |
+| `worklogs.py` | /worklogs | דיווחי שעות + approve |
 | `suppliers.py` | /suppliers | ספקים + ציוד ספק |
-| `supplier_portal.py` | /supplier-portal | דף נחיתה לספק |
+| `supplier_portal.py` | /supplier-portal | דף נחיתה לספק (ללא auth) |
 | `supplier_rotations.py` | /supplier-rotations | Fair Rotation |
 | `equipment.py` | /equipment | ציוד + סריקות |
-| `invoices.py` | /invoices | חשבוניות |
+| `equipment_categories.py` | /equipment-categories | קטגוריות ציוד |
+| `equipment_types.py` | /equipment-types | סוגי ציוד |
+| `equipment_rates.py` | /settings/equipment-rates | תעריפים + היסטוריה |
+| `invoices.py` | /invoices | חשבוניות + generate-monthly |
 | `budgets.py` | /budgets | תקציבים |
-| `dashboard.py` | /dashboard | נתוני לוח בקרה |
+| `budget_transfers.py` | /budget-transfers | בקשות העברת תקציב |
+| `pricing.py` | /pricing | compute-cost, reports by-project/supplier/equipment-type |
+| `system_rates.py` | /system-rates | תעריפי מערכת |
+| `dashboard.py` | /dashboard | נתוני לוח בקרה + work-manager-summary |
 | `geo.py` | /geo | שכבות גיאוגרפיות (PostGIS) |
 | `notifications.py` | /notifications | התראות |
 | `reports.py` | /reports | דוחות |
 | `activity_logs.py` | /activity-logs | לוג פעילות |
+| `support_tickets.py` | /support-tickets | קריאות תמיכה |
 | `websocket.py` | /ws | WebSocket real-time |
+| `pdf_preview.py` | /pdf | תצוגה מקדימה PDF |
+| `settings.py` | /settings | הגדרות מערכת |
+| `admin.py` | /admin | פעולות אדמין |
 
 ---
 
@@ -162,17 +174,19 @@ flowchart TD
 
 | Service | תפקיד |
 |---------|--------|
-| `auth_service.py` | login, OTP, password reset, 2FA |
-| `project_service.py` | CRUD פרויקטים, filtering per role |
+| `auth_service.py` | login, OTP, password reset, 2FA, must_change_password |
+| `project_service.py` | CRUD פרויקטים, filtering per role, auto-create budget |
 | `work_order_service.py` | יצירה, שליחה לספק, flow states |
 | `supplier_service.py` | רשימת ספקים, ציוד, סטטיסטיקות |
 | `supplier_rotation_service.py` | Fair Rotation algorithm |
 | `equipment_service.py` | הקצאת ציוד, סריקות QR |
-| `invoice_service.py` | חשבוניות, אישור, שליחה |
-| `worklog_service.py` | דיווחי שעות, חישוב, אישור |
-| `budget_service.py` | תקציבים, הקצאה, מעקב הוצאות |
-| `notification_service.py` | יצירה ושליחת התראות |
+| `invoice_service.py` | חשבוניות, אישור, **generate_monthly_invoice**, uninvoiced_suppliers |
+| `worklog_service.py` | דיווחי שעות, **calculate_worklog_totals**, **save_worklog_with_segments**, 12hr limit |
+| `budget_service.py` | **freeze_budget_for_work_order**, **release_budget_freeze**, budget transfers |
+| `rate_service.py` | **get_rate_service(db)** — priority: supplier_equipment → equipment → equipment_type. Guard לnull equipment |
+| `notification_service.py` | יצירה ושליחת התראות (WORKLOG_PENDING, INVOICE_PENDING, BUDGET_ALERT) |
 | `activity_log_service.py` | לוג כל הפעולות |
-| `pdf_report_service.py` | הפקת PDF |
-| `forest_map_service.py` | PostGIS — פוליגוני יער |
+| `pdf_report_service.py` | **generate_and_save_worklog_pdf** (weasyprint) + email לספק+חשבת |
+| `forest_map_service.py` | PostGIS — פוליגוני יער, graceful fallback >10km |
 | `region_service.py` / `area_service.py` | גיאוגרפיה ארגונית |
+| `tasks/user_lifecycle.py` | **anonymize_expired_users** — CRON לילי, מאחד suspended users שפג תאריך |

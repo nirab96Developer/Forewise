@@ -40,6 +40,7 @@ import app.models.supplier_constraint_log  # Must be imported before supplier_co
 import app.models.supplier_constraint_reason
 import app.models.supplier_rejection_reason
 import app.models.budget_item  # After budget
+import app.models.budget_transfer
 import app.models.supplier_invitation  # Fair rotation invitations
 import app.models.forest  # PostGIS forest polygons
 

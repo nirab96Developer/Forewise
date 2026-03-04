@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X, Upload } from "lucide-react";
 import NotificationCenter from "../NotificationCenter";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { getRoleDisplayName, isAdmin } from "../../utils/permissions";
 import { getMenuItemsForRole } from "../../config/menuConfig";
+import { useOfflineSync } from "../../hooks/useOfflineSync";
 
 // Main Navigation Component - תפריט דינמי לפי תפקיד
 const Navigation: React.FC = () => {
@@ -17,6 +18,7 @@ const Navigation: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
   const [_isAdmin, setIsAdmin] = useState(false);
+  const { pendingCount } = useOfflineSync();
 
   // פונקציה לטעינת נתוני משתמש מה-localStorage
   const loadUserData = () => {
@@ -46,9 +48,11 @@ const Navigation: React.FC = () => {
     setIsLoaded(true);
   };
 
+  // Load user data once on mount only — NOT on every pathname change
   useEffect(() => {
     loadUserData();
-  }, [location.pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -56,8 +60,13 @@ const Navigation: React.FC = () => {
         loadUserData();
       }
     };
+    const handleAuthChange = () => loadUserData();
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-change', handleAuthChange);
+    };
   }, []);
   
   // Close mobile menu on route change
@@ -237,6 +246,22 @@ const Navigation: React.FC = () => {
               })}
             </div>
           </nav>
+
+          {/* Offline Pending Badge — WORK_MANAGER only */}
+          {(userRole === 'WORK_MANAGER' || userRole === 'FIELD_WORKER') && pendingCount > 0 && (
+            <div className="px-4 pb-2">
+              <button
+                onClick={() => navigate('/pending-sync')}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 transition-colors text-sm font-medium"
+              >
+                <Upload className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-right">📤 ממתינים לסנכרון</span>
+                <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {pendingCount}
+                </span>
+              </button>
+            </div>
+          )}
 
           {/* Logout Button — mt-auto pushes it to bottom without extra spacer */}
           <div className="p-4 border-t border-gray-200 flex-shrink-0 bg-gradient-to-t from-white to-gray-50 mt-auto">

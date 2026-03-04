@@ -155,6 +155,13 @@ class WorkOrderResponse(WorkOrderBase):
     area_name: Optional[str] = None
     region_name: Optional[str] = None
 
+    # Computed hours tracking (enriched by endpoint)
+    used_hours: Optional[float] = None
+    remaining_hours: Optional[float] = None
+    days_total: Optional[float] = None
+    days_used: Optional[float] = None
+    days_remaining: Optional[float] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 

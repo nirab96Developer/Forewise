@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import { clearAuthSession, readUserFromStorage, getRefreshTokenWithStorage } from '../utils/authStorage';
 
@@ -27,7 +27,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    // Return a default value instead of throwing error
     return {
       user: null,
       login: async () => {},
@@ -39,96 +38,91 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+// Read once synchronously — used for lazy initial state and comparisons
+function readAuth(): { user: User | null; isAuthenticated: boolean } {
+  const { token, user } = readUserFromStorage();
+  if (token && user) {
+    return { user: user as User, isAuthenticated: true };
+  }
+  return { user: null, isAuthenticated: false };
+}
 
-  // Function to load user from localStorage
-  const loadUserFromStorage = useCallback(() => {
-    const { token, user } = readUserFromStorage();
-    
-    console.log('[AuthContext] loadUserFromStorage called');
-    console.log('[AuthContext] token exists:', !!token);
-    console.log('[AuthContext] user loaded:', !!user);
-    
-    if (token && user) {
-      try {
-        const userData = user as User;
-        console.log('[AuthContext] Parsed user data:', JSON.stringify(userData, null, 2));
-        console.log('[AuthContext] User role from storage:', userData.role);
-        setUser(userData);
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('[AuthContext] Failed to parse user data:', error);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Lazy initial state — reads localStorage exactly once, avoids useEffect on mount
+  const [user, setUser] = useState<User | null>(() => readAuth().user);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => readAuth().isAuthenticated);
+
+  // Ref to track current user id for equality check (avoids object comparison)
+  const userIdRef = useRef<string | number | null>(user?.id ?? null);
+
+  // Only update state when auth data actually changes
+  const syncFromStorage = useCallback(() => {
+    const next = readAuth();
+    const nextId = next.user?.id ?? null;
+    // Skip setState if nothing actually changed (prevents cascade re-renders)
+    if (nextId === userIdRef.current && next.isAuthenticated === (userIdRef.current !== null)) return;
+    userIdRef.current = nextId;
+    setUser(next.user);
+    setIsAuthenticated(next.isAuthenticated);
+  }, []);
+
+  // Bootstrap: silently try to refresh token on first mount, only if no access token exists
+  const didBootstrap = useRef(false);
+  useEffect(() => {
+    if (didBootstrap.current) return;
+    didBootstrap.current = true;
+
+    const { token } = getRefreshTokenWithStorage();
+    const { token: accessToken } = readUserFromStorage();
+    if (accessToken || !token) return;
+
+    api.post('/auth/refresh', { refresh_token: token })
+      .then(response => {
+        const newAccessToken = response.data?.access_token;
+        if (!newAccessToken) return;
+        const { storage } = getRefreshTokenWithStorage();
+        storage.setItem('access_token', newAccessToken);
+        syncFromStorage();
+      })
+      .catch(() => {
+        clearAuthSession();
         setUser(null);
         setIsAuthenticated(false);
-      }
-    } else {
-      console.log('[AuthContext] No token or user, clearing auth');
-      setUser(null);
-      setIsAuthenticated(false);
-    }
-  }, []);
+        userIdRef.current = null;
+      });
+  }, [syncFromStorage]);
 
-  const bootstrapRefresh = useCallback(async () => {
-    const { token } = getRefreshTokenWithStorage();
-    const { token: accessToken, user } = readUserFromStorage();
-    if (accessToken || !token || !user) return;
-    try {
-      const response = await api.post('/auth/refresh', { refresh_token: token });
-      const newAccessToken = response.data?.access_token;
-      if (!newAccessToken) return;
-      const { storage } = getRefreshTokenWithStorage();
-      storage.setItem('access_token', newAccessToken);
-      window.dispatchEvent(new Event('auth-change'));
-    } catch (_e) {
-      clearAuthSession();
-    }
-  }, []);
-
-  // Load on mount
+  // Listen for auth changes from other tabs (storage) and same tab (auth-change event)
   useEffect(() => {
-    loadUserFromStorage();
-    bootstrapRefresh();
-  }, [loadUserFromStorage, bootstrapRefresh]);
-
-  // Listen for storage changes (from Login component or other tabs)
-  useEffect(() => {
-    const handleStorageChange = (_e?: StorageEvent) => {
-      console.log('[AuthContext] Storage event detected');
-      loadUserFromStorage();
+    const handleStorageChange = (e: StorageEvent) => {
+      // Only react to access_token or user changes, ignore unrelated keys
+      if (e.key && !['access_token', 'user', 'refresh_token'].includes(e.key)) return;
+      syncFromStorage();
     };
+    const handleAuthChange = () => syncFromStorage();
 
-    // Listen for both storage events (from other tabs) and custom events (from same tab)
     window.addEventListener('storage', handleStorageChange);
-    
-    // Also re-check on custom auth-change event for same-tab updates
-    const handleAuthChange = () => {
-      console.log('[AuthContext] Auth change event detected');
-      loadUserFromStorage();
-    };
     window.addEventListener('auth-change', handleAuthChange);
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('auth-change', handleAuthChange);
     };
-  }, [loadUserFromStorage]);
+  }, [syncFromStorage]);
 
   const login = async (_credentials: any) => {
-    // Login is handled by the Login component
-    // This is a placeholder for the interface
+    // Login is handled by the Login component; refresh context after
   };
 
   const logout = () => {
     clearAuthSession();
+    userIdRef.current = null;
     setUser(null);
     setIsAuthenticated(false);
   };
 
-  const refreshUser = () => {
-    loadUserFromStorage();
-  };
+  const refreshUser = useCallback(() => {
+    syncFromStorage();
+  }, [syncFromStorage]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, isAuthenticated, refreshUser }}>

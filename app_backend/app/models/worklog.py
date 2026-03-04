@@ -272,6 +272,16 @@ class Worklog(Base):
     
     # Note: NO deleted_at, NO version (TRANSACTIONS category)
 
+    # Overnight / segments
+    is_overnight: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
+    overnight_nights: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
+    overnight_rate: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True, default=0)
+    overnight_total: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True, default=0)
+    net_hours: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True, default=0)
+    paid_hours: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True, default=0)
+    pdf_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    pdf_generated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
     # Relationships - one-way only
     work_order: Mapped[Optional["WorkOrder"]] = relationship("WorkOrder", lazy="select", foreign_keys="[Worklog.work_order_id]")
     user: Mapped[Optional["User"]] = relationship("User", lazy="select", foreign_keys="[Worklog.user_id]")

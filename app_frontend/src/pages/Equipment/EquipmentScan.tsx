@@ -8,6 +8,8 @@ import {
   Loader2, X, ArrowLeft, Clock, DollarSign, Camera, Keyboard, ScanLine
 } from 'lucide-react';
 import api from '../../services/api';
+import { saveOfflineScan } from '../../utils/offlineStorage';
+import { showToast } from '../../components/common/Toast';
 
 interface EquipmentResult {
   id: number;
@@ -175,13 +177,25 @@ const EquipmentScan: React.FC = () => {
   };
 
   const registerScan = async (equipmentId: number, _scanValue: string, scanType: string) => {
+    const scan_type = scanType === 'qr' ? 'field_check' : 'manual_check';
+    if (!navigator.onLine) {
+      await saveOfflineScan({ equipment_id: equipmentId, scan_type });
+      showToast('📱 הסריקה נשמרה — תסונכרן כשיחזור חיבור', 'info', 5000);
+      setScanRegistered(true);
+      return;
+    }
     try {
       await api.post(`/equipment/${equipmentId}/scan`, null, {
-        params: { scan_type: scanType === 'qr' ? 'field_check' : 'manual_check' }
+        params: { scan_type }
       });
       setScanRegistered(true);
-    } catch (e) {
-      // scan registration is best-effort
+    } catch (e: any) {
+      if (!e.response) {
+        // Network error — save offline
+        await saveOfflineScan({ equipment_id: equipmentId, scan_type });
+        showToast('📱 הסריקה נשמרה — תסונכרן כשיחזור חיבור', 'info', 5000);
+        setScanRegistered(true);
+      }
     }
   };
 

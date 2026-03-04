@@ -1,233 +1,232 @@
-
 // src/components/HelpWidget/SmartHelpWidget.tsx
-// בוט תמיכה חכם - עוזר לבד ופותח טיקט רק כשצריך
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  HelpCircle, 
-  ChevronRight,
-  ChevronLeft,
-  CheckCircle,
-  XCircle,
-  ExternalLink,
-  Phone,
-  Clock,
-  Loader2,
-  ThumbsUp,
-  ThumbsDown,
-  ArrowLeft,
-  Headphones,
-} from 'lucide-react';
-import {
-  supportCategories,
-  getArticleByCategory,
-  SupportArticle,
-} from '../../data/supportKnowledgeBase';
+// בוט תמיכה חכם — FAQ keyword matching + פתיחת קריאה לאדמין
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageCircle, X, Send, HelpCircle, CheckCircle, Loader2 } from 'lucide-react';
+import api from '../../services/api';
 
-// Types
-interface StepResult {
-  stepId: string;
-  helped: boolean;
+// ─── FAQ Knowledge Base ──────────────────────────────────────────────────────
+
+const FAQ = [
+  {
+    keywords: ['סיסמה', 'סיסמא', 'שכחתי', 'לא זוכר', 'לא נכנס', 'התחברות'],
+    answer: 'לאיפוס סיסמה — לחץ "שכחתי סיסמה" בדף הכניסה, או פנה למנהל המערכת.',
+  },
+  {
+    keywords: ['הזמנה', 'להזמין', 'ספק', 'לשלוח ספק', 'הזמנת עבודה'],
+    answer: 'ליצירת הזמנה: כנס לפרויקט → טאב הזמנות → "+ הזמנה חדשה" → בחר סוג כלי וספק.',
+  },
+  {
+    keywords: ['דיווח', 'שעות', 'לדווח', 'worklog', 'דיווחים'],
+    answer: 'לדיווח שעות: כנס לפרויקט → טאב דיווחים → "+ דיווח חדש". חובה לסרוק ציוד לפני דיווח.',
+  },
+  {
+    keywords: ['ציוד', 'כלי', 'סריקה', 'QR', 'מספר רישוי', 'סרוק'],
+    answer: 'לסריקת ציוד: בתוך ההזמנה הפעילה לחץ "סרוק ציוד" והזן מספר רישוי או סרוק QR.',
+  },
+  {
+    keywords: ['חשבונית', 'תשלום', 'לאשר חשבונית', 'חשבוניות'],
+    answer: 'חשבוניות ניתן לאשר תחת: הגדרות → תקציבים וניהול חשבונות.',
+  },
+  {
+    keywords: ['תקציב', 'יתרה', 'כמה נשאר', 'תקציבים'],
+    answer: 'לצפייה בתקציב: כנס לפרויקט → טאב סקירה → כרטיס תקציב.',
+  },
+  {
+    keywords: ['משתמש', 'הרשאה', 'תפקיד', 'להוסיף משתמש', 'ניהול משתמשים'],
+    answer: 'ניהול משתמשים: הגדרות מערכת → ניהול משתמשים.',
+  },
+  {
+    keywords: ['פג תוקף', '3 שעות', 'לא מגיב', 'קישור ספק'],
+    answer: 'אם פג תוקף קישור הספק — כנס לתיאום הזמנות וצור הזמנה חדשה לאותו ספק.',
+  },
+  {
+    keywords: ['מפה', 'פוליגון', 'לא רואה', 'יער', 'שטח'],
+    answer: 'המפה מציגה את שטח היער. אם לא נראה פוליגון — ייתכן שהיער לא ממופה עדיין במערכת.',
+  },
+  {
+    keywords: ['שגיאה', 'תקלה', 'לא עובד', 'בעיה', 'נתקע', 'קורס'],
+    answer: 'נסה לרענן את הדף (F5). אם הבעיה נמשכת — אוכל לפתוח קריאת שירות לאדמין.',
+  },
+  {
+    keywords: ['תעריף', 'מחיר', 'עלות', 'שכר'],
+    answer: 'תעריפי ציוד מנוהלים תחת: הגדרות מערכת → תעריפי ציוד.',
+  },
+];
+
+function findAnswer(text: string): string | null {
+  const lower = text.toLowerCase();
+  for (const entry of FAQ) {
+    if (entry.keywords.some(kw => lower.includes(kw.toLowerCase()))) {
+      return entry.answer;
+    }
+  }
+  return null;
 }
 
-interface TicketData {
-  userId: string;
-  userName: string;
-  userRole: string;
-  regionId?: string;
-  areaId?: string;
-  projectId?: string;
-  currentRoute: string;
-  category: string;
-  stepsWalked: StepResult[];
-  userMessage: string;
-  clientContext: {
-    url: string;
-    browser: string;
-    resolution: string;
-    timestamp: string;
-  };
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type MsgFrom = 'user' | 'bot';
+
+interface ChatMsg {
+  id: number;
+  from: MsgFrom;
+  text: string;
+  ts: Date;
+  // bot-only extras
+  showButtons?: 'helped' | 'send_admin' | 'none';
 }
 
-type WidgetState = 'closed' | 'categories' | 'steps' | 'message' | 'success' | 'ticket_form';
+type Phase = 'chat' | 'ask_description' | 'success';
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 const SmartHelpWidget: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  
-  // State
   const [isOpen, setIsOpen] = useState(false);
-  const [widgetState, setWidgetState] = useState<WidgetState>('categories');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [currentArticle, setCurrentArticle] = useState<SupportArticle | null>(null);
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [stepsWalked, setStepsWalked] = useState<StepResult[]>([]);
-  const [userMessage, setUserMessage] = useState('');
+  const [phase, setPhase] = useState<Phase>('chat');
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [input, setInput] = useState('');
+  const [description, setDescription] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [showFaq, setShowFaq] = useState(false);
+  const [_ticketNumber, setTicketNumber] = useState('');
+  const msgCounter = useRef(0);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  // User info from localStorage
-  const [userInfo, setUserInfo] = useState({
-    id: '',
-    name: 'משתמש',
-    role: 'USER',
-    regionId: '',
-    areaId: '',
-  });
+  const userInfo = useRef({ id: '', name: 'משתמש', role: 'USER' });
 
-  // Load user info
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setUserInfo({
-          id: user.id || '',
-          name: user.name || 'משתמש',
-          role: user.role || 'USER',
-          regionId: user.region_id || '',
-          areaId: user.area_id || '',
-        });
-      } catch (e) {
-        console.error('Error parsing user info:', e);
-      }
-    }
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      userInfo.current = {
+        id: u.id || '',
+        name: u.full_name || u.name || 'משתמש',
+        role: u.role || 'USER',
+      };
+    } catch {}
   }, []);
 
-  // Reset when closing
-  const handleClose = () => {
+  // Scroll to bottom on new message
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const addMsg = (from: MsgFrom, text: string, extra: Partial<ChatMsg> = {}) => {
+    msgCounter.current += 1;
+    const msg: ChatMsg = { id: msgCounter.current, from, text, ts: new Date(), ...extra };
+    setMessages(prev => [...prev, msg]);
+    return msg.id;
+  };
+
+  const openWidget = () => {
+    setIsOpen(true);
+    if (messages.length === 0) {
+      setTimeout(() => {
+        addMsg('bot', `שלום ${userInfo.current.name}! 👋 אני הבוט של מערכת קק"ל. במה אוכל לעזור?`, { showButtons: 'none' });
+      }, 200);
+    }
+  };
+
+  const closeWidget = () => {
     setIsOpen(false);
+    // Reset after close animation
     setTimeout(() => {
-      setWidgetState('categories');
-      setSelectedCategory(null);
-      setCurrentArticle(null);
-      setCurrentStepIndex(0);
-      setStepsWalked([]);
-      setUserMessage('');
-      setShowFaq(false);
-    }, 300);
+      setPhase('chat');
+      setMessages([]);
+      setInput('');
+      setDescription('');
+      setTicketNumber('');
+      msgCounter.current = 0;
+    }, 350);
   };
 
-  // Select category
-  const handleSelectCategory = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    const article = getArticleByCategory(categoryId);
-    if (article) {
-      setCurrentArticle(article);
-      setCurrentStepIndex(0);
-      setStepsWalked([]);
-      setWidgetState('steps');
-    }
-  };
+  const handleUserSend = () => {
+    const text = input.trim();
+    if (!text) return;
+    setInput('');
+    addMsg('user', text);
 
-  // Step feedback
-  const handleStepFeedback = (helped: boolean) => {
-    if (!currentArticle) return;
-    
-    const currentStep = currentArticle.steps[currentStepIndex];
-    setStepsWalked(prev => [...prev, { stepId: currentStep.id, helped }]);
-
-    if (helped) {
-      // Problem solved!
-      setWidgetState('success');
-    } else {
-      // Move to next step
-      if (currentStepIndex < currentArticle.steps.length - 1) {
-        setCurrentStepIndex(prev => prev + 1);
+    // Short typing delay
+    setTimeout(() => {
+      const answer = findAnswer(text);
+      if (answer) {
+        addMsg('bot', answer, { showButtons: 'helped' });
       } else {
-        // No more steps - offer to talk to support
-        setWidgetState('ticket_form');
+        addMsg('bot', 'לא מצאתי תשובה מוכנה לשאלתך. רוצה שאפתח קריאת שירות למנהל המערכת?', {
+          showButtons: 'send_admin',
+        });
       }
+    }, 500);
+  };
+
+  const handleHelped = (msgId: number, helped: boolean) => {
+    // Remove buttons from that message
+    setMessages(prev =>
+      prev.map(m => (m.id === msgId ? { ...m, showButtons: 'none' } : m))
+    );
+    if (helped) {
+      addMsg('bot', 'מעולה! שמח שעזרתי 😊 אם יש עוד שאלות — כאן בשבילך.');
+    } else {
+      addMsg('bot', 'מבין. אפתח קריאת שירות עבורך כדי שמנהל המערכת יטפל בזה.', {
+        showButtons: 'send_admin',
+      });
     }
   };
 
-  // Navigate to action link
-  const handleActionClick = (path: string) => {
-    navigate(path);
-    handleClose();
+  const handleRequestAdmin = (msgId: number) => {
+    setMessages(prev =>
+      prev.map(m => (m.id === msgId ? { ...m, showButtons: 'none' } : m))
+    );
+    setPhase('ask_description');
+    addMsg('bot', 'תאר בקצרה את הבעיה (תוכן יישלח לאדמין):');
   };
 
-  // Submit ticket
   const handleSubmitTicket = async () => {
-    if (!userMessage.trim()) return;
-
+    const desc = description.trim();
+    if (!desc) return;
     setIsSending(true);
 
-    const ticketData: TicketData = {
-      userId: userInfo.id,
-      userName: userInfo.name,
-      userRole: userInfo.role,
-      regionId: userInfo.regionId,
-      areaId: userInfo.areaId,
-      currentRoute: location.pathname,
-      category: selectedCategory || 'GENERAL',
-      stepsWalked,
-      userMessage: userMessage.trim(),
-      clientContext: {
-        url: window.location.href,
-        browser: navigator.userAgent,
-        resolution: `${window.innerWidth}x${window.innerHeight}`,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
     try {
-      // Send to backend
       const token = localStorage.getItem('access_token');
-      const response = await fetch('/api/v1/support-tickets/from-widget', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+      const res = await api.post('/support-tickets/from-widget', {
+        userId: userInfo.current.id,
+        userName: userInfo.current.name,
+        userRole: userInfo.current.role,
+        currentRoute: window.location.pathname,
+        category: 'TECHNICAL',
+        stepsWalked: [],
+        userMessage: desc,
+        clientContext: {
+          url: window.location.href,
+          browser: navigator.userAgent.slice(0, 150),
+          resolution: `${window.innerWidth}x${window.innerHeight}`,
+          timestamp: new Date().toISOString(),
         },
-        body: JSON.stringify(ticketData),
-      });
+      }, { headers: { Authorization: `Bearer ${token}` } });
 
-      if (response.ok) {
-        setWidgetState('success');
-      } else {
-        // Fallback - still show success (ticket will be created manually)
-        console.error('Failed to create ticket:', await response.text());
-        setWidgetState('success');
-      }
-    } catch (error) {
-      console.error('Error creating ticket:', error);
-      // Still show success - we'll handle it manually
-      setWidgetState('success');
+      const tNum = res.data?.ticket_number || res.data?.id || '—';
+      setTicketNumber(String(tNum));
+      setPhase('success');
+      addMsg('bot', `✅ קריאה נפתחה (${tNum}). מנהל המערכת יחזור אליך בהקדם.`);
+    } catch (err) {
+      addMsg('bot', 'אירעה שגיאה בשליחה. נסה שוב או פנה ישירות למנהל המערכת.');
     } finally {
       setIsSending(false);
+      setDescription('');
+      setPhase('chat');
     }
   };
 
-  // Go back
-  const handleBack = () => {
-    if (widgetState === 'steps' && currentStepIndex > 0) {
-      setCurrentStepIndex(prev => prev - 1);
-      setStepsWalked(prev => prev.slice(0, -1));
-    } else if (widgetState === 'steps' || widgetState === 'ticket_form') {
-      setWidgetState('categories');
-      setSelectedCategory(null);
-      setCurrentArticle(null);
-      setCurrentStepIndex(0);
-      setStepsWalked([]);
-    }
-  };
-
-  // Current step
-  const currentStep = currentArticle?.steps[currentStepIndex];
+  const fmtTime = (d: Date) =>
+    d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <>
-      {/* Floating Button */}
+      {/* ── Floating Button ── */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={isOpen ? closeWidget : openWidget}
         className={`fixed bottom-6 left-6 z-50 p-4 rounded-full shadow-lg transition-all duration-300 ${
-          isOpen 
-            ? 'bg-gray-700 hover:bg-gray-800 rotate-0' 
-            : 'bg-gradient-to-r from-kkl-green to-kkl-green-dark hover:shadow-xl hover:scale-110'
+          isOpen
+            ? 'bg-gray-700 hover:bg-gray-800'
+            : 'bg-gradient-to-br from-green-600 to-green-700 hover:shadow-xl hover:scale-110'
         }`}
         aria-label={isOpen ? 'סגור עזרה' : 'פתח עזרה'}
       >
@@ -238,274 +237,142 @@ const SmartHelpWidget: React.FC = () => {
         )}
       </button>
 
-      {/* Help Panel */}
+      {/* ── Chat Panel ── */}
       {isOpen && (
-        <div 
-          className="fixed bottom-24 left-6 z-50 w-96 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slideUp border border-kkl-border"
+        <div
+          className="fixed bottom-24 left-6 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200"
           dir="rtl"
+          style={{ animation: 'slideUp 0.25s ease-out' }}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-kkl-green to-kkl-green-dark p-4 text-white">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-white/20 rounded-lg">
-                  <HelpCircle className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">צריך עזרה?</h3>
-                  <p className="text-sm text-white/80">אני כאן לעזור לך</p>
-                </div>
+          <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-white/20 rounded-lg">
+                <HelpCircle className="w-5 h-5 text-white" />
               </div>
-              {widgetState !== 'categories' && widgetState !== 'success' && (
-                <button 
-                  onClick={handleBack}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              )}
+              <div>
+                <p className="text-white font-bold text-sm">בוט תמיכה קק"ל</p>
+                <p className="text-green-100 text-xs flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-300 rounded-full inline-block" />
+                  מחובר
+                </p>
+              </div>
             </div>
+            <button
+              onClick={closeWidget}
+              className="p-1.5 hover:bg-white/20 rounded-lg transition-colors text-white"
+              aria-label="סגור"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Content */}
-          <div className="max-h-[500px] overflow-y-auto">
-            
-            {/* Categories Selection */}
-            {widgetState === 'categories' && (
-              <div className="p-4 space-y-3">
-                <p className="text-sm text-gray-600 mb-4">בחר את סוג הבעיה:</p>
-                
-                {supportCategories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => handleSelectCategory(category.id)}
-                    className="w-full flex items-center gap-3 p-4 bg-gray-50 rounded-xl hover:bg-kkl-green-light hover:border-kkl-green border border-transparent transition-all text-right group"
-                  >
-                    <span className="text-2xl">{category.icon}</span>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 group-hover:text-kkl-green">
-                        {category.label}
-                      </p>
-                      <p className="text-xs text-gray-500">{category.description}</p>
-                    </div>
-                    <ChevronLeft className="w-5 h-5 text-gray-400 group-hover:text-kkl-green" />
-                  </button>
-                ))}
-
-                {/* Contact Info */}
-                <div className="pt-4 mt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 text-center">
-                    <span className="flex items-center justify-center gap-2 mb-1">
-                      <Clock className="w-3 h-3" /> א'-ה' 08:00-17:00
-                    </span>
-                    <span className="flex items-center justify-center gap-2">
-                      <Phone className="w-3 h-3" /> 03-1234567
-                    </span>
+          {/* Messages */}
+          <div className="h-80 overflow-y-auto px-3 py-3 space-y-3 bg-gray-50">
+            {messages.map(msg => (
+              <div key={msg.id} className={`flex flex-col ${msg.from === 'user' ? 'items-end' : 'items-start'}`}>
+                <div
+                  className={`max-w-[82%] px-3 py-2 rounded-2xl text-sm shadow-sm ${
+                    msg.from === 'user'
+                      ? 'bg-green-600 text-white rounded-tl-sm'
+                      : 'bg-white text-gray-800 rounded-tr-sm border border-gray-100'
+                  }`}
+                >
+                  <p className="leading-relaxed whitespace-pre-line">{msg.text}</p>
+                  <p className={`text-xs mt-1 ${msg.from === 'user' ? 'text-green-200' : 'text-gray-400'}`}>
+                    {fmtTime(msg.ts)}
                   </p>
                 </div>
-              </div>
-            )}
 
-            {/* Steps View */}
-            {widgetState === 'steps' && currentArticle && currentStep && (
-              <div className="p-4">
-                {/* Progress */}
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-sm text-gray-500">
-                    שלב {currentStepIndex + 1} מתוך {currentArticle.steps.length}
-                  </span>
-                  <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-kkl-green rounded-full transition-all duration-300"
-                      style={{ width: `${((currentStepIndex + 1) / currentArticle.steps.length) * 100}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Current Step */}
-                <div className="bg-kkl-green-light rounded-xl p-4 mb-4">
-                  <h4 className="font-bold text-kkl-green mb-2 flex items-center gap-2">
-                    <span className="w-6 h-6 bg-kkl-green text-white rounded-full flex items-center justify-center text-sm">
-                      {currentStepIndex + 1}
-                    </span>
-                    {currentStep.title}
-                  </h4>
-                  <p className="text-gray-700 text-sm whitespace-pre-line leading-relaxed">
-                    {currentStep.text}
-                  </p>
-                  
-                  {currentStep.actionLink && (
+                {/* Action buttons */}
+                {msg.from === 'bot' && msg.showButtons === 'helped' && (
+                  <div className="flex gap-2 mt-1.5">
                     <button
-                      onClick={() => handleActionClick(currentStep.actionLink!)}
-                      className="mt-3 flex items-center gap-2 text-kkl-green hover:text-kkl-green-dark font-medium text-sm"
+                      onClick={() => handleHelped(msg.id, true)}
+                      className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-full hover:bg-green-200 transition-colors font-medium flex items-center gap-1"
                     >
-                      <ExternalLink className="w-4 h-4" />
-                      {currentStep.actionText || 'עבור לדף'}
+                      <CheckCircle className="w-3 h-3" />
+                      זה עזר
                     </button>
-                  )}
-                </div>
-
-                {/* Feedback Buttons */}
-                <p className="text-sm text-gray-600 mb-3 text-center">האם זה עזר לך?</p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleStepFeedback(true)}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-kkl-success text-white rounded-xl hover:bg-green-600 transition-colors font-medium"
-                  >
-                    <ThumbsUp className="w-5 h-5" />
-                    כן, עזר לי!
-                  </button>
-                  <button
-                    onClick={() => handleStepFeedback(false)}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
-                  >
-                    <ThumbsDown className="w-5 h-5" />
-                    לא עזר
-                  </button>
-                </div>
-
-                {/* FAQ Toggle */}
-                {currentArticle.faq.length > 0 && (
-                  <button
-                    onClick={() => setShowFaq(!showFaq)}
-                    className="w-full mt-4 text-sm text-kkl-green hover:text-kkl-green-dark flex items-center justify-center gap-1"
-                  >
-                    <HelpCircle className="w-4 h-4" />
-                    שאלות נפוצות
-                    <ChevronRight className={`w-4 h-4 transition-transform ${showFaq ? 'rotate-90' : ''}`} />
-                  </button>
+                    <button
+                      onClick={() => handleHelped(msg.id, false)}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs rounded-full hover:bg-gray-200 transition-colors font-medium"
+                    >
+                      ❌ עדיין לא פתור
+                    </button>
+                  </div>
                 )}
 
-                {/* FAQ List */}
-                {showFaq && (
-                  <div className="mt-3 space-y-2">
-                    {currentArticle.faq.map((item, index) => (
-                      <div key={index} className="bg-gray-50 rounded-lg p-3">
-                        <p className="font-medium text-gray-800 text-sm mb-1">{item.question}</p>
-                        <p className="text-gray-600 text-xs">{item.answer}</p>
-                      </div>
-                    ))}
-                  </div>
+                {msg.from === 'bot' && msg.showButtons === 'send_admin' && (
+                  <button
+                    onClick={() => handleRequestAdmin(msg.id)}
+                    className="mt-1.5 px-4 py-1.5 bg-orange-500 text-white text-xs rounded-full hover:bg-orange-600 transition-colors font-medium flex items-center gap-1 shadow-sm"
+                  >
+                    📨 שלח לאדמין
+                  </button>
                 )}
               </div>
-            )}
+            ))}
+            <div ref={bottomRef} />
+          </div>
 
-            {/* Ticket Form */}
-            {widgetState === 'ticket_form' && (
-              <div className="p-4">
-                <div className="text-center mb-4">
-                  <div className="w-16 h-16 bg-kkl-warning/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Headphones className="w-8 h-8 text-kkl-warning" />
-                  </div>
-                  <h4 className="font-bold text-gray-900 mb-1">נראה שהבעיה לא נפתרה</h4>
-                  <p className="text-sm text-gray-500">תרצה שנציג תמיכה יעבור על זה?</p>
-                </div>
+          {/* Input area */}
+          {phase === 'chat' && (
+            <div className="px-3 py-2 border-t border-gray-100 bg-white flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleUserSend()}
+                placeholder="כתוב שאלה..."
+                className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50"
+                autoFocus
+              />
+              <button
+                onClick={handleUserSend}
+                disabled={!input.trim()}
+                className="p-2 bg-green-600 text-white rounded-full hover:bg-green-700 disabled:opacity-40 transition-colors"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
-                {/* Steps Summary */}
-                {stepsWalked.length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                    <p className="text-xs text-gray-500 mb-2">מה כבר ניסינו:</p>
-                    {stepsWalked.map((_step, index) => (
-                      <div key={index} className="flex items-center gap-2 text-xs text-gray-600">
-                        <XCircle className="w-3 h-3 text-red-400" />
-                        <span>שלב {index + 1}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Message Input */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    תאר את הבעיה במילים שלך
-                  </label>
-                  <textarea
-                    value={userMessage}
-                    onChange={(e) => setUserMessage(e.target.value)}
-                    placeholder="ספר לנו מה קורה..."
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-transparent resize-none text-sm"
-                    rows={4}
-                  />
-                </div>
-
-                {/* Submit Button */}
+          {phase === 'ask_description' && (
+            <div className="px-3 py-2 border-t border-gray-100 bg-white space-y-2">
+              <textarea
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                placeholder="תאר את הבעיה בקצרה..."
+                rows={3}
+                className="w-full text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 resize-none"
+                autoFocus
+              />
+              <div className="flex gap-2">
                 <button
                   onClick={handleSubmitTicket}
-                  disabled={!userMessage.trim() || isSending}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-kkl-green text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-kkl-green-dark transition-colors"
+                  disabled={!description.trim() || isSending}
+                  className="flex-1 py-2 bg-green-600 text-white text-sm rounded-xl hover:bg-green-700 disabled:opacity-50 font-medium flex items-center justify-center gap-1"
                 >
-                  {isSending ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      שולח...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      שלח לנציג תמיכה
-                    </>
-                  )}
+                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : '📨'}
+                  שלח לאדמין
                 </button>
-
-                {/* Cancel */}
                 <button
-                  onClick={handleBack}
-                  className="w-full mt-2 py-2 text-gray-500 hover:text-gray-700 text-sm"
+                  onClick={() => { setPhase('chat'); setDescription(''); }}
+                  className="px-3 py-2 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50"
                 >
-                  לא כרגע, אנסה שוב
+                  ביטול
                 </button>
               </div>
-            )}
-
-            {/* Success */}
-            {widgetState === 'success' && (
-              <div className="p-6 text-center">
-                <div className="w-20 h-20 bg-kkl-success/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-10 h-10 text-kkl-success" />
-                </div>
-                
-                {stepsWalked.length > 0 && stepsWalked[stepsWalked.length - 1]?.helped ? (
-                  <>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">מעולה! 🎉</h4>
-                    <p className="text-gray-600 mb-4">שמח שהצלחתי לעזור!</p>
-                  </>
-                ) : (
-                  <>
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">הפנייה נשלחה!</h4>
-                    <p className="text-gray-600 mb-4">
-                      נציג תמיכה יחזור אליך בהקדם.
-                      <br />
-                      <span className="text-sm text-gray-400">בדרך כלל תוך שעות עבודה ספורות</span>
-                    </p>
-                  </>
-                )}
-
-                <button
-                  onClick={handleClose}
-                  className="px-6 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors"
-                >
-                  סגור
-                </button>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Styles */}
       <style>{`
         @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out;
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </>
@@ -513,4 +380,3 @@ const SmartHelpWidget: React.FC = () => {
 };
 
 export default SmartHelpWidget;
-

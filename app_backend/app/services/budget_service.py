@@ -142,3 +142,176 @@ class BudgetService(BaseService[Budget]):
             by_type={},
             by_status={}
         )
+
+
+# ── Freeze / Release / Transfer ────────────────────────────────────────────────
+
+def freeze_budget_for_work_order(
+    project_id: int,
+    work_order_id: int,
+    amount: float,
+    db: "Session",
+) -> None:
+    """
+    כשנפתחת הזמנה — מקפיא סכום מתקציב הפרויקט (committed_amount).
+    מעלה ValueError אם אין תקציב פעיל או אין יתרה מספיקה.
+    """
+    from app.models.budget import Budget
+    from app.models.work_order import WorkOrder
+
+    budget = (
+        db.query(Budget)
+        .filter(Budget.project_id == project_id, Budget.is_active == True, Budget.deleted_at.is_(None))
+        .first()
+    )
+    if not budget:
+        raise ValueError("אין תקציב פעיל לפרויקט")
+
+    committed = float(budget.committed_amount or 0)
+    spent = float(budget.spent_amount or 0)
+    total = float(budget.total_amount or 0)
+    available = total - committed - spent
+
+    if available < amount:
+        raise ValueError(
+            f"אין מספיק תקציב. זמין: ₪{available:,.0f}, נדרש: ₪{amount:,.0f}"
+        )
+
+    budget.committed_amount = committed + amount
+    budget.remaining_amount = total - budget.committed_amount - spent
+
+    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    if wo:
+        wo.frozen_amount = amount
+
+    db.commit()
+
+
+def release_budget_freeze(
+    work_order_id: int,
+    actual_amount: float,
+    db: "Session",
+) -> None:
+    """
+    כשנסגרת הזמנה — שחרר הקפאה ועדכן spent_amount.
+    """
+    from app.models.budget import Budget
+    from app.models.work_order import WorkOrder
+
+    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    if not wo or not wo.project_id:
+        return
+
+    budget = (
+        db.query(Budget)
+        .filter(Budget.project_id == wo.project_id, Budget.is_active == True, Budget.deleted_at.is_(None))
+        .first()
+    )
+    if not budget:
+        return
+
+    frozen = float(wo.frozen_amount or 0)
+    budget.committed_amount = max(0, float(budget.committed_amount or 0) - frozen)
+    budget.spent_amount = float(budget.spent_amount or 0) + actual_amount
+    budget.remaining_amount = (
+        float(budget.total_amount or 0) - float(budget.committed_amount) - float(budget.spent_amount)
+    )
+    wo.frozen_amount = 0
+    db.commit()
+
+
+def request_budget_transfer(
+    from_budget_id: "Optional[int]",
+    to_budget_id: int,
+    amount: float,
+    reason: str,
+    requested_by: int,
+    transfer_type: str = "regular",
+    db: "Session" = None,
+) -> "BudgetTransfer":
+    """
+    יוצר בקשת העברת תקציב בסטטוס PENDING.
+    """
+    from app.models.budget_transfer import BudgetTransfer
+    from datetime import datetime
+
+    transfer = BudgetTransfer(
+        from_budget_id=from_budget_id,
+        to_budget_id=to_budget_id,
+        amount=amount,
+        reason=reason,
+        requested_by=requested_by,
+        transfer_type=transfer_type,
+        status="PENDING",
+        requested_at=datetime.now(),
+    )
+    db.add(transfer)
+    db.commit()
+    db.refresh(transfer)
+    return transfer
+
+
+def approve_budget_transfer(
+    transfer_id: int,
+    approved_by: int,
+    approved_amount: float,
+    db: "Session",
+    notes: str = "",
+) -> "BudgetTransfer":
+    """
+    מנהל מרחב מאשר (מלא / חלקי) — מעביר סכום בין תקציבים.
+    """
+    from app.models.budget import Budget
+    from app.models.budget_transfer import BudgetTransfer
+    from datetime import datetime
+
+    transfer = db.query(BudgetTransfer).filter(BudgetTransfer.id == transfer_id).first()
+    if not transfer:
+        raise ValueError("בקשת העברה לא נמצאה")
+
+    if transfer.from_budget_id:
+        from_b = db.query(Budget).filter(Budget.id == transfer.from_budget_id).first()
+        if from_b:
+            avail = float(from_b.remaining_amount or from_b.total_amount or 0)
+            if avail < approved_amount:
+                raise ValueError(f"אין מספיק יתרה. זמין: ₪{avail:,.0f}")
+            from_b.total_amount = float(from_b.total_amount or 0) - approved_amount
+            from_b.remaining_amount = float(from_b.remaining_amount or 0) - approved_amount
+
+    to_b = db.query(Budget).filter(Budget.id == transfer.to_budget_id).first()
+    if not to_b:
+        raise ValueError("תקציב יעד לא נמצא")
+    to_b.total_amount = float(to_b.total_amount or 0) + approved_amount
+    to_b.remaining_amount = float(to_b.remaining_amount or 0) + approved_amount
+
+    transfer.status = "APPROVED"
+    transfer.approved_by = approved_by
+    transfer.amount = approved_amount
+    transfer.approved_at = datetime.now()
+    transfer.executed_at = datetime.now()
+    if notes:
+        transfer.notes = notes
+
+    db.commit()
+    db.refresh(transfer)
+    return transfer
+
+
+def reject_budget_transfer(
+    transfer_id: int,
+    rejected_by: int,
+    reason: str,
+    db: "Session",
+) -> "BudgetTransfer":
+    from app.models.budget_transfer import BudgetTransfer
+
+    transfer = db.query(BudgetTransfer).filter(BudgetTransfer.id == transfer_id).first()
+    if not transfer:
+        raise ValueError("בקשת העברה לא נמצאה")
+
+    transfer.status = "REJECTED"
+    transfer.approved_by = rejected_by
+    transfer.rejected_reason = reason
+    db.commit()
+    db.refresh(transfer)
+    return transfer

@@ -179,11 +179,49 @@ class WorklogService:
     
     def submit(self, db: Session, worklog_id: int, current_user_id: int) -> Worklog:
         """Submit worklog for approval"""
+        from sqlalchemy import text as sa_text
         worklog = self.get_by_id(db, worklog_id)
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
         
         worklog.status = 'SUBMITTED'
+
+        # Compute hours for metadata
+        hours_meta = {}
+        if worklog.work_order_id:
+            try:
+                row = db.execute(sa_text("""
+                    SELECT COALESCE(SUM(work_hours),0) as used
+                    FROM worklogs
+                    WHERE work_order_id = :wid AND UPPER(status) != 'REJECTED'
+                      AND is_active = true AND id != :lid
+                """), {"wid": worklog.work_order_id, "lid": worklog_id}).first()
+                wo_row = db.execute(sa_text(
+                    "SELECT estimated_hours FROM work_orders WHERE id=:wid"
+                ), {"wid": worklog.work_order_id}).first()
+                used_before = float(row.used) if row else 0
+                this_hours = float(worklog.work_hours or 0)
+                used_total = used_before + this_hours
+                estimated = float(wo_row.estimated_hours or 0) if wo_row else 0
+                remaining = max(estimated - used_total, 0)
+                hours_meta = {
+                    "hours_reported": this_hours,
+                    "hours_remaining": remaining,
+                    "days_remaining": round(remaining / 9, 1),
+                }
+            except Exception:
+                pass
+
+        # Enrich metadata_json
+        if hours_meta:
+            import json
+            try:
+                existing = json.loads(worklog.metadata_json or '{}') if worklog.metadata_json else {}
+                existing.update(hours_meta)
+                worklog.metadata_json = json.dumps(existing)
+            except Exception:
+                pass
+
         db.commit()
         db.refresh(worklog)
         
@@ -198,6 +236,10 @@ class WorklogService:
 
         # Notify area/region managers
         _notify_managers_worklog_submitted(db, worklog)
+
+        # Notify if remaining hours < 9
+        if hours_meta.get("hours_remaining", 9) < 9 and worklog.work_order_id:
+            _notify_low_hours(db, worklog, hours_meta)
 
         return worklog
     
@@ -355,6 +397,52 @@ def _notify_managers_worklog_submitted(db, worklog):
         log.warning(f"Worklog submit notification failed: {e}")
 
 
+def _notify_low_hours(db, worklog, hours_meta: dict):
+    """Send high-priority notification when work order has < 9 remaining hours."""
+    try:
+        from app.services.notification_service import notification_service
+        from app.schemas.notification import NotificationCreate
+        from sqlalchemy import text
+
+        remaining = hours_meta.get("hours_remaining", 0)
+        wo_row = db.execute(text(
+            "SELECT id, title, equipment_type, created_by_id FROM work_orders WHERE id=:wid"
+        ), {"wid": worklog.work_order_id}).first()
+        if not wo_row:
+            return
+        title_body = f"⚠️ יתרת שעות נמוכה — {wo_row.equipment_type or 'כלי'}"
+        body = f"נשארו {remaining:.1f} שעות בלבד מהזמנה #{worklog.work_order_id}. שקול להזמין המשך."
+
+        # Notify work order creator
+        recipients = set()
+        if wo_row.created_by_id:
+            recipients.add(wo_row.created_by_id)
+        # Also notify area managers of the project
+        if worklog.project_id:
+            rows = db.execute(text("""
+                SELECT DISTINCT u.id FROM users u
+                JOIN project_assignments pa ON pa.user_id = u.id
+                WHERE pa.project_id = :pid AND u.is_active = true
+                  AND u.role IN ('AREA_MANAGER','REGION_MANAGER')
+            """), {"pid": worklog.project_id}).fetchall()
+            for r in rows:
+                recipients.add(r[0])
+
+        for uid in recipients:
+            notif = NotificationCreate(
+                user_id=uid,
+                title=title_body,
+                message=body,
+                notification_type="EQUIPMENT_LOW_HOURS",
+                priority="high",
+                link=f"/work-orders/{worklog.work_order_id}",
+            )
+            notification_service.create_notification(db, notif)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Low hours notification failed: {e}")
+
+
 def _audit_worklog(db, user_id: int, worklog_id: int, action: str):
     """Insert audit log for worklog status change."""
     import logging, json
@@ -368,3 +456,146 @@ def _audit_worklog(db, user_id: int, worklog_id: int, action: str):
         db.commit()
     except Exception as e:
         logging.getLogger(__name__).warning(f"Worklog audit log failed: {e}")
+
+
+# ── Segments + Overnight calculation ──────────────────────────────────────────
+
+MAX_NET_HOURS_PER_DAY = 12.0
+
+SEGMENT_TYPES = {"work", "rest", "idle", "travel", "overnight"}
+ACTIVITY_TYPES = {"נטיעה", "ניקוי", "גיזום", "תחזוקה", "הסעה", "פיקוח", "אחר"}
+
+
+def _calc_duration(start: str, end: str) -> float:
+    """HH:MM → hours (float)"""
+    from datetime import datetime as _dt
+    fmt = "%H:%M"
+    s = _dt.strptime(start, fmt)
+    e = _dt.strptime(end, fmt)
+    diff = (e - s).total_seconds()
+    if diff < 0:
+        diff += 86400  # overnight segment
+    return round(diff / 3600, 2)
+
+
+def calculate_worklog_totals(
+    segments: list,
+    is_overnight: bool,
+    overnight_nights: int,
+    overnight_rate: float,
+    hourly_rate: float,
+    vat_rate: float = 0.17,
+) -> dict:
+    """
+    קלט: רשימת segments, דגל is_overnight
+    פלט: net_hours, paid_hours, overnight_total, cost_before_vat, cost_with_vat
+
+    כלל: מנוחה = 0% | עבודה = payment_pct% | אחר = payment_pct%
+    ולידציה: מקסימום 12 שעות net ביום
+    """
+    net_hours = 0.0
+    paid_hours = 0.0
+
+    for seg in segments:
+        seg_type = seg.get("segment_type", "work")
+        start = seg.get("start_time", "00:00")
+        end = seg.get("end_time", "00:00")
+        dur = seg.get("duration_hours") or _calc_duration(start, end)
+        pct = seg.get("payment_pct", 100)
+
+        net_hours += dur
+        if seg_type == "rest":
+            pass  # 0%
+        else:
+            paid_hours += dur * (pct / 100)
+
+    if net_hours > MAX_NET_HOURS_PER_DAY:
+        raise ValueError(
+            f"חריגה ממקסימום שעות ביום ({MAX_NET_HOURS_PER_DAY}). דווח: {net_hours:.1f}"
+        )
+
+    overnight_total = 0.0
+    if is_overnight and overnight_rate and overnight_nights:
+        overnight_total = float(overnight_rate) * int(overnight_nights)
+
+    cost_before_vat = round(paid_hours * hourly_rate + overnight_total, 2)
+    cost_with_vat = round(cost_before_vat * (1 + vat_rate), 2)
+
+    return {
+        "net_hours": round(net_hours, 2),
+        "paid_hours": round(paid_hours, 2),
+        "overnight_total": round(overnight_total, 2),
+        "cost_before_vat": cost_before_vat,
+        "cost_with_vat": cost_with_vat,
+    }
+
+
+def save_worklog_with_segments(
+    worklog_id: int,
+    segments: list,
+    is_overnight: bool,
+    overnight_nights: int,
+    db,
+) -> dict:
+    """
+    שומר segments לטבלה, מחשב totals, מעדכן worklog.
+    """
+    from app.models.worklog import Worklog
+    from app.models.worklog_segment import WorklogSegment
+    from app.services.rate_service import get_equipment_rate
+
+    wl = db.query(Worklog).filter(Worklog.id == worklog_id).first()
+    if not wl:
+        raise ValueError("דיווח לא נמצא")
+
+    # נקה segments קיימים
+    db.query(WorklogSegment).filter(WorklogSegment.worklog_id == worklog_id).delete()
+
+    # קבל תעריף
+    rate_info = get_equipment_rate(wl.equipment_id, wl.supplier_id, db)
+    hourly_rate = float(wl.hourly_rate_snapshot or rate_info["hourly_rate"] or 0)
+    overnight_rate = rate_info["overnight_rate"]
+
+    # חשב totals
+    totals = calculate_worklog_totals(
+        segments=segments,
+        is_overnight=is_overnight,
+        overnight_nights=overnight_nights,
+        overnight_rate=overnight_rate,
+        hourly_rate=hourly_rate,
+        vat_rate=float(wl.vat_rate or 0.17),
+    )
+
+    # שמור segments
+    for i, seg in enumerate(segments):
+        duration = seg.get("duration_hours") or _calc_duration(
+            seg.get("start_time", "00:00"), seg.get("end_time", "00:00")
+        )
+        ws = WorklogSegment(
+            worklog_id=worklog_id,
+            segment_type=seg.get("segment_type", "work"),
+            activity_type=seg.get("activity_type"),
+            start_time=seg.get("start_time", "00:00"),
+            end_time=seg.get("end_time", "00:00"),
+            duration_hours=duration,
+            payment_pct=seg.get("payment_pct", 100),
+            amount=round(duration * (seg.get("payment_pct", 100) / 100) * hourly_rate, 2),
+            notes=seg.get("notes"),
+        )
+        db.add(ws)
+
+    # עדכן worklog
+    wl.net_hours = totals["net_hours"]
+    wl.paid_hours = totals["paid_hours"]
+    wl.is_overnight = is_overnight
+    wl.overnight_nights = overnight_nights
+    wl.overnight_rate = overnight_rate
+    wl.overnight_total = totals["overnight_total"]
+    wl.cost_before_vat = totals["cost_before_vat"]
+    wl.cost_with_vat = totals["cost_with_vat"]
+    wl.total_amount = totals["cost_with_vat"]
+    wl.hourly_rate_snapshot = hourly_rate
+
+    db.commit()
+    db.refresh(wl)
+    return totals

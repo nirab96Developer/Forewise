@@ -1,6 +1,6 @@
 # Data Models — כל המודלים מפורטים
 
-## User Model — app/models/user.py
+## User Model — app/models/user.py (עדכני מרץ 2026)
 
 ```python
 class User(Base):
@@ -21,8 +21,16 @@ class User(Base):
     
     # Status
     is_active: bool = True
+    status: str = 'active'  # 'active' | 'suspended' | 'deleted'
     two_factor_enabled: bool = False
     last_login: datetime
+    must_change_password: bool = False  # true בכניסה ראשונה
+    
+    # Lifecycle / Suspension (נוסף מרץ 2026)
+    suspended_at: datetime = NULL
+    suspension_reason: text = NULL
+    scheduled_deletion_at: datetime = NULL  # ברירת מחדל: 3 שנים מהשהייה
+    previous_role_id: int (FK → roles) = NULL  # לפני החלפת תפקיד
     
     # Timestamps (BaseModel)
     created_at, updated_at, deleted_at, version
@@ -37,6 +45,9 @@ class User(Base):
     
 # Roles: ADMIN, REGION_MANAGER, AREA_MANAGER, WORK_MANAGER,
 #        ACCOUNTANT, ORDER_COORDINATOR, FIELD_WORKER, SUPPLIER, VIEWER
+#
+# CRON: anonymize_expired_users() — כל לילה
+#   suspended users עם scheduled_deletion_at < NOW() → אנונימיזציה + status='deleted'
 ```
 
 ---

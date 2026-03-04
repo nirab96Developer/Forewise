@@ -140,9 +140,15 @@ async def lifespan(app: FastAPI):
         logger.error(f"Startup failed: {str(e)}")
         raise
 
+    # Start nightly CRON for anonymizing expired/suspended users
+    import asyncio as _asyncio
+    from app.tasks.user_lifecycle import schedule_nightly_cleanup
+    _cleanup_task = _asyncio.create_task(schedule_nightly_cleanup())
+
     yield
 
     # Shutdown
+    _cleanup_task.cancel()
     logger.info("Shutting down...")
     try:
         engine.dispose()
@@ -274,6 +280,50 @@ async def add_security_headers(request: Request, call_next):
 # ============================================================
 # Safe Mode Middleware - Block writes in production/testing
 # ============================================================
+@app.middleware("http")
+async def offline_sync_audit_middleware(request: Request, call_next):
+    """
+    When request arrives with X-Offline-Sync: true header,
+    record it in sync_queue for auditing after the response is sent.
+    """
+    is_offline_sync = request.headers.get("X-Offline-Sync") == "true"
+    response = await call_next(request)
+    if is_offline_sync and response.status_code < 300:
+        try:
+            from app.core.database import SessionLocal
+            from sqlalchemy import text as _text
+            import json as _json
+            db = SessionLocal()
+            try:
+                # Get user_id from Authorization header (best-effort)
+                user_id = None
+                auth = request.headers.get("Authorization", "")
+                if auth.startswith("Bearer "):
+                    try:
+                        from app.core.security import decode_token
+                        payload = decode_token(auth.split(" ", 1)[1])
+                        user_id = payload.get("sub")
+                    except Exception:
+                        pass
+                op_type = request.url.path.split("/")[-2] if "/" in request.url.path else "unknown"
+                client_ip = request.client.host if request.client else None
+                db.execute(_text(
+                    "INSERT INTO sync_queue (user_id, type, payload, ip_address) "
+                    "VALUES (:uid, :type, :payload::jsonb, :ip)"
+                ), {
+                    "uid": user_id,
+                    "type": op_type,
+                    "payload": _json.dumps({"path": request.url.path, "method": request.method}),
+                    "ip": client_ip,
+                })
+                db.commit()
+            finally:
+                db.close()
+        except Exception:
+            pass  # audit is best-effort, never block the response
+    return response
+
+
 @app.middleware("http")
 async def safe_mode_middleware(request: Request, call_next):
     """

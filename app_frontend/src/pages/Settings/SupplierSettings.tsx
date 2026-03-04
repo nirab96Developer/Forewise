@@ -463,10 +463,10 @@ const SupplierSettings: React.FC = () => {
               <h3 className="text-lg font-semibold text-kkl-text mb-2">תמחור כלים</h3>
               <p className="text-gray-500 mb-4">ניהול תעריפי שעה לכל סוגי הכלים</p>
               <button
-                onClick={() => navigate('/settings/equipment-catalog')}
+                onClick={() => navigate('/settings/equipment-catalog?tab=rates')}
                 className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors"
               >
-                עבור לקטלוג כלים ותעריפים
+                עבור לניהול תעריפים
               </button>
             </div>
           ) : activeTab === 'rotation' ? (

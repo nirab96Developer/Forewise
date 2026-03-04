@@ -17,6 +17,9 @@ const Login = lazy(() => import("../pages/Login/Login"));
 const ForgotPassword = lazy(() => import("../pages/Login/ForgotPassword"));
 const ResetPassword = lazy(() => import("../pages/Login/ResetPassword"));
 const OTP = lazy(() => import("../pages/OTP/OTP"));
+const ChangePassword = lazy(() => import("../pages/Auth/ChangePassword"));
+const PendingSync = lazy(() => import("../pages/PendingSync/PendingSync"));
+const BudgetTransfers = lazy(() => import("../pages/Budget/BudgetTransfers"));
 const SupplierPortal = lazy(() => import("../pages/SupplierPortal/SupplierPortal"));
 
 // Dashboard
@@ -55,7 +58,6 @@ const Suppliers = lazy(() => import("../pages/Suppliers/Suppliers"));
 const NewSupplier = lazy(() => import("../pages/Suppliers/NewSupplier"));
 const EditSupplier = lazy(() => import("../pages/Suppliers/EditSupplier"));
 const AddSupplierEquipment = lazy(() => import("../pages/Suppliers/AddSupplierEquipment"));
-const UpdateSupplierEquipmentRate = lazy(() => import("../pages/Suppliers/UpdateSupplierEquipmentRate"));
 
 // Invoices & Reports
 const Invoices = lazy(() => import("../pages/Invoices/Invoices"));
@@ -132,6 +134,9 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/otp" element={<OTP setGlobalLoading={setGlobalLoading} />} />
+        <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/pending-sync" element={<PendingSync />} />
+        <Route path="/budget-transfers" element={<BudgetTransfers />} />
         {/* Supplier Portal - External landing page (no auth required) */}
         <Route path="/supplier-portal" element={<SupplierPortal />} />
         <Route path="/supplier-portal/:token" element={<SupplierPortal />} />
@@ -228,7 +233,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/suppliers/:id" element={<Guarded permission={PERMISSIONS.SUPPLIERS_VIEW}><EditSupplier /></Guarded>} />
         <Route path="/suppliers/:id/edit" element={<Guarded permission={PERMISSIONS.SUPPLIERS_UPDATE}><EditSupplier /></Guarded>} />
         <Route path="/suppliers/:supplierId/add-equipment" element={<Guarded permission={PERMISSIONS.SUPPLIERS_UPDATE}><AddSupplierEquipment /></Guarded>} />
-        <Route path="/suppliers/equipment/:equipmentId/update-rate" element={<Guarded permission={PERMISSIONS.SUPPLIERS_UPDATE}><UpdateSupplierEquipmentRate /></Guarded>} />
+        <Route path="/suppliers/equipment/:equipmentId/update-rate" element={<Navigate to="/settings/equipment-catalog" replace />} />
 
         {/* ============================================
               INVOICES & REPORTS
@@ -253,6 +258,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/settings/budgets/:id" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><BudgetDetail /></Guarded>} />
         {/* Equipment catalog - קטלוג כלים עם מחירים */}
         <Route path="/settings/equipment-catalog" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><EquipmentCatalog /></Guarded>} />
+        <Route path="/settings/equipment-rates" element={<Navigate to="/settings/equipment-catalog?tab=rates" replace />} />
         {/* equipment-types and pricing-overrides removed - pricing is in equipment catalog */}
         <Route path="/settings/equipment-types" element={<Navigate to="/settings/equipment-catalog" replace />} />
         <Route path="/settings/pricing-overrides" element={<Navigate to="/settings/equipment-catalog" replace />} />

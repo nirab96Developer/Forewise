@@ -179,6 +179,13 @@ const settingsCategories: SettingsCategory[] = [
         icon: <Layers className="w-5 h-5" />,
         path: '/settings/equipment-catalog',
       },
+      {
+        id: 'equipment-rates',
+        title: 'תעריפי ציוד',
+        description: 'עלויות לשעה לפי סוג כלי והיסטוריית שינויים',
+        icon: <DollarSign className="w-5 h-5" />,
+        path: '/settings/equipment-catalog?tab=rates',
+      },
     ],
   },
   {

@@ -344,3 +344,146 @@ def _notify_accountants_invoice(db, invoice_id: int, invoice_number: str, projec
             notification_service.create_notification(db, notif)
     except Exception as e:
         log.warning(f"Invoice notification failed: {e}")
+
+
+# ── Monthly Invoice Generator ──────────────────────────────────────────────────
+
+def generate_monthly_invoice(
+    supplier_id: int,
+    project_id: int,
+    month: int,
+    year: int,
+    created_by: int,
+    db: Session,
+) -> Invoice:
+    """
+    מרכזת כל worklogs APPROVED של ספק+פרויקט לחודש → חשבונית DRAFT.
+    מקבצת לפי equipment_id (מספר רישוי).
+    """
+    from sqlalchemy import extract
+    from app.models.worklog import Worklog
+    from app.models.invoice_item import InvoiceItem
+
+    worklogs = (
+        db.query(Worklog)
+        .filter(
+            Worklog.supplier_id == supplier_id,
+            Worklog.project_id == project_id,
+            Worklog.status == "APPROVED",
+            extract("month", Worklog.work_date) == month,
+            extract("year", Worklog.work_date) == year,
+        )
+        .all()
+    )
+
+    if not worklogs:
+        raise ValueError(
+            f"אין דיווחים מאושרים לספק {supplier_id} / פרויקט {project_id} "
+            f"בחודש {month}/{year}"
+        )
+
+    # קבץ לפי ציוד
+    by_equipment: dict = {}
+    for wl in worklogs:
+        key = wl.equipment_id or 0
+        by_equipment.setdefault(key, []).append(wl)
+
+    # חשב סכום כולל
+    subtotal = sum(float(wl.cost_before_vat or wl.total_amount or 0) for wl in worklogs)
+    vat_pct = float(worklogs[0].vat_rate or 0.17) if worklogs else 0.17
+    tax_amount = round(subtotal * vat_pct, 2)
+    total_amount = round(subtotal + tax_amount, 2)
+
+    # מספר חשבונית
+    invoice_count = db.query(Invoice).count()
+    invoice_number = f"INV-{year}{month:02d}-{invoice_count + 1:04d}"
+
+    invoice = Invoice(
+        invoice_number=invoice_number,
+        supplier_id=supplier_id,
+        project_id=project_id,
+        status="DRAFT",
+        created_by=created_by,
+        issue_date=dt_date.today(),
+        due_date=dt_date.today().replace(day=1),  # תאריך לתשלום ידני
+        subtotal=subtotal,
+        tax_amount=tax_amount,
+        total_amount=total_amount,
+    )
+    db.add(invoice)
+    db.flush()
+
+    # צור invoice_items לפי ציוד
+    line = 1
+    for eq_id, wls in by_equipment.items():
+        paid_hours_total = sum(float(w.paid_hours or w.hours_worked or 0) for w in wls)
+        overnight_total = sum(float(w.overnight_total or 0) for w in wls)
+        rate = float(wls[0].hourly_rate_snapshot or wls[0].hourly_rate or 0)
+        item_subtotal = round(paid_hours_total * rate + overnight_total, 2)
+        tax = round(item_subtotal * vat_pct, 2)
+
+        eq_name = ""
+        if wls[0].equipment:
+            eq = wls[0].equipment
+            eq_name = f"{getattr(eq, 'name', '')} {getattr(eq, 'license_plate', '') or ''}".strip()
+
+        item = InvoiceItem(
+            invoice_id=invoice.id,
+            line_number=line,
+            description=f"{eq_name} — {len(wls)} ימי עבודה",
+            quantity=paid_hours_total,
+            unit_price=rate,
+            total_price=item_subtotal,
+            discount_percent=0,
+            discount_amount=0,
+            subtotal=item_subtotal,
+            tax_rate=vat_pct,
+            tax_amount=tax,
+            total=item_subtotal + tax,
+            equipment_type_id=getattr(wls[0].equipment, 'equipment_type_id', None) if wls[0].equipment else None,
+        )
+        db.add(item)
+        line += 1
+
+        # סמן worklogs כ-INVOICED
+        for wl in wls:
+            wl.status = "INVOICED"
+
+    # שחרר הקפאת תקציב
+    try:
+        from app.services.budget_service import release_budget_freeze
+        # מחפש work_order_id מהראשון שיש לו
+        wo_ids = list({wl.work_order_id for wl in worklogs if wl.work_order_id})
+        for wo_id in wo_ids:
+            release_budget_freeze(wo_id, 0, db)  # actual amount יחושב מהחשבונית
+    except Exception:
+        pass
+
+    db.commit()
+    db.refresh(invoice)
+    return invoice
+
+
+def get_uninvoiced_suppliers(project_id: int, month: int, year: int, db: Session) -> list:
+    """
+    מחזיר רשימת ספקים עם דיווחים מאושרים שלא שויכו לחשבונית בחודש נתון.
+    """
+    from sqlalchemy import extract
+    from app.models.worklog import Worklog
+
+    rows = (
+        db.query(Worklog.supplier_id, Worklog.project_id)
+        .filter(
+            Worklog.project_id == project_id,
+            Worklog.status == "APPROVED",
+            extract("month", Worklog.work_date) == month,
+            extract("year", Worklog.work_date) == year,
+        )
+        .distinct()
+        .all()
+    )
+    return [{"supplier_id": r.supplier_id, "project_id": r.project_id} for r in rows]
+
+
+# ── Endpoint registration helper ──────────────────────────────────────────────
+# ה-endpoint נרשם ב-invoices.py עצמו (ראה שלב הבא)

@@ -105,25 +105,40 @@ export interface ProjectResponse {
   total_pages: number;
 }
 
+// In-flight deduplication: if the same request is already in-flight, reuse its promise
+const _inflight: Map<string, Promise<ProjectResponse>> = new Map();
+
 class ProjectService {
   /**
-   * קבלת רשימת פרויקטים
+   * קבלת רשימת פרויקטים — עם deduplication של קריאות כפולות
    */
-  async getProjects(filters: ProjectFilters = {}): Promise<ProjectResponse> {
-    try {
-      const response = await api.get('/projects', { params: filters });
-      // המרה מ-PaginatedResponse ל-ProjectResponse
-      return {
+  async getProjects(filters: ProjectFilters = {}, signal?: AbortSignal): Promise<ProjectResponse> {
+    const key = JSON.stringify(filters);
+
+    // If identical request is already in-flight, share its promise
+    if (_inflight.has(key)) {
+      return _inflight.get(key)!;
+    }
+
+    const promise = api.get('/projects', { params: filters, signal })
+      .then(response => ({
         projects: response.data.items || [],
         total: response.data.total || 0,
         page: response.data.page || 1,
         limit: response.data.page_size || 20,
         total_pages: response.data.pages || 1
-      };
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      throw error;
-    }
+      }))
+      .finally(() => {
+        _inflight.delete(key);
+      });
+
+    _inflight.set(key, promise);
+    return promise;
+  }
+
+  /** נקה cache בין פעולות (יצירה/עריכה/מחיקה) */
+  invalidateCache() {
+    _inflight.clear();
   }
 
   /**

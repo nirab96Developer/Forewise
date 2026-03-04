@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight, Eye, Map, ClipboardList, Clock,
-  Loader2, AlertCircle, DollarSign, CheckCircle2,
+  Loader2, AlertCircle, CheckCircle2,
   Calendar, User, TreeDeciduous, MapPin, ExternalLink, Package,
   FileText, Plus, ChevronLeft
 } from 'lucide-react';
@@ -128,8 +128,8 @@ const ProjectWorkspaceNew: React.FC = () => {
       setWorklogs(logs);
       
       // Calculate stats
-      const activeOrders = orders.filter(o => ['pending', 'approved', 'in_progress'].includes(o.status)).length;
-      const pendingOrders = orders.filter(o => o.status === 'pending').length;
+      const activeOrders = orders.filter(o => ['PENDING','APPROVED','APPROVED_AND_SENT','IN_PROGRESS','ACTIVE','SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(o.status?.toUpperCase())).length;
+      const pendingOrders = orders.filter(o => o.status?.toUpperCase() === 'PENDING').length;
       const openReports = logs.filter(l => ['draft', 'pending', 'submitted'].includes(l.status)).length;
       const pendingReports = logs.filter(l => l.status === 'pending').length;
       
@@ -261,7 +261,7 @@ const OverviewTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ proj
       {/* כרטיסי סטטיסטיקה - 2x2 */}
       <div className="grid grid-cols-2 gap-2">
         <StatCard 
-          icon={<DollarSign className="w-4 h-4 text-green-600" />}
+          icon={<span className="text-green-600 font-bold text-lg leading-none">₪</span>}
           label="תקציב"
           value={`${stats.budgetUsedPercent}%`}
           subtitle="נוצל"
@@ -290,22 +290,43 @@ const OverviewTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ proj
         />
       </div>
 
-      {/* מצב תקציב - קומפקטי */}
+      {/* מצב תקציב — מפורט */}
       <div className="bg-white rounded-xl border p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">תקציב</span>
-          <span className="text-lg font-bold">₪{stats.budgetTotal.toLocaleString()}</span>
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-semibold text-gray-700">מצב תקציב</span>
+          <span className="text-base font-bold text-gray-900">₪{stats.budgetTotal.toLocaleString()}</span>
         </div>
-        
+
+        {/* 4 שורות פירוט */}
+        <div className="space-y-1.5 text-xs mb-3">
+          <div className="flex justify-between">
+            <span className="text-gray-500">תקציב כולל:</span>
+            <span className="font-medium text-gray-800">₪{stats.budgetTotal.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-yellow-600">🟡 מוקפא (הזמנות פתוחות):</span>
+            <span className="font-medium text-yellow-700">₪{stats.budgetCommitted.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-green-600">🟢 נוצל (חשבוניות שולמו):</span>
+            <span className="font-medium text-green-700">₪{stats.budgetSpent.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between border-t border-gray-100 pt-1.5 mt-1.5">
+            <span className="font-semibold text-gray-700">זמין:</span>
+            <span className={`font-bold ${stats.budgetAvailable < 0 ? 'text-red-600' : 'text-green-700'}`}>
+              ₪{stats.budgetAvailable.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden flex">
-          <div className="bg-green-500 h-full" style={{ width: `${paidPercent}%` }} />
-          <div className="bg-yellow-400 h-full" style={{ width: `${committedPercent}%` }} />
+          <div className="bg-green-500 h-full transition-all" style={{ width: `${paidPercent}%` }} />
+          <div className="bg-yellow-400 h-full transition-all" style={{ width: `${committedPercent}%` }} />
         </div>
-        
-        <div className="flex justify-between mt-2 text-xs text-gray-500">
-          <span>🟢 שולם {paidPercent}%</span>
-          <span>🟡 מחוייב {committedPercent}%</span>
-          <span>⚪ פנוי {100 - paidPercent - committedPercent}%</span>
+        <div className="flex justify-between mt-1.5 text-xs text-gray-400">
+          <span>נוצל {paidPercent}%</span>
+          <span>מוקפא {committedPercent}%</span>
+          <span>פנוי {Math.max(0, 100 - paidPercent - committedPercent)}%</span>
         </div>
       </div>
 
@@ -587,25 +608,44 @@ const OrdersTab: React.FC<{ projectCode: string; projectId: number; orders: Work
   const navigate = useNavigate();
   
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'approved': return 'bg-blue-100 text-blue-800';
-      case 'in_progress': return 'bg-purple-100 text-purple-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
+    const s = status?.toUpperCase();
+    switch (s) {
+      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+      case 'APPROVED':
+      case 'APPROVED_AND_SENT':
+      case 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': return 'bg-blue-100 text-blue-800';
+      case 'IN_PROGRESS':
+      case 'ACTIVE': return 'bg-purple-100 text-purple-800';
+      case 'COMPLETED': return 'bg-green-100 text-green-800';
+      case 'CANCELLED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
   
   const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending': return 'ממתין';
-      case 'approved': return 'מאושר';
-      case 'in_progress': return 'בביצוע';
-      case 'completed': return 'הושלם';
-      case 'cancelled': return 'בוטל';
+    const s = status?.toUpperCase();
+    switch (s) {
+      case 'PENDING': return 'ממתין';
+      case 'APPROVED': return 'מאושר';
+      case 'APPROVED_AND_SENT': return 'אושר ונשלח';
+      case 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': return 'ספק אישר';
+      case 'IN_PROGRESS':
+      case 'ACTIVE': return 'בביצוע';
+      case 'COMPLETED': return 'הושלם';
+      case 'CANCELLED': return 'בוטל';
       default: return status;
     }
+  };
+
+  const isActiveOrder = (status: string) => {
+    const s = status?.toUpperCase();
+    return ['APPROVED', 'APPROVED_AND_SENT', 'ACTIVE', 'IN_PROGRESS', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(s);
+  };
+
+  const getBarColor = (pct: number) => {
+    if (pct >= 90) return 'bg-red-500';
+    if (pct >= 70) return 'bg-orange-400';
+    return 'bg-green-500';
   };
   
   return (
@@ -628,28 +668,57 @@ const OrdersTab: React.FC<{ projectCode: string; projectId: number; orders: Work
         </div>
       ) : (
         <div className="space-y-2">
-          {orders.map((order) => (
-            <div 
-              key={order.id}
-              onClick={() => navigate(`/work-orders/${order.id}`)}
-              className="bg-white rounded-xl border p-4 hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-900 truncate">{order.title}</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {order.supplier_name || 'ללא ספק'} • {new Date(order.work_start_date).toLocaleDateString('he-IL')}
-                  </p>
+          {orders.map((order) => {
+            const estimatedHours = order.estimated_hours ?? 0;
+            const usedHours = order.used_hours ?? 0;
+            const remainingHours = order.remaining_hours ?? Math.max(estimatedHours - usedHours, 0);
+            const pct = estimatedHours > 0 ? Math.min(Math.round((usedHours / estimatedHours) * 100), 100) : 0;
+            const daysRemaining = order.days_remaining ?? (remainingHours > 0 ? Math.round(remainingHours / 9 * 10) / 10 : 0);
+            const showBar = isActiveOrder(order.status) && estimatedHours > 0;
+            const isCritical = pct >= 90 && remainingHours < 9;
+
+            return (
+              <div 
+                key={order.id}
+                onClick={() => navigate(`/work-orders/${order.id}`)}
+                className="bg-white rounded-xl border p-4 hover:shadow-md transition-shadow cursor-pointer"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900 truncate">{order.title}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {order.supplier_name || 'ללא ספק'} • {new Date(order.work_start_date).toLocaleDateString('he-IL')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                      {getStatusLabel(order.status)}
+                    </span>
+                    <ChevronLeft className="w-4 h-4 text-gray-400" />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                    {getStatusLabel(order.status)}
-                  </span>
-                  <ChevronLeft className="w-4 h-4 text-gray-400" />
-                </div>
+
+                {showBar && (
+                  <div className="mt-3">
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>{usedHours}/{estimatedHours} שעות ({pct}%)</span>
+                      {isCritical ? (
+                        <span className="text-red-600 font-semibold">⚠️ נשאר פחות מיום!</span>
+                      ) : (
+                        <span className="text-gray-600">נשאר: {remainingHours.toFixed(1)} שעות ({daysRemaining} ימים)</span>
+                      )}
+                    </div>
+                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all ${getBarColor(pct)}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

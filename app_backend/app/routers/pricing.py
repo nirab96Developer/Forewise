@@ -158,6 +158,7 @@ class PricingReportItem(BaseModel):
     total_cost: float
     total_cost_with_vat: float
     worklog_count: int
+    unverified_count: int = 0   # worklogs with cost_before_vat but no hourly_rate_snapshot
 
 
 class PricingReportResponse(BaseModel):
@@ -190,13 +191,20 @@ async def get_pricing_report_by_project(
         func.sum(Worklog.total_hours).label("total_hours"),
         func.sum(Worklog.cost_before_vat).label("total_cost"),
         func.sum(Worklog.cost_with_vat).label("total_cost_with_vat"),
-        func.count(Worklog.id).label("worklog_count")
+        func.count(Worklog.id).label("worklog_count"),
+        # Count worklogs that have cost_before_vat but no hourly_rate_snapshot
+        func.count(
+            func.nullif(
+                Worklog.cost_before_vat.isnot(None) & Worklog.hourly_rate_snapshot.is_(None),
+                False
+            )
+        ).label("unverified_count"),
     ).join(
         Worklog, Worklog.project_id == Project.id
     ).filter(
         Worklog.cost_before_vat.isnot(None)  # Only worklogs with pricing
     )
-    
+
     # Apply filters
     if date_from:
         query = query.filter(Worklog.report_date >= date_from)
@@ -206,34 +214,54 @@ async def get_pricing_report_by_project(
         query = query.filter(Worklog.supplier_id == supplier_id)
     if status and status != "all":
         query = query.filter(Worklog.status == status)
-    
+
     query = query.group_by(Project.id, Project.name).order_by(func.sum(Worklog.cost_before_vat).desc())
-    
+
     results = query.all()
-    
+
+    # Fallback: fetch unverified counts via a separate simple query if needed
+    # (SQLAlchemy bool expression in nullif can be tricky — safer raw approach)
+    from sqlalchemy import text as _text
+    unverified_map: Dict[int, int] = {}
+    try:
+        urows = db.execute(_text("""
+            SELECT w.project_id, COUNT(*) as cnt
+            FROM worklogs w
+            WHERE w.cost_before_vat IS NOT NULL
+              AND w.hourly_rate_snapshot IS NULL
+            GROUP BY w.project_id
+        """)).fetchall()
+        unverified_map = {r.project_id: r.cnt for r in urows}
+    except Exception:
+        pass
+
     items = []
     total_hours = 0
     total_cost = 0
     total_cost_with_vat = 0
-    
+    total_unverified = 0
+
     for row in results:
         hours = float(row.total_hours or 0)
         cost = float(row.total_cost or 0)
         cost_vat = float(row.total_cost_with_vat or 0)
-        
+        unverified = unverified_map.get(row.id, 0)
+
         items.append(PricingReportItem(
             id=row.id,
             name=row.name or f"פרויקט {row.id}",
             total_hours=hours,
             total_cost=cost,
             total_cost_with_vat=cost_vat,
-            worklog_count=row.worklog_count
+            worklog_count=row.worklog_count,
+            unverified_count=unverified,
         ))
-        
+
         total_hours += hours
         total_cost += cost
         total_cost_with_vat += cost_vat
-    
+        total_unverified += unverified
+
     return PricingReportResponse(
         items=items,
         summary={
@@ -241,7 +269,8 @@ async def get_pricing_report_by_project(
             "total_hours": total_hours,
             "total_cost": total_cost,
             "total_cost_with_vat": total_cost_with_vat,
-            "average_hourly_rate": total_cost / total_hours if total_hours > 0 else 0
+            "average_hourly_rate": total_cost / total_hours if total_hours > 0 else 0,
+            "total_unverified_worklogs": total_unverified,
         }
     )
 

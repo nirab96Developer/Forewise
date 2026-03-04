@@ -238,9 +238,17 @@ const WorklogDetail: React.FC = () => {
                 {worklog.project_name && ` | ${worklog.project_name}`}
               </p>
             </div>
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(worklog.status)}`}>
-              {getStatusIcon(worklog.status)}
-              {getStatusText(worklog.status)}
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {worklog.is_overnight && (
+                <span className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                  🌙 שמירת לילה
+                  {(worklog.overnight_total ?? 0) > 0 && ` — ₪${Number(worklog.overnight_total).toLocaleString()}`}
+                </span>
+              )}
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(worklog.status)}`}>
+                {getStatusIcon(worklog.status)}
+                {getStatusText(worklog.status)}
+              </div>
             </div>
           </div>
         </div>

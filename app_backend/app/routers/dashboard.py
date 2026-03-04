@@ -840,3 +840,77 @@ async def get_region_areas_breakdown(
         })
 
     return result
+
+
+@router.get("/work-manager-summary")
+async def get_work_manager_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """
+    Weekly summary for WORK_MANAGER dashboard.
+    Returns real hours, active work orders, equipment in use.
+    """
+    now = datetime.now()
+    week_ago = now - timedelta(days=7)
+
+    # Hours this week (non-rejected worklogs by this user)
+    hours_this_week = db.execute(text("""
+        SELECT COALESCE(SUM(w.work_hours), 0)
+        FROM worklogs w
+        WHERE w.user_id = :uid
+          AND UPPER(w.status) != 'REJECTED'
+          AND w.is_active = true
+          AND w.created_at >= :since
+    """), {"uid": current_user.id, "since": week_ago}).scalar() or 0
+
+    # Active work orders created by or assigned to this user
+    active_wo = db.execute(text("""
+        SELECT COUNT(*)
+        FROM work_orders wo
+        WHERE wo.created_by_id = :uid
+          AND UPPER(wo.status) IN ('APPROVED','APPROVED_AND_SENT','ACTIVE','IN_PROGRESS',
+                                    'SUPPLIER_ACCEPTED_PENDING_COORDINATOR')
+          AND wo.deleted_at IS NULL
+          AND wo.is_active = true
+    """), {"uid": current_user.id}).scalar() or 0
+
+    # Equipment in use (from active work orders by this user)
+    equipment_in_use = db.execute(text("""
+        SELECT COUNT(DISTINCT wo.equipment_id)
+        FROM work_orders wo
+        WHERE wo.created_by_id = :uid
+          AND UPPER(wo.status) IN ('APPROVED','APPROVED_AND_SENT','ACTIVE','IN_PROGRESS',
+                                    'SUPPLIER_ACCEPTED_PENDING_COORDINATOR')
+          AND wo.equipment_id IS NOT NULL
+          AND wo.deleted_at IS NULL
+          AND wo.is_active = true
+    """), {"uid": current_user.id}).scalar() or 0
+
+    # Hours this month (for context)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0)
+    hours_this_month = db.execute(text("""
+        SELECT COALESCE(SUM(w.work_hours), 0)
+        FROM worklogs w
+        WHERE w.user_id = :uid
+          AND UPPER(w.status) != 'REJECTED'
+          AND w.is_active = true
+          AND w.created_at >= :since
+    """), {"uid": current_user.id, "since": month_start}).scalar() or 0
+
+    # Pending worklogs waiting for approval
+    pending_worklogs = db.execute(text("""
+        SELECT COUNT(*)
+        FROM worklogs w
+        WHERE w.user_id = :uid
+          AND UPPER(w.status) = 'SUBMITTED'
+          AND w.is_active = true
+    """), {"uid": current_user.id}).scalar() or 0
+
+    return {
+        "hours_this_week": float(hours_this_week),
+        "hours_this_month": float(hours_this_month),
+        "active_work_orders": int(active_wo),
+        "equipment_in_use": int(equipment_in_use),
+        "pending_worklogs": int(pending_worklogs),
+    }

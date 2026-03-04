@@ -16,7 +16,6 @@ import {
   Briefcase
 } from 'lucide-react';
 import projectService, { Project, ProjectFilters } from '../../services/projectService';
-import TreeLoader from '../../components/common/TreeLoader';
 
 const ProjectsClean: React.FC = () => {
   const navigate = useNavigate();
@@ -24,18 +23,23 @@ const ProjectsClean: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [myProjectsOnly, setMyProjectsOnly] = useState(false);
+  // Auto-enable "my projects only" for WORK_MANAGER — they should only see their assigned projects
+  const _userRole = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').role || ''; } catch { return ''; } })();
+  const [myProjectsOnly, setMyProjectsOnly] = useState(_userRole === 'WORK_MANAGER' || _userRole === 'FIELD_WORKER');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
+  // AbortController ref — cancels in-flight request when a newer one starts
+  const abortRef = React.useRef<AbortController | null>(null);
 
   const fetchProjects = async () => {
+    // Cancel any previous in-flight request
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      
       const filters: ProjectFilters = {
         search: searchTerm || undefined,
         status: filterStatus !== 'all' ? filterStatus : undefined,
@@ -43,24 +47,32 @@ const ProjectsClean: React.FC = () => {
         page: 1,
         per_page: 50
       };
-      
-      const response = await projectService.getProjects(filters);
+      const response = await projectService.getProjects(filters, signal);
+      if (signal.aborted) return; // Stale response — discard
       setProjects(response.projects);
     } catch (error: any) {
+      if (error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') return;
       console.error('Error fetching projects:', error);
       setError('שגיאה בטעינת הפרויקטים. אנא נסה שוב.');
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   };
-
-  // טעינה מחדש כשמשנים את החיפוש או הסינון
+  // Single effect: fetch immediately on mount, debounce on filter changes
+  const isMountRef = React.useRef(true);
   useEffect(() => {
+    if (isMountRef.current) {
+      // First render — fetch immediately, no debounce
+      isMountRef.current = false;
+      fetchProjects();
+      return;
+    }
+    // Filter changed — debounce 500ms
     const timeoutId = setTimeout(() => {
       fetchProjects();
     }, 500);
-
     return () => clearTimeout(timeoutId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filterStatus, myProjectsOnly]);
 
   // מיפוי סטטוסים בעברית + צבעים
@@ -93,10 +105,6 @@ const ProjectsClean: React.FC = () => {
     
     return matchesSearch && matchesStatus;
   });
-
-  if (loading) {
-    return <TreeLoader fullScreen />;
-  }
 
   if (error) {
     return (
@@ -174,7 +182,28 @@ const ProjectsClean: React.FC = () => {
         </div>
 
         {/* Projects Grid */}
-        {filteredProjects.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="animate-pulse bg-white rounded-2xl border border-gray-200 overflow-hidden" style={{ willChange: 'transform' }}>
+                <div className="h-1.5 bg-gray-200 rounded-t-2xl" />
+                <div className="p-5 space-y-3">
+                  <div className="flex justify-between">
+                    <div className="h-4 bg-gray-200 rounded w-3/5" />
+                    <div className="h-4 bg-gray-200 rounded w-14" />
+                  </div>
+                  <div className="h-3 bg-gray-100 rounded w-full" />
+                  <div className="h-3 bg-gray-100 rounded w-4/5" />
+                  <div className="flex gap-3 pt-2">
+                    <div className="h-3 bg-gray-100 rounded w-20" />
+                    <div className="h-3 bg-gray-100 rounded w-20" />
+                  </div>
+                </div>
+                <div className="h-10 bg-gray-50 border-t border-gray-100" />
+              </div>
+            ))}
+          </div>
+        ) : filteredProjects.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
             <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
@@ -203,9 +232,10 @@ const ProjectsClean: React.FC = () => {
               return (
               <div
                 key={project.id}
-                className={`bg-white rounded-2xl border-2 flex flex-col hover:shadow-lg transition-all duration-200 cursor-pointer group ${
+                className={`bg-white rounded-2xl border-2 flex flex-col hover:shadow-lg transition-shadow duration-200 cursor-pointer group ${
                   isActive ? 'border-green-100 hover:border-green-300' : 'border-gray-100 hover:border-gray-300'
                 }`}
+                style={{ willChange: 'transform' }}
                 onClick={() => navigate(`/projects/${project.code}/workspace`)}
               >
                 {/* Colored top strip */}

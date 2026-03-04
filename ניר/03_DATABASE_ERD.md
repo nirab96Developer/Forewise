@@ -2,7 +2,7 @@
 
 **Database:** `kkl_forest_prod`  
 **Engine:** PostgreSQL 16 + PostGIS  
-**Tables:** 54  
+**Tables:** 57+ (עדכני מרץ 2026)  
 
 ---
 
@@ -344,10 +344,10 @@ erDiagram
 ### 🌍 Geography
 | טבלה | שורות | תיאור |
 |------|-------|--------|
-| `regions` | 19 | מרחבים (צפון/מרכז/דרום + test) |
+| `regions` | 19 | מרחבים (צפון/מרכז/דרום) |
 | `areas` | 21 | אזורים בתוך מרחבים |
-| `locations` | 22 | נקודות מיקום פיזיות |
-| `departments` | 7 | מחלקות ארגוניות |
+| `locations` | 22 | נקודות מיקום פיזיות (polygon, geojson, center_lat/lng נוסף) |
+| `departments` | 3 | מחלקות: הנהלה / חשבונות / מנהלי עבודה (נוקו ב-2026) |
 | `forests` | 3 | יערות עם PostGIS geometry |
 | `forest_polygons` | 273 | פוליגוני יער מפורטים |
 
@@ -365,9 +365,10 @@ erDiagram
 ### 🔧 Work Execution
 | טבלה | שורות | תיאור |
 |------|-------|--------|
-| `work_orders` | 10 | הזמנות עבודה |
+| `work_orders` | 10+ | הזמנות עבודה |
 | `work_order_statuses` | 72 | סטטוסים (PENDING/DISTRIBUTING וכו') |
-| `worklogs` | 14 | דיווחי שעות |
+| `worklogs` | 22+ | דיווחי שעות + is_overnight, overnight_total, pdf_path |
+| `worklog_segments` | 0+ | פירוט סגמנטים (work/rest/idle/travel/overnight) |
 | `worklog_statuses` | 61 | סטטוסי worklog |
 | `equipment_scans` | 58 | סריקות ציוד בשטח |
 
@@ -388,7 +389,8 @@ erDiagram
 | `equipment` | 47 | יחידות ציוד |
 | `equipment_models` | 11 | דגמי ציוד |
 | `equipment_categories` | 10 | קטגוריות |
-| `equipment_types` | 23 | סוגי ציוד |
+| `equipment_types` | 23 | סוגי ציוד (hourly_rate + overnight_rate נוסף) |
+| `equipment_rate_history` | 0+ | **חדש** — היסטוריית שינויי תעריף |
 | `equipment_maintenance` | 78 | תחזוקה |
 | `equipment_assignments` | 0 | שיוכי ציוד |
 
@@ -398,15 +400,105 @@ erDiagram
 | `invoices` | 27 | חשבוניות |
 | `invoice_items` | 2 | פריטי חשבונית |
 | `invoice_payments` | 1 | תשלומים |
+| `budget_transfers` | 0+ | **עדכון** — requests/approve/reject בין אזורים |
 | `system_rates` | 6 | תעריפי מערכת |
+| `sync_queue` | 0+ | **חדש** — audit ל-offline sync (X-Offline-Sync header) |
 
 ### 📊 Reporting & Ops
 | טבלה | שורות | תיאור |
 |------|-------|--------|
-| `activity_logs` | 731 | לוג פעילות מלא |
+| `activity_logs` | 731+ | לוג פעילות מלא |
 | `activity_types` | 245 | סוגי פעילויות |
-| `notifications` | 7 | התראות |
+| `notifications` | 0 | התראות (נוקו — נמחקו כל הישנות לפני 2026-03-01) |
+| `audit_logs` | 0+ | **חדש** — שינוי סטטוס, SUSPEND, ROLE CHANGE |
 | `reports` | 12 | דוחות שמורים |
 | `report_runs` | 0 | הרצות דוחות |
 | `support_tickets` | 12 | כרטיסי תמיכה |
 | `support_ticket_comments` | 4 | תגובות |
+
+---
+
+## שינויי Schema — מרץ 2026
+
+### `users` — עמודות חדשות
+```sql
+ALTER TABLE users ADD COLUMN suspended_at          TIMESTAMP NULL;
+ALTER TABLE users ADD COLUMN suspension_reason      TEXT NULL;
+ALTER TABLE users ADD COLUMN scheduled_deletion_at  TIMESTAMP NULL;
+ALTER TABLE users ADD COLUMN previous_role_id       INTEGER NULL REFERENCES roles(id);
+-- status נורמל: ערכים = 'active' | 'suspended' | 'deleted'
+```
+
+### `worklogs` — עמודות חדשות
+```sql
+ALTER TABLE worklogs ADD COLUMN is_overnight      BOOLEAN DEFAULT FALSE;
+ALTER TABLE worklogs ADD COLUMN overnight_nights  INTEGER DEFAULT 0;
+ALTER TABLE worklogs ADD COLUMN overnight_rate    NUMERIC(10,2) DEFAULT 0;
+ALTER TABLE worklogs ADD COLUMN overnight_total   NUMERIC(10,2) DEFAULT 0;
+ALTER TABLE worklogs ADD COLUMN net_hours         NUMERIC(5,2) DEFAULT 0;
+ALTER TABLE worklogs ADD COLUMN paid_hours        NUMERIC(5,2) DEFAULT 0;
+ALTER TABLE worklogs ADD COLUMN pdf_path          VARCHAR(500) NULL;
+ALTER TABLE worklogs ADD COLUMN pdf_generated_at  TIMESTAMP NULL;
+```
+
+### `worklog_segments` — טבלה חדשה
+```sql
+CREATE TABLE worklog_segments (
+    id              SERIAL PRIMARY KEY,
+    worklog_id      INTEGER NOT NULL REFERENCES worklogs(id) ON DELETE CASCADE,
+    segment_type    VARCHAR(50) NOT NULL, -- 'work'|'rest'|'idle'|'travel'|'overnight'
+    activity_type   VARCHAR(50),
+    start_time      TIME NOT NULL,
+    end_time        TIME NOT NULL,
+    duration_hours  NUMERIC(5,2),
+    payment_pct     INTEGER DEFAULT 100,
+    amount          NUMERIC(10,2) DEFAULT 0,
+    notes           TEXT,
+    created_at      TIMESTAMP DEFAULT NOW()
+);
+```
+
+### `equipment_types` — עמודות חדשות
+```sql
+ALTER TABLE equipment_types ADD COLUMN hourly_rate    NUMERIC(10,2) DEFAULT 0;
+ALTER TABLE equipment_types ADD COLUMN overnight_rate NUMERIC(10,2) DEFAULT 0;
+-- default_hourly_rate = עמודה ישנה = 100 (placeholder)
+-- hourly_rate = עמודה חדשה, 0 ברירת מחדל
+```
+
+### `equipment_rate_history` — טבלה חדשה
+```sql
+CREATE TABLE IF NOT EXISTS equipment_rate_history (
+    id                  SERIAL PRIMARY KEY,
+    equipment_type_id   INTEGER REFERENCES equipment_types(id),
+    old_rate            NUMERIC(10,2),
+    new_rate            NUMERIC(10,2),
+    changed_by          INTEGER REFERENCES users(id),
+    reason              TEXT,
+    effective_date      DATE DEFAULT CURRENT_DATE,
+    created_at          TIMESTAMP DEFAULT NOW()
+);
+```
+
+### `locations` — עמודות חדשות
+```sql
+ALTER TABLE locations ADD COLUMN IF NOT EXISTS polygon    JSONB;
+ALTER TABLE locations ADD COLUMN IF NOT EXISTS geojson    JSONB;
+ALTER TABLE locations ADD COLUMN IF NOT EXISTS center_lat FLOAT;
+ALTER TABLE locations ADD COLUMN IF NOT EXISTS center_lng FLOAT;
+```
+
+### `audit_logs` — טבלה חדשה
+```sql
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    table_name  VARCHAR(100) NOT NULL,
+    record_id   INTEGER,
+    action      VARCHAR(50) NOT NULL,
+    old_values  JSONB,
+    new_values  JSONB,
+    ip_address  VARCHAR(45),
+    created_at  TIMESTAMP DEFAULT NOW()
+);
+```

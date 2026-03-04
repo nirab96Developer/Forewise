@@ -35,6 +35,38 @@ router = APIRouter(prefix="/work-orders", tags=["Work Orders"])
 work_order_service = WorkOrderService()
 
 
+def _enrich_hours(work_order, db: Session) -> dict:
+    """Compute used/remaining hours from non-rejected worklogs."""
+    from sqlalchemy import text
+    try:
+        row = db.execute(text("""
+            SELECT COALESCE(SUM(work_hours), 0) as used
+            FROM worklogs
+            WHERE work_order_id = :wid AND UPPER(status) != 'REJECTED'
+              AND is_active = true
+        """), {"wid": work_order.id}).first()
+        used = float(row.used) if row and row.used else 0.0
+        estimated = float(work_order.estimated_hours or 0)
+        remaining = max(estimated - used, 0)
+        return {
+            "used_hours": used,
+            "remaining_hours": remaining,
+            "days_total": round(estimated / 9, 1) if estimated else None,
+            "days_used": round(used / 9, 1),
+            "days_remaining": round(remaining / 9, 1),
+        }
+    except Exception:
+        return {}
+
+
+def _to_response(work_order, db: Session) -> dict:
+    """Serialize WorkOrder ORM object + inject computed hours."""
+    from pydantic import TypeAdapter
+    d = WorkOrderResponse.model_validate(work_order).model_dump()
+    d.update(_enrich_hours(work_order, db))
+    return d
+
+
 @router.get("", response_model=WorkOrderList)
 def list_work_orders(
     search: Annotated[WorkOrderSearch, Depends()],
@@ -56,8 +88,9 @@ def list_work_orders(
         
         total_pages = (total + search.page_size - 1) // search.page_size if total > 0 else 1
         
+        enriched = [_to_response(wo, db) for wo in work_orders]
         return WorkOrderList(
-            items=work_orders,
+            items=enriched,
             total=total,
             page=search.page,
             page_size=search.page_size,
@@ -132,7 +165,7 @@ def get_work_order(
         if not work_order:
             raise NotFoundException("WorkOrder not found")
 
-        return work_order
+        return _to_response(work_order, db)
 
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

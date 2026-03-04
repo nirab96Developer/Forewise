@@ -1,513 +1,399 @@
-
-import React, { useState, useEffect } from "react";
+// src/pages/Support/Support.tsx
+// ניהול קריאות תמיכה — WhatsApp style
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Send, Plus,
-  CheckCircle, Clock,
-  X, HelpCircle, Mail,
-  MessageSquare, ChevronDown
-} from "lucide-react";
-import supportTicketService from "../../services/supportTicketService";
+  MessageSquare, CheckCircle2, Clock, AlertCircle,
+  Send, RefreshCw, ChevronRight, X, User, Shield,
+} from 'lucide-react';
+import api from '../../services/api';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type TicketStatus = 'open' | 'in_progress' | 'resolved';
 
 interface Ticket {
   id: number;
+  ticket_number: string;
   title: string;
   description: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: TicketStatus;
+  priority: string;
   category: string;
+  user_id: number;
   created_at: string;
-  messages: { text: string; sender: 'user' | 'support'; time: string; userName?: string }[];
+  updated_at: string;
+  // enriched
+  user_name?: string;
 }
 
-interface NewTicketForm {
-  title: string;
-  description: string;
-  category: string;
-  priority: string;
+interface Comment {
+  id: number;
+  ticket_id: number;
+  user_id: number;
+  user_name: string;
+  is_staff: boolean;
+  content: string;
+  created_at: string;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const STATUS_LABEL: Record<TicketStatus, string> = {
+  open: 'פתוחה',
+  in_progress: 'בטיפול',
+  resolved: 'טופלה',
+};
+
+const STATUS_COLOR: Record<TicketStatus, string> = {
+  open: 'bg-red-100 text-red-700',
+  in_progress: 'bg-yellow-100 text-yellow-700',
+  resolved: 'bg-green-100 text-green-700',
+};
+
+const STATUS_DOT: Record<TicketStatus, string> = {
+  open: 'bg-red-500',
+  in_progress: 'bg-yellow-400',
+  resolved: 'bg-green-500',
+};
+
+const fmtDate = (iso: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+};
+
+const fmtTime = (iso: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const Support: React.FC = () => {
-  const [myTickets, setMyTickets] = useState<Ticket[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [showNewTicket, setShowNewTicket] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
-  const [userName, setUserName] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
-  
-  const [newTicketForm, setNewTicketForm] = useState<NewTicketForm>({
-    title: "",
-    description: "",
-    category: "general",
-    priority: "medium"
-  });
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [selected, setSelected] = useState<Ticket | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [reply, setReply] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  // קבלת נתוני המשתמש
+  const currentUser = useRef({ id: 0, name: '', role: '' });
+
   useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        setUserName(userData.name || userData.full_name || "משתמש");
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
-    }
+    try {
+      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      currentUser.current = { id: u.id || 0, name: u.full_name || u.name || '', role: u.role || '' };
+    } catch {}
   }, []);
 
-  // טעינת פניות - ADMIN רואה הכל, שאר המשתמשים רואים רק שלהם
-  useEffect(() => {
-    loadTickets();
-  }, []);
+  const isAdmin = currentUser.current.role === 'ADMIN';
 
-  const loadTickets = async () => {
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  const loadTickets = useCallback(async () => {
+    setLoading(true);
     try {
-      // Admin gets all tickets via GET /support-tickets/
-      // Regular users are filtered server-side by user_id
-      const data = await supportTicketService.getTickets();
-      const tickets = (data?.tickets || []).map((t: any) => ({
-        ...t,
-        messages: t.messages || t.comments || [],
-      }));
-      setMyTickets(tickets);
-    } catch (error) {
-      console.error("Error loading tickets:", error);
-      setMyTickets([]);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'resolved': return 'bg-green-100 text-green-800 border-green-200';
-      case 'closed': return 'bg-gray-100 text-gray-800 border-gray-200';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'open': return 'פתוח';
-      case 'in_progress': return 'בטיפול';
-      case 'resolved': return 'נפתר';
-      case 'closed': return 'סגור';
-      default: return status;
-    }
-  };
-
-  const getCategoryText = (category: string) => {
-    switch (category) {
-      case 'technical': return 'תקלה טכנית';
-      case 'access': return 'בעיית גישה';
-      case 'feature': return 'בקשת פיצ\'ר';
-      case 'general': return 'שאלה כללית';
-      default: return category;
-    }
-  };
-
-  // שליחת פנייה חדשה
-  const submitNewTicket = async () => {
-    if (!newTicketForm.title.trim() || !newTicketForm.description.trim()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await supportTicketService.createTicket({
-        title: newTicketForm.title,
-        description: newTicketForm.description,
-        priority: newTicketForm.priority,
-        type: newTicketForm.category
+      const params = isAdmin ? {} : { user_id: currentUser.current.id };
+      const res = await api.get('/support-tickets', { params });
+      const items: Ticket[] = Array.isArray(res.data)
+        ? res.data
+        : res.data?.items || res.data?.tickets || [];
+      // Sort: open first, then by updated_at desc
+      items.sort((a, b) => {
+        const statusOrder: Record<TicketStatus, number> = { open: 0, in_progress: 1, resolved: 2 };
+        const sa = statusOrder[a.status as TicketStatus] ?? 3;
+        const sb = statusOrder[b.status as TicketStatus] ?? 3;
+        if (sa !== sb) return sa - sb;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       });
-      
-      setSuccessMessage("הפנייה נשלחה בהצלחה! נחזור אליך בהקדם.");
-      setNewTicketForm({ title: "", description: "", category: "general", priority: "medium" });
-      setShowNewTicket(false);
-      loadTickets();
-      
-      setTimeout(() => setSuccessMessage(""), 5000);
-    } catch (error) {
-      console.error("Error creating ticket:", error);
-      // Fallback - הודעה גם במקרה של שגיאה
-      setSuccessMessage("הפנייה נשלחה בהצלחה! נחזור אליך בהקדם.");
-      setNewTicketForm({ title: "", description: "", category: "general", priority: "medium" });
-      setShowNewTicket(false);
-      
-      setTimeout(() => setSuccessMessage(""), 5000);
+      setTickets(items);
+    } catch (err) {
+      console.error('Failed to load tickets', err);
+    } finally {
+      setLoading(false);
     }
+  }, [isAdmin]);
 
-    setIsSubmitting(false);
+  useEffect(() => { loadTickets(); }, [loadTickets]);
+
+  const loadComments = useCallback(async (ticketId: number) => {
+    try {
+      const res = await api.get(`/support-tickets/${ticketId}/comments`);
+      setComments(res.data || []);
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    } catch {}
+  }, []);
+
+  const openTicket = (ticket: Ticket) => {
+    setSelected(ticket);
+    setReply('');
+    loadComments(ticket.id);
   };
 
-  // טעינת הודעות לטיקט נבחר
-  const loadComments = async (ticketId: number) => {
+  const sendReply = async () => {
+    if (!reply.trim() || !selected) return;
+    setSending(true);
     try {
-      const comments = await supportTicketService.getComments(ticketId);
-      return (comments || []).map((c: any) => ({
-        text: c.content || c.comment_text,
-        sender: c.is_staff ? 'support' as const : 'user' as const,
-        time: c.created_at ? new Date(c.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }) : '',
-        userName: c.user_name || ''
-      }));
+      const res = await api.post(`/support-tickets/${selected.id}/comments`, { content: reply });
+      setComments(prev => [...prev, res.data]);
+      setReply('');
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch {
-      return [];
+      showToast('שגיאה בשליחת תגובה');
+    } finally {
+      setSending(false);
     }
   };
 
-  // בחירת טיקט - טוענת גם הודעות
-  const selectTicket = async (ticket: Ticket) => {
-    const messages = await loadComments(ticket.id);
-    setSelectedTicket({ ...ticket, messages });
-  };
-
-  // שליחת הודעה בפנייה קיימת
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedTicket) return;
-
+  const changeStatus = async (ticketId: number, newStatus: TicketStatus) => {
     try {
-      await supportTicketService.addComment(selectedTicket.id, newMessage);
-      
-      // רענון הודעות מה-DB
-      const messages = await loadComments(selectedTicket.id);
-      setSelectedTicket({ ...selectedTicket, messages, status: selectedTicket.status === 'open' ? 'in_progress' : selectedTicket.status });
-    } catch (error) {
-      console.error("Error sending message:", error);
-      // Fallback - עדכון מקומי
-      const updatedTicket = {
-        ...selectedTicket,
-        messages: [
-          ...(selectedTicket.messages || []),
-          { text: newMessage, sender: 'user' as const, time: new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }), userName: userName }
-        ]
-      };
-      setSelectedTicket(updatedTicket);
+      await api.patch(`/support-tickets/${ticketId}/status`, { status: newStatus });
+      setTickets(prev =>
+        prev.map(t => t.id === ticketId ? { ...t, status: newStatus } : t)
+      );
+      if (selected?.id === ticketId) {
+        setSelected(prev => prev ? { ...prev, status: newStatus } : prev);
+      }
+      showToast(newStatus === 'resolved' ? '✅ הקריאה סומנה כטופלה' : '🔄 סטטוס עודכן');
+    } catch {
+      showToast('שגיאה בעדכון סטטוס');
     }
-
-    setNewMessage("");
   };
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20" dir="rtl">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl text-white shadow-lg">
-              <HelpCircle className="w-7 h-7" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">מרכז תמיכה</h1>
-              <p className="text-gray-500">שלום {userName}, איך נוכל לעזור לך?</p>
-            </div>
-          </div>
-
-          {/* Contact Info */}
-          <div className="flex items-center gap-6 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <Mail className="w-4 h-4" />
-              <span>avitbulnir@gmail.com</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              <span>א'-ה' 08:00-17:00</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Success Message */}
-      {successMessage && (
-        <div className="max-w-4xl mx-auto px-6 pt-4">
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            <span className="text-green-800 font-medium">{successMessage}</span>
-          </div>
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Toast */}
+      {toastMsg && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[2000] bg-gray-800 text-white text-sm px-5 py-2.5 rounded-xl shadow-xl">
+          {toastMsg}
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* New Ticket Button */}
-        {!showNewTicket && !selectedTicket && (
-          <button
-            onClick={() => setShowNewTicket(true)}
-            className="w-full mb-8 p-6 bg-white rounded-2xl border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-blue-50/50 transition-all group"
-          >
-            <div className="flex items-center justify-center gap-3 text-blue-600 group-hover:text-blue-700">
-              <Plus className="w-6 h-6" />
-              <span className="text-lg font-medium">פתח פנייה חדשה</span>
-            </div>
-          </button>
-        )}
-
-        {/* New Ticket Form */}
-        {showNewTicket && (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">פנייה חדשה</h2>
-              <button
-                onClick={() => setShowNewTicket(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-all"
-              >
-                <X className="w-5 h-5 text-gray-500" />
+      <div className="flex h-screen">
+        {/* ── LEFT: Ticket List ── */}
+        <div className={`bg-white border-l border-gray-200 flex flex-col ${selected ? 'hidden md:flex w-80 flex-shrink-0' : 'flex-1 md:w-80 md:flex-none'}`}>
+          {/* Header */}
+          <div className="px-4 py-4 border-b border-gray-100 bg-green-600">
+            <div className="flex items-center justify-between">
+              <h1 className="text-white font-bold text-lg flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                קריאות תמיכה
+              </h1>
+              <button onClick={loadTickets} className="text-green-200 hover:text-white p-1.5 rounded-lg hover:bg-white/10">
+                <RefreshCw className="w-4 h-4" />
               </button>
             </div>
-
-            <div className="space-y-5">
-              {/* Category */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">סוג הפנייה</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { value: 'technical', label: 'תקלה טכנית', icon: '🔧' },
-                    { value: 'access', label: 'בעיית גישה', icon: '🔐' },
-                    { value: 'feature', label: 'בקשת פיצ\'ר', icon: '💡' },
-                    { value: 'general', label: 'שאלה כללית', icon: '❓' }
-                  ].map(cat => (
-                    <button
-                      key={cat.value}
-                      onClick={() => setNewTicketForm({ ...newTicketForm, category: cat.value })}
-                      className={`p-4 rounded-xl border-2 transition-all text-right ${
-                        newTicketForm.category === cat.value
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <span className="text-2xl mb-2 block">{cat.icon}</span>
-                      <span className="font-medium text-gray-800">{cat.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">נושא הפנייה</label>
-                <input
-                  type="text"
-                  value={newTicketForm.title}
-                  onChange={(e) => setNewTicketForm({ ...newTicketForm, title: e.target.value })}
-                  placeholder="תאר בקצרה את הבעיה..."
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">פירוט הבעיה</label>
-                <textarea
-                  value={newTicketForm.description}
-                  onChange={(e) => setNewTicketForm({ ...newTicketForm, description: e.target.value })}
-                  placeholder="ספר לנו יותר על הבעיה שאתה חווה..."
-                  rows={5}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                />
-              </div>
-
-              {/* Priority */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">דחיפות</label>
-                <div className="flex gap-3">
-                  {[
-                    { value: 'low', label: 'נמוכה', color: 'bg-green-100 text-green-700 border-green-200' },
-                    { value: 'medium', label: 'בינונית', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-                    { value: 'high', label: 'גבוהה', color: 'bg-red-100 text-red-700 border-red-200' }
-                  ].map(pri => (
-                    <button
-                      key={pri.value}
-                      onClick={() => setNewTicketForm({ ...newTicketForm, priority: pri.value })}
-                      className={`flex-1 py-3 rounded-xl border-2 font-medium transition-all ${
-                        newTicketForm.priority === pri.value
-                          ? pri.color + ' ring-2 ring-offset-2 ring-gray-300'
-                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
-                    >
-                      {pri.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                onClick={submitNewTicket}
-                disabled={isSubmitting || !newTicketForm.title.trim() || !newTicketForm.description.trim()}
-                className="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    שולח...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-5 h-5" />
-                    שלח פנייה
-                  </>
-                )}
-              </button>
+            <div className="flex gap-3 mt-2 text-xs text-green-200">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-red-400" />
+                {tickets.filter(t => t.status === 'open').length} פתוחות
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-yellow-300" />
+                {tickets.filter(t => t.status === 'in_progress').length} בטיפול
+              </span>
             </div>
           </div>
-        )}
 
-        {/* Selected Ticket - Conversation View */}
-        {selectedTicket && (
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden mb-8">
-            {/* Ticket Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6">
-              <button
-                onClick={() => setSelectedTicket(null)}
-                className="flex items-center gap-2 text-white/80 hover:text-white mb-4 text-sm"
-              >
-                <ChevronDown className="w-4 h-4 rotate-90" />
-                חזרה לרשימה
-              </button>
-              <h2 className="text-xl font-bold mb-2">{selectedTicket.title}</h2>
-              <div className="flex items-center gap-4 text-sm text-white/80">
-                <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(selectedTicket.status)}`}>
-                  {getStatusText(selectedTicket.status)}
-                </span>
-                <span>{getCategoryText(selectedTicket.category)}</span>
-                <span>{new Date(selectedTicket.created_at).toLocaleDateString('he-IL')}</span>
+          {/* List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
+            {loading ? (
+              <div className="flex items-center justify-center h-40 text-gray-400 text-sm">טוען...</div>
+            ) : tickets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-sm gap-2">
+                <MessageSquare className="w-8 h-8 opacity-30" />
+                אין קריאות תמיכה
               </div>
-            </div>
-
-            {/* Messages / Chat */}
-            <div className="h-80 overflow-y-auto p-6 space-y-4 bg-gray-50">
-              {/* תיאור הפנייה כהודעה ראשונה */}
-              <div className="flex justify-start">
-                <div className="max-w-[70%] px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-800">
-                  <p className="text-xs font-medium text-gray-500 mb-1">פנייה מקורית</p>
-                  <p className="text-sm">{selectedTicket.description}</p>
-                </div>
-              </div>
-              
-              {(selectedTicket.messages || []).map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.sender === 'user' ? 'justify-start' : 'justify-end'}`}
+            ) : (
+              tickets.map(ticket => (
+                <button
+                  key={ticket.id}
+                  onClick={() => openTicket(ticket)}
+                  className={`w-full text-right px-4 py-3.5 hover:bg-gray-50 transition-colors ${selected?.id === ticket.id ? 'bg-green-50 border-r-4 border-r-green-600' : ''}`}
                 >
-                  <div className={`max-w-[70%] px-4 py-3 rounded-2xl ${
-                    msg.sender === 'user'
-                      ? 'bg-white border border-gray-200 text-gray-800'
-                      : 'bg-blue-500 text-white'
-                  }`}>
-                    {msg.userName && (
-                      <p className={`text-xs font-medium mb-1 ${msg.sender === 'support' ? 'text-blue-100' : 'text-gray-500'}`}>
-                        {msg.sender === 'support' ? '🛡️ ' : ''}{msg.userName}
-                      </p>
-                    )}
-                    <p className="text-sm">{msg.text}</p>
-                    <p className="text-xs opacity-60 mt-1">{msg.time}</p>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${STATUS_DOT[ticket.status as TicketStatus] || 'bg-gray-400'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-mono text-gray-400">{ticket.ticket_number}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(ticket.updated_at).toLocaleDateString('he-IL')}
+                        </span>
+                      </div>
+                      <p className="font-medium text-gray-900 text-sm truncate">{ticket.title}</p>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{ticket.description}</p>
+                      <div className="flex items-center justify-between mt-1.5">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[ticket.status as TicketStatus] || 'bg-gray-100 text-gray-600'}`}>
+                          {STATUS_LABEL[ticket.status as TicketStatus] || ticket.status}
+                        </span>
+                        {ticket.user_name && (
+                          <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            {ticket.user_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mt-2" />
                   </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* ── RIGHT: Conversation Thread ── */}
+        {selected ? (
+          <div className="flex-1 flex flex-col bg-gray-50">
+            {/* Thread Header */}
+            <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shadow-sm">
+              <button
+                onClick={() => setSelected(null)}
+                className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-gray-400">{selected.ticket_number}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[selected.status as TicketStatus] || 'bg-gray-100 text-gray-600'}`}>
+                    {STATUS_LABEL[selected.status as TicketStatus] || selected.status}
+                  </span>
                 </div>
-              ))}
-              
-              {(selectedTicket.messages || []).length === 0 && (
-                <div className="text-center text-gray-400 text-sm py-8">
-                  אין הודעות עדיין. כתוב תגובה למטה 👇
+                <p className="font-semibold text-gray-900 text-sm truncate mt-0.5">{selected.title}</p>
+                <p className="text-xs text-gray-400">נפתח: {fmtDate(selected.created_at)}</p>
+              </div>
+              {/* Admin actions */}
+              {isAdmin && (
+                <div className="flex gap-2 flex-shrink-0">
+                  {selected.status !== 'in_progress' && selected.status !== 'resolved' && (
+                    <button
+                      onClick={() => changeStatus(selected.id, 'in_progress')}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-xs font-medium hover:bg-yellow-100 transition-colors"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      בטיפול
+                    </button>
+                  )}
+                  {selected.status !== 'resolved' && (
+                    <button
+                      onClick={() => changeStatus(selected.id, 'resolved')}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100 transition-colors"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      סגור וטפל
+                    </button>
+                  )}
+                  {selected.status === 'resolved' && (
+                    <button
+                      onClick={() => changeStatus(selected.id, 'open')}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      פתח מחדש
+                    </button>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Reply Input */}
-            {selectedTicket.status !== 'closed' && (
-              <div className="border-t border-gray-200 p-4 bg-white">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="text"
-                    placeholder="הקלד תגובה..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    onClick={sendMessage}
-                    disabled={!newMessage.trim()}
-                    className="p-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all disabled:opacity-50"
-                  >
-                    <Send className="w-5 h-5" />
-                  </button>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              {/* Original message */}
+              <div className="flex flex-col items-start">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-gray-600" />
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {selected.user_name || 'משתמש'} · {fmtDate(selected.created_at)}
+                  </span>
+                </div>
+                <div className="mr-9 bg-white text-gray-800 text-sm px-4 py-3 rounded-2xl rounded-tr-sm shadow-sm border border-gray-100 max-w-[80%]">
+                  <p className="whitespace-pre-line leading-relaxed">{selected.description}</p>
                 </div>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* My Tickets List */}
-        {!showNewTicket && !selectedTicket && (
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">הפניות שלי</h2>
-            
-            {myTickets.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <MessageSquare className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">אין פניות עדיין</h3>
-                <p className="text-gray-500 mb-6">לא פתחת עדיין פניות תמיכה</p>
+              {/* Comments */}
+              {comments.map(c => {
+                const isStaff = c.is_staff;
+                return (
+                  <div
+                    key={c.id}
+                    className={`flex flex-col ${isStaff ? 'items-end' : 'items-start'}`}
+                  >
+                    <div className={`flex items-center gap-2 mb-1 ${isStaff ? 'flex-row-reverse' : ''}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center ${isStaff ? 'bg-green-600' : 'bg-gray-300'}`}>
+                        {isStaff
+                          ? <Shield className="w-4 h-4 text-white" />
+                          : <User className="w-4 h-4 text-gray-600" />}
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {c.user_name} · {fmtTime(c.created_at)}
+                      </span>
+                    </div>
+                    <div
+                      className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm shadow-sm ${
+                        isStaff
+                          ? 'bg-green-600 text-white rounded-tl-sm ml-9'
+                          : 'bg-white text-gray-800 rounded-tr-sm mr-9 border border-gray-100'
+                      }`}
+                    >
+                      <p className="whitespace-pre-line leading-relaxed">{c.content}</p>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Reply input */}
+            {selected.status !== 'resolved' ? (
+              <div className="bg-white border-t border-gray-200 px-4 py-3 flex gap-2 items-end">
+                <textarea
+                  value={reply}
+                  onChange={e => setReply(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendReply();
+                    }
+                  }}
+                  placeholder="הקלד תגובה... (Enter לשליחה, Shift+Enter לשורה חדשה)"
+                  rows={2}
+                  className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-gray-50 resize-none"
+                />
                 <button
-                  onClick={() => setShowNewTicket(true)}
-                  className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all"
+                  onClick={sendReply}
+                  disabled={!reply.trim() || sending}
+                  className="p-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-40 transition-colors flex-shrink-0"
                 >
-                  פתח פנייה ראשונה
+                  {sending
+                    ? <RefreshCw className="w-4 h-4 animate-spin" />
+                    : <Send className="w-4 h-4" />}
                 </button>
               </div>
             ) : (
-              <div className="space-y-4">
-                {myTickets.map(ticket => (
-                  <div
-                    key={ticket.id}
-                    onClick={() => selectTicket(ticket)}
-                    className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-gray-900">{ticket.title}</h3>
-                          <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(ticket.status)}`}>
-                            {getStatusText(ticket.status)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-1">{ticket.description}</p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {new Date(ticket.created_at).toLocaleDateString('he-IL')}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MessageSquare className="w-3 h-3" />
-                            {(ticket.messages || []).length} הודעות
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronDown className="w-5 h-5 text-gray-400 -rotate-90" />
-                    </div>
-                  </div>
-                ))}
+              <div className="bg-green-50 border-t border-green-200 px-4 py-3 text-center">
+                <p className="text-green-700 text-sm flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  קריאה זו טופלה ונסגרה
+                </p>
               </div>
             )}
           </div>
-        )}
-
-        {/* FAQ Section */}
-        {!showNewTicket && !selectedTicket && (
-          <div className="mt-12">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">שאלות נפוצות</h2>
-            <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
-              {[
-                { q: "איך מדווחים שעות עבודה?", a: "נכנסים לפרויקט הרלוונטי ולוחצים על 'דווח שעות'" },
-                { q: "איך מבקשים ציוד לפרויקט?", a: "בעמוד הפרויקט, לוחצים על 'בקש ציוד' ובוחרים את הציוד הנדרש" },
-                { q: "למי פונים בבעיות דחופות?", a: "ניתן לשלוח מייל ל-avitbulnir@gmail.com או לפתוח פנייה דחופה כאן" }
-              ].map((faq, idx) => (
-                <div key={idx} className="p-5">
-                  <h4 className="font-medium text-gray-900 mb-1">{faq.q}</h4>
-                  <p className="text-sm text-gray-600">{faq.a}</p>
-                </div>
-              ))}
-            </div>
+        ) : (
+          <div className="hidden md:flex flex-1 items-center justify-center text-gray-400 flex-col gap-3 bg-gray-50">
+            <MessageSquare className="w-16 h-16 opacity-20" />
+            <p className="text-sm">בחר קריאה לצפייה בשיחה</p>
           </div>
         )}
       </div>

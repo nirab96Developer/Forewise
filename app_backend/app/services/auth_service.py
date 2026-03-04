@@ -40,6 +40,7 @@ class AuthService:
             "region_id": user.region_id,
             "area_id": user.area_id,
             "department_id": user.department_id,
+            "must_change_password": bool(getattr(user, "must_change_password", False)),
         }
 
     def _load_user(self, db: Session, user_id: int) -> Optional[User]:

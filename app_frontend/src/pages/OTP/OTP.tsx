@@ -216,8 +216,12 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         
         // עדכון הסטטוס של ההתחברות
         window.dispatchEvent(new Event('storage'));
-        
-        navigate('/', { replace: true });
+
+        if (result.user?.must_change_password) {
+          navigate('/change-password', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
       } else {
         setError('קוד OTP שגוי. אנא נסה שוב');
         setGlobalLoading(false);

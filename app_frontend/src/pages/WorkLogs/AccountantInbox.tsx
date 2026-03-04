@@ -40,6 +40,118 @@ const STATUS_LABEL: Record<string, { label: string; color: string; icon: React.R
 };
 const getStatus = (s: string | null) => STATUS_LABEL[s || 'submitted'] || STATUS_LABEL.submitted;
 
+// ─── Monthly Invoice Button ───────────────────────────────────────────────────
+const MonthlyInvoiceButton: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [projectId, setProjectId] = useState('');
+  const [supplierId, setSupplierId] = useState('');
+  const now = new Date();
+  const [month, setMonth] = useState(String(now.getMonth() + 1));
+  const [year, setYear] = useState(String(now.getFullYear()));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const loadData = async () => {
+    const [pRes, sRes] = await Promise.all([
+      api.get('/projects?limit=200').catch(() => ({ data: { items: [] } })),
+      api.get('/suppliers?limit=200').catch(() => ({ data: { items: [] } })),
+    ]);
+    setProjects(pRes.data?.items || pRes.data || []);
+    setSuppliers(sRes.data?.items || sRes.data || []);
+  };
+
+  const handleOpen = () => { setOpen(true); loadData(); };
+
+  const handleGenerate = async () => {
+    if (!projectId || !supplierId) { setMsg('בחר פרויקט וספק'); return; }
+    setSaving(true); setMsg('');
+    try {
+      const res = await api.post('/invoices/generate-monthly', {
+        project_id: Number(projectId),
+        supplier_id: Number(supplierId),
+        month: Number(month),
+        year: Number(year),
+      });
+      setMsg(`✅ ${res.data.message}`);
+      setTimeout(() => { setOpen(false); setMsg(''); }, 2500);
+    } catch (e: any) {
+      setMsg(`❌ ${e?.response?.data?.detail || 'שגיאה'}`);
+    }
+    setSaving(false);
+  };
+
+  return (
+    <>
+      <button onClick={handleOpen}
+        className="flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl">
+        <ReceiptText className="w-4 h-4" />
+        הפק חשבונית חודשית
+      </button>
+      {open && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" dir="rtl">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="font-bold text-gray-900">הפקת חשבונית חודשית</h2>
+              <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400">
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">חודש</label>
+                  <select value={month} onChange={e => setMonth(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-2 pr-2 pl-8 py-2 text-sm">
+                    {Array.from({length:12},(_,i)=>(
+                      <option key={i+1} value={i+1}>{i+1}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">שנה</label>
+                  <select value={year} onChange={e => setYear(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl px-2 pr-2 pl-8 py-2 text-sm">
+                    {[2024,2025,2026,2027].map(y=>(
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">פרויקט</label>
+                <select value={projectId} onChange={e => setProjectId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-3 pr-3 pl-10 py-2 text-sm">
+                  <option value="">בחר פרויקט...</option>
+                  {projects.map((p:any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">ספק</label>
+                <select value={supplierId} onChange={e => setSupplierId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-3 pr-3 pl-10 py-2 text-sm">
+                  <option value="">בחר ספק...</option>
+                  {suppliers.map((s:any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              {msg && <p className={`text-sm ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
+            </div>
+            <div className="flex gap-2 px-5 py-4 border-t border-gray-100">
+              <button onClick={handleGenerate} disabled={saving}
+                className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium rounded-xl text-sm">
+                {saving ? 'מפיק...' : '📄 הפק חשבונית'}
+              </button>
+              <button onClick={() => setOpen(false)}
+                className="px-4 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm">ביטול</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 const AccountantInbox: React.FC = () => {
   const navigate = useNavigate();
   const [worklogs, setWorklogs] = useState<WorklogRow[]>([]);
@@ -236,9 +348,12 @@ const AccountantInbox: React.FC = () => {
                 </p>
               </div>
             </div>
-            <button onClick={loadWorklogs} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500" title="רענן">
-              <RefreshCw className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <MonthlyInvoiceButton />
+              <button onClick={loadWorklogs} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500" title="רענן">
+                <RefreshCw className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 

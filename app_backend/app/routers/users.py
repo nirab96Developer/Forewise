@@ -163,3 +163,150 @@ def unlock_user(
     
     user = user_service.unlock_user(db, user_id)
     return user
+
+
+# ── Lifecycle endpoints ────────────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+from datetime import datetime as _dt, timedelta as _td
+from typing import Optional as _Opt
+
+
+class SuspendRequest(_BaseModel):
+    reason: str
+    deletion_years: _Opt[int] = 3
+
+
+class ChangeRoleRequest(_BaseModel):
+    role_id: int
+    region_id: _Opt[int] = None
+    area_id: _Opt[int] = None
+
+
+@router.put("/{user_id}/suspend")
+def suspend_user(
+    user_id: int,
+    body: SuspendRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """השהיית משתמש עם תאריך מחיקה מתוזמנת"""
+    require_permission(current_user, "users.edit")
+
+    user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="משתמש לא נמצא")
+
+    user.status = "suspended"
+    user.suspended_at = _dt.now()
+    user.suspension_reason = body.reason
+    user.scheduled_deletion_at = _dt.now() + _td(days=365 * body.deletion_years)
+    user.is_active = False
+
+    # בטל sessions פעילים
+    try:
+        from sqlalchemy import text as _text
+        db.execute(_text("DELETE FROM otp_tokens WHERE user_id = :uid"), {"uid": user_id})
+    except Exception:
+        pass
+
+    db.commit()
+    db.refresh(user)
+
+    # רשום audit
+    try:
+        from app.models.audit_log import AuditLog
+        db.add(AuditLog(
+            user_id=current_user.id, table_name="users", record_id=user_id,
+            action="SUSPEND",
+            new_values={"reason": body.reason, "scheduled_deletion_at": str(user.scheduled_deletion_at)},
+        ))
+        db.commit()
+    except Exception:
+        pass
+
+    return {
+        "id": user.id,
+        "status": user.status,
+        "suspended_at": user.suspended_at,
+        "scheduled_deletion_at": user.scheduled_deletion_at,
+        "message": "המשתמש הושהה בהצלחה",
+    }
+
+
+@router.put("/{user_id}/reactivate")
+def reactivate_user(
+    user_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """החזרת משתמש מושהה לפעילות"""
+    require_permission(current_user, "users.edit")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="משתמש לא נמצא")
+
+    user.status = "active"
+    user.is_active = True
+    user.suspended_at = None
+    user.suspension_reason = None
+    user.scheduled_deletion_at = None
+    db.commit()
+    return {"id": user.id, "status": user.status, "message": "המשתמש הופעל מחדש"}
+
+
+@router.put("/{user_id}/role")
+def change_user_role(
+    user_id: int,
+    body: ChangeRoleRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """שינוי תפקיד משתמש + ניקוי שיוכי פרויקטים ישנים"""
+    require_permission(current_user, "users.edit")
+
+    user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="משתמש לא נמצא")
+
+    # שמור previous role
+    user.previous_role_id = user.role_id
+    user.role_id = body.role_id
+    user.region_id = body.region_id
+    user.area_id = body.area_id
+
+    # בטל שיוכי פרויקטים ישנים
+    try:
+        from app.models.project_assignment import ProjectAssignment
+        db.query(ProjectAssignment).filter(
+            ProjectAssignment.user_id == user_id,
+            ProjectAssignment.is_active == True
+        ).update({"is_active": False}, synchronize_session=False)
+    except Exception:
+        pass
+
+    db.commit()
+    db.refresh(user)
+
+    # audit
+    try:
+        from app.models.audit_log import AuditLog
+        db.add(AuditLog(
+            user_id=current_user.id, table_name="users", record_id=user_id,
+            action="CHANGE_ROLE",
+            old_values={"role_id": user.previous_role_id},
+            new_values={"role_id": body.role_id, "region_id": body.region_id, "area_id": body.area_id},
+        ))
+        db.commit()
+    except Exception:
+        pass
+
+    return {
+        "id": user.id,
+        "role_id": user.role_id,
+        "previous_role_id": user.previous_role_id,
+        "region_id": user.region_id,
+        "area_id": user.area_id,
+        "message": "התפקיד עודכן בהצלחה",
+    }

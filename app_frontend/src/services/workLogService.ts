@@ -107,6 +107,15 @@ export interface WorkLog {
 
   // Segments
   segments?: WorkLogSegment[];
+
+  // Overnight
+  is_overnight?: boolean;
+  overnight_nights?: number;
+  overnight_rate?: number;
+  overnight_total?: number;
+  paid_hours?: number;
+  pdf_path?: string;
+  pdf_generated_at?: string;
 }
 
 export interface WorkLogCreate {

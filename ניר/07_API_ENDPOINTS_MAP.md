@@ -1,4 +1,4 @@
-# API Endpoints Map — כל ה-35 Routers
+# API Endpoints Map — כל ה-38 Routers (עדכני מרץ 2026)
 
 **Base URL:** `https://forewise.co/api/v1`  
 **Auth:** `Authorization: Bearer {access_token}`
@@ -43,6 +43,9 @@
 | PUT | `/users/{id}` | עדכון משתמש |
 | DELETE | `/users/{id}` | מחיקת משתמש |
 | GET | `/users/me` | המשתמש הנוכחי |
+| PUT | `/users/{id}/suspend` | **השהיית משתמש** — סיבה + scheduled_deletion_at |
+| PUT | `/users/{id}/reactivate` | **החזרת משתמש** — ביטול השהייה |
+| PUT | `/users/{id}/role` | **החלפת תפקיד** — שמירת previous_role_id |
 
 ---
 
@@ -169,7 +172,35 @@
 | GET | POST | PUT /{id} | DELETE /{id} |
 
 ### `/pricing`
-| GET /reports/by-project |
+| Method | Endpoint | תיאור |
+|--------|----------|--------|
+| POST | `/pricing/compute-cost` | חישוב עלות דיווח |
+| GET | `/pricing/rate-for-equipment-type/{id}` | תעריף לסוג כלי |
+| GET | `/pricing/simulate-days` | סימולציית עלות לימים |
+| GET | `/pricing/reports/by-project` | דוח עלויות לפי פרויקט + `unverified_count` |
+| GET | `/pricing/reports/by-supplier` | דוח עלויות לפי ספק |
+| GET | `/pricing/reports/by-equipment-type` | דוח עלויות לפי סוג כלי |
+
+### `/budget-transfers` (**חדש**)
+| Method | Endpoint | תיאור |
+|--------|----------|--------|
+| POST | `/budget-transfers/request` | בקשת העברת תקציב |
+| POST | `/budget-transfers/{id}/approve` | אישור העברה (מלא/חלקי) |
+| POST | `/budget-transfers/{id}/reject` | דחיית העברה |
+| GET | `/budget-transfers` | רשימת בקשות (per role) |
+
+### `/settings/equipment-rates` (**חדש**)
+| Method | Endpoint | תיאור |
+|--------|----------|--------|
+| GET | `/settings/equipment-rates` | תעריפים לפי equipment_type |
+| POST | `/settings/equipment-rates` | יצירת סוג ציוד חדש |
+| PATCH | `/settings/equipment-rates/{id}` | עדכון תעריף + רישום היסטוריה |
+| GET | `/settings/equipment-rates/{id}/history` | היסטוריית שינויי תעריף |
+
+### `/invoices` — עדכון
+נוספו:
+| POST | `/invoices/generate-monthly` | יצירת חשבונית חודשית מ-APPROVED worklogs |
+| GET | `/invoices/uninvoiced-suppliers` | ספקים עם worklogs לא מחויינים |
 
 ---
 

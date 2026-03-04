@@ -229,8 +229,12 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
           // המתנה קצרה נוספת כדי לוודא שה-globalLoading עודכן
           await new Promise(resolve => setTimeout(resolve, 50));
           
-          // ניווט לדף הבית
-          navigate('/', { replace: true });
+          // אם must_change_password — redirect לשינוי סיסמה
+          if (data.user?.must_change_password) {
+            navigate('/change-password', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
         } else {
           // אם אין user בנתונים
           setError('שגיאה בנתוני המשתמש');

@@ -12,7 +12,7 @@ export interface WorkOrder {
   equipment_type: string;
   work_start_date: string;
   work_end_date: string;
-  status: 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
+  status: string;
   priority: 'low' | 'medium' | 'high';
   estimated_hours?: number;
   hourly_rate?: number;
@@ -21,6 +21,12 @@ export interface WorkOrder {
   created_by?: number;
   approved_by?: number;
   approved_at?: string;
+  // Computed hours tracking
+  used_hours?: number;
+  remaining_hours?: number;
+  days_total?: number;
+  days_used?: number;
+  days_remaining?: number;
 }
 
 export interface WorkOrderCreate {

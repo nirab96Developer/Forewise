@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, List
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Unicode
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, Unicode
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -41,6 +41,12 @@ class User(BaseModel):
     is_locked: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    # Lifecycle / suspension fields
+    suspended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    suspension_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    scheduled_deletion_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    previous_role_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('roles.id', ondelete='SET NULL'), nullable=True)
 
     # Organization
     role_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('roles.id'), nullable=True)

@@ -12,6 +12,8 @@ import projectService from '../../services/projectService';
 import supplierService from '../../services/supplierService';
 import equipmentService from '../../services/equipmentService';
 import api from '../../services/api';
+import { saveOfflineWorkOrder } from '../../utils/offlineStorage';
+import { showToast } from '../../components/common/Toast';
 
 interface Project {
   id: number;
@@ -281,38 +283,49 @@ const NewWorkOrder: React.FC = () => {
     // הערות חובה רק בסבב הוגן אם רוצים, או אופציונלי תמיד
     // כרגע: הערות אופציונליות בשני המקרים
 
+    const workOrderData: WorkOrderCreate = {
+      title: `דרישת כלי: ${formData.tool_type} (${quantityNumber} יחידות)`,
+      description: formData.notes || `דרישת כלי ${formData.tool_type} לפרויקט ${selectedProject.name}`,
+      project_id: selectedProject.id,
+      supplier_id: formData.allocation_method === 'supplier_selection' && formData.supplier_id ? parseInt(formData.supplier_id.toString()) : undefined,
+      equipment_type: formData.tool_type,
+      work_start_date: formData.start_date,
+      work_end_date: endDate,
+      priority: 'medium',
+      estimated_hours: totalHours,
+      is_forced_selection: formData.allocation_method === 'supplier_selection',
+      constraint_reason_id: formData.allocation_method === 'supplier_selection' && formData.constraint_reason_id
+        ? parseInt(formData.constraint_reason_id.toString())
+        : undefined,
+      constraint_notes: formData.constraint_explanation?.trim() || undefined,
+      requires_guard: formData.requires_guard,
+      guard_days: formData.guard_days,
+    };
+
     try {
-      const workOrderData: WorkOrderCreate = {
-        title: `דרישת כלי: ${formData.tool_type} (${quantityNumber} יחידות)`,
-        description: formData.notes || `דרישת כלי ${formData.tool_type} לפרויקט ${selectedProject.name}`,
-        project_id: selectedProject.id,
-        supplier_id: formData.allocation_method === 'supplier_selection' && formData.supplier_id ? parseInt(formData.supplier_id.toString()) : undefined,
-        equipment_type: formData.tool_type,
-        work_start_date: formData.start_date,
-        work_end_date: endDate,
-        priority: 'medium',
-        estimated_hours: totalHours,
-        is_forced_selection: formData.allocation_method === 'supplier_selection',
-        constraint_reason_id: formData.allocation_method === 'supplier_selection' && formData.constraint_reason_id
-          ? parseInt(formData.constraint_reason_id.toString())
-          : undefined,
-        constraint_notes: formData.constraint_explanation?.trim() || undefined,
-        requires_guard: formData.requires_guard,
-        guard_days: formData.guard_days,
-      };
+      if (!navigator.onLine) {
+        await saveOfflineWorkOrder(workOrderData);
+        showToast('📋 ההזמנה נשמרה במכשיר — תועלה כשיחזור חיבור', 'info', 7000);
+        showToast('⚠️ זכור: אחרי סנכרון תצטרך לשלוח את ההזמנה לספק ידנית', 'warning', 8000);
+        setTimeout(() => navigate('/pending-sync'), 1800);
+        return;
+      }
 
       await workOrderService.createWorkOrder(workOrderData);
-      
-      if ((window as any).showToast) {
-        (window as any).showToast('דרישת הכלים נשלחה בהצלחה!', 'success');
-      }
-      
-      // After creating work order, always go to order coordination
+      showToast('דרישת הכלים נשלחה בהצלחה!', 'success');
       navigate('/order-coordination');
     } catch (error: any) {
-      console.error('Error creating work order:', error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'שגיאה ביצירת דרישת כלים';
-      setError(errorMessage);
+      if (!error.response) {
+        // Network error — save offline
+        await saveOfflineWorkOrder(workOrderData);
+        showToast('📋 ההזמנה נשמרה במכשיר — תועלה כשיחזור חיבור', 'info', 7000);
+        showToast('⚠️ זכור: אחרי סנכרון תצטרך לשלוח את ההזמנה לספק ידנית', 'warning', 8000);
+        setTimeout(() => navigate('/pending-sync'), 1800);
+      } else {
+        console.error('Error creating work order:', error);
+        const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'שגיאה ביצירת דרישת כלים';
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }

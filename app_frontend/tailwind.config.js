@@ -6,10 +6,10 @@ module.exports = {
       colors: {
         // 🎨 KKL Official Palette - Hilan Style
         // Primary Greens
-        "kkl-green": "#009557",
-        "kkl-green-dark": "#007A48",
+        "kkl-green": "#00994C",
+        "kkl-green-dark": "#007A3B",
         "kkl-green-light": "#DFF7EC",
-        "kkl-green-hover": "#007A48",
+        "kkl-green-hover": "#007A3B",
         
         // Neutrals
         "kkl-bg": "#F5F7F8",

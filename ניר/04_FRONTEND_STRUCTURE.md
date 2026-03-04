@@ -91,7 +91,6 @@ flowchart TB
             NEW_S["Suppliers/NewSupplier.tsx"]
             EDIT_S["Suppliers/EditSupplier.tsx\nTabbed: פרטים + כלים"]
             ADD_EQ["Suppliers/AddSupplierEquipment.tsx"]
-            UPD_RATE["Suppliers/UpdateSupplierEquipmentRate.tsx"]
             PORTAL["SupplierPortal/SupplierPortal.tsx\nחיצוני - ללא auth\nקבלה/דחייה הזמנה"]
         end
         subgraph EQ_P["Equipment"]
@@ -114,18 +113,21 @@ flowchart TB
             ROLES_P["Settings/RolesPermissions.tsx"]
             FAIR_R["Settings/FairRotation.tsx"]
             CONSTR["Settings/ConstraintReasons.tsx"]
-            EQ_CAT["Settings/EquipmentCatalog.tsx"]
+            EQ_CAT["Settings/EquipmentCatalog.tsx\n2 tabs: כרטיסים + תעריפים\nbadge תעריף על כרטיס"]
             WH["Settings/WorkHours.tsx"]
             SUPP_SET["Settings/SupplierSettings.tsx"]
         end
         subgraph OTHER_P["Other"]
-            USERS_P["Users/Users.tsx"]
+            USERS_P["Users/Users.tsx\nbadge מושהה/נמחק\nSuspendModal + ChangeRoleModal"]
             NEW_U["Users/NewUser.tsx"]
             EDIT_U["Users/EditUser.tsx"]
             NOTIFS["Notifications/Notifications.tsx"]
             ACTS["ActivityLog/ActivityLogNew.tsx"]
-            SUPPORT["Support/Support.tsx"]
-            REPORTS["Reports/PricingReports.tsx"]
+            SUPPORT["Support/Support.tsx\nWhatsApp style + הגב + סגור"]
+            REPORTS["Reports/PricingReports.tsx\nbadge unverified_count\nבאנר missing_rate_source"]
+            BUDG_TRANS["Budget/BudgetTransfers.tsx\nROLE: AREA_MANAGER + REGION_MANAGER"]
+            PEND_SYNC["PendingSync/PendingSync.tsx\nממתינים לסנכרון"]
+            CH_PASS["Login/ChangePassword.tsx\nמסך שינוי סיסמה חובה"]
         end
     end
 
@@ -146,12 +148,12 @@ flowchart TB
             INP["common/Input.tsx"]
             SEL["common/Select.tsx"]
             BADGE["common/Badge.tsx"]
-            STATUS["common/StatusBadge.tsx"]
             LOADER["common/UnifiedLoader.tsx\nTreeLoader\nPageLoader"]
             DATE_P["common/DatePicker.tsx"]
             TABS["common/Tabs.tsx"]
             SKEL["common/Skeleton.tsx"]
             EMPTY["common/EmptyState.tsx"]
+            OFFLINE_BNR["OfflineBanner.tsx\nפס כתום כשאין חיבור"]
         end
         subgraph EQ_C["Equipment Components"]
             QR["equipment/QRScanner.tsx\ncamera-based scan"]
@@ -204,7 +206,7 @@ flowchart TB
         STATUS_U["utils/statusTranslation.ts"]
         USE_API["hooks/useApi.ts"]
         USE_MOBILE["hooks/useIsMobile.ts"]
-        USE_OFFLINE["hooks/useOffline.ts\nService Worker\ncache strategies"]
+        USE_OFFLINE["hooks/useOfflineSync.ts\nauto-sync on reconnect\nIndexedDB queue"]
         USE_WS["hooks/useWebSocket.ts\nWebSocket client"]
         USE_AUTH["hooks/useAuth.ts"]
         MENU_CFG["config/menuConfig.ts\nתפריט לפי role"]
@@ -225,13 +227,34 @@ flowchart TB
 
 ## pages/ — תיאור מלא של כל דף
 
+---
+
+## שינויים בקבצי Pages — מרץ 2026
+
+### נמחקו
+| קובץ | סיבה |
+|------|-------|
+| `Suppliers/UpdateSupplierEquipmentRate.tsx` | Dead link — אין route פעיל אליו |
+| `components/common/StatusBadge.tsx` | קובץ ריק לחלוטין |
+| `Settings/EquipmentRates.tsx` | מוזג לתוך `EquipmentCatalog.tsx` (tab "תעריפים") |
+
+### נוספו
+| קובץ | נתיב | תיאור |
+|------|------|--------|
+| `Login/ChangePassword.tsx` | `/change-password` | שינוי סיסמה חובה בכניסה ראשונה |
+| `Budget/BudgetTransfers.tsx` | `/budget-transfers` | בקשות העברת תקציב בין אזורים |
+| `PendingSync/PendingSync.tsx` | `/pending-sync` | רשימת פריטים ממתינים לסנכרון offline |
+
+---
+
 ### Auth Pages
 | דף | נתיב | תיאור |
 |----|------|--------|
 | Login | `/login` | טופס login, remember me, biometric button |
-| OTP | `/otp` | קוד 6 ספרות, countdown |
+| OTP | `/otp` | קוד 6 ספרות, countdown, redirect לChangePassword אם must_change_password |
 | ForgotPassword | `/forgot-password` | שליחת מייל reset |
 | ResetPassword | `/reset-password` | קביעת סיסמה חדשה עם token |
+| ChangePassword | `/change-password` | **חדש** — שינוי סיסמה חובה בכניסה ראשונה |
 
 ### Dashboard (9 variants)
 | דף | תפקיד | מה מציג |

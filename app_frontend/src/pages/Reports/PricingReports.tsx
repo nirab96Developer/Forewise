@@ -22,6 +22,7 @@ interface PricingReportItem {
   total_cost: number;
   total_cost_with_vat: number;
   worklog_count: number;
+  unverified_count: number;
 }
 
 interface PricingReportResponse {
@@ -31,7 +32,8 @@ interface PricingReportResponse {
     total_cost: number;
     total_cost_with_vat: number;
     average_hourly_rate: number;
-    [key: string]: number;
+    total_unverified_worklogs?: number;
+    [key: string]: number | undefined;
   };
 }
 
@@ -235,6 +237,14 @@ const PricingReports: React.FC = () => {
         {/* Data */}
         {!loading && !error && data && (
           <>
+            {/* Unverified rates banner */}
+            {(data.summary.total_unverified_worklogs ?? 0) > 0 && (
+              <div className="mb-4 flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+                ⚠️ {data.summary.total_unverified_worklogs} דיווחים ללא תעריף מאומת —
+                הסכומים המוצגים הם הערכה בלבד
+              </div>
+            )}
+
             {/* Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-white rounded-xl shadow-sm p-4">
@@ -303,8 +313,18 @@ const PricingReports: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {data.items.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
+                        <tr
+                          key={item.id}
+                          className={`hover:bg-gray-50 transition-colors ${item.unverified_count > 0 ? 'bg-orange-50/40' : ''}`}
+                        >
+                          <td className="px-4 py-3 font-medium text-gray-900">
+                            <span>{item.name}</span>
+                            {item.unverified_count > 0 && (
+                              <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5">
+                                ⚠️ {item.unverified_count} ללא אימות תעריף
+                              </span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-gray-600">{item.worklog_count}</td>
                           <td className="px-4 py-3 text-gray-600">{formatNumber(item.total_hours)}</td>
                           <td className="px-4 py-3 text-gray-900 font-medium">

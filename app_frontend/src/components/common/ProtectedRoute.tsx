@@ -49,6 +49,53 @@ export const usePermissions = () => useContext(PermissionContext);
 // ============================================================
 // Component
 // ============================================================
+// Read auth state synchronously from localStorage — no async needed
+function readAuthState(requiredPermission?: string, requiredRole?: string): AuthState {
+  try {
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    const userStr = localStorage.getItem('user');
+    let user: AuthUser | null = null;
+
+    if (userStr) {
+      try {
+        const parsed = JSON.parse(userStr);
+        if (parsed && (parsed.id || parsed.id === 0)) {
+          user = {
+            id: parsed.id.toString(),
+            name: parsed.name || parsed.full_name || '',
+            role: parsed.role || '',
+            permissions: parsed.permissions || []
+          };
+        }
+      } catch {
+        localStorage.removeItem('user');
+      }
+    }
+
+    if (!isAuthenticated || !user) {
+      return { status: 'unauthenticated', user: null, error: 'המשתמש לא מחובר' };
+    }
+
+    let access = true;
+    let error = '';
+    if (requiredPermission) {
+      access = hasPermission(requiredPermission);
+      if (!access) error = `חסרה הרשאה: ${requiredPermission}`;
+    } else if (requiredRole) {
+      const ur = normalizeRole(user.role || '');
+      const rr = normalizeRole(requiredRole);
+      access = ur === rr || ur === UserRole.ADMIN;
+      if (!access) error = 'נדרש תפקיד מתאים';
+    }
+
+    return access
+      ? { status: 'authenticated', user }
+      : { status: 'forbidden', user, error };
+  } catch {
+    return { status: 'unauthenticated', user: null, error: 'שגיאה בבדיקת ההרשאות' };
+  }
+}
+
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   redirectTo = "/login",
@@ -57,126 +104,37 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   showReadOnlyBanner = false,
 }) => {
   const location = useLocation();
-  const [authState, setAuthState] = useState<AuthState>({
-    status: 'checking',
-    user: null
-  });
-  
-  const isFirstRender = useRef(true);
-  const prevAuthStateRef = useRef<AuthState | null>(null);
 
+  // Lazy initial state — read auth synchronously on first render, no 'checking' phase
+  const [authState, setAuthState] = useState<AuthState>(() =>
+    readAuthState(requiredPermission, requiredRole)
+  );
+
+  const prevStatusRef = useRef(authState.status);
+
+  // Only re-check when auth events fire from other tabs, NOT on every pathname change
   useEffect(() => {
-    const checkAuth = () => {
-      try {
-        // בדיקת אותנטיקציה
-        const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-        
-        // בדיקת המשתמש
-        const userStr = localStorage.getItem('user');
-        let user: AuthUser | null = null;
-        
-        try {
-          if (userStr) {
-            const parsedUser = JSON.parse(userStr);
-            if (parsedUser && (parsedUser.id || parsedUser.id === 0)) {
-              user = {
-                id: parsedUser.id.toString(),
-                name: parsedUser.name || parsedUser.full_name || '',
-                role: parsedUser.role || '',
-                permissions: parsedUser.permissions || []
-              };
-            }
-          }
-        } catch (parseError) {
-          console.error('Error parsing user data:', parseError);
-          localStorage.removeItem('user');
-        }
-        
-        // לא מחובר
-        if (!isAuthenticated || !user) {
-          updateState({
-            status: 'unauthenticated',
-            user: null,
-            error: !isAuthenticated ? 'המשתמש לא מחובר' : 'פרטי המשתמש לא תקינים'
-          });
-          return;
-        }
-        
-        // בדיקת הרשאות
-        let hasAccess = true;
-        let errorMessage = '';
-        
-        // 1. בדיקת permission ספציפי
-        if (requiredPermission) {
-          hasAccess = hasPermission(requiredPermission);
-          if (!hasAccess) {
-            errorMessage = `חסרה הרשאה: ${requiredPermission}`;
-          }
-        }
-        // 2. בדיקת role (fallback)
-        else if (requiredRole) {
-          const userRole = normalizeRole(user.role || '');
-          const reqRole = normalizeRole(requiredRole);
-          hasAccess = userRole === reqRole || userRole === UserRole.ADMIN;
-          if (!hasAccess) {
-            errorMessage = 'נדרש תפקיד מתאים';
-          }
-        }
-        
-        // קביעת הסטייט הסופי
-        if (hasAccess) {
-          updateState({
-            status: 'authenticated',
-            user
-          });
-        } else {
-          updateState({
-            status: 'forbidden',
-            user,
-            error: errorMessage
-          });
-        }
-        
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        updateState({
-          status: 'unauthenticated',
-          user: null,
-          error: 'שגיאה בבדיקת ההרשאות'
-        });
+    const recheck = () => {
+      const next = readAuthState(requiredPermission, requiredRole);
+      if (next.status !== prevStatusRef.current ||
+          next.user?.id !== authState.user?.id) {
+        prevStatusRef.current = next.status;
+        setAuthState(next);
       }
     };
-    
-    const updateState = (newState: AuthState) => {
-      const prevState = prevAuthStateRef.current;
-      const hasChanged = !prevState || 
-        prevState.status !== newState.status ||
-        prevState.user?.id !== newState.user?.id ||
-        prevState.error !== newState.error;
-      
-      if (hasChanged) {
-        prevAuthStateRef.current = newState;
-        setAuthState(newState);
-      }
-      
-      if (isFirstRender.current) {
-        isFirstRender.current = false;
-      }
-    };
-    
-    checkAuth();
-    
-    const handleStorageChange = () => {
-      setTimeout(checkAuth, 50);
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-    
-  }, [requiredPermission, requiredRole, location.pathname]);
 
-  // מצב טעינה - לואדר יפה ומאוחד
-  if (authState.status === 'checking' && isFirstRender.current) {
+    window.addEventListener('storage', recheck);
+    window.addEventListener('auth-change', recheck);
+    return () => {
+      window.removeEventListener('storage', recheck);
+      window.removeEventListener('auth-change', recheck);
+    };
+  // requiredPermission and requiredRole are stable (passed as string literals from routes)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requiredPermission, requiredRole]);
+
+  // מצב טעינה (shouldn't happen with lazy init, but kept as safety net)
+  if (authState.status === 'checking') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="relative">

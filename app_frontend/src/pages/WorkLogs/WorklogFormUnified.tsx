@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Calendar, Save, Building2, AlertCircle, Loader2, Plus, Trash2, Moon } from 'lucide-react';
 import api from '../../services/api';
+import { saveOfflineWorklog } from '../../utils/offlineStorage';
+import { showToast } from '../../components/common/Toast';
 import projectService from '../../services/projectService';
 
 interface Project {
@@ -246,29 +248,36 @@ const WorklogFormUnified: React.FC = () => {
     setLoading(true);
     setError(null);
     
+    const payload = {
+      project_id: formData.project_id,
+      work_order_id: formData.work_order_id,
+      equipment_id: formData.equipment_id,
+      work_date: formData.work_date,
+      is_standard: !isNonStandard,
+      total_hours: totals.totalPresence,
+      billable_hours: totals.totalBillable,
+      break_hours: totals.restHours,
+      activity_type: formData.activity,
+      description: formData.description,
+      notes: formData.notes,
+      equipment_scanned: !!equipmentIdParam,
+      segments: isNonStandard ? segments.map(s => ({
+        type: s.type,
+        start_time: s.start_time,
+        end_time: s.end_time,
+        hours: calculateSegmentHours(s.start_time, s.end_time),
+        notes: s.notes
+      })) : undefined
+    };
+
     try {
-      const payload = {
-        project_id: formData.project_id,
-        work_order_id: formData.work_order_id,
-        equipment_id: formData.equipment_id,
-        work_date: formData.work_date,
-        is_standard: !isNonStandard,
-        total_hours: totals.totalPresence,
-        billable_hours: totals.totalBillable,
-        break_hours: totals.restHours,
-        activity_type: formData.activity,
-        description: formData.description,
-        notes: formData.notes,
-        equipment_scanned: !!equipmentIdParam,
-        segments: isNonStandard ? segments.map(s => ({
-          type: s.type,
-          start_time: s.start_time,
-          end_time: s.end_time,
-          hours: calculateSegmentHours(s.start_time, s.end_time),
-          notes: s.notes
-        })) : undefined
-      };
-      
+      if (!navigator.onLine) {
+        await saveOfflineWorklog(payload);
+        showToast('✅ הדיווח נשמר במכשיר — יועלה כשיחזור חיבור', 'success', 6000);
+        setTimeout(() => navigate('/projects'), 1500);
+        return;
+      }
+
       await api.post('/worklogs', payload);
       setSuccess(true);
       
@@ -281,8 +290,15 @@ const WorklogFormUnified: React.FC = () => {
       }, 1500);
       
     } catch (err: any) {
-      console.error('Error submitting worklog:', err);
-      setError(err.response?.data?.detail || 'שגיאה בשמירת הדיווח');
+      // Network error — save offline
+      if (!err.response) {
+        await saveOfflineWorklog(payload);
+        showToast('✅ הדיווח נשמר במכשיר — יועלה כשיחזור חיבור', 'success', 6000);
+        setTimeout(() => navigate('/projects'), 1500);
+      } else {
+        console.error('Error submitting worklog:', err);
+        setError(err.response?.data?.detail || 'שגיאה בשמירת הדיווח');
+      }
     } finally {
       setLoading(false);
     }

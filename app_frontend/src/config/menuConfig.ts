@@ -143,7 +143,7 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
   [UserRole.ADMIN]: {
     items: [
       "dashboard", "projects", "orderCoordination",
-      "invoices", "equipment", "reports", "map",
+      "invoices", "reports", "map",
       "activityLog", "settings"
     ],
     dividerAfter: ["dashboard", "map"],
@@ -157,8 +157,8 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
     dividerAfter: ["dashboard", "map"],
   },
   [UserRole.WORK_MANAGER]: {
-    items: ["dashboard", "projects", "equipmentScan", "activityLog"],
-    dividerAfter: ["dashboard", "equipmentScan"],
+    items: ["dashboard", "projects", "activityLog"],
+    dividerAfter: ["dashboard"],
   },
   [UserRole.ORDER_COORDINATOR]: {
     items: ["dashboard", "orderCoordination", "activityLog", "settings"],
@@ -169,11 +169,11 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
     dividerAfter: ["dashboard"],
   },
   [UserRole.SUPPLIER_MANAGER]: {
-    items: ["dashboard", "equipment", "activityLog", "settings"],
+    items: ["dashboard", "activityLog", "settings"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.FIELD_WORKER]: {
-    items: ["dashboard", "projects", "equipmentScan"],
+    items: ["dashboard", "projects"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.SUPPLIER]: {
@@ -199,7 +199,6 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
   MENU_ITEM_POOL.orderCoordination,
   MENU_ITEM_POOL.suppliers,
   MENU_ITEM_POOL.invoices,
-  MENU_ITEM_POOL.equipment,
   MENU_ITEM_POOL.reports,
   MENU_ITEM_POOL.map,
   MENU_ITEM_POOL.activityLog,
