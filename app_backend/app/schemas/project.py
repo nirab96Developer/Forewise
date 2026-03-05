@@ -4,7 +4,29 @@ Project schemas
 
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+
+
+# ── Nested basic schemas ────────────────────────────────────────────────────
+
+class RegionBasic(BaseModel):
+    id: int
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AreaBasic(BaseModel):
+    id: int
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserBasic(BaseModel):
+    id: int
+    full_name: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+# ───────────────────────────────────────────────────────────────────────────
 
 
 class ProjectBase(BaseModel):
@@ -63,11 +85,34 @@ class ProjectResponse(ProjectBase):
     updated_at: Optional[datetime] = None
     deleted_at: Optional[datetime] = None
     version: Optional[int] = 1
-    
+
+    # Nested objects (from ORM relationships)
+    region:       Optional[RegionBasic] = None
+    area:         Optional[AreaBasic]   = None
+    manager:      Optional[UserBasic]   = None
+    accountant:   Optional[UserBasic]   = None
+    area_manager: Optional[UserBasic]   = None
+
+    # Flat name aliases (populated in /code/{code} enriched endpoint)
+    region_name:  Optional[str] = None
+    area_name:    Optional[str] = None
+    manager_name: Optional[str] = None
+
     # Nested location (optional, loaded when needed)
     location: Optional[LocationBrief] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="after")
+    def _populate_name_aliases(self) -> "ProjectResponse":
+        """Auto-fill flat name fields from nested objects if not already set."""
+        if self.region and not self.region_name:
+            self.region_name = self.region.name
+        if self.area and not self.area_name:
+            self.area_name = self.area.name
+        if self.manager and not self.manager_name:
+            self.manager_name = self.manager.full_name
+        return self
 
 
 class ProjectBrief(BaseModel):

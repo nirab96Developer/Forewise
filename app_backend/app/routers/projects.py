@@ -27,10 +27,42 @@ def list_projects(
     current_user: Annotated[User, Depends(get_current_active_user)],
     my_projects: bool = False,
 ):
-    """List projects. Pass my_projects=true to filter by user assignments."""
+    """List projects filtered by the caller's role scope."""
     require_permission(current_user, "projects.read")
+
+    # ── Role-based scope filtering ──────────────────────────────────────────
+    role_code = current_user.role.code if current_user.role else ""
+
+    if role_code in ("ADMIN", "ORDER_COORDINATOR"):
+        # Full access — no extra filtering
+        pass
+
+    elif role_code == "REGION_MANAGER":
+        # Restrict to own region (unless caller already narrowed further)
+        if search.region_id is None and current_user.region_id:
+            search.region_id = current_user.region_id
+
+    elif role_code == "AREA_MANAGER":
+        # Restrict to own area
+        if search.area_id is None and current_user.area_id:
+            search.area_id = current_user.area_id
+        elif search.region_id is None and current_user.region_id:
+            search.region_id = current_user.region_id
+
+    elif role_code == "ACCOUNTANT":
+        # Area-level if area is set, otherwise region-level
+        if search.area_id is None and current_user.area_id:
+            search.area_id = current_user.area_id
+        elif search.region_id is None and current_user.region_id:
+            search.region_id = current_user.region_id
+
+    elif role_code == "WORK_MANAGER":
+        # Always show only assigned projects
+        my_projects = True
+    # ────────────────────────────────────────────────────────────────────────
+
     items, total = service.list(db, search)
-    
+
     if my_projects:
         from app.models.project_assignment import ProjectAssignment
         assigned_ids = {
@@ -41,7 +73,7 @@ def list_projects(
         }
         items = [p for p in items if p.id in assigned_ids]
         total = len(items)
-    
+
     total_pages = (total + search.page_size - 1) // search.page_size if total > 0 else 1
     return ProjectList(items=items, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
@@ -115,12 +147,87 @@ def get_by_code_alias(
             except (TypeError, ValueError):
                 result[col.name] = str(val)
     
-    # Add relationships
+    # Add relationships — nested objects + flat name aliases for frontend
     if item.region:
         result["region"] = {"id": item.region.id, "name": item.region.name}
+        result["region_name"] = item.region.name
     if item.area:
         result["area"] = {"id": item.area.id, "name": item.area.name}
-    
+        result["area_name"] = item.area.name
+
+    # Manager = WORK_MANAGER assigned to this project via project_assignments (raw SQL)
+    try:
+        wm_row = db.execute(
+            sa_text("""
+                SELECT u.id, u.full_name
+                FROM project_assignments pa
+                JOIN users u ON u.id = pa.user_id
+                JOIN roles r ON r.id = u.role_id
+                WHERE pa.project_id = :pid
+                  AND pa.is_active = TRUE
+                  AND r.code = 'WORK_MANAGER'
+                LIMIT 1
+            """),
+            {"pid": item.id},
+        ).fetchone()
+    except Exception as _wm_err:
+        import logging as _log
+        _log.getLogger("app").error(f"[get_by_code] manager query failed: {type(_wm_err).__name__}: {_wm_err}", exc_info=True)
+        wm_row = None
+    if wm_row:
+        result["manager"] = {"id": wm_row[0], "full_name": wm_row[1]}
+        result["manager_name"] = wm_row[1]
+    else:
+        result["manager"] = None
+        result["manager_name"] = None
+
+    # Accountant = ACCOUNTANT user in the same area (raw SQL)
+    try:
+        acc_row = db.execute(
+            sa_text("""
+                SELECT u.id, u.full_name
+                FROM users u
+                JOIN roles r ON r.id = u.role_id
+                WHERE r.code = 'ACCOUNTANT'
+                  AND u.area_id = :area_id
+                  AND u.is_active = TRUE
+                LIMIT 1
+            """),
+            {"area_id": item.area_id},
+        ).fetchone()
+    except Exception as _acc_err:
+        import logging as _log
+        _log.getLogger("app").error(f"[get_by_code] accountant query failed: {type(_acc_err).__name__}: {_acc_err}", exc_info=True)
+        acc_row = None
+    if acc_row:
+        result["accountant"] = {"id": acc_row[0], "full_name": acc_row[1]}
+    else:
+        result["accountant"] = None
+
+    # Area manager = AREA_MANAGER in the same area (raw SQL)
+    try:
+        am_row = db.execute(
+            sa_text("""
+                SELECT u.id, u.full_name
+                FROM users u
+                JOIN roles r ON r.id = u.role_id
+                WHERE r.code = 'AREA_MANAGER'
+                  AND u.area_id = :area_id
+                  AND u.is_active = TRUE
+                LIMIT 1
+            """),
+            {"area_id": item.area_id},
+        ).fetchone()
+    except Exception as _am_err:
+        import logging as _log
+        _log.getLogger("app").error(f"[get_by_code] area_manager query failed: {type(_am_err).__name__}: {_am_err}", exc_info=True)
+        am_row = None
+    if am_row:
+        result["area_manager"] = {"id": am_row[0], "full_name": am_row[1]}
+    else:
+        result["area_manager"] = None
+
+
     # Add budget info
     budget = db.query(Budget).filter(Budget.project_id == item.id, Budget.is_active == True).first()
     if budget:

@@ -26,18 +26,23 @@ const Invoices: React.FC = () => {
         setIsLoading(true);
         setError(null);
 
-        const [invoicesData, summaryData] = await Promise.all([
-          invoiceService.getInvoices().catch(() => []),
+        const [invoicesRaw, summaryData] = await Promise.all([
+          invoiceService.getInvoices({}).catch(() => []),
           invoiceService.getInvoiceSummary().catch(() => null)
         ]);
 
-        // Map invoices to ensure work_order_id is always a number
-        const mappedInvoices: Invoice[] = Array.isArray(invoicesData) 
-          ? invoicesData.map(inv => ({
-              ...inv,
-              work_order_id: inv.work_order_id ?? 0
-            }))
+        // Handle both array and { items: [...] } response shapes
+        const invoicesData: Invoice[] = Array.isArray(invoicesRaw)
+          ? invoicesRaw
+          : Array.isArray((invoicesRaw as any)?.items)
+          ? (invoicesRaw as any).items
           : [];
+
+        // Map invoices to ensure work_order_id is always a number
+        const mappedInvoices: Invoice[] = invoicesData.map(inv => ({
+          ...inv,
+          work_order_id: inv.work_order_id ?? 0
+        }));
         setInvoices(mappedInvoices);
         setSummary(summaryData);
         setIsLoading(false);
@@ -119,13 +124,13 @@ const Invoices: React.FC = () => {
 
         {/* Summary Cards */}
         {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm text-gray-500">סה"כ חשבוניות</div>
                   <div className="text-3xl font-semibold mt-2 text-gray-900">
-                    {summary.total_invoices || invoices.length}
+                    {summary.total ?? summary.total_invoices ?? invoices.length}
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
@@ -151,11 +156,29 @@ const Invoices: React.FC = () => {
                 <div>
                   <div className="text-sm text-gray-500">ממתין לתשלום</div>
                   <div className="text-3xl font-semibold mt-2 text-gray-900">
-                    ₪{new Intl.NumberFormat('he-IL').format(summary.pending_amount || 0)}
+                    ₪{new Intl.NumberFormat('he-IL').format(summary.balance_due ?? summary.pending_amount ?? 0)}
                   </div>
+                  {(summary.overdue_count ?? 0) > 0 && (
+                    <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                      {summary.overdue_count} באיחור
+                    </div>
+                  )}
                 </div>
                 <div className="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center">
                   <AlertCircle className="w-6 h-6 text-orange-600" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-gray-500">שולם</div>
+                  <div className="text-3xl font-semibold mt-2 text-green-700">
+                    ₪{new Intl.NumberFormat('he-IL').format(summary.paid_amount || 0)}
+                  </div>
+                </div>
+                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
               </div>
             </div>

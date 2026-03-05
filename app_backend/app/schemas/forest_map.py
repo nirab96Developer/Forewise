@@ -27,6 +27,8 @@ class ForestInfo(BaseModel):
     area_km2: Optional[float] = None
     geojson_preview: Dict[str, Any]
     geojson_full: Dict[str, Any]
+    center_lat: Optional[float] = None   # centroid of polygon
+    center_lng: Optional[float] = None   # centroid of polygon
 
 
 class ForestMapResponse(BaseModel):

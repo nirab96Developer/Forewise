@@ -27,7 +27,7 @@ flowchart TD
         GUARDED_R --> GEO_ROUTES["Geography\n/regions → Regions\n/regions/:id → RegionDetail\n/areas → Areas\n/areas/:id → AreaDetail\n/locations → LocationsClean\n/map → ForestMap"]
         GUARDED_R --> FIN_ROUTES["Finance\n/invoices → Invoices\n/budgets → Budgets\n/budgets/:id → BudgetDetail"]
         GUARDED_R --> USER_ROUTES["Users\n/users → Users\n/users/new → NewUser\n/users/:id/edit → EditUser"]
-        GUARDED_R --> OTHER_ROUTES["Other\n/notifications → Notifications\n/activity-log → ActivityLogNew\n/support → Support\n/reports → PricingReports\n/settings → SystemSettings\n/settings/roles → RolesPermissions\n/settings/fair-rotation → FairRotation\n..."]
+        GUARDED_R --> OTHER_ROUTES["Other\n/notifications → Notifications\n/activity-log → ActivityLogNew\n/support → Support\n/reports → PricingReports\n/settings → SystemSettings\n/settings/roles → RolesPermissions\n/settings/fair-rotation → FairRotation\n/budget-transfers → BudgetTransfers\n/pending-sync → PendingSync\n/change-password → ChangePassword\n..."]
     end
 
     MAIN --> APP
@@ -43,17 +43,43 @@ flowchart TD
 flowchart TD
     PWS["ProjectWorkspaceNew.tsx\n/projects/:code/workspace"]
     
-    PWS --> HEADER["Header Bar\n- שם פרויקט\n- קוד\n- סטטוס badge\n- כפתורי עריכה"]
+    PWS --> HEADER["Header Bar (sticky top-16, z-10)\n- שם פרויקט\n- קוד\n- סטטוס badge\n- כפתורי עריכה"]
     
     PWS --> TABS["Tabs Component\n(common/Tabs.tsx)"]
     
-    TABS --> TAB1["Tab: סקירה\n- תקציב summary\n- מנהל + אזור\n- תאריכים\n- תיאור"]
-    TABS --> TAB2["Tab: הזמנות עבודה\n- WorkOrders list\n- status filter\n- create new WO"]
-    TABS --> TAB3["Tab: דיווחי שעות\n- Worklogs list\n- total hours\n- approve actions"]
-    TABS --> TAB4["Tab: מפה\n- ForestMap component\n- project location_geom\n- Leaflet polygon"]
+    TABS --> TAB1["Tab: סקירה\n- פרטי הפרויקט (InfoItem)\n- תקציב: total/committed/spent/available\n- מנהל עבודה (WORK_MANAGER)\n- מנהל אזור (AREA_MANAGER)\n- מנהלת חשבונות אזורית (ACCOUNTANT)\n- תאריכים, תיאור"]
+    TABS --> TAB2["Tab: הזמנות עבודה\n- WorkOrders list\n- status filter\n- WO progress bar (ירוק/כתום/אדום)\n- create new WO"]
+    TABS --> TAB3["Tab: דיווחי שעות\n- Worklogs list\n- total hours\n- badge 🌙 overnight\n- approve actions"]
+    TABS --> TAB4["Tab: מפה\n- LeafletMap component\n- פוליגון ירוק (has_forest=true)\n- נקודה כתומה תמיד מוצגת\n  has_forest→centroid forest.center_lat/lng\n  no_forest→project GPS point\n- fitBounds כשיש פוליגון"]
     TABS --> TAB5["Tab: ציוד\n- Equipment assigned\n- scan history"]
     
     HEADER --> ACTIONS["Actions dropdown\n- ערוך פרויקט\n- הקצה ציוד\n- צור דוח"]
+    
+    subgraph PROJECT_DETAILS["קארד פרטי הפרויקט"]
+        PD1["🗺️ מרחב — region_name"]
+        PD2["📍 אזור — area_name"]
+        PD3["👤 מנהל עבודה — manager.full_name\n(WORK_MANAGER מ-project_assignments)"]
+        PD4["👤 מנהל אזור — area_manager.full_name\n(AREA_MANAGER מ-users.area_id)"]
+        PD5["🧮 מנהלת חשבונות אזורית — accountant.full_name\n(ACCOUNTANT מ-users.area_id)"]
+        PD6["📅 תאריך התחלה / סיום"]
+    end
+    
+    TAB1 --> PROJECT_DETAILS
+```
+
+### לוגיקת מפה — נקודה כתומה (מרץ 2026)
+```
+has_forest = true:
+  pointLat = forestCenterLat ?? projLat
+  pointLng = forestCenterLng ?? projLng
+  → נקודה כתומה בתוך הפוליגון (centroid)
+
+has_forest = false:
+  pointLat = projLat
+  pointLng = projLng
+  → נקודה כתומה ב-GPS של פרויקט
+
+allPoints = [projectPoint]  // תמיד קיים
 ```
 
 ---
@@ -122,6 +148,8 @@ flowchart TD
     FM --> SIDEBAR["Sidebar\n- שכבות toggles\n- מרחבים filter\n- מקרא\n- selected project card"]
     
     FM --> GEO_VALID["Geo Validation (3km rule):\nINSIDE ✅ = within area polygon\nNEAR ⚠️ = 0-3000m outside\nFAR ❌ = >3000m (data issue)"]
+    
+    FM --> FOREST_MAP["ProjectWorkspaceNew → MapTab\n- GET /projects/{id}/forest-map\n- ForestInfo: {has_forest, geojson_full,\n  center_lat, center_lng}\n- נקודה כתומה: centroid כש-has_forest=true"]
 ```
 
 ---

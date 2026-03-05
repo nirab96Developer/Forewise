@@ -49,7 +49,7 @@ class ActivityLogBase(BaseModel):
     """Base activity log schema."""
     user_id: Optional[int] = Field(None, description="User who performed the activity")
     # Changed to str for flexibility
-    activity_type: str = Field(..., description="Type of activity")
+    activity_type: Optional[str] = Field(None, description="Type of activity")
     action: str = Field(..., max_length=200, description="Action performed")
     description: Optional[str] = Field(None, description="Detailed description")
 

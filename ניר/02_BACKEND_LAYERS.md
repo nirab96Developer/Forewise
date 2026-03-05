@@ -104,6 +104,7 @@ flowchart TD
         M_BUDG["budget.py → budgets table"]
         M_REGION["region.py → regions table"]
         M_AREA["area.py → areas table"]
+        M_PA["project_assignment.py → project_assignments table"]
         M_OTHERS["+ 40 more models..."]
     end
 
@@ -142,7 +143,7 @@ flowchart TD
 | `roles.py` | /roles | ניהול תפקידים |
 | `regions.py` | /regions | מרחבים |
 | `areas.py` | /areas | אזורים |
-| `projects.py` | /projects | פרויקטים + workspace |
+| `projects.py` | /projects | פרויקטים + workspace — `list_projects` מסנן לפי role, `/code/{code}` מחזיר manager/accountant/area_manager |
 | `work_orders.py` | /work-orders | הזמנות עבודה + כל הflow |
 | `worklogs.py` | /worklogs | דיווחי שעות + approve |
 | `suppliers.py` | /suppliers | ספקים + ציוד ספק |
@@ -187,6 +188,28 @@ flowchart TD
 | `notification_service.py` | יצירה ושליחת התראות (WORKLOG_PENDING, INVOICE_PENDING, BUDGET_ALERT) |
 | `activity_log_service.py` | לוג כל הפעולות |
 | `pdf_report_service.py` | **generate_and_save_worklog_pdf** (weasyprint) + email לספק+חשבת |
-| `forest_map_service.py` | PostGIS — פוליגוני יער, graceful fallback >10km |
+| `forest_map_service.py` | PostGIS — פוליגוני יער, **center_lat/center_lng** (centroid), graceful fallback >10km |
 | `region_service.py` / `area_service.py` | גיאוגרפיה ארגונית |
 | `tasks/user_lifecycle.py` | **anonymize_expired_users** — CRON לילי, מאחד suspended users שפג תאריך |
+
+---
+
+## app/models/__init__.py — ייצוא מודלים
+
+כל המודלים חייבים להיות מיובאים ומיוצאים ב-`app/models/__init__.py`.
+**תיקון מרץ 2026** — `ProjectAssignment` לא היה מיוצא, גרם ל-`ImportError` בrouters:
+
+```python
+# app/models/__init__.py
+import app.models.project_assignment   # ProjectAssignment
+from app.models.project_assignment import ProjectAssignment
+
+__all__ = [
+    # ... existing models ...
+    'ProjectAssignment',   # ← נוסף מרץ 2026
+]
+```
+
+**סיבה לבאג:** ה-router ניסה לייבא `from app.models import ProjectAssignment` אבל ה-class לא היה ב-`__all__`.  
+**גורם נסתר:** תהליך uvicorn ישן המשיך לרוץ על port 8000 גם אחרי `systemctl restart`.  
+**פתרון:** `fuser -k 8000/tcp && systemctl restart kkl-backend`

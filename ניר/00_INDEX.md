@@ -40,7 +40,7 @@ PDF:        weasyprint worklog PDFs ✅
 
 ---
 
-## שינויים אחרונים — Session מרץ 2026
+## שינויים אחרונים — Session מרץ 2026 (עדכון 05/03/2026)
 
 ### Frontend — מחיקות וניקוי
 | קובץ | סטטוס | סיבה |
@@ -64,13 +64,19 @@ PDF:        weasyprint worklog PDFs ✅
 | `EquipmentCatalog.tsx` | מוזג עם Rates — עכשיו 2 tabs: "כרטיסים" + "תעריפים" + badge תעריף |
 | `tailwind.config.js` | `kkl-green` אוחד ל-`#00994C` (היה `#009557`) |
 | `/settings/equipment-rates` | Redirect → `/settings/equipment-catalog?tab=rates` |
-| `PricingReports.tsx` | Badge ⚠️ "ללא אימות תעריף" + באנר כולל |
+| `PricingReports.tsx` | Badge ⚠️ "ללא אימות תעריף" + באנר כולל + expandable rows + PDF export |
 | `WorkManagerDashboard.tsx` | נתונים אמיתיים מ-API: שעות שבוע / הזמנות / מפה |
 | `AccountantInbox.tsx` | כפתור "הפק חשבונית חודשית" עם modal |
 | `Users.tsx` | badges מושהה/נמחק + SuspendModal + ChangeRoleModal |
 | `WorklogDetail.tsx` | badge "🌙 שמירת לילה" אם is_overnight=true |
 | `Navigation.tsx` | badge 📤 "N ממתינים" ל-WORK_MANAGER + OfflineBanner |
 | `ProjectWorkspaceNew.tsx` | Budget card: total/committed/spent/available + WO progress bar |
+| `ProjectWorkspaceNew.tsx` | **מפה:** נקודה כתומה תמיד מוצגת — centroid כש-has_forest=true, GPS כש-false |
+| `ProjectWorkspaceNew.tsx` | **פרטי פרויקט:** שדה "מנהל עבודה" (WORK_MANAGER מ-project_assignments) |
+| `ProjectWorkspaceNew.tsx` | **פרטי פרויקט:** שדה "מנהל אזור" (AREA_MANAGER מ-area_id) |
+| `ProjectWorkspaceNew.tsx` | **פרטי פרויקט:** שדה "מנהלת חשבונות אזורית" (ACCOUNTANT מ-area_id) |
+| `ProjectWorkspaceNew.tsx` | sticky header: top-0 → top-16 (מתחת ל-navbar) + z-10 |
+| `Invoices.tsx` | 4 summary cards: total/amount/balance_due/paid עם overdue badge |
 | `SmartHelpWidget.tsx` | FAQ 10 שאלות בעברית + זרימה BOT → ticket |
 | `select` elements | pl-10 + font-size:16px + min-height:44px במובייל |
 | header padding | pt-20 → pt-16 בכל דפי wrapper |
@@ -80,7 +86,7 @@ PDF:        weasyprint worklog PDFs ✅
 |-------|--------|
 | `rate_service.py` | `get_rate_service(db)`, `resolve_rate()`, `compute_worklog_cost()` עם guard |
 | `pricing.py` router | **תוקן ImportError** — עכשיו 38/38 routers טוענים |
-| `pricing.py` reports | `unverified_count` + `total_unverified_worklogs` |
+| `pricing.py` reports | `unverified_count` + `total_unverified_worklogs` + `worklogs_detail` per project |
 | `users.py` router | `/suspend`, `/reactivate`, `/role` endpoints |
 | `budget_transfers.py` | router חדש — request/approve/reject |
 | `budget_service.py` | `freeze_budget_for_work_order`, `release_budget_freeze`, transfers |
@@ -90,6 +96,11 @@ PDF:        weasyprint worklog PDFs ✅
 | `user_lifecycle.py` | CRON: `anonymize_expired_users()` + lifespan integration |
 | `audit_logs` trigger | INSERT on suspend/role-change/invoice-status-change |
 | `sync_queue` | X-Offline-Sync header → INSERT audit record |
+| `projects.py` | `list_projects` — סינון אוטומטי לפי role (REGION_MANAGER/AREA_MANAGER/WORK_MANAGER) |
+| `projects.py` | `GET /code/{code}` — מחזיר `manager` (WORK_MANAGER), `accountant`, `area_manager` |
+| `schemas/project.py` | `ProjectResponse` — הוספת שדות: `manager`, `accountant`, `area_manager` (UserBasic) |
+| `models/__init__.py` | **תוקן ImportError** — הוספת `ProjectAssignment` לexports |
+| `activity_log.py` schema | `activity_type: Optional[str]` (תוקן ResponseValidationError) |
 
 ### DB — שינויים
 | שינוי | תיאור |
@@ -100,12 +111,23 @@ PDF:        weasyprint worklog PDFs ✅
 | `equipment_types` | +2 columns: hourly_rate, overnight_rate |
 | `equipment_rate_history` | טבלה חדשה — היסטוריית שינויי תעריף |
 | `locations` | +4 columns: polygon, geojson, center_lat, center_lng |
+| `forest_map` (ForestInfo schema) | +2 fields: center_lat, center_lng — centroid פוליגון |
 | `audit_logs` | טבלה חדשה — audit trail |
 | `sync_queue` | טבלה חדשה — offline sync audit |
+| `budget_transfers` | +1 column: rejected_reason |
 | `departments` | נוקו — נשארו 3 בלבד (הנהלה/חשבונות/מנהלי עבודה) |
 | `notifications` | נוקו — כל הישנות לפני 2026-03-01 נמחקו |
 | `roles` | נמחקו 6 test roles "Delete Test Role" |
 | `users.status` | נורמל ל-lowercase: 'active' בלבד |
+
+### Bug Fixes — תיקוני באגים
+| באג | תיקון |
+|-----|--------|
+| `GET /projects/code/{code}` → 500 | תהליך uvicorn ישן נשאר על port 8000 — `fuser -k 8000/tcp && systemctl restart` |
+| `ImportError: ProjectAssignment` | הוספה ל-`app/models/__init__.py` + `__all__` |
+| `ImportError: get_rate_service` | מימוש `RateService` class + factory function ב-`rate_service.py` |
+| `ResponseValidationError: activity_type` | שינוי ל-`Optional[str] = None` ב-`activity_log.py` |
+| Pricing reports — 404 | תוקן ImportError שגרם לrouter לא לטעון |
 
 ### צבע ירוק — אוחד
 ```css

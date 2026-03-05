@@ -78,16 +78,31 @@
 ### `/projects`
 | Method | Endpoint | תיאור |
 |--------|----------|--------|
-| GET | `/projects` | רשימת פרויקטים (role-filtered) |
+| GET | `/projects` | רשימת פרויקטים — **role-filtered אוטומטי:** REGION_MANAGER→region, AREA_MANAGER→area, WORK_MANAGER→my_projects=true |
 | POST | `/projects` | יצירת פרויקט |
 | GET | `/projects/{id}` | פרטי פרויקט |
 | PUT | `/projects/{id}` | עדכון פרויקט |
 | DELETE | `/projects/{id}` | מחיקה (soft) |
 | GET | `/projects/by-code/{code}` | לפי קוד (+ budget data) |
-| GET | `/projects/code/{code}` | alias (workspace) |
+| GET | `/projects/code/{code}` | **Workspace endpoint** — מחזיר מידע מועשר: `manager` (WORK_MANAGER מ-project_assignments), `accountant` (ACCOUNTANT מ-area_id), `area_manager` (AREA_MANAGER מ-area_id), `region_name`, `area_name`, forest polygon centroid |
 | GET | `/projects/statistics` | סטטיסטיקות |
 | POST | `/projects/{id}/restore` | שחזור |
-| GET | `/projects/{id}/forest-map` | מפת יער |
+| GET | `/projects/{id}/forest-map` | מפת יער + `center_lat`/`center_lng` בFForestInfo |
+
+**Response schema של `/projects/code/{code}`:**
+```json
+{
+  "id": 127,
+  "code": "YR-045",
+  "name": "פרויקט דוגמה",
+  "region_name": "מרחב הצפון",
+  "area_name": "אזור עמק יזרעאל",
+  "manager": { "id": 12, "full_name": "אבי לוי" },
+  "accountant": { "id": 7, "full_name": "רחל כהן" },
+  "area_manager": { "id": 3, "full_name": "דוד מזרחי" },
+  "budget": { "total_amount": 50000, "committed_amount": 10000, "spent_amount": 15000, "available_amount": 25000 }
+}
+```
 
 ### `/project-assignments`
 | GET | POST | PUT | DELETE | GET /my-assignments | GET /project/{id}/team |
@@ -165,8 +180,18 @@
 | GET | `/budgets/statistics` | סטטיסטיקות |
 
 ### `/invoices`
-| GET | POST | GET /{id} | PUT /{id} | DELETE /{id} |
-| POST /{id}/approve | GET /{id}/items | GET /statistics |
+| Method | Endpoint | תיאור |
+|--------|----------|--------|
+| GET | `/invoices` | רשימת חשבוניות |
+| POST | `/invoices` | יצירה |
+| GET | `/invoices/{id}` | פרטים |
+| PUT | `/invoices/{id}` | עדכון |
+| DELETE | `/invoices/{id}` | מחיקה |
+| POST | `/invoices/{id}/approve` | אישור |
+| GET | `/invoices/{id}/items` | פריטים |
+| GET | `/invoices/summary/stats` | **סטטיסטיקות** — total/total_amount/balance_due/paid_amount/overdue_count |
+| POST | `/invoices/generate-monthly` | **יצירת חשבונית חודשית** מ-APPROVED worklogs |
+| GET | `/invoices/uninvoiced-suppliers` | ספקים עם worklogs לא ממוינים |
 
 ### `/system-rates`
 | GET | POST | PUT /{id} | DELETE /{id} |
@@ -177,9 +202,26 @@
 | POST | `/pricing/compute-cost` | חישוב עלות דיווח |
 | GET | `/pricing/rate-for-equipment-type/{id}` | תעריף לסוג כלי |
 | GET | `/pricing/simulate-days` | סימולציית עלות לימים |
-| GET | `/pricing/reports/by-project` | דוח עלויות לפי פרויקט + `unverified_count` |
+| GET | `/pricing/reports/by-project` | דוח עלויות לפי פרויקט + `unverified_count` + **`worklogs_detail`** |
 | GET | `/pricing/reports/by-supplier` | דוח עלויות לפי ספק |
 | GET | `/pricing/reports/by-equipment-type` | דוח עלויות לפי סוג כלי |
+
+**`worklogs_detail` per project item** (מרץ 2026):
+```json
+{
+  "worklog_id": 45,
+  "report_date": "2026-02-20",
+  "work_hours": 8.5,
+  "cost_before_vat": 1275.0,
+  "cost_with_vat": 1487.25,
+  "hourly_rate_snapshot": 150.0,
+  "supplier_name": "חברת מחפרים בע\"מ",
+  "equipment_license_plate": "12-345-67",
+  "equipment_type": "מחפר",
+  "status": "APPROVED",
+  "is_verified": true
+}
+```
 
 ### `/budget-transfers` (**חדש**)
 | Method | Endpoint | תיאור |
@@ -197,10 +239,6 @@
 | PATCH | `/settings/equipment-rates/{id}` | עדכון תעריף + רישום היסטוריה |
 | GET | `/settings/equipment-rates/{id}/history` | היסטוריית שינויי תעריף |
 
-### `/invoices` — עדכון
-נוספו:
-| POST | `/invoices/generate-monthly` | יצירת חשבונית חודשית מ-APPROVED worklogs |
-| GET | `/invoices/uninvoiced-suppliers` | ספקים עם worklogs לא מחויינים |
 
 ---
 

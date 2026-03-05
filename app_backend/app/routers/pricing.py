@@ -5,10 +5,10 @@ API for computing work pricing and reports
 
 from datetime import date
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, text as _text
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -17,6 +17,7 @@ from app.services.rate_service import RateService, get_rate_service
 from app.models.worklog import Worklog
 from app.models.project import Project
 from app.models.supplier import Supplier
+from app.models.equipment import Equipment
 from app.models.equipment_type import EquipmentType
 
 
@@ -150,6 +151,21 @@ async def simulate_days_cost(
 # REPORTS - דוחות תמחור
 # =====================================================
 
+class WorklogDetail(BaseModel):
+    """פרטי worklog בודד לתוך דוח פרויקט"""
+    worklog_id: int
+    report_date: Optional[str]
+    work_hours: float
+    cost_before_vat: Optional[float]
+    cost_with_vat: Optional[float]
+    hourly_rate_snapshot: Optional[float]
+    supplier_name: Optional[str]
+    equipment_license_plate: Optional[str]
+    equipment_type: Optional[str]
+    status: str
+    is_verified: bool
+
+
 class PricingReportItem(BaseModel):
     """שורה בדוח תמחור"""
     id: int
@@ -159,6 +175,7 @@ class PricingReportItem(BaseModel):
     total_cost_with_vat: float
     worklog_count: int
     unverified_count: int = 0   # worklogs with cost_before_vat but no hourly_rate_snapshot
+    worklogs_detail: List[WorklogDetail] = []
 
 
 class PricingReportResponse(BaseModel):
@@ -219,21 +236,73 @@ async def get_pricing_report_by_project(
 
     results = query.all()
 
-    # Fallback: fetch unverified counts via a separate simple query if needed
-    # (SQLAlchemy bool expression in nullif can be tricky — safer raw approach)
-    from sqlalchemy import text as _text
-    unverified_map: Dict[int, int] = {}
+    # Build filters string for the detail sub-query
+    filter_clauses = ["w.cost_before_vat IS NOT NULL"]
+    filter_params: dict = {}
+    if date_from:
+        filter_clauses.append("w.report_date >= :date_from")
+        filter_params["date_from"] = date_from
+    if date_to:
+        filter_clauses.append("w.report_date <= :date_to")
+        filter_params["date_to"] = date_to
+    if supplier_id:
+        filter_clauses.append("w.supplier_id = :supplier_id")
+        filter_params["supplier_id"] = supplier_id
+    if status and status != "all":
+        filter_clauses.append("w.status = :status")
+        filter_params["status"] = status
+
+    where_sql = " AND ".join(filter_clauses)
+
+    # Fetch worklog details for all projects in one query
+    detail_sql = _text(f"""
+        SELECT
+            w.id            AS worklog_id,
+            w.project_id,
+            w.report_date,
+            w.work_hours,
+            w.cost_before_vat,
+            w.cost_with_vat,
+            w.hourly_rate_snapshot,
+            w.status,
+            s.name          AS supplier_name,
+            e.license_plate AS equipment_license_plate,
+            COALESCE(e.equipment_type, et.name) AS equipment_type
+        FROM worklogs w
+        LEFT JOIN suppliers s ON s.id = w.supplier_id
+        LEFT JOIN equipment e ON e.id = w.equipment_id
+        LEFT JOIN equipment_types et ON et.id = e.equipment_type_id
+        WHERE {where_sql}
+        ORDER BY w.report_date DESC
+    """)
     try:
-        urows = db.execute(_text("""
-            SELECT w.project_id, COUNT(*) as cnt
-            FROM worklogs w
-            WHERE w.cost_before_vat IS NOT NULL
-              AND w.hourly_rate_snapshot IS NULL
-            GROUP BY w.project_id
-        """)).fetchall()
-        unverified_map = {r.project_id: r.cnt for r in urows}
+        detail_rows = db.execute(detail_sql, filter_params).fetchall()
     except Exception:
-        pass
+        detail_rows = []
+
+    # Group details by project_id
+    details_by_project: Dict[int, List[WorklogDetail]] = {}
+    all_supplier_ids = set()
+    for dr in detail_rows:
+        pid = dr.project_id
+        if pid not in details_by_project:
+            details_by_project[pid] = []
+        is_verified = dr.hourly_rate_snapshot is not None
+        details_by_project[pid].append(WorklogDetail(
+            worklog_id=dr.worklog_id,
+            report_date=str(dr.report_date) if dr.report_date else None,
+            work_hours=float(dr.work_hours or 0),
+            cost_before_vat=float(dr.cost_before_vat) if dr.cost_before_vat is not None else None,
+            cost_with_vat=float(dr.cost_with_vat) if dr.cost_with_vat is not None else None,
+            hourly_rate_snapshot=float(dr.hourly_rate_snapshot) if dr.hourly_rate_snapshot is not None else None,
+            supplier_name=dr.supplier_name,
+            equipment_license_plate=dr.equipment_license_plate,
+            equipment_type=dr.equipment_type,
+            status=dr.status or "PENDING",
+            is_verified=is_verified,
+        ))
+        if dr.supplier_name:
+            all_supplier_ids.add(dr.supplier_name)
 
     items = []
     total_hours = 0
@@ -245,7 +314,8 @@ async def get_pricing_report_by_project(
         hours = float(row.total_hours or 0)
         cost = float(row.total_cost or 0)
         cost_vat = float(row.total_cost_with_vat or 0)
-        unverified = unverified_map.get(row.id, 0)
+        wl_details = details_by_project.get(row.id, [])
+        unverified = sum(1 for d in wl_details if not d.is_verified)
 
         items.append(PricingReportItem(
             id=row.id,
@@ -255,6 +325,7 @@ async def get_pricing_report_by_project(
             total_cost_with_vat=cost_vat,
             worklog_count=row.worklog_count,
             unverified_count=unverified,
+            worklogs_detail=wl_details,
         ))
 
         total_hours += hours
@@ -271,6 +342,7 @@ async def get_pricing_report_by_project(
             "total_cost_with_vat": total_cost_with_vat,
             "average_hourly_rate": total_cost / total_hours if total_hours > 0 else 0,
             "total_unverified_worklogs": total_unverified,
+            "total_suppliers": len(all_supplier_ids),
         }
     )
 

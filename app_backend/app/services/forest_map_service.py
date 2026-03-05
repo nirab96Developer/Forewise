@@ -114,7 +114,8 @@ class ForestMapService:
                 code,
                 area_km2,
                 ST_AsGeoJSON(geom) as geojson_full,
-                ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0002)) as geojson_preview
+                ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0002)) as geojson_preview,
+                ST_AsGeoJSON(ST_Centroid(geom)) as centroid
             FROM forests
             WHERE id = :forest_id
         """)
@@ -123,14 +124,20 @@ class ForestMapService:
         
         if not result:
             return None
-        
+
+        centroid = json.loads(result.centroid) if result.centroid else None
+        center_lng = centroid["coordinates"][0] if centroid else None
+        center_lat = centroid["coordinates"][1] if centroid else None
+
         return ForestInfo(
             id=result.id,
             name=result.name,
             code=result.code,
             area_km2=float(result.area_km2) if result.area_km2 else None,
             geojson_full=json.loads(result.geojson_full),
-            geojson_preview=json.loads(result.geojson_preview)
+            geojson_preview=json.loads(result.geojson_preview),
+            center_lat=center_lat,
+            center_lng=center_lng,
         )
     
     @staticmethod
@@ -144,6 +151,7 @@ class ForestMapService:
                 ST_Area(fp.geom::geography)/1000000 as area_km2,
                 ST_AsGeoJSON(fp.geom) as geojson_full,
                 ST_AsGeoJSON(ST_SimplifyPreserveTopology(fp.geom, 0.0002)) as geojson_preview,
+                ST_AsGeoJSON(ST_Centroid(fp.geom)) as centroid,
                 CASE WHEN p.location_geom IS NOT NULL THEN
                     ST_Distance(p.location_geom::geography, fp.geom::geography)
                 ELSE 0 END as dist_meters
@@ -160,14 +168,20 @@ class ForestMapService:
         # Reject polygon if it's more than 10km from the project point
         if result.dist_meters and result.dist_meters > 10000:
             return None
-        
+
+        centroid = json.loads(result.centroid) if result.centroid else None
+        center_lng = centroid["coordinates"][0] if centroid else None
+        center_lat = centroid["coordinates"][1] if centroid else None
+
         return ForestInfo(
             id=result.id,
             name=f"יער #{result.id}",
             code=None,
             area_km2=float(result.area_km2) if result.area_km2 else None,
             geojson_full=json.loads(result.geojson_full),
-            geojson_preview=json.loads(result.geojson_preview)
+            geojson_preview=json.loads(result.geojson_preview),
+            center_lat=center_lat,
+            center_lng=center_lng,
         )
     
     @staticmethod
@@ -179,7 +193,8 @@ class ForestMapService:
                 id,
                 ST_Area(geom::geography)/1000000 as area_km2,
                 ST_AsGeoJSON(geom) as geojson_full,
-                ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0002)) as geojson_preview
+                ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0002)) as geojson_preview,
+                ST_AsGeoJSON(ST_Centroid(geom)) as centroid
             FROM forest_polygons
             WHERE ST_Contains(geom, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))
             LIMIT 1
@@ -189,14 +204,20 @@ class ForestMapService:
         
         if not result:
             return None
-        
+
+        centroid = json.loads(result.centroid) if result.centroid else None
+        center_lng = centroid["coordinates"][0] if centroid else None
+        center_lat = centroid["coordinates"][1] if centroid else None
+
         return ForestInfo(
             id=result.id,
-            name=f"יער #{result.id}",  # Clean polygon has no name
+            name=f"יער #{result.id}",
             code=None,
             area_km2=float(result.area_km2) if result.area_km2 else None,
             geojson_full=json.loads(result.geojson_full),
-            geojson_preview=json.loads(result.geojson_preview)
+            geojson_preview=json.loads(result.geojson_preview),
+            center_lat=center_lat,
+            center_lng=center_lng,
         )
     
     @staticmethod

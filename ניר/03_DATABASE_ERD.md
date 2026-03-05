@@ -581,3 +581,43 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at  TIMESTAMP DEFAULT NOW()
 );
 ```
+
+### `budget_transfers` — עמודה חדשה (מרץ 2026)
+```sql
+ALTER TABLE budget_transfers ADD COLUMN IF NOT EXISTS rejected_reason TEXT NULL;
+-- נוסף לתמיכה ב-reject endpoint עם סיבת דחייה
+```
+
+### `project_assignments` — מבנה (מרץ 2026)
+```sql
+-- שיוך WORK_MANAGERs לפרויקטים
+-- בשימוש ב: GET /projects/code/{code} → manager field
+SELECT u.id, u.full_name
+FROM project_assignments pa
+JOIN users u ON u.id = pa.user_id
+JOIN roles r ON r.id = u.role_id
+WHERE pa.project_id = :pid
+  AND pa.is_active = TRUE
+  AND r.code = 'WORK_MANAGER'
+LIMIT 1;
+
+-- columns: id, project_id, user_id, role ('MANAGER'|'MEMBER'|'VIEWER'),
+--          is_active, assigned_at, assigned_by
+```
+
+### ERD — project_assignments relationships
+```mermaid
+erDiagram
+    projects ||--o{ project_assignments : "has members"
+    users ||--o{ project_assignments : "assigned to"
+    
+    project_assignments {
+        int id PK
+        int project_id FK
+        int user_id FK
+        string role "MANAGER|MEMBER|VIEWER"
+        bool is_active
+        datetime assigned_at
+        int assigned_by FK
+    }
+```

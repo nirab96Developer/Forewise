@@ -400,3 +400,50 @@ sequenceDiagram
     ADMIN->>BE: PATCH /support-tickets/{id} {status: "RESOLVED"}
     BE->>U: 🔔 "קריאתך #TKT-015 טופלה ✅"
 ```
+
+---
+
+## 14. Project Details — Manager Resolution Flow (מרץ 2026)
+
+```mermaid
+flowchart TD
+    REQ["GET /api/v1/projects/code/{code}"]
+    
+    REQ --> LOAD_PROJECT["טוען Project מ-DB\n(by code)"]
+    
+    LOAD_PROJECT --> Q1["שאילתה: WORK_MANAGER\nSELECT u.id, u.full_name\nFROM project_assignments pa\nJOIN users u ON u.id=pa.user_id\nJOIN roles r ON r.id=u.role_id\nWHERE pa.project_id=:pid\n  AND pa.is_active=TRUE\n  AND r.code='WORK_MANAGER'\nLIMIT 1"]
+    
+    LOAD_PROJECT --> Q2["שאילתה: ACCOUNTANT\nSELECT u.id, u.full_name\nFROM users u JOIN roles r ON r.id=u.role_id\nWHERE r.code='ACCOUNTANT'\n  AND u.area_id=:area_id\n  AND u.is_active=TRUE\nLIMIT 1"]
+    
+    LOAD_PROJECT --> Q3["שאילתה: AREA_MANAGER\nSELECT u.id, u.full_name\nFROM users u JOIN roles r ON r.id=u.role_id\nWHERE r.code='AREA_MANAGER'\n  AND u.area_id=:area_id\n  AND u.is_active=TRUE\nLIMIT 1"]
+    
+    Q1 --> RESP["Response JSON:\n{\n  manager: {id, full_name},\n  accountant: {id, full_name},\n  area_manager: {id, full_name},\n  region_name, area_name\n}"]
+    Q2 --> RESP
+    Q3 --> RESP
+    
+    RESP --> FRONTEND["Frontend ProjectWorkspaceNew.tsx\n→ InfoItem 'מנהל עבודה'\n→ InfoItem 'מנהל אזור'\n→ InfoItem 'מנהלת חשבונות אזורית'"]
+```
+
+---
+
+## 15. Map Display — has_forest Logic (מרץ 2026)
+
+```mermaid
+flowchart TD
+    LOAD["טוען ProjectWorkspaceNew\nGET /projects/code/{code}"]
+    
+    LOAD --> FOREST_CALL["GET /projects/{id}/forest-map"]
+    
+    FOREST_CALL --> HAS_FOREST{"has_forest?"}
+    
+    HAS_FOREST -->|"true"| POLY["הצג פוליגון ירוק\n(forest.geojson_full)"]
+    POLY --> CENTROID["pointLat = forest.center_lat\npointLng = forest.center_lng\n(centroid של פוליגון)"]
+    
+    HAS_FOREST -->|"false"| NO_POLY["ללא פוליגון"]
+    NO_POLY --> GPS_PT["pointLat = project.lat\npointLng = project.lng\n(GPS מקורי)"]
+    
+    CENTROID --> ORANGE_PT["🔶 נקודה כתומה\nתמיד מוצגת\n(allPoints = [projectPoint])"]
+    GPS_PT --> ORANGE_PT
+    
+    ORANGE_PT --> MAP_RENDER["LeafletMap\n- fitBounds כשיש פוליגון\n- popup עם שם+קוד+מרחב+אזור"]
+```

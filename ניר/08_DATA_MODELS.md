@@ -517,6 +517,120 @@ class BaseModel(Base):
 
 ---
 
+## Pydantic Schemas — Project Response (עדכני מרץ 2026)
+
+```python
+class UserBasic(BaseModel):
+    """Sub-schema לייצוג משתמש בתוך response אחר"""
+    id: int
+    full_name: str
+    model_config = ConfigDict(from_attributes=True)
+
+class RegionBasic(BaseModel):
+    id: int
+    name: str
+
+class AreaBasic(BaseModel):
+    id: int
+    name: str
+
+class ProjectResponse(ProjectBase):
+    id: int
+    code: str
+    status: str
+    
+    # Flat string aliases (populated from nested or directly)
+    region_name:  Optional[str] = None
+    area_name:    Optional[str] = None
+    manager_name: Optional[str] = None
+    
+    # Nested objects
+    region:       Optional[RegionBasic] = None
+    area:         Optional[AreaBasic]   = None
+    
+    # People — populated by raw SQL in /code/{code} endpoint
+    manager:      Optional[UserBasic]   = None   # WORK_MANAGER מ-project_assignments
+    accountant:   Optional[UserBasic]   = None   # ACCOUNTANT מ-users.area_id
+    area_manager: Optional[UserBasic]   = None   # AREA_MANAGER מ-users.area_id  ← נוסף מרץ 2026
+    
+    @model_validator(mode="after")
+    def populate_flat_names(self):
+        # auto-fill flat names from nested objects if not set
+        if not self.region_name and self.region:
+            self.region_name = self.region.name
+        if not self.area_name and self.area:
+            self.area_name = self.area.name
+        if not self.manager_name and self.manager:
+            self.manager_name = self.manager.full_name
+        return self
+
+# HOW MANAGER/ACCOUNTANT/AREA_MANAGER ARE RESOLVED
+# (in projects.py → get_by_code_alias):
+#
+# Manager = WORK_MANAGER assigned via project_assignments:
+#   SELECT u.id, u.full_name
+#   FROM project_assignments pa JOIN users u ON u.id = pa.user_id
+#   JOIN roles r ON r.id = u.role_id
+#   WHERE pa.project_id = :pid AND pa.is_active = TRUE AND r.code = 'WORK_MANAGER'
+#
+# Accountant = ACCOUNTANT in same area:
+#   SELECT u.id, u.full_name FROM users u JOIN roles r ON r.id = u.role_id
+#   WHERE r.code = 'ACCOUNTANT' AND u.area_id = :area_id AND u.is_active = TRUE
+#
+# Area Manager = AREA_MANAGER in same area:
+#   SELECT u.id, u.full_name FROM users u JOIN roles r ON r.id = u.role_id
+#   WHERE r.code = 'AREA_MANAGER' AND u.area_id = :area_id AND u.is_active = TRUE
+```
+
+---
+
+## ProjectAssignment Model — app/models/project_assignment.py
+
+```python
+class ProjectAssignment(Base):
+    """שיוך משתמש לפרויקט — WORK_MANAGERs המנהלים פרויקטים"""
+    __tablename__ = "project_assignments"
+    
+    id: int (PK)
+    project_id: int (FK → projects)
+    user_id: int (FK → users)
+    role: str   # 'MANAGER' | 'MEMBER' | 'VIEWER'
+    is_active: bool = True
+    assigned_at: datetime = NOW()
+    assigned_by: int (FK → users) = NULL
+    
+    # Relationships
+    project → Project
+    user    → User
+
+# IMPORTANT: ProjectAssignment must be explicitly imported in app/models/__init__.py
+# and added to __all__ to avoid ImportError in routers.
+# Fix applied מרץ 2026:
+#   import app.models.project_assignment
+#   from app.models.project_assignment import ProjectAssignment
+#   __all__ = [..., 'ProjectAssignment']
+```
+
+---
+
+## ForestInfo Schema — forest_map (עדכני מרץ 2026)
+
+```python
+class ForestInfo(BaseModel):
+    """תוצאת חיפוש פוליגון יער לפרויקט"""
+    has_forest: bool
+    forest_id: Optional[int]
+    geojson_full: Optional[dict]   # GeoJSON of polygon
+    center_lat: Optional[float]    # centroid latitude  ← נוסף מרץ 2026
+    center_lng: Optional[float]    # centroid longitude ← נוסף מרץ 2026
+    
+# USAGE in frontend (ProjectWorkspaceNew.tsx):
+# has_forest = true  → נקודה כתומה במיקום center_lat/center_lng (centroid)
+# has_forest = false → נקודה כתומה ב-GPS של project.point
+```
+
+---
+
 ## PostGIS Geometry Models
 
 ```python

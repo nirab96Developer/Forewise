@@ -43,6 +43,7 @@ import app.models.budget_item  # After budget
 import app.models.budget_transfer
 import app.models.supplier_invitation  # Fair rotation invitations
 import app.models.forest  # PostGIS forest polygons
+import app.models.project_assignment  # Project user assignments
 
 # Step 3: NOW import the actual classes for use
 from app.models.user import User
@@ -81,6 +82,7 @@ from app.models.supplier_constraint_reason import SupplierConstraintReason
 from app.models.supplier_rejection_reason import SupplierRejectionReason
 from app.models.supplier_invitation import SupplierInvitation
 from app.models.forest import Forest
+from app.models.project_assignment import ProjectAssignment
 
 # Step 4: Export everything
 __all__ = [
@@ -122,5 +124,6 @@ __all__ = [
     'SupplierConstraintLog',
     'SupplierRejectionReason',
     'SupplierInvitation',
-    'Forest'
+    'Forest',
+    'ProjectAssignment',
 ]

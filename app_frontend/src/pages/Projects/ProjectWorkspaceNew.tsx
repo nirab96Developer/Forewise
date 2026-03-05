@@ -6,7 +6,7 @@ import {
   ArrowRight, Eye, Map, ClipboardList, Clock,
   Loader2, AlertCircle, CheckCircle2,
   Calendar, User, TreeDeciduous, MapPin, ExternalLink, Package,
-  FileText, Plus, ChevronLeft
+  FileText, Plus, ChevronLeft, Calculator
 } from 'lucide-react';
 import projectService from '../../services/projectService';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
@@ -37,7 +37,10 @@ interface Project {
   allocated_budget?: number;
   spent_budget?: number;
   committed_budget?: number;
+  manager?: { id: number; full_name: string };
   manager_name?: string;
+  accountant?: { id: number; full_name: string } | null;
+  area_manager?: { id: number; full_name: string } | null;
   planned_start_date?: string;
   planned_end_date?: string;
   location?: ProjectLocation;
@@ -186,7 +189,7 @@ const ProjectWorkspaceNew: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
       {/* Header + Tabs קבועים למעלה */}
-      <div className="sticky top-0 z-[1100] bg-white shadow-sm">
+      <div className="sticky top-16 z-10 bg-white shadow-sm">
         {/* Header קומפקטי */}
         <div className="border-b">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
@@ -337,7 +340,9 @@ const OverviewTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ proj
           <InfoItem icon={<Map className="w-3.5 h-3.5" />} label="מרחב" value={project.region_name || '-'} />
           <InfoItem icon={<MapPin className="w-3.5 h-3.5" />} label="אזור" value={project.area_name || '-'} />
           <InfoItem icon={<TreeDeciduous className="w-3.5 h-3.5" />} label="יער" value={project.name} />
-          <InfoItem icon={<User className="w-3.5 h-3.5" />} label="מנהל" value={project.manager_name || '-'} />
+          <InfoItem icon={<User className="w-3.5 h-3.5" />} label="מנהל עבודה" value={project.manager_name || project.manager?.full_name || '-'} />
+          <InfoItem icon={<User className="w-3.5 h-3.5" />} label="מנהל אזור" value={project.area_manager?.full_name || '-'} />
+          <InfoItem icon={<Calculator className="w-3.5 h-3.5" />} label="מנהלת חשבונות אזורית" value={project.accountant?.full_name || '-'} />
           {project.planned_start_date && (
             <InfoItem 
               icon={<Calendar className="w-3.5 h-3.5" />} 
@@ -443,15 +448,20 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
     );
   }
 
-  // Project point
-  const lat = mapData?.geo?.latitude || defaultLat;
-  const lng = mapData?.geo?.longitude || defaultLng;
+  // Determine map center: prefer polygon centroid, fallback to project GPS point
+  const hasForest = mapData?.forest?.has_forest && mapData.forest.forest;
+  const forestCenterLat = hasForest ? mapData.forest.forest.center_lat : null;
+  const forestCenterLng = hasForest ? mapData.forest.forest.center_lng : null;
+  const projLat = mapData?.geo?.latitude || defaultLat;
+  const projLng = mapData?.geo?.longitude || defaultLng;
+  const lat = forestCenterLat ?? projLat;
+  const lng = forestCenterLng ?? projLng;
 
   // Build map layers
   const LazyLeafletMap = React.lazy(() => import('../../components/Map/LeafletMap'));
   
-  // Forest polygon - show with border, no mask
-  const forestGeom = mapData?.forest?.has_forest && mapData.forest.forest?.geojson_full;
+  // Forest polygon layer
+  const forestGeom = hasForest && mapData.forest.forest?.geojson_full;
   const forestPolygons = [];
   if (forestGeom) {
     const geom = forestGeom.geometry || forestGeom;
@@ -465,13 +475,14 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
     }
   }
 
-  // No nearby projects in project view - keep it clean and fast
-  const nearbyPoints: any[] = [];
+  // Point marker: use centroid when has_forest (so it's inside the polygon),
+  // fallback to project GPS point when no forest polygon exists
+  const pointLat = hasForest ? (forestCenterLat ?? projLat) : projLat;
+  const pointLng = hasForest ? (forestCenterLng ?? projLng) : projLng;
 
-  // Main project point (gold, prominent)
   const projectPoint = {
     id: project.id, name: project.name, code: project.code,
-    lat, lng,
+    lat: pointLat, lng: pointLng,
     color: '#f59e0b',
     popupContent:
       '<div style="direction:rtl;padding:8px;min-width:160px">' +
@@ -482,7 +493,8 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
       '</div>',
   };
 
-  const allPoints = [projectPoint, ...nearbyPoints];
+  // Always show the orange point — at centroid when has_forest, at GPS when not
+  const allPoints = [projectPoint];
   const allPolygons = [...forestPolygons];
 
   return (
@@ -554,9 +566,9 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
               height="500px"
               center={[lat, lng]}
               zoom={forestPolygons.length > 0 ? 14 : 13}
-              points={forestPolygons.length > 0 ? [projectPoint] : allPoints}
+              points={allPoints}
               polygons={allPolygons}
-              fitBounds={true}
+              fitBounds={forestPolygons.length > 0}
               mapType="street"
             />
           </React.Suspense>
@@ -570,10 +582,10 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
             <div className="w-4 h-4 rounded-full bg-amber-500 border-2 border-white shadow" />
             <span className="text-gray-700">הפרויקט הנוכחי</span>
           </div>
-          {nearbyPoints.length > 0 && (
+          {!hasForest && (
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-gray-500 border-2 border-white shadow" />
-              <span className="text-gray-700">פרויקטים באזור ({nearbyPoints.length})</span>
+              <div className="w-4 h-4 rounded-full bg-amber-500 border-2 border-white shadow" />
+              <span className="text-gray-700">מיקום פרויקט</span>
             </div>
           )}
           {forestPolygons.length > 0 && (

@@ -12,8 +12,24 @@ import {
   Briefcase,
   Wrench,
   Filter,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import api from "../../services/api";
+
+interface WorklogDetail {
+  worklog_id: number;
+  report_date: string | null;
+  work_hours: number;
+  cost_before_vat: number | null;
+  cost_with_vat: number | null;
+  hourly_rate_snapshot: number | null;
+  supplier_name: string | null;
+  equipment_license_plate: string | null;
+  equipment_type: string | null;
+  status: string;
+  is_verified: boolean;
+}
 
 interface PricingReportItem {
   id: number;
@@ -23,6 +39,7 @@ interface PricingReportItem {
   total_cost_with_vat: number;
   worklog_count: number;
   unverified_count: number;
+  worklogs_detail?: WorklogDetail[];
 }
 
 interface PricingReportResponse {
@@ -33,6 +50,8 @@ interface PricingReportResponse {
     total_cost_with_vat: number;
     average_hourly_rate: number;
     total_unverified_worklogs?: number;
+    total_projects?: number;
+    total_suppliers?: number;
     [key: string]: number | undefined;
   };
 }
@@ -47,6 +66,7 @@ const PricingReports: React.FC = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     fetchReport();
@@ -56,6 +76,7 @@ const PricingReports: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      setExpandedRows(new Set());
 
       const params: Record<string, string> = {};
       if (dateFrom) params.date_from = dateFrom;
@@ -76,17 +97,30 @@ const PricingReports: React.FC = () => {
     fetchReport();
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("he-IL", {
+  const toggleRow = (id: number) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("he-IL", {
       style: "currency",
       currency: "ILS",
       maximumFractionDigits: 0,
     }).format(value);
-  };
 
-  const formatNumber = (value: number) => {
-    return new Intl.NumberFormat("he-IL", { maximumFractionDigits: 1 }).format(value);
-  };
+  const formatNumber = (value: number) =>
+    new Intl.NumberFormat("he-IL", { maximumFractionDigits: 1 }).format(value);
+
+  const fmtNull = (v: number | null | undefined) =>
+    v != null ? formatCurrency(v) : "—";
 
   const exportCSV = () => {
     if (!data || data.items.length === 0) return;
@@ -103,7 +137,6 @@ const PricingReports: React.FC = () => {
       item.total_cost_with_vat.toFixed(2),
     ]);
 
-    // Add summary row
     rows.push([
       "סה\"כ",
       data.items.reduce((s, i) => s + i.worklog_count, 0),
@@ -123,11 +156,112 @@ const PricingReports: React.FC = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const generatePrintHTML = () => {
+    const summary = data?.summary;
+    const items = data?.items ?? [];
+    const now = new Date().toLocaleDateString("he-IL");
+
+    const unverifiedBanner =
+      (summary?.total_unverified_worklogs ?? 0) > 0
+        ? `<div class="warning-banner">⚠️ ${summary!.total_unverified_worklogs} דיווחים ללא תעריף מאומת — הסכומים המוצגים הם הערכה בלבד</div>`
+        : "";
+
+    const projectRows = items.map((item) => {
+      const detailRows = (item.worklogs_detail ?? [])
+        .map(
+          (w) => `
+        <tr class="${!w.is_verified ? "unverified-row" : ""}">
+          <td>${w.report_date ?? "—"}</td>
+          <td>${w.supplier_name ?? "—"}</td>
+          <td class="license">${w.equipment_license_plate ?? "—"}</td>
+          <td>${w.work_hours}</td>
+          <td>${w.hourly_rate_snapshot != null ? "₪" + w.hourly_rate_snapshot : "⚠️ לא מאומת"}</td>
+          <td>${w.cost_before_vat != null ? "₪" + Number(w.cost_before_vat).toLocaleString("he-IL") : "—"}</td>
+          <td>${w.cost_with_vat != null ? "₪" + Number(w.cost_with_vat).toLocaleString("he-IL") : "—"}</td>
+        </tr>`
+        )
+        .join("");
+
+      return `
+      <tr class="project-row ${item.unverified_count > 0 ? "has-unverified" : ""}">
+        <td colspan="6">
+          <div class="project-header">
+            <span class="project-name">${item.name}</span>
+            ${item.unverified_count > 0 ? `<span class="badge">⚠️ ${item.unverified_count} ללא אימות תעריף</span>` : ""}
+            <span class="project-stats">${item.worklog_count} דיווחים · ${item.total_hours} שעות · ₪${Number(item.total_cost_with_vat).toLocaleString("he-IL")} כולל מע"מ</span>
+          </div>
+          <table class="detail-table">
+            <thead><tr><th>תאריך</th><th>ספק</th><th>מספר כלי</th><th>שעות</th><th>תעריף</th><th>לפני מע"מ</th><th>כולל מע"מ</th></tr></thead>
+            <tbody>${detailRows}</tbody>
+          </table>
+        </td>
+      </tr>`;
+    }).join("");
+
+    return `<!DOCTYPE html>
+<html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>דוח תמחור — קק"ל</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;direction:rtl;color:#1a1a1a;padding:28px;font-size:13px}
+  .header{border-bottom:3px solid #16a34a;padding-bottom:14px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-end}
+  .header h1{font-size:20px;color:#15803d}.header .sub{font-size:11px;color:#6b7280;margin-top:3px}
+  .date{font-size:11px;color:#9ca3af}
+  .warning-banner{background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;padding:9px 13px;margin-bottom:18px;color:#9a3412;font-size:12px}
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px}
+  .summary-card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:11px;text-align:center}
+  .summary-card .label{font-size:10px;color:#6b7280;margin-bottom:3px}
+  .summary-card .value{font-size:17px;font-weight:bold;color:#111827}
+  .summary-card .hint{font-size:9px;color:#9ca3af;margin-top:2px}
+  .project-row td{padding:14px 0 6px}
+  .project-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .project-name{font-size:14px;font-weight:700;color:#111827}
+  .project-stats{font-size:11px;color:#6b7280;margin-right:auto}
+  .badge{background:#fed7aa;color:#9a3412;border-radius:9999px;padding:2px 9px;font-size:10px;font-weight:600}
+  .detail-table{width:100%;border-collapse:collapse;font-size:11px;border:1px solid #e5e7eb;margin-bottom:8px}
+  .detail-table thead tr{background:#f0fdf4}
+  .detail-table th{padding:6px 9px;text-align:right;font-weight:600;color:#166534;font-size:10px;border-bottom:1px solid #d1fae5}
+  .detail-table td{padding:7px 9px;border-bottom:1px solid #f3f4f6}
+  .license{font-weight:700;color:#1e40af}
+  .unverified-row{background:#fff7ed !important}
+  .has-unverified .project-name{color:#92400e}
+  .footer{margin-top:28px;padding-top:10px;border-top:1px solid #e5e7eb;font-size:10px;color:#9ca3af;display:flex;justify-content:space-between}
+  @media print{body{padding:12px}@page{margin:12mm;size:A4}}
+</style></head><body>
+  <div class="header">
+    <div><h1>דוח תמחור — קק"ל</h1><div class="sub">סיכום עלויות דיווחי שעות לפי פרויקט, ספק ומספר כלי</div></div>
+    <div class="date">הופק: ${now}</div>
+  </div>
+  ${unverifiedBanner}
+  <div class="summary-grid">
+    <div class="summary-card"><div class="label">פרויקטים</div><div class="value">${summary?.total_projects ?? 0}</div></div>
+    <div class="summary-card"><div class="label">שעות</div><div class="value">${summary?.total_hours ?? 0}</div></div>
+    <div class="summary-card"><div class="label">לפני מע"מ</div><div class="value">₪${Number(summary?.total_cost ?? 0).toLocaleString("he-IL")}</div></div>
+    <div class="summary-card"><div class="label">כולל מע"מ</div><div class="value" style="color:#15803d">₪${Number(summary?.total_cost_with_vat ?? 0).toLocaleString("he-IL")}</div><div class="hint">ממוצע ₪${Math.round(summary?.average_hourly_rate ?? 0)}/שעה</div></div>
+  </div>
+  <table style="width:100%"><tbody>${projectRows}</tbody></table>
+  <div class="footer"><span>מערכת ניהול יערות — קק"ל</span><span>forewise.co</span></div>
+</body></html>`;
+  };
+
+  const handleExportPDF = () => {
+    const printWindow = window.open("", "_blank", "width=1000,height=750");
+    if (!printWindow) return;
+    printWindow.document.write(generatePrintHTML());
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
+  };
+
   const reportTabs = [
     { key: "by-project" as ReportType, label: "לפי פרויקט", icon: Briefcase },
     { key: "by-supplier" as ReportType, label: "לפי ספק", icon: Users },
     { key: "by-equipment-type" as ReportType, label: "לפי סוג כלי", icon: Wrench },
   ];
+
+  const isExpandable = reportType === "by-project";
 
   return (
     <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4 " dir="rtl">
@@ -198,13 +332,21 @@ const PricingReports: React.FC = () => {
               סנן
             </button>
             {data && data.items.length > 0 && (
-              <button
-                onClick={exportCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm mr-auto"
-              >
-                <Download className="w-4 h-4" />
-                ייצוא CSV
-              </button>
+              <div className="flex items-center gap-2 mr-auto">
+                <button
+                  onClick={exportCSV}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  ייצוא CSV
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors"
+                >
+                  📄 ייצוא PDF
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -297,6 +439,9 @@ const PricingReports: React.FC = () => {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
+                        {isExpandable && (
+                          <th className="w-10 px-2 py-3" />
+                        )}
                         <th className="text-right px-4 py-3 font-medium text-gray-600">
                           {reportType === "by-project"
                             ? "פרויקט"
@@ -313,36 +458,105 @@ const PricingReports: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {data.items.map((item) => (
-                        <tr
-                          key={item.id}
-                          className={`hover:bg-gray-50 transition-colors ${item.unverified_count > 0 ? 'bg-orange-50/40' : ''}`}
-                        >
-                          <td className="px-4 py-3 font-medium text-gray-900">
-                            <span>{item.name}</span>
-                            {item.unverified_count > 0 && (
-                              <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5">
-                                ⚠️ {item.unverified_count} ללא אימות תעריף
-                              </span>
+                        <React.Fragment key={item.id}>
+                          {/* Main row */}
+                          <tr
+                            className={`hover:bg-gray-50 transition-colors ${
+                              item.unverified_count > 0 ? "bg-orange-50/40" : ""
+                            }`}
+                          >
+                            {isExpandable && (
+                              <td className="px-2 py-3 text-center">
+                                <button
+                                  onClick={() => toggleRow(item.id)}
+                                  className="p-1 rounded hover:bg-gray-200 text-gray-500 transition-colors"
+                                  title={expandedRows.has(item.id) ? "סגור" : "פרטים"}
+                                >
+                                  {expandedRows.has(item.id) ? (
+                                    <ChevronUp className="w-4 h-4" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </td>
                             )}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">{item.worklog_count}</td>
-                          <td className="px-4 py-3 text-gray-600">{formatNumber(item.total_hours)}</td>
-                          <td className="px-4 py-3 text-gray-900 font-medium">
-                            {formatCurrency(item.total_cost)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-900 font-medium">
-                            {formatCurrency(item.total_cost_with_vat)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">
-                            {item.total_hours > 0
-                              ? formatCurrency(item.total_cost / item.total_hours)
-                              : "-"}
-                          </td>
-                        </tr>
+                            <td className="px-4 py-3 font-medium text-gray-900">
+                              <span>{item.name}</span>
+                              {item.unverified_count > 0 && (
+                                <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5">
+                                  ⚠️ {item.unverified_count} ללא אימות תעריף
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">{item.worklog_count}</td>
+                            <td className="px-4 py-3 text-gray-600">{formatNumber(item.total_hours)}</td>
+                            <td className="px-4 py-3 text-gray-900 font-medium">
+                              {formatCurrency(item.total_cost)}
+                            </td>
+                            <td className="px-4 py-3 text-gray-900 font-medium">
+                              {formatCurrency(item.total_cost_with_vat)}
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {item.total_hours > 0
+                                ? formatCurrency(item.total_cost / item.total_hours)
+                                : "—"}
+                            </td>
+                          </tr>
+
+                          {/* Expanded sub-table */}
+                          {isExpandable && expandedRows.has(item.id) && (
+                            <tr>
+                              <td colSpan={7} className="bg-gray-50 px-6 pb-4 pt-0">
+                                {(item.worklogs_detail ?? []).length === 0 ? (
+                                  <p className="text-xs text-gray-400 py-3 text-center">אין פרטי דיווחים</p>
+                                ) : (
+                                  <table className="w-full text-xs border border-gray-200 rounded-lg overflow-hidden mt-2">
+                                    <thead className="bg-green-50">
+                                      <tr>
+                                        <th className="text-right px-3 py-2 font-semibold text-green-800">תאריך</th>
+                                        <th className="text-right px-3 py-2 font-semibold text-green-800">ספק</th>
+                                        <th className="text-right px-3 py-2 font-semibold text-green-800">מספר כלי</th>
+                                        <th className="text-right px-3 py-2 font-semibold text-green-800">שעות</th>
+                                        <th className="text-right px-3 py-2 font-semibold text-green-800">תעריף</th>
+                                        <th className="text-right px-3 py-2 font-semibold text-green-800">לפני מע"מ</th>
+                                        <th className="text-right px-3 py-2 font-semibold text-green-800">כולל מע"מ</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {(item.worklogs_detail ?? []).map((w) => (
+                                        <tr
+                                          key={w.worklog_id}
+                                          className={`${!w.is_verified ? "bg-orange-50" : "bg-white"}`}
+                                        >
+                                          <td className="px-3 py-2 text-gray-700">{w.report_date ?? "—"}</td>
+                                          <td className="px-3 py-2 text-gray-700">{w.supplier_name ?? "—"}</td>
+                                          <td className="px-3 py-2 font-bold text-blue-800">
+                                            {w.equipment_license_plate ?? "—"}
+                                          </td>
+                                          <td className="px-3 py-2 text-gray-700">{w.work_hours}</td>
+                                          <td className="px-3 py-2">
+                                            {w.hourly_rate_snapshot != null ? (
+                                              <span className="text-gray-700">₪{w.hourly_rate_snapshot}</span>
+                                            ) : (
+                                              <span className="text-orange-600 font-semibold">⚠️ ללא תעריף</span>
+                                            )}
+                                          </td>
+                                          <td className="px-3 py-2 text-gray-700">{fmtNull(w.cost_before_vat)}</td>
+                                          <td className="px-3 py-2 text-gray-700">{fmtNull(w.cost_with_vat)}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                     <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                       <tr className="font-bold">
+                        {isExpandable && <td />}
                         <td className="px-4 py-3 text-gray-900">סה"כ</td>
                         <td className="px-4 py-3 text-gray-900">
                           {data.items.reduce((s, i) => s + i.worklog_count, 0)}
@@ -359,7 +573,7 @@ const PricingReports: React.FC = () => {
                         <td className="px-4 py-3 text-gray-600">
                           {data.summary.average_hourly_rate > 0
                             ? formatCurrency(data.summary.average_hourly_rate)
-                            : "-"}
+                            : "—"}
                         </td>
                       </tr>
                     </tfoot>

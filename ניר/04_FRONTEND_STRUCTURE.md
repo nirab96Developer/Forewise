@@ -68,8 +68,8 @@ flowchart TB
             LOCS["Locations/LocationsClean.tsx"]
         end
         subgraph PROJ_P["Projects"]
-            PROJS["Projects/ProjectsClean.tsx\nרשימת פרויקטים"]
-            PROJ_WS["Projects/ProjectWorkspaceNew.tsx\nWorkspace + Tabs\n(הזמנות/WorLog/מפה/תקציב)"]
+            PROJS["Projects/ProjectsClean.tsx\nרשימת פרויקטים\n(סינון אוטומטי לפי role)"]
+            PROJ_WS["Projects/ProjectWorkspaceNew.tsx\nWorkspace + Tabs\n(סקירה/הזמנות/WorkLog/מפה/ציוד)\nפרטים: manager+area_manager+accountant\nמפה: centroid כש-has_forest"]
             NEW_P["Projects/NewProject.tsx"]
             EDIT_P["Projects/EditProject.tsx"]
         end
@@ -124,7 +124,7 @@ flowchart TB
             NOTIFS["Notifications/Notifications.tsx"]
             ACTS["ActivityLog/ActivityLogNew.tsx"]
             SUPPORT["Support/Support.tsx\nWhatsApp style + הגב + סגור"]
-            REPORTS["Reports/PricingReports.tsx\nbadge unverified_count\nבאנר missing_rate_source"]
+            REPORTS["Reports/PricingReports.tsx\nbadge unverified_count\nבאנר missing_rate_source\nexpandable rows + PDF export"]
             BUDG_TRANS["Budget/BudgetTransfers.tsx\nROLE: AREA_MANAGER + REGION_MANAGER"]
             PEND_SYNC["PendingSync/PendingSync.tsx\nממתינים לסנכרון"]
             CH_PASS["Login/ChangePassword.tsx\nמסך שינוי סיסמה חובה"]
@@ -278,6 +278,26 @@ flowchart TB
 - Tab: **מפה** — ForestMap עם Leaflet + overflow-hidden + isolation:isolate
 - Tab: **ציוד** — ציוד משויך לפרויקט
 
+**קארד "פרטי הפרויקט" — שדות (מרץ 2026):**
+| שדה | מקור | אייקון |
+|-----|------|--------|
+| מרחב | `project.region_name` | MapPin |
+| אזור | `project.area_name` | MapPin |
+| מנהל עבודה | `project.manager?.full_name` — WORK_MANAGER מ-`project_assignments` | User |
+| מנהל אזור | `project.area_manager?.full_name` — AREA_MANAGER מ-`users.area_id` | User |
+| מנהלת חשבונות אזורית | `project.accountant?.full_name` — ACCOUNTANT מ-`users.area_id` | Calculator |
+| תאריך התחלה/סיום | `project.start_date / end_date` | Calendar |
+| תקציב (מאושר/מוקפא/נוצל/זמין) | `project.budget.*` | DollarSign |
+
+**לוגיקת מפה — נקודה כתומה:**
+```
+has_forest = true  → נקודה כתומה במיקום centroid (forest.center_lat/lng)
+has_forest = false → נקודה כתומה ב-GPS של פרויקט (project.point)
+```
+- הנקודה הכתומה **תמיד** מוצגת
+- כש-has_forest=true: הפוליגון הירוק + נקודה כתומה בתוכו (centroid)
+- sticky header מיוצב ב-`top-16` (מתחת ל-navbar 64px) + `z-index: 10`
+
 ### WorkManagerDashboard
 `WorkManagerDashboard.tsx` — מחובר ל-API אמיתי (מרץ 2026):
 - **Weekly Summary:** GET `/dashboard/work-manager-summary` → שעות 7 ימים / הזמנות פעילות / ציוד בשימוש
@@ -301,6 +321,15 @@ flowchart TB
 `Reports/PricingReports.tsx` — (מרץ 2026):
 - **באנר אזהרה** אם `total_unverified_worklogs > 0`: "⚠️ X דיווחים ללא תעריף מאומת"
 - **badge per row** אם `unverified_count > 0`: "⚠️ X ללא אימות תעריף" + רקע כתום עדין
+- **expandable rows** — ChevronDown/Up, sub-table של `worklogs_detail` (תאריך/ספק/לוחית/שעות/תעריף/עלות)
+- **PDF export** — "📄 ייצוא PDF" (אדום) — `generatePrintHTML` → window.print() / styled HTML
+- **CSV export** — כל הנתונים
+
+### Invoices
+`Invoices/Invoices.tsx` — (מרץ 2026):
+- **4 summary cards:** סה"כ חשבוניות / סה"כ סכום / ממתין לתשלום (+ X באיחור badge) / שולם
+- summary endpoint: `GET /api/v1/invoices/summary/stats`
+- list endpoint: `GET /api/v1/invoices` — ללא פילטר ברירת מחדל
 
 ---
 
