@@ -1,0 +1,114 @@
+# =============================================
+# Forewise — .gitignore
+# =============================================
+
+# ──────────────────────────────────────────
+# SECRETS & ENV FILES
+# ──────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+.env.backup*
+*.env.backup*
+# Allow only the example/template files
+!.env.example
+!.env.production.template
+
+# Cypress credentials (passwords inside!)
+app_frontend/cypress.env.json
+
+# ──────────────────────────────────────────
+# PYTHON — Backend
+# ──────────────────────────────────────────
+app_backend/.venv/
+app_backend/venv/
+app_backend/__pycache__/
+app_backend/**/__pycache__/
+app_backend/**/*.pyc
+app_backend/**/*.pyo
+app_backend/**/*.pyd
+app_backend/*.egg-info/
+app_backend/dist/
+app_backend/build/
+app_backend/.pytest_cache/
+app_backend/.mypy_cache/
+app_backend/.ruff_cache/
+app_backend/htmlcov/
+app_backend/.coverage
+app_backend/coverage.xml
+
+# Alembic auto-generated (keep migrations, ignore temp)
+app_backend/alembic/versions/__pycache__/
+
+# PDF reports generated at runtime
+app_backend/reports/worklogs/
+
+# ──────────────────────────────────────────
+# NODE / FRONTEND
+# ──────────────────────────────────────────
+app_frontend/node_modules/
+app_frontend/dist/
+app_frontend/build/
+app_frontend/.cache/
+app_frontend/.parcel-cache/
+
+# Playwright / Cypress artifacts
+app_frontend/tests/results/
+app_frontend/playwright-report/
+app_frontend/test-results/
+app_frontend/cypress/screenshots/
+app_frontend/cypress/videos/
+app_frontend/cypress/downloads/
+app_frontend/tests/**/*.spec.ts-snapshots/
+
+# Electron build artifacts
+app_frontend/electron/dist/
+app_frontend/electron/out/
+
+# Visual test snapshots (keep baseline, ignore diffs)
+app_frontend/tests/visual.spec.ts-snapshots/
+
+# ──────────────────────────────────────────
+# CERTIFICATES & KEYS
+# ──────────────────────────────────────────
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+app_frontend/certificates/
+
+# ──────────────────────────────────────────
+# LOGS
+# ──────────────────────────────────────────
+*.log
+logs/
+app_backend/logs/
+/root/backups/
+
+# ──────────────────────────────────────────
+# OS / EDITOR
+# ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+*~
+
+# ──────────────────────────────────────────
+# BACKUP FILES
+# ──────────────────────────────────────────
+*.backup
+*.bak
+*.sql.gz
+deployment/backups/
+
+# ──────────────────────────────────────────
+# MISC
+# ──────────────────────────────────────────
+.claude/
+CLAUDE_CODE_SUMMARY.md

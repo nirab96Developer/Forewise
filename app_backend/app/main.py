@@ -23,6 +23,19 @@ from app.core.database import engine, get_db
 from app.core.logging import logger, setup_logging
 from app.core.rate_limiting import rate_limit_middleware
 
+# Sentry — Error Monitoring (initialised only when DSN is configured)
+try:
+    import sentry_sdk
+    if settings.SENTRY_DSN:
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.ENVIRONMENT,
+            traces_sample_rate=0.1,
+        )
+        logger.info("Sentry initialised")
+except ImportError:
+    pass  # sentry-sdk not installed — skip silently
+
 # Custom API metadata בעברית
 API_METADATA = {
     "title": "🌲 מערכת ניהול יערות ופרויקטים",

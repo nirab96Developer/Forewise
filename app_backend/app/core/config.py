@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     APP_DESCRIPTION: str = "Project and Equipment Reports Management System"
     PROJECT_NAME: str = ""
     ENVIRONMENT: str = "development"
+
+    # ==========================================
+    # Sentry — Error Monitoring
+    # ==========================================
+    SENTRY_DSN: Optional[str] = None  # מלא אחרי יצירת חשבון Sentry
     DEBUG: bool = False
     
     # ==========================================
@@ -93,10 +98,14 @@ class Settings(BaseSettings):
     # הגדרות CORS
     # ==========================================
     BACKEND_CORS_ORIGINS: List[str] = [
+        # Production
+        "https://forewise.co",
+        "https://www.forewise.co",
+        # Local development
+        "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "http://10.0.0.20:5173",  # הכתובת של הפרונט מהדפדפן
-        # הפרונט החדש:
+        "http://10.0.0.20:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
         "http://10.0.0.20:5174",
