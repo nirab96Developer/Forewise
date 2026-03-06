@@ -12,6 +12,7 @@ import {
   DollarSign
 } from "lucide-react";
 import invoiceService, { Invoice } from "../../services/invoiceService";
+import api from "../../services/api";
 
 const Invoices: React.FC = () => {
   const navigate = useNavigate();
@@ -112,14 +113,37 @@ const Invoices: React.FC = () => {
     }
   };
 
+  const handleExportExcel = async () => {
+    try {
+      const response = await api.get(`/reports/export/excel?type=invoices`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoices_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      (window as any).showToast?.("שגיאה בייצוא Excel", "error");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">חשבוניות</h1>
-          <p className="text-sm text-gray-600 mt-1">ניהול וצפייה בחשבוניות</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">חשבוניות</h1>
+            <p className="text-sm text-gray-600 mt-1">ניהול וצפייה בחשבוניות</p>
+          </div>
+          <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            📊 ייצוא Excel
+          </button>
         </div>
 
         {/* Summary Cards */}

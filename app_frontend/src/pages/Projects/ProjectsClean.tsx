@@ -16,6 +16,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import projectService, { Project, ProjectFilters } from '../../services/projectService';
+import api from '../../services/api';
 
 const ProjectsClean: React.FC = () => {
   const navigate = useNavigate();
@@ -126,9 +127,29 @@ const ProjectsClean: React.FC = () => {
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">פרויקטים</h1>
-          <p className="text-gray-600 mt-2">ניהול וסקירת פרויקטים פעילים</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">פרויקטים</h1>
+            <p className="text-gray-600 mt-2">ניהול וסקירת פרויקטים פעילים</p>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                const res = await api.get('/reports/export/excel?type=projects', { responseType: 'blob' });
+                const url = window.URL.createObjectURL(new Blob([res.data]));
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `projects_${new Date().toISOString().slice(0,10)}.xlsx`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+              } catch {
+                (window as any).showToast?.('שגיאה בייצוא Excel', 'error');
+              }
+            }}
+            className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 transition-colors"
+          >
+            📊 ייצוא Excel
+          </button>
         </div>
 
         {/* Search and Filter Bar */}

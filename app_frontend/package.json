@@ -15,10 +15,13 @@
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
+    "@playwright/test": "^1.58.2",
     "@radix-ui/react-icons": "^1.3.0",
     "@react-google-maps/api": "^2.20.7",
+    "@sentry/react": "^10.42.0",
     "@tanstack/react-query": "^5.90.7",
     "@types/leaflet": "^1.9.21",
+    "allure-playwright": "^3.5.0",
     "axios": "^1.8.3",
     "dayjs": "^1.11.19",
     "dotenv": "^16.4.1",

@@ -255,6 +255,23 @@ const PricingReports: React.FC = () => {
     };
   };
 
+  const handleExportExcel = async () => {
+    try {
+      const response = await api.get(
+        `/reports/export/excel?type=worklogs`,
+        { responseType: "blob" }
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `worklogs_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      (window as any).showToast?.("שגיאה בייצוא Excel", "error");
+    }
+  };
+
   const reportTabs = [
     { key: "by-project" as ReportType, label: "לפי פרויקט", icon: Briefcase },
     { key: "by-supplier" as ReportType, label: "לפי ספק", icon: Users },
@@ -345,6 +362,13 @@ const PricingReports: React.FC = () => {
                   className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors"
                 >
                   📄 ייצוא PDF
+                </button>
+                <button
+                  onClick={handleExportExcel}
+                  className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  📊 ייצוא Excel
                 </button>
               </div>
             )}
