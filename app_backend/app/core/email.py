@@ -8,6 +8,7 @@ import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from email.header import Header
 from typing import Optional, List, Tuple
 from dotenv import load_dotenv
 from pathlib import Path
@@ -115,7 +116,7 @@ def send_via_smtp(to: str, subject: str, body: str) -> dict:
     msg = MIMEMultipart()
     msg['From'] = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>"
     msg['To'] = to
-    msg['Subject'] = subject
+    msg['Subject'] = str(Header(subject, 'utf-8'))
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
     server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)

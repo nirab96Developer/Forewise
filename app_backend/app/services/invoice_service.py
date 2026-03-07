@@ -189,9 +189,6 @@ class InvoiceService(BaseService[Invoice]):
         """Mark invoice as approved + update budget spent_amount."""
         invoice = self.get_by_id_or_404(db, invoice_id)
         invoice.status = 'APPROVED'
-        import datetime
-        invoice.approved_at = datetime.datetime.now()
-        invoice.approved_by = user_id
         db.commit()
         # Update budget (best-effort - has its own try/except + rollback)
         if invoice.project_id:

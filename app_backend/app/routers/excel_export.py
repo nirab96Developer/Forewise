@@ -85,7 +85,7 @@ def _workbook_to_response(wb: openpyxl.Workbook, filename: str) -> StreamingResp
 def _export_worklogs(db: Session) -> openpyxl.Workbook:
     rows = db.execute(text("""
         SELECT
-            wl.work_date,
+            wl.report_date,
             p.name         AS project_name,
             p.code         AS project_code,
             s.name         AS supplier_name,
@@ -105,7 +105,7 @@ def _export_worklogs(db: Session) -> openpyxl.Workbook:
         LEFT JOIN suppliers s  ON s.id  = wl.supplier_id
         LEFT JOIN equipment e  ON e.id  = wl.equipment_id
         LEFT JOIN equipment_types et ON et.id = e.equipment_type_id
-        ORDER BY wl.work_date DESC
+        ORDER BY wl.report_date DESC
         LIMIT 5000
     """)).fetchall()
 

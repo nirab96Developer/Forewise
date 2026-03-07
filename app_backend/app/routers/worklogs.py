@@ -429,7 +429,7 @@ def submit_worklog(
                 # Rule: Scan required only when WO is ACCEPTED or IN_PROGRESS
                 scan_required_statuses = ["ACCEPTED", "IN_PROGRESS"]
                 if wo.equipment_id and wo.status in scan_required_statuses:
-                    report_date = worklog.report_date or worklog.work_date
+                    report_date = worklog.report_date
                     if report_date:
                         # Check scan for SAME equipment + SAME day
                         scan_exists = db.execute(sa_text("""
@@ -532,7 +532,7 @@ def send_approval_pdf(db: Session, worklog, current_user):
         worklog_data = {
             'id': worklog.id,
             'report_number': worklog.report_number,
-            'work_date': worklog.work_date.strftime('%d/%m/%Y') if worklog.work_date else '',
+            'work_date': worklog.report_date.strftime('%d/%m/%Y') if worklog.report_date else '',
             'project_name': '',
             'region_name': '',
             'area_name': '',
@@ -572,7 +572,7 @@ def send_approval_pdf(db: Session, worklog, current_user):
         
         # Generate PDF
         pdf_bytes = generate_worklog_pdf(worklog_data)
-        pdf_filename = f"worklog_{worklog.report_number}_{worklog.work_date.strftime('%Y%m%d') if worklog.work_date else 'report'}.pdf"
+        pdf_filename = f"worklog_{worklog.report_number}_{worklog.report_date.strftime('%Y%m%d') if worklog.report_date else 'report'}.pdf"
         
         # Send to supplier (if email available)
         if worklog_data.get('supplier_email'):

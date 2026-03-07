@@ -199,8 +199,10 @@ def approve_invoice(
         notify_invoice_approved(db, updated)
         return updated
     except NotFoundException as e:
+        db.rollback()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to approve invoice: {str(e)}"

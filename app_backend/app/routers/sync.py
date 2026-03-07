@@ -143,14 +143,9 @@ async def create_worklog(
         # Create worklog
         worklog = Worklog(
             work_order_id=operation.data["work_order_id"],
-            work_date=operation.data["work_date"],
-            hours_worked=operation.data["hours_worked"],
-            description=operation.data.get("description", ""),
-            equipment_used=operation.data.get("equipment_used", ""),
-            materials_used=operation.data.get("materials_used", ""),
-            weather_conditions=operation.data.get("weather_conditions", ""),
+            report_date=operation.data["work_date"],
+            work_hours=operation.data["hours_worked"],
             created_by=current_user.id,
-            created_at=datetime.utcnow()
         )
         
         db.add(worklog)

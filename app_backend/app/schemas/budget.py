@@ -52,7 +52,7 @@ class BudgetResponse(BudgetBase):
     """Budget response"""
     id: int
     code: Optional[str] = None
-    status: str
+    status: Optional[str] = "DRAFT"
     parent_budget_id: Optional[int] = None
     region_id: Optional[int] = None
     area_id: Optional[int] = None
