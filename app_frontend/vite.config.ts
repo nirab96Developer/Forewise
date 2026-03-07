@@ -1,9 +1,17 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    sentryVitePlugin({
+      org: "forewise",
+      project: "forewise-backend",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+    }),
+  ],
   base: "/",
   server: {
     port: 5173,
