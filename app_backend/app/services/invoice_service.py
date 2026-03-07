@@ -441,19 +441,25 @@ def generate_monthly_invoice(
             eq = wls[0].equipment
             eq_name = f"{getattr(eq, 'name', '')} {getattr(eq, 'license_plate', '') or ''}".strip()
 
+        # Defensive: ensure NOT-NULL fields always have a value
+        _qty  = paid_hours_total or 0.0
+        _rate = rate or 0.0
+        _sub  = round(_qty * _rate + overnight_total, 2) if item_subtotal == 0 else item_subtotal
+        _tax  = round(_sub * vat_pct, 2)
+
         item = InvoiceItem(
             invoice_id=invoice.id,
             line_number=line,
             description=f"{eq_name} — {len(wls)} ימי עבודה",
-            quantity=paid_hours_total,
-            unit_price=rate,
-            total_price=item_subtotal,
+            quantity=_qty,
+            unit_price=_rate,
+            total_price=_sub,          # NOT NULL — always computed
             discount_percent=0,
             discount_amount=0,
-            subtotal=item_subtotal,
+            subtotal=_sub,
             tax_rate=vat_pct,
-            tax_amount=tax,
-            total=item_subtotal + tax,
+            tax_amount=_tax,
+            total=round(_sub + _tax, 2),
             equipment_type_id=getattr(wls[0].equipment, 'equipment_type_id', None) if wls[0].equipment else None,
             is_active=True,
         )

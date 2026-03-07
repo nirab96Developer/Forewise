@@ -3,7 +3,7 @@ Area Service
 """
 
 from typing import Optional, List, Tuple
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select, func, or_
 
 from app.models.area import Area
@@ -110,9 +110,15 @@ class AreaService(BaseService[Area]):
         return area
     
     def list(self, db: Session, search: AreaSearch) -> Tuple[List[Area], int]:
-        """List areas"""
+        """List areas — uses selectinload to avoid N+1 on region/manager."""
         query = self._base_query(db, include_deleted=search.include_deleted)
-        
+
+        # Eager-load relationships in a single query to eliminate N+1
+        query = query.options(
+            selectinload(Area.region),
+            selectinload(Area.manager),
+        )
+
         if search.q:
             term = f"%{search.q}%"
             query = query.where(or_(
@@ -120,21 +126,21 @@ class AreaService(BaseService[Area]):
                 Area.code.ilike(term),
                 Area.description.ilike(term)
             ))
-        
+
         if search.region_id is not None:
             query = query.where(Area.region_id == search.region_id)
-        
+
         if search.is_active is not None:
             query = query.where(Area.is_active == search.is_active)
-        
+
         total = db.execute(select(func.count()).select_from(query.subquery())).scalar() or 0
-        
+
         sort_col = getattr(Area, search.sort_by, Area.name)
         query = query.order_by(sort_col.desc() if search.sort_desc else sort_col.asc())
-        
+
         offset = (search.page - 1) * search.page_size
         areas = db.execute(query.offset(offset).limit(search.page_size)).scalars().all()
-        
+
         return areas, total
     
     def get_by_code(self, db: Session, code: str) -> Optional[Area]:
