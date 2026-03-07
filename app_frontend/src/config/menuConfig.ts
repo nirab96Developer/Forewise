@@ -12,6 +12,9 @@ import {
   Truck,
   ScanLine,
   FileText,
+  Wallet,
+  ClipboardCheck,
+  BookOpen,
   LucideIcon
 } from "lucide-react";
 import { PERMISSIONS, hasPermission, normalizeRole, UserRole } from "../utils/permissions";
@@ -126,12 +129,33 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
     path: "/equipment/inventory",
     permission: PERMISSIONS.EQUIPMENT_VIEW,
   },
+  workOrders: {
+    id: "work-orders",
+    icon: ClipboardCheck,
+    label: "הזמנות עבודה",
+    path: "/work-orders",
+    permission: PERMISSIONS.WORK_ORDERS_VIEW,
+  },
+  budgets: {
+    id: "budgets",
+    icon: Wallet,
+    label: "תקציבים",
+    path: "/budgets",
+    permission: PERMISSIONS.BUDGETS_VIEW,
+  },
   settings: {
     id: "settings",
     icon: Settings,
     label: "הגדרות מערכת",
     path: "/settings",
     permission: PERMISSIONS.SYSTEM_SETTINGS,
+  },
+  journal: {
+    id: "journal",
+    icon: BookOpen,
+    label: "יומן אישי",
+    path: "/my-journal",
+    permission: PERMISSIONS.DASHBOARD_VIEW, // available to all logged-in users
   },
 };
 
@@ -146,34 +170,34 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
       "invoices", "reports", "map",
       "activityLog", "settings"
     ],
-    dividerAfter: ["dashboard", "map"],
+    dividerAfter: ["dashboard", "map", "settings"],
   },
   [UserRole.REGION_MANAGER]: {
-    items: ["dashboard", "projectsRegion", "reports", "map", "activityLog"],
+    items: ["dashboard", "projectsRegion", "workOrders", "invoices", "budgets", "reports", "map", "journal"],
     dividerAfter: ["dashboard", "map"],
   },
   [UserRole.AREA_MANAGER]: {
-    items: ["dashboard", "projectsArea", "reports", "map", "activityLog"],
+    items: ["dashboard", "projectsArea", "workOrders", "budgets", "reports", "map", "journal"],
     dividerAfter: ["dashboard", "map"],
   },
   [UserRole.WORK_MANAGER]: {
-    items: ["dashboard", "projects", "activityLog"],
-    dividerAfter: ["dashboard"],
+    items: ["dashboard", "projects", "map", "journal"],
+    dividerAfter: ["dashboard", "map"],
   },
   [UserRole.ORDER_COORDINATOR]: {
-    items: ["dashboard", "orderCoordination", "activityLog", "settings"],
-    dividerAfter: ["dashboard"],
+    items: ["dashboard", "orderCoordination", "suppliers", "map", "journal"],
+    dividerAfter: ["dashboard", "map"],
   },
   [UserRole.ACCOUNTANT]: {
-    items: ["dashboard", "invoices", "reports"],
-    dividerAfter: ["dashboard"],
+    items: ["dashboard", "invoices", "budgets", "reports", "journal"],
+    dividerAfter: ["dashboard", "reports"],
   },
   [UserRole.SUPPLIER_MANAGER]: {
-    items: ["dashboard", "activityLog", "settings"],
-    dividerAfter: ["dashboard"],
+    items: ["dashboard", "settings", "journal"],
+    dividerAfter: ["dashboard", "settings"],
   },
   [UserRole.FIELD_WORKER]: {
-    items: ["dashboard", "projects"],
+    items: ["dashboard", "projects", "journal"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.SUPPLIER]: {
@@ -181,11 +205,11 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
     dividerAfter: [],
   },
   [UserRole.VIEWER]: {
-    items: ["dashboard", "projects", "reports"],
-    dividerAfter: ["dashboard"],
+    items: ["dashboard", "projects", "reports", "journal"],
+    dividerAfter: ["dashboard", "reports"],
   },
   [UserRole.USER]: {
-    items: ["dashboard", "projects"],
+    items: ["dashboard", "projects", "journal"],
     dividerAfter: ["dashboard"],
   },
 };

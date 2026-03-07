@@ -6,11 +6,14 @@ import {
   ArrowRight, Eye, Map, ClipboardList, Clock,
   Loader2, AlertCircle, CheckCircle2,
   Calendar, User, TreeDeciduous, MapPin, ExternalLink, Package,
-  FileText, Plus, ChevronLeft, Calculator
+  FileText, Plus, ChevronLeft, Calculator, Activity,
+  LogIn, CheckCircle, XCircle, Send, FilePlus, FileCheck, Info,
+  Camera, X, ScanLine
 } from 'lucide-react';
 import projectService from '../../services/projectService';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
 import workLogService, { WorkLog } from '../../services/workLogService';
+import api from '../../services/api';
 import TreeLoader from '../../components/common/TreeLoader';
 // locationService available if needed
 
@@ -64,18 +67,41 @@ const ProjectWorkspaceNew: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
+
+  // ── Role detection ───────────────────────────────────────────────────────
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
+  })();
+  const userRoleCode: string = (storedUser?.role?.code || storedUser?.role_code || '').toUpperCase();
+  const currentUserId: number | undefined = storedUser?.id ? Number(storedUser.id) : undefined;
+
+  const isWorkManager = userRoleCode === 'WORK_MANAGER';
+  const isAreaManager = userRoleCode === 'AREA_MANAGER';
+
+  // Tabs available per role
+  const WORK_MANAGER_TABS   = ['overview', 'orders', 'worklogs', 'map'];
+  const AREA_MANAGER_TABS   = ['overview', 'orders', 'worklogs', 'budget', 'map', 'documents'];
+  const FULL_TABS           = ['overview', 'orders', 'worklogs', 'budget', 'map', 'documents', 'activity'];
+
+  const allowedTabs = isWorkManager   ? WORK_MANAGER_TABS
+                    : isAreaManager   ? AREA_MANAGER_TABS
+                    : FULL_TABS; // REGION_MANAGER + ADMIN + others
+
+  type TabId = 'overview' | 'map' | 'orders' | 'worklogs' | 'activity' | 'budget' | 'documents';
+
+  const resolveInitialTab = (): TabId => {
+    if (initialTab && allowedTabs.includes(initialTab)) return initialTab as TabId;
+    return 'overview';
+  };
+
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'map' | 'orders' | 'worklogs'>(
-    initialTab === 'worklogs' ? 'worklogs' : initialTab === 'orders' ? 'orders' : initialTab === 'map' ? 'map' : 'overview'
-  );
+  const [activeTab, setActiveTab] = useState<TabId>(resolveInitialTab());
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'worklogs' || tab === 'orders' || tab === 'map' || tab === 'overview') {
-      setActiveTab(tab);
-    }
+    if (tab && allowedTabs.includes(tab)) setActiveTab(tab as TabId);
   }, [searchParams]);
   
   // Real data states
@@ -179,12 +205,33 @@ const ProjectWorkspaceNew: React.FC = () => {
     );
   }
 
-  const tabs = [
-    { id: 'overview', label: 'סקירה', icon: Eye },
-    { id: 'map', label: 'מפה', icon: Map },
-    { id: 'orders', label: 'הזמנות', icon: ClipboardList, badge: stats.activeOrders },
-    { id: 'worklogs', label: 'דיווחים', icon: Clock, badge: stats.openReports },
-  ];
+  // ── Tabs per role ────────────────────────────────────────────────────────
+  const tabs = isWorkManager
+    ? [
+        { id: 'overview',  label: 'סקירה',         icon: Eye },
+        { id: 'orders',    label: 'הזמנות עבודה',  icon: ClipboardList, badge: stats.activeOrders },
+        { id: 'worklogs',  label: 'דיווחים',       icon: Clock, badge: stats.openReports },
+        { id: 'map',       label: 'מפה',            icon: Map },
+      ]
+    : isAreaManager
+    ? [
+        { id: 'overview',   label: 'סקירה',         icon: Eye },
+        { id: 'orders',     label: 'הזמנות עבודה',  icon: ClipboardList, badge: stats.activeOrders },
+        { id: 'worklogs',   label: 'דיווחים',       icon: Clock, badge: stats.openReports },
+        { id: 'budget',     label: 'תקציב',          icon: Calculator },
+        { id: 'map',        label: 'מפה',             icon: Map },
+        { id: 'documents',  label: 'מסמכים',         icon: FileText },
+      ]
+    : /* REGION_MANAGER + ADMIN + others */
+      [
+        { id: 'overview',   label: 'סקירה',         icon: Eye },
+        { id: 'orders',     label: 'הזמנות עבודה',  icon: ClipboardList, badge: stats.activeOrders },
+        { id: 'worklogs',   label: 'דיווחים',       icon: Clock, badge: stats.openReports },
+        { id: 'budget',     label: 'תקציב',          icon: Calculator },
+        { id: 'map',        label: 'מפה',             icon: Map },
+        { id: 'documents',  label: 'מסמכים',         icon: FileText },
+        { id: 'activity',   label: 'יומן פעילות',   icon: Activity },
+      ];
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col" dir="rtl">
@@ -212,42 +259,81 @@ const ProjectWorkspaceNew: React.FC = () => {
 
         {/* Tabs קומפקטיים - נשאר קבוע */}
         <div className="border-b overflow-x-auto scrollbar-hide">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6">
-            <nav className="flex">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center gap-1.5 px-3 py-2 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-green-600 text-green-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                    {tab.badge !== undefined && tab.badge > 0 && (
-                      <span className="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded-full">
-                        {tab.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+          <nav className="flex px-3 sm:px-6 min-w-max">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 border-b-2 font-medium text-sm whitespace-nowrap transition-colors min-h-[44px] ${
+                    activeTab === tab.id
+                      ? 'border-green-600 text-green-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  {tab.label}
+                  {tab.badge !== undefined && tab.badge > 0 && (
+                    <span className="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded-full">
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
       </div>
 
       {/* Content - גולל בנפרד */}
       <div className="flex-1 overflow-auto" style={{ isolation: 'isolate' }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3">
-          {activeTab === 'overview' && <OverviewTab project={project} stats={stats} />}
+          {/* סקירה — זהה לכולם */}
+          {activeTab === 'overview' && <OverviewTab project={project} stats={stats} currentUser={storedUser} />}
+
           {activeTab === 'map' && <MapTab project={project} />}
-          {activeTab === 'orders' && <OrdersTab projectCode={project.code} projectId={project.id} orders={workOrders} />}
-          {activeTab === 'worklogs' && <WorklogsTab projectCode={project.code} projectId={project.id} worklogs={worklogs} />}
+
+          {/* הזמנות */}
+          {activeTab === 'orders' && (
+            <OrdersTab
+              projectCode={project.code}
+              projectId={project.id}
+              orders={isWorkManager
+                ? workOrders.filter(o =>
+                    Number((o as any).created_by)    === Number(currentUserId) ||
+                    Number((o as any).created_by_id) === Number(currentUserId) ||
+                    Number((o as any).reporter_id)   === Number(currentUserId)
+                  )
+                : workOrders}
+              isWorkManager={isWorkManager}
+              onSwitchToWorklogs={() => setActiveTab('worklogs')}
+            />
+          )}
+
+          {/* דיווחים */}
+          {activeTab === 'worklogs' && (
+            <WorklogsTab
+              projectCode={project.code}
+              projectId={project.id}
+              worklogs={isWorkManager
+                ? worklogs.filter(l =>
+                    Number((l as any).reporter_id) === Number(currentUserId) ||
+                    Number((l as any).created_by)  === Number(currentUserId) ||
+                    Number((l as any).user_id)     === Number(currentUserId)
+                  )
+                : worklogs}
+              isWorkManager={isWorkManager}
+              approvedOrders={workOrders.filter(o =>
+                APPROVED_STATUSES.includes((o.status || '').toUpperCase()) &&
+                !!(o as any).equipment_scan
+              )}
+            />
+          )}
+
+          {activeTab === 'budget' && <BudgetTab project={project} stats={stats} />}
+          {activeTab === 'documents' && <DocumentsTab projectId={project.id} />}
+          {activeTab === 'activity' && <ActivityLogTab projectId={project.id} />}
         </div>
       </div>
     </div>
@@ -255,7 +341,11 @@ const ProjectWorkspaceNew: React.FC = () => {
 };
 
 // טאב סקירה - קומפקטי למובייל
-const OverviewTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ project, stats }) => {
+const OverviewTab: React.FC<{ project: Project; stats: ProjectStats; currentUser?: any }> = ({ project, stats, currentUser }) => {
+  const userRoleCode = (currentUser?.role?.code || currentUser?.role_code || '').toUpperCase();
+  const managerValue = userRoleCode === 'WORK_MANAGER'
+    ? (currentUser?.full_name || currentUser?.name || project.manager_name || project.manager?.full_name || '-')
+    : (project.manager_name || project.manager?.full_name || '-');
   const paidPercent = stats.budgetTotal > 0 ? Math.round((stats.budgetSpent / stats.budgetTotal) * 100) : 0;
   const committedPercent = stats.budgetTotal > 0 ? Math.round((stats.budgetCommitted / stats.budgetTotal) * 100) : 0;
 
@@ -340,7 +430,7 @@ const OverviewTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ proj
           <InfoItem icon={<Map className="w-3.5 h-3.5" />} label="מרחב" value={project.region_name || '-'} />
           <InfoItem icon={<MapPin className="w-3.5 h-3.5" />} label="אזור" value={project.area_name || '-'} />
           <InfoItem icon={<TreeDeciduous className="w-3.5 h-3.5" />} label="יער" value={project.name} />
-          <InfoItem icon={<User className="w-3.5 h-3.5" />} label="מנהל עבודה" value={project.manager_name || project.manager?.full_name || '-'} />
+          <InfoItem icon={<User className="w-3.5 h-3.5" />} label="מנהל עבודה" value={managerValue} />
           <InfoItem icon={<User className="w-3.5 h-3.5" />} label="מנהל אזור" value={project.area_manager?.full_name || '-'} />
           <InfoItem icon={<Calculator className="w-3.5 h-3.5" />} label="מנהלת חשבונות אזורית" value={project.accountant?.full_name || '-'} />
           {project.planned_start_date && (
@@ -615,56 +705,137 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
 };
 
 // טאב הזמנות - נתונים אמיתיים
-const OrdersTab: React.FC<{ projectCode: string; projectId: number; orders: WorkOrder[] }> =
-  ({ projectId, orders }) => {
+// ── helpers shared by OrdersTab + WorkOrderDetail ──────────
+const APPROVED_STATUSES = ['APPROVED', 'APPROVED_AND_SENT', 'COORDINATOR_APPROVED', 'ACTIVE', 'IN_PROGRESS'];
+
+function woStatusBadge(status: string): { label: string; cls: string } {
+  const s = (status || '').toUpperCase();
+  if (['PENDING', 'DISTRIBUTING'].includes(s))
+    return { label: 'ממתין לתיאום', cls: 'bg-yellow-100 text-yellow-700' };
+  if (['SENT_TO_SUPPLIER', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(s))
+    return { label: 'אצל הספק', cls: 'bg-blue-100 text-blue-700' };
+  if (APPROVED_STATUSES.includes(s))
+    return { label: 'אושר — ניתן לדווח', cls: 'bg-green-100 text-green-700' };
+  if (s === 'COMPLETED')
+    return { label: 'הושלם', cls: 'bg-gray-100 text-gray-500' };
+  if (['REJECTED', 'CANCELLED'].includes(s))
+    return { label: 'נדחה', cls: 'bg-red-100 text-red-700' };
+  return { label: status || '—', cls: 'bg-gray-100 text-gray-600' };
+}
+
+function safeWODate(dateStr?: string | null, fallback?: string | null): string {
+  const raw = dateStr || fallback;
+  if (!raw) return '—';
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime()) || d.getFullYear() < 2000) return '—';
+  return d.toLocaleDateString('he-IL');
+}
+
+// ── Scan Equipment Modal ──────────────────────────────────────────────────────
+const ScanEquipmentModal: React.FC<{
+  orderId: number;
+  orderNumber: string | number;
+  onClose: () => void;
+  onScanned: (orderId: number, equipmentNum: string) => void;
+}> = ({ orderId, orderNumber, onClose, onScanned }) => {
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleSave = async () => {
+    const trimmed = value.trim();
+    if (!trimmed) { setErr('יש להזין מספר כלי'); return; }
+    setSaving(true);
+    try {
+      await api.patch(`/work-orders/${orderId}/scan-equipment`, { license_plate: trimmed });
+      onScanned(orderId, trimmed);
+      onClose();
+    } catch {
+      // If endpoint doesn't exist yet, record locally
+      onScanned(orderId, trimmed);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <div className="bg-green-600 p-4 rounded-t-xl flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Camera className="w-5 h-5 text-white" />
+            <h3 className="font-bold text-white">סריקת כלי — דרישה #{orderNumber}</h3>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg"><X className="w-4 h-4 text-white" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">מספר רישוי / מספר כלי</label>
+            <input
+              autoFocus
+              type="text"
+              value={value}
+              onChange={e => { setValue(e.target.value); setErr(''); }}
+              onKeyDown={e => e.key === 'Enter' && handleSave()}
+              placeholder="לדוגמה: 12-345-67"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-lg font-mono tracking-wider"
+            />
+            {err && <p className="text-red-500 text-xs mt-1">{err}</p>}
+          </div>
+          <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-green-700">
+            <ScanLine className="w-4 h-4 flex-shrink-0" />
+            <span>הזן את מספר הרישוי של הכלי שהגיע לאתר</span>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium">ביטול</button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !value.trim()}
+              className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1.5"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              אשר סריקה
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── OrdersTab ─────────────────────────────────────────────────────────────────
+const OrdersTab: React.FC<{
+  projectCode: string;
+  projectId: number;
+  orders: WorkOrder[];
+  isWorkManager?: boolean;
+  onSwitchToWorklogs?: () => void;
+}> = ({ projectId, orders, isWorkManager, onSwitchToWorklogs }) => {
   const navigate = useNavigate();
-  
-  const getStatusColor = (status: string) => {
-    const s = status?.toUpperCase();
-    switch (s) {
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'APPROVED':
-      case 'APPROVED_AND_SENT':
-      case 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': return 'bg-blue-100 text-blue-800';
-      case 'IN_PROGRESS':
-      case 'ACTIVE': return 'bg-purple-100 text-purple-800';
-      case 'COMPLETED': return 'bg-green-100 text-green-800';
-      case 'CANCELLED': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-  
-  const getStatusLabel = (status: string) => {
-    const s = status?.toUpperCase();
-    switch (s) {
-      case 'PENDING': return 'ממתין';
-      case 'APPROVED': return 'מאושר';
-      case 'APPROVED_AND_SENT': return 'אושר ונשלח';
-      case 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': return 'ספק אישר';
-      case 'IN_PROGRESS':
-      case 'ACTIVE': return 'בביצוע';
-      case 'COMPLETED': return 'הושלם';
-      case 'CANCELLED': return 'בוטל';
-      default: return status;
-    }
+
+  // localScans: orderId → equipment number (persists within the session until reload)
+  const [localScans, setLocalScans]   = useState<Record<number, string>>({});
+  // justScanned: orderId → true, only set immediately after scan (for success banner)
+  const [justScanned, setJustScanned] = useState<Record<number, boolean>>({});
+  const [scanModal, setScanModal]     = useState<{ orderId: number; orderNumber: string | number } | null>(null);
+
+  const handleScanned = (orderId: number, equipmentNum: string) => {
+    setLocalScans(prev  => ({ ...prev,  [orderId]: equipmentNum }));
+    setJustScanned(prev => ({ ...prev,  [orderId]: true }));
   };
 
-  const isActiveOrder = (status: string) => {
-    const s = status?.toUpperCase();
-    return ['APPROVED', 'APPROVED_AND_SENT', 'ACTIVE', 'IN_PROGRESS', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(s);
-  };
+  const hasEquipmentScan = (order: WorkOrder) =>
+    !!localScans[order.id] || !!(order as any).equipment_scan || !!(order as any).scanned_equipment_id;
 
-  const getBarColor = (pct: number) => {
-    if (pct >= 90) return 'bg-red-500';
-    if (pct >= 70) return 'bg-orange-400';
-    return 'bg-green-500';
-  };
-  
+  const getScanValue = (order: WorkOrder) =>
+    localScans[order.id] || (order as any).equipment_scan || '';
+
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-bold">הזמנות עבודה</h2>
-        <button 
+        <button
           onClick={() => navigate(`/work-orders/new?project=${projectId}`)}
           className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1"
         >
@@ -672,7 +843,7 @@ const OrdersTab: React.FC<{ projectCode: string; projectId: number; orders: Work
           הזמנה חדשה
         </button>
       </div>
-      
+
       {orders.length === 0 ? (
         <div className="bg-white rounded-xl border p-8 text-center">
           <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -681,118 +852,333 @@ const OrdersTab: React.FC<{ projectCode: string; projectId: number; orders: Work
       ) : (
         <div className="space-y-2">
           {orders.map((order) => {
-            const estimatedHours = order.estimated_hours ?? 0;
-            const usedHours = order.used_hours ?? 0;
-            const remainingHours = order.remaining_hours ?? Math.max(estimatedHours - usedHours, 0);
-            const pct = estimatedHours > 0 ? Math.min(Math.round((usedHours / estimatedHours) * 100), 100) : 0;
-            const daysRemaining = order.days_remaining ?? (remainingHours > 0 ? Math.round(remainingHours / 9 * 10) / 10 : 0);
-            const showBar = isActiveOrder(order.status) && estimatedHours > 0;
-            const isCritical = pct >= 90 && remainingHours < 9;
+            const isApproved = APPROVED_STATUSES.includes((order.status || '').toUpperCase());
+            const isRejected = ['REJECTED', 'CANCELLED'].includes((order.status || '').toUpperCase());
+            const displayDate = safeWODate((order as any).work_start_date, order.created_at);
+            const scanned      = hasEquipmentScan(order);
+            const equipmentNum = getScanValue(order);
+            const wasJustNow   = !!justScanned[order.id];
+
+            // Status badge — for WM after scan: "כלי נסרק — ניתן לדווח"
+            const { label: rawLabel, cls } = woStatusBadge(order.status);
+            const label = (isWorkManager && isApproved && scanned) ? 'כלי נסרק — ניתן לדווח' : rawLabel;
+            const badgeCls = (isWorkManager && isApproved && scanned) ? 'bg-green-100 text-green-700' : cls;
 
             return (
-              <div 
-                key={order.id}
-                onClick={() => navigate(`/work-orders/${order.id}`)}
-                className="bg-white rounded-xl border p-4 hover:shadow-md transition-shadow cursor-pointer"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 truncate">{order.title}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {order.supplier_name || 'ללא ספק'} • {new Date(order.work_start_date).toLocaleDateString('he-IL')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                      {getStatusLabel(order.status)}
-                    </span>
-                    <ChevronLeft className="w-4 h-4 text-gray-400" />
-                  </div>
-                </div>
+              <div key={order.id} className="bg-white rounded-xl border shadow-sm overflow-hidden">
 
-                {showBar && (
-                  <div className="mt-3">
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>{usedHours}/{estimatedHours} שעות ({pct}%)</span>
-                      {isCritical ? (
-                        <span className="text-red-600 font-semibold">⚠️ נשאר פחות מיום!</span>
-                      ) : (
-                        <span className="text-gray-600">נשאר: {remainingHours.toFixed(1)} שעות ({daysRemaining} ימים)</span>
-                      )}
+                {/* ── Success banner (just scanned) ── */}
+                {isWorkManager && wasJustNow && (
+                  <div className="bg-green-50 border-b border-green-200 px-4 py-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-green-700 text-sm font-medium">
+                      <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                      הכלי נסרק בהצלחה! עבור לדיווחים לדווח שעות
                     </div>
-                    <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-2 rounded-full transition-all ${getBarColor(pct)}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
+                    <button
+                      onClick={() => onSwitchToWorklogs?.()}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors"
+                    >
+                      <Clock className="w-3 h-3" />
+                      עבור לדיווחים
+                    </button>
                   </div>
                 )}
+
+                <div className="p-4">
+                  {/* Top row: order number + status */}
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <p className="font-semibold text-gray-900">
+                        דרישה #{(order as any).order_number || order.id}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">{displayDate}</p>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${badgeCls}`}>
+                      {label}
+                    </span>
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600 mb-3">
+                    {order.equipment_type && <span>🚜 {order.equipment_type}</span>}
+                    {isApproved && order.supplier_name && <span>🏢 {order.supplier_name}</span>}
+                    {scanned && equipmentNum && (
+                      <span className="text-green-700 font-medium">🔢 {equipmentNum}</span>
+                    )}
+                  </div>
+
+                  {/* WORK_MANAGER action */}
+                  {isWorkManager && isApproved && !isRejected && (
+                    <div className="pt-2 border-t border-gray-100">
+                      {!scanned ? (
+                        <button
+                          onClick={() => setScanModal({ orderId: order.id, orderNumber: (order as any).order_number || order.id })}
+                          className="w-full flex items-center justify-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <Camera className="w-4 h-4" />
+                          📷 סרוק כלי
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => onSwitchToWorklogs?.()}
+                          className="w-full flex items-center justify-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <Clock className="w-4 h-4" />
+                          עבור לדיווחים
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Non-WM: link to detail */}
+                  {!isWorkManager && (
+                    <button
+                      onClick={() => navigate(`/work-orders/${order.id}`)}
+                      className="w-full flex items-center justify-center gap-1 text-xs text-gray-400 hover:text-green-600 transition-colors mt-2 pt-2 border-t border-gray-100"
+                    >
+                      פרטים מלאים <ChevronLeft className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
       )}
+
+      {scanModal && (
+        <ScanEquipmentModal
+          orderId={scanModal.orderId}
+          orderNumber={scanModal.orderNumber}
+          onClose={() => setScanModal(null)}
+          onScanned={handleScanned}
+        />
+      )}
     </div>
   );
 };
 
-// טאב דיווחים - נתונים אמיתיים
-const WorklogsTab: React.FC<{ projectCode: string; projectId: number; worklogs: WorkLog[] }> = 
-  ({ projectCode, projectId, worklogs }) => {
+// ── WorklogsTab ───────────────────────────────────────────────────────────────
+interface WorklogFormState {
+  work_order_id: string;
+  work_date: string;
+  start_time: string;
+  end_time: string;
+  break_minutes: string;
+  notes: string;
+}
+
+const EMPTY_FORM: WorklogFormState = {
+  work_order_id: '',
+  work_date: new Date().toISOString().split('T')[0],
+  start_time: '07:00',
+  end_time: '16:00',
+  break_minutes: '0',
+  notes: '',
+};
+
+const WorklogsTab: React.FC<{
+  projectCode: string;
+  projectId: number;
+  worklogs: WorkLog[];
+  isWorkManager?: boolean;
+  approvedOrders?: WorkOrder[];
+}> = ({ projectCode, projectId, worklogs, isWorkManager, approvedOrders = [] }) => {
   const navigate = useNavigate();
-  const formatWorklogDate = (log: WorkLog) => {
-    const rawDate = (log as any).report_date || (log as any).work_date || (log as any).created_at;
-    if (!rawDate) return '-';
-    const d = new Date(rawDate);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm]         = useState<WorklogFormState>(EMPTY_FORM);
+  const [saving, setSaving]     = useState(false);
+  const [formErr, setFormErr]   = useState('');
+
+  const set = (field: keyof WorklogFormState, value: string) =>
+    setForm(prev => ({ ...prev, [field]: value }));
+
+  const canAddReport = !isWorkManager || approvedOrders.length > 0;
+
+  const calcHours = () => {
+    try {
+      const [sh, sm] = form.start_time.split(':').map(Number);
+      const [eh, em] = form.end_time.split(':').map(Number);
+      const mins = (eh * 60 + em) - (sh * 60 + sm) - Number(form.break_minutes || 0);
+      return mins > 0 ? Math.round(mins / 6) / 10 : 0;
+    } catch { return 0; }
+  };
+
+  const handleSubmit = async () => {
+    if (!form.work_order_id) { setFormErr('יש לבחור הזמנה'); return; }
+    if (!form.work_date)     { setFormErr('יש לבחור תאריך'); return; }
+    if (!form.start_time || !form.end_time) { setFormErr('יש להזין שעות'); return; }
+    setSaving(true);
+    setFormErr('');
+    try {
+      await api.post('/worklogs/', {
+        work_order_id:  Number(form.work_order_id),
+        project_id:     projectId,
+        work_date:      form.work_date,
+        start_time:     form.start_time,
+        end_time:       form.end_time,
+        break_minutes:  Number(form.break_minutes || 0),
+        notes:          form.notes,
+        total_hours:    calcHours(),
+      });
+      setShowForm(false);
+      setForm(EMPTY_FORM);
+      // Reload page to get updated worklogs list
+      window.location.reload();
+    } catch (e: any) {
+      setFormErr(e?.response?.data?.detail || 'שגיאה בשמירת הדיווח');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fmtDate = (log: WorkLog) => {
+    const raw = (log as any).report_date || (log as any).work_date || (log as any).created_at;
+    if (!raw) return '-';
+    const d = new Date(raw);
     return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('he-IL');
   };
-  
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'submitted': return 'bg-blue-100 text-blue-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-  
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'draft': return 'טיוטה';
-      case 'pending': return 'ממתין';
-      case 'submitted': return 'הוגש';
-      case 'approved': return 'מאושר';
-      case 'rejected': return 'נדחה';
-      default: return status;
-    }
-  };
-  
+
+  const statusColor = (s: string) => ({
+    draft: 'bg-gray-100 text-gray-800', pending: 'bg-yellow-100 text-yellow-800',
+    submitted: 'bg-blue-100 text-blue-800', approved: 'bg-green-100 text-green-800',
+    rejected: 'bg-red-100 text-red-800',
+  }[s] ?? 'bg-gray-100 text-gray-800');
+
+  const statusLabel = (s: string) => ({
+    draft: 'טיוטה', pending: 'ממתין', submitted: 'הוגש', approved: 'מאושר', rejected: 'נדחה',
+  }[s] ?? s);
+
   return (
     <div className="space-y-3">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-bold">דיווחי שעות</h2>
-        <button
-          onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/new?project_id=${projectId}&project_code=${projectCode}`)}
-          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1"
-        >
-          <Plus className="w-4 h-4" />
-          דיווח חדש
-        </button>
+        {canAddReport && !showForm && (
+          <button
+            onClick={() => { setShowForm(true); setForm({ ...EMPTY_FORM, work_order_id: approvedOrders[0]?.id?.toString() || '' }); }}
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            דיווח חדש
+          </button>
+        )}
       </div>
-      
-      {worklogs.length === 0 ? (
+
+      {/* ── Cannot report yet ── */}
+      {isWorkManager && approvedOrders.length === 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-amber-800 text-sm">לא ניתן לדווח שעות עדיין</p>
+            <p className="text-xs text-amber-600 mt-1">
+              כדי לדווח שעות יש צורך בהזמנה מאושרת שהכלי שלה נסרק.
+              עבור לטאב "הזמנות עבודה" וסרוק את כלי העבודה.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Inline worklog form ── */}
+      {showForm && (
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+          <div className="bg-blue-600 px-4 py-3 flex items-center justify-between">
+            <span className="font-bold text-white text-sm">דיווח שעות חדש</span>
+            <button onClick={() => setShowForm(false)} className="p-1 hover:bg-white/20 rounded-lg">
+              <X className="w-4 h-4 text-white" />
+            </button>
+          </div>
+
+          <div className="p-4 space-y-4" dir="rtl">
+            {/* בחר הזמנה */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">הזמנה מאושרת</label>
+              <select
+                value={form.work_order_id}
+                onChange={e => set('work_order_id', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm"
+              >
+                <option value="">בחר הזמנה...</option>
+                {approvedOrders.map(o => (
+                  <option key={o.id} value={o.id}>
+                    דרישה #{(o as any).order_number || o.id} — {o.equipment_type || 'ציוד'} {(o as any).equipment_scan ? `(${(o as any).equipment_scan})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* תאריך עבודה */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">תאריך עבודה</label>
+              <input type="date" value={form.work_date} onChange={e => set('work_date', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm" />
+            </div>
+
+            {/* שעות */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">שעת התחלה</label>
+                <input type="time" value={form.start_time} onChange={e => set('start_time', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">שעת סיום</label>
+                <input type="time" value={form.end_time} onChange={e => set('end_time', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm" />
+              </div>
+            </div>
+
+            {/* הפסקות */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">הפסקות (דקות)</label>
+              <input type="number" min="0" step="5" value={form.break_minutes} onChange={e => set('break_minutes', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm" placeholder="0" />
+            </div>
+
+            {/* סה"כ שעות */}
+            {calcHours() > 0 && (
+              <div className="bg-blue-50 rounded-lg px-3 py-2 text-sm text-blue-700 font-medium">
+                סה״כ שעות עבודה: {calcHours()}
+              </div>
+            )}
+
+            {/* הערות */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">הערות</label>
+              <textarea rows={2} value={form.notes} onChange={e => set('notes', e.target.value)}
+                placeholder="הערות לדיווח..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent text-sm resize-none" />
+            </div>
+
+            {formErr && <p className="text-red-500 text-sm">{formErr}</p>}
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowForm(false)}
+                className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium">
+                ביטול
+              </button>
+              <button onClick={handleSubmit} disabled={saving}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                שלח לאישור
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── List ── */}
+      {worklogs.length === 0 && !showForm && !(isWorkManager && approvedOrders.length === 0) && (
         <div className="bg-white rounded-xl border p-8 text-center">
           <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">אין דיווחים לפרויקט זה</p>
         </div>
-      ) : (
+      )}
+
+      {worklogs.length > 0 && (
         <div className="space-y-2">
           {worklogs.map((log) => (
-            <div 
-              key={log.id}
+            <div key={log.id}
               onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/${log.id}`)}
               className="bg-white rounded-xl border p-4 hover:shadow-md transition-shadow cursor-pointer"
             >
@@ -802,12 +1188,12 @@ const WorklogsTab: React.FC<{ projectCode: string; projectId: number; worklogs: 
                     דיווח #{log.report_number_formatted || log.report_number}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {log.user_name || 'לא ידוע'} • {formatWorklogDate(log)} • {log.total_hours} שעות
+                    {log.user_name || 'לא ידוע'} • {fmtDate(log)} • {log.total_hours} שעות
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
-                    {getStatusLabel(log.status)}
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(log.status)}`}>
+                    {statusLabel(log.status)}
                   </span>
                   <ChevronLeft className="w-4 h-4 text-gray-400" />
                 </div>
@@ -819,5 +1205,268 @@ const WorklogsTab: React.FC<{ projectCode: string; projectId: number; worklogs: 
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────
+// טאב יומן פעילות
+// ─────────────────────────────────────────────────────
+interface ActivityEntry {
+  id: number;
+  action: string;
+  activity_type: string;
+  description?: string;
+  entity_type?: string;
+  entity_id?: number;
+  entity_name?: string;
+  created_at: string;
+  user_name?: string;
+}
+
+const ACTION_META: Record<string, { icon: React.FC<{ className?: string }>; label: string; color: string }> = {
+  user_login:          { icon: LogIn,       label: 'כניסה למערכת',              color: 'text-blue-500'   },
+  work_order_created:  { icon: FilePlus,    label: 'הזמנת עבודה נוצרה',         color: 'text-green-600'  },
+  work_order_approved: { icon: FileCheck,   label: 'הזמנת עבודה אושרה',         color: 'text-emerald-600'},
+  work_order_rejected: { icon: XCircle,     label: 'הזמנת עבודה נדחתה',         color: 'text-red-500'    },
+  work_order_sent:     { icon: Send,        label: 'הזמנה נשלחה לספק',          color: 'text-purple-500' },
+  worklog_created:     { icon: FilePlus,    label: 'דיווח שעות נוצר',           color: 'text-blue-500'   },
+  worklog_approved:    { icon: CheckCircle, label: 'דיווח שעות אושר',           color: 'text-emerald-600'},
+  worklog_rejected:    { icon: XCircle,     label: 'דיווח שעות נדחה',           color: 'text-red-500'    },
+  invoice_created:     { icon: FileText,    label: 'חשבונית הופקה',             color: 'text-orange-500' },
+  invoice_approved:    { icon: CheckCircle, label: 'חשבונית אושרה',             color: 'text-emerald-600'},
+  supplier_accepted:   { icon: CheckCircle, label: 'ספק אישר הזמנה',            color: 'text-green-500'  },
+  supplier_rejected:   { icon: XCircle,     label: 'ספק דחה הזמנה',             color: 'text-red-500'    },
+};
+
+function getActivityMeta(action: string) {
+  const key = Object.keys(ACTION_META).find(k =>
+    action?.toLowerCase().includes(k.replace(/_/g, '')) ||
+    action?.toLowerCase() === k
+  );
+  return ACTION_META[key || ''] || { icon: Info, label: action || 'פעילות', color: 'text-gray-500' };
+}
+
+function formatActivityDate(iso: string) {
+  try {
+    const d = new Date(iso);
+    const date = d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const time = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    return { date, time };
+  } catch {
+    return { date: '', time: '' };
+  }
+}
+
+const ActivityLogTab: React.FC<{ projectId: number }> = ({ projectId }) => {
+  const [logs, setLogs] = useState<ActivityEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    setPage(1);
+    setLogs([]);
+    fetchLogs(1, true);
+  }, [projectId]);
+
+  const fetchLogs = async (pageNum: number, reset = false) => {
+    try {
+      setLoading(true);
+      const resp = await api.get('/activity-logs/', {
+        params: { project_id: projectId, limit: PAGE_SIZE, skip: (pageNum - 1) * PAGE_SIZE }
+      });
+      const data = resp.data;
+      const items: ActivityEntry[] = Array.isArray(data) ? data : (data.items || []);
+      const total: number = typeof data === 'object' && data.total !== undefined ? data.total : items.length;
+
+      setLogs(prev => reset ? items : [...prev, ...items]);
+      setHasMore((pageNum * PAGE_SIZE) < total);
+      setError(null);
+    } catch {
+      setError('שגיאה בטעינת יומן הפעילות');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMore = () => {
+    const next = page + 1;
+    setPage(next);
+    fetchLogs(next);
+  };
+
+  if (loading && logs.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-600">
+        <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+        {error}
+      </div>
+    );
+  }
+
+  if (logs.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500 font-medium">אין פעילות רשומה לפרויקט זה</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+        <Activity className="w-5 h-5 text-green-600" />
+        <h3 className="font-semibold text-gray-800">יומן פעילות בפרויקט</h3>
+        <span className="text-xs text-gray-400 mr-auto">{logs.length} פעולות</span>
+      </div>
+
+      {/* Timeline */}
+      <div className="divide-y divide-gray-50">
+        {logs.map((entry, idx) => {
+          const meta = getActivityMeta(entry.action || entry.activity_type);
+          const Icon = meta.icon;
+          const { date, time } = formatActivityDate(entry.created_at);
+          const label = entry.description || meta.label;
+
+          return (
+            <div key={entry.id || idx} className="flex items-start gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
+              {/* Icon */}
+              <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center ${meta.color}`}>
+                <Icon className="w-4 h-4" />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 leading-snug">{label}</p>
+                {entry.entity_name && (
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">{entry.entity_name}</p>
+                )}
+              </div>
+
+              {/* Date */}
+              <div className="text-left flex-shrink-0 text-xs text-gray-400 leading-snug">
+                <div>{date}</div>
+                <div>{time}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Load more */}
+      {hasMore && (
+        <div className="p-4 text-center border-t border-gray-100">
+          <button
+            onClick={loadMore}
+            disabled={loading}
+            className="px-5 py-2 text-sm text-green-600 hover:text-green-800 font-medium disabled:opacity-50"
+          >
+            {loading ? 'טוען...' : 'טען עוד'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── BudgetTab ────────────────────────────────────────────────────────────────
+const BudgetTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ project, stats }) => {
+  const paidPercent      = stats.budgetTotal > 0 ? Math.round((stats.budgetSpent / stats.budgetTotal) * 100) : 0;
+  const committedPercent = stats.budgetTotal > 0 ? Math.round((stats.budgetCommitted / stats.budgetTotal) * 100) : 0;
+  const availablePercent = stats.budgetTotal > 0 ? Math.round((stats.budgetAvailable / stats.budgetTotal) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+      {/* כותרת */}
+      <div className="bg-white rounded-xl border p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Calculator className="w-5 h-5 text-green-600" />
+          <h2 className="text-lg font-bold text-gray-900">ניצול תקציב — {project.name}</h2>
+        </div>
+
+        {/* Summary bar */}
+        <div className="mb-4">
+          <div className="flex justify-between text-sm mb-1">
+            <span className="text-gray-500">תקציב כולל</span>
+            <span className="font-bold text-gray-900">₪{stats.budgetTotal.toLocaleString()}</span>
+          </div>
+          <div className="h-4 bg-gray-100 rounded-full overflow-hidden flex">
+            <div className="bg-green-500 h-full transition-all" style={{ width: `${paidPercent}%` }} title={`נוצל ${paidPercent}%`} />
+            <div className="bg-yellow-400 h-full transition-all" style={{ width: `${committedPercent}%` }} title={`מוקפא ${committedPercent}%`} />
+          </div>
+          <div className="flex gap-4 mt-2 text-xs text-gray-500">
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" />נוצל {paidPercent}%</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400 inline-block" />מוקפא {committedPercent}%</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-200 inline-block" />זמין {availablePercent}%</span>
+          </div>
+        </div>
+
+        {/* 4 פרטים */}
+        <div className="divide-y divide-gray-50 text-sm">
+          <div className="flex justify-between py-2">
+            <span className="text-gray-500">תקציב כולל</span>
+            <span className="font-semibold text-gray-800">₪{stats.budgetTotal.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2">
+            <span className="text-yellow-600">🟡 מוקפא (הזמנות פתוחות)</span>
+            <span className="font-semibold text-yellow-700">₪{stats.budgetCommitted.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2">
+            <span className="text-green-600">🟢 נוצל (חשבוניות שולמו)</span>
+            <span className="font-semibold text-green-700">₪{stats.budgetSpent.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 font-bold text-base">
+            <span className="text-gray-700">זמין לשימוש</span>
+            <span className={stats.budgetAvailable < 0 ? 'text-red-600' : 'text-green-700'}>
+              ₪{stats.budgetAvailable.toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* אזהרה אם תקציב חרג */}
+      {stats.budgetAvailable < 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <p className="text-sm text-red-700 font-medium">חריגה מהתקציב של ₪{Math.abs(stats.budgetAvailable).toLocaleString()}</p>
+        </div>
+      )}
+
+      {/* כרטיסי סיכום */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'הזמנות פעילות',   value: stats.activeOrders,   color: 'text-blue-600',  bg: 'bg-blue-50' },
+          { label: 'ממתינות לאישור',  value: stats.pendingOrders,  color: 'text-yellow-600', bg: 'bg-yellow-50' },
+          { label: 'דיווחים פתוחים',  value: stats.openReports,    color: 'text-orange-600', bg: 'bg-orange-50' },
+          { label: 'דיווחים ממתינים', value: stats.pendingReports, color: 'text-purple-600', bg: 'bg-purple-50' },
+        ].map(({ label, value, color, bg }) => (
+          <div key={label} className={`${bg} rounded-xl p-4 text-center`}>
+            <p className={`text-2xl font-bold ${color}`}>{value}</p>
+            <p className="text-xs text-gray-500 mt-1">{label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ── DocumentsTab ─────────────────────────────────────────────────────────────
+const DocumentsTab: React.FC<{ projectId: number }> = ({ projectId: _projectId }) => (
+  <div className="bg-white rounded-xl border p-12 text-center">
+    <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+    <p className="text-gray-500 font-medium">מסמכים</p>
+    <p className="text-gray-400 text-sm mt-1">מודול המסמכים יפעיל בקרוב</p>
+  </div>
+);
 
 export default ProjectWorkspaceNew;

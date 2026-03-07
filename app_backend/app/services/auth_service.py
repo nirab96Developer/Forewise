@@ -30,17 +30,23 @@ class AuthService:
         permissions = []
         if role and hasattr(role, "permissions"):
             permissions = [p.code for p in role.permissions]
+        full_name = user.full_name or ""
+        first_name = full_name.split()[0] if full_name.strip() else full_name
+        last_login_iso = user.last_login.isoformat() if getattr(user, "last_login", None) else None
         return {
             "id": user.id,
             "email": user.email,
             "username": user.username,
-            "full_name": user.full_name,
+            "full_name": full_name,
+            "first_name": first_name,
             "role": role.code if role else None,
+            "role_code": role.code if role else None,
             "permissions": permissions,
             "region_id": user.region_id,
             "area_id": user.area_id,
             "department_id": user.department_id,
             "must_change_password": bool(getattr(user, "must_change_password", False)),
+            "last_login": last_login_iso,
         }
 
     def _load_user(self, db: Session, user_id: int) -> Optional[User]:

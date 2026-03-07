@@ -190,6 +190,15 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
           permissions: permissions
         };
 
+        // ── שמירה מפורשת ב-localStorage — תמיד, ללא תנאי ──────────────
+        localStorage.setItem('access_token',    result.access_token);
+        localStorage.setItem('token',           result.access_token);
+        localStorage.setItem('user',            JSON.stringify(userObject));
+        localStorage.setItem('isAuthenticated', 'true');
+        if (result.refresh_token) {
+          localStorage.setItem('refresh_token', result.refresh_token);
+        }
+
         const rememberMe = getRememberPreference();
         setAuthSession({
           accessToken: result.access_token,
@@ -220,7 +229,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         if (result.user?.must_change_password) {
           navigate('/change-password', { replace: true });
         } else {
-          navigate('/', { replace: true });
+          navigate('/welcome', { replace: true });
         }
       } else {
         setError('קוד OTP שגוי. אנא נסה שוב');

@@ -36,6 +36,7 @@ import app.models.work_order
 import app.models.worklog_segment  # Must be before worklog
 import app.models.worklog
 import app.models.invoice
+import app.models.invoice_item  # Invoice line items
 import app.models.supplier_constraint_log  # Must be imported before supplier_constraint_reason
 import app.models.supplier_constraint_reason
 import app.models.supplier_rejection_reason
@@ -44,6 +45,7 @@ import app.models.budget_transfer
 import app.models.supplier_invitation  # Fair rotation invitations
 import app.models.forest  # PostGIS forest polygons
 import app.models.project_assignment  # Project user assignments
+import app.models.biometric_credential  # WebAuthn biometric credentials
 
 # Step 3: NOW import the actual classes for use
 from app.models.user import User
@@ -77,12 +79,14 @@ from app.models.work_order_status import WorkOrderStatus
 from app.models.budget import Budget
 from app.models.budget_item import BudgetItem
 from app.models.invoice import Invoice
+from app.models.invoice_item import InvoiceItem
 from app.models.supplier_constraint_log import SupplierConstraintLog  # Must be imported before SupplierConstraintReason
 from app.models.supplier_constraint_reason import SupplierConstraintReason
 from app.models.supplier_rejection_reason import SupplierRejectionReason
 from app.models.supplier_invitation import SupplierInvitation
 from app.models.forest import Forest
 from app.models.project_assignment import ProjectAssignment
+from app.models.biometric_credential import BiometricCredential
 
 # Step 4: Export everything
 __all__ = [
@@ -120,10 +124,12 @@ __all__ = [
     'Budget',
     'BudgetItem',
     'Invoice',
+    'InvoiceItem',
     'SupplierConstraintReason',
     'SupplierConstraintLog',
     'SupplierRejectionReason',
     'SupplierInvitation',
     'Forest',
     'ProjectAssignment',
+    'BiometricCredential',
 ]

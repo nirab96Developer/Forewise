@@ -130,6 +130,7 @@ def user_has_permission(user, permission: str) -> bool:
     
     ADMIN role has all permissions.
     Other roles checked against role_permissions from DB.
+    Case-insensitive: 'WORK_ORDERS.CREATE' matches 'work_orders.create'.
     """
     # ADMIN bypass - has all permissions
     if hasattr(user, 'role') and user.role and user.role.code == 'ADMIN':
@@ -138,12 +139,16 @@ def user_has_permission(user, permission: str) -> bool:
     # Check cached permissions
     user_perms = getattr(user, '_permissions', set())
     
-    # Direct match
-    if permission in user_perms:
+    # Normalize to lower for comparison
+    perm_lower = permission.lower()
+    perms_lower = {p.lower() for p in user_perms}
+    
+    # Direct match (case-insensitive)
+    if perm_lower in perms_lower:
         return True
     
     # Check SYSTEM.ADMIN (super permission)
-    if 'SYSTEM.ADMIN' in user_perms:
+    if 'system.admin' in perms_lower:
         return True
     
     return False
@@ -195,34 +200,45 @@ class PermissionChecker:
         return current_user
 
 
-def require_permission(*permissions: str, require_all: bool = False):
+def require_permission(user_or_first_perm, *permissions: str, require_all: bool = False):
     """
-    Dependency to require specific permission(s).
-    
-    Usage:
-        @router.get("/projects")
-        async def list_projects(
-            user: User = Depends(require_permission("PROJECTS.VIEW"))
-        ):
-            ...
-        
-        # Multiple permissions (any one is enough):
-        @router.post("/projects")
-        async def create_project(
-            user: User = Depends(require_permission("PROJECTS.CREATE", "SYSTEM.ADMIN"))
-        ):
-            ...
-        
-        # All permissions required:
-        @router.delete("/projects/{id}")
-        async def delete_project(
-            user: User = Depends(require_permission("PROJECTS.DELETE", "PROJECTS.VIEW", require_all=True))
-        ):
-            ...
+    Dual-mode permission check:
+
+    Inline mode (most common in this codebase):
+        require_permission(current_user, "users.list")
+        require_permission(current_user, "perm1", "perm2")
+        → raises HTTP 403 immediately if not authorized, returns user if OK
+
+    Factory/Depends mode:
+        Depends(require_permission("PROJECTS.VIEW"))
+        → returns a PermissionChecker callable for FastAPI dependency injection
     """
-    # Return the PermissionChecker instance directly (not wrapped in Depends)
-    # The caller will wrap it in Depends()
-    return PermissionChecker(*permissions, require_all=require_all)
+    # Detect inline mode: first arg is a user object (has role_id attribute)
+    if hasattr(user_or_first_perm, 'role_id') or hasattr(user_or_first_perm, 'is_active'):
+        user = user_or_first_perm
+        # ADMIN bypass
+        if hasattr(user, 'role') and user.role and getattr(user.role, 'code', None) == 'ADMIN':
+            return user
+        if not permissions:
+            return user
+        if require_all:
+            for perm in permissions:
+                if not user_has_permission(user, perm):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Missing permission: {perm}"
+                    )
+        else:
+            if not any(user_has_permission(user, p) for p in permissions):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"One of these permissions required: {', '.join(permissions)}"
+                )
+        return user
+    else:
+        # Factory mode: require_permission("perm1", "perm2") → PermissionChecker for Depends
+        all_perms = (user_or_first_perm,) + permissions
+        return PermissionChecker(*all_perms, require_all=require_all)
 
 
 # ============================================================

@@ -16,6 +16,11 @@ from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.models.worklog import Worklog
 from app.models.project import Project
+from app.services.notification_service import (
+    notify_worklog_created,
+    notify_worklog_approved,
+    notify_worklog_rejected,
+)
 from app.schemas.worklog import (
     WorklogCreate, WorklogUpdate, WorklogResponse,
     WorklogList, WorklogSearch, WorklogStatistics
@@ -164,6 +169,7 @@ def create_worklog(
 
     try:
         worklog = worklog_service.create(db, data, current_user.id)
+        notify_worklog_created(db, worklog)
         return worklog
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -492,7 +498,8 @@ def approve_worklog(
     try:
         # Use service method (handles log internally)
         updated = worklog_service.approve(db, worklog_id, current_user.id)
-        
+        notify_worklog_approved(db, updated)
+
         # Send PDF in background
         if background_tasks:
             background_tasks.add_task(
@@ -614,6 +621,7 @@ def reject_worklog(
     try:
         # Use service method (handles log internally)
         updated = worklog_service.reject(db, worklog_id, current_user.id, rejection_reason)
+        notify_worklog_rejected(db, updated, reason=rejection_reason or "")
         return updated
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

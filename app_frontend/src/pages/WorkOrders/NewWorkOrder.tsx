@@ -312,8 +312,21 @@ const NewWorkOrder: React.FC = () => {
       }
 
       await workOrderService.createWorkOrder(workOrderData);
-      showToast('דרישת הכלים נשלחה בהצלחה!', 'success');
-      navigate('/order-coordination');
+      showToast('ההזמנה נשלחה בהצלחה למתאם ההזמנות ✅', 'success');
+      // Navigate back to project workspace (if came from a project)
+      if (projectCode) {
+        navigate(`/projects/${projectCode}`);
+      } else if (projectIdFromUrl) {
+        // Fetch project code to build the right URL
+        try {
+          const { data } = await import('../../services/api').then(m => m.default.get(`/projects/${projectIdFromUrl}`));
+          navigate(`/projects/${data.code || data.project_code || projectIdFromUrl}`);
+        } catch {
+          navigate('/projects');
+        }
+      } else {
+        navigate('/projects');
+      }
     } catch (error: any) {
       if (!error.response) {
         // Network error — save offline

@@ -12,6 +12,7 @@ from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.models.invoice import Invoice
 from app.models.project import Project
+from app.services.notification_service import notify_invoice_created, notify_invoice_approved
 from app.schemas.invoice import (
     InvoiceCreate, InvoiceUpdate, InvoiceResponse,
     InvoiceList, InvoiceSearch, InvoiceStatistics
@@ -32,7 +33,9 @@ def list_invoices(
     """List invoices"""
     require_permission(current_user, "invoices.read")
 
-    if current_user.area_id is not None:
+    # ACCOUNTANT/ADMIN/REGION_MANAGER see all invoices; other roles filtered by area
+    user_role = getattr(getattr(current_user, 'role', None), 'code', '')
+    if current_user.area_id is not None and user_role not in ('ACCOUNTANT', 'ADMIN', 'REGION_MANAGER'):
         search.area_id = current_user.area_id
 
     invoices, total = invoice_service.list(db, search)
@@ -95,7 +98,10 @@ def get_invoice(
 ):
     """Get invoice"""
     require_permission(current_user, "invoices.read")
-    if current_user.area_id is None:
+    # ACCOUNTANT and ADMIN see all invoices regardless of area
+    user_role = getattr(getattr(current_user, 'role', None), 'code', '')
+    no_area_filter = current_user.area_id is None or user_role in ('ACCOUNTANT', 'ADMIN', 'REGION_MANAGER')
+    if no_area_filter:
         invoice = invoice_service.get_by_id_or_404(db, invoice_id)
         return invoice
 
@@ -190,6 +196,7 @@ def approve_invoice(
     try:
         # Use service method (handles log internally)
         updated = invoice_service.approve(db, invoice_id, current_user.id)
+        notify_invoice_approved(db, updated)
         return updated
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -591,6 +598,7 @@ def generate_monthly_invoice_endpoint(
             created_by=current_user.id,
             db=db,
         )
+        notify_invoice_created(db, invoice)
         return {
             "invoice_id": invoice.id,
             "invoice_number": invoice.invoice_number,

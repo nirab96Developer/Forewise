@@ -94,7 +94,9 @@ const App: React.FC = () => {
   // בדיקה אם הנתיב הנוכחי הוא דף ציבורי (ללא ניווט)
   const isLoginPage = location.pathname === "/login";
   const isSupplierPortal = location.pathname.startsWith("/supplier-portal");
-  const isPublicPage = isLoginPage || isSupplierPortal;
+  const isChangePassword = location.pathname === "/change-password";
+  const isWelcomeSplash = location.pathname === "/welcome";
+  const isPublicPage = isLoginPage || isSupplierPortal || isChangePassword || isWelcomeSplash;
 
   return (
     <ToastProvider>

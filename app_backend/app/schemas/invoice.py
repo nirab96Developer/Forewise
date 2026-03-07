@@ -21,14 +21,14 @@ class InvoiceStatus(str, Enum):
 
 class InvoiceBase(BaseModel):
     """Base invoice schema"""
-    supplier_id: int = Field(..., description="ספק (חובה)")
+    supplier_id: Optional[int] = Field(None, description="ספק")
     project_id: Optional[int] = Field(None, description="פרויקט")
-    issue_date: date = Field(..., description="תאריך הנפקה")
-    due_date: date = Field(..., description="תאריך פירעון")
-    subtotal: Decimal = Field(..., ge=0, description="סכום לפני מע\"מ")
-    tax_amount: Decimal = Field(..., ge=0, description="מע\"מ")
-    total_amount: Decimal = Field(..., ge=0, description="סכום כולל")
-    status: InvoiceStatus = Field(InvoiceStatus.DRAFT, description="סטטוס")
+    issue_date: Optional[date] = Field(None, description="תאריך הנפקה")
+    due_date: Optional[date] = Field(None, description="תאריך פירעון")
+    subtotal: Optional[Decimal] = Field(None, ge=0, description="סכום לפני מע\"מ")
+    tax_amount: Optional[Decimal] = Field(None, ge=0, description="מע\"מ")
+    total_amount: Optional[Decimal] = Field(None, ge=0, description="סכום כולל")
+    status: Optional[InvoiceStatus] = Field(InvoiceStatus.DRAFT, description="סטטוס")
     notes: Optional[str] = Field(None, description="הערות")
 
 
@@ -100,15 +100,15 @@ class InvoiceResponse(InvoiceBase):
 class InvoiceBrief(BaseModel):
     """Brief invoice for lists"""
     id: int
-    invoice_number: str
-    supplier_id: int
+    invoice_number: Optional[str] = None
+    supplier_id: Optional[int] = None
     project_id: Optional[int] = None
-    status: str
-    total_amount: Decimal
-    paid_amount: Decimal
-    due_date: date
-    is_active: bool
-    
+    status: Optional[str] = None
+    total_amount: Optional[Decimal] = Decimal("0")
+    paid_amount: Optional[Decimal] = Decimal("0")
+    due_date: Optional[date] = None
+    is_active: bool = True
+
     model_config = ConfigDict(from_attributes=True)
 
 

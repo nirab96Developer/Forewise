@@ -782,7 +782,8 @@ _biometric_challenges = {}
 
 @router.post("/biometric/register")
 async def biometric_register_start(
-    request: dict,
+    http_request: Request,
+    body: dict = Body(default={}),
     current_user=Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
@@ -790,21 +791,27 @@ async def biometric_register_start(
     try:
         user_id = current_user.id
         username = current_user.username
-        
+
+        # Determine rpID from Host header (strip port), fall back to production domain
+        host = http_request.headers.get("host", "forewise.co")
+        rp_id = host.split(":")[0]  # strip port if present
+        # Prefer explicit hostname from request body (client-sent)
+        rp_id = body.get("hostname", rp_id)
+
         # Generate random challenge
         challenge = base64.b64encode(os.urandom(32)).decode('utf-8')
-        
+
         # Store challenge temporarily
         _biometric_challenges[str(user_id)] = {
             "challenge": challenge,
             "created_at": datetime.utcnow()
         }
-        
+
         return {
             "challenge": challenge,
             "rp": {
                 "name": "מערכת דיווח שעות קק״ל",
-                "id": request.get("hostname", "167.99.228.10")
+                "id": rp_id
             },
             "user": {
                 "id": str(user_id),
@@ -812,7 +819,7 @@ async def biometric_register_start(
                 "displayName": current_user.full_name or username
             }
         }
-        
+
     except Exception as e:
         logger.error(f"Error starting biometric registration: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1374,3 +1381,274 @@ def list_devices(
         }
         for d in devices
     ]
+
+
+# ============================================================
+# WebAuthn — proper register/login flows (py webauthn 2.x)
+# ============================================================
+
+import os as _os
+
+# In-memory challenge store (replace with Redis in production)
+_wn_reg_challenges:   dict = {}   # user_id  → challenge bytes
+_wn_login_challenges: dict = {}   # username → (challenge bytes, credential_ids)
+
+try:
+    import webauthn as _wn
+    from webauthn.helpers.structs import (
+        AuthenticatorSelectionCriteria,
+        UserVerificationRequirement,
+        AuthenticatorAttachment,
+        ResidentKeyRequirement,
+        PublicKeyCredentialDescriptor,
+        PublicKeyCredentialType,
+    )
+    from webauthn.helpers.cose import COSEAlgorithmIdentifier
+    import webauthn.helpers.base64url_to_bytes as _b64url
+    _WN_OK = True
+except Exception as _e:
+    logger.warning(f"webauthn library not available: {_e}")
+    _WN_OK = False
+
+
+@router.post("/webauthn/register/begin")
+async def webauthn_register_begin(
+    http_request: Request,
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Step 1 of registration: generate PublicKeyCredentialCreationOptions.
+    Called while the user is already logged in.
+    """
+    if not _WN_OK:
+        raise HTTPException(status_code=501, detail="WebAuthn library not available on server")
+
+    rp_id = http_request.headers.get("host", "forewise.co").split(":")[0]
+
+    # List credentials already registered for this user (to exclude)
+    existing = db.query(BiometricCredential).filter(
+        BiometricCredential.user_id == current_user.id,
+        BiometricCredential.is_active == True,
+    ).all()
+    exclude_creds = [
+        PublicKeyCredentialDescriptor(
+            id=c.credential_id.encode() if isinstance(c.credential_id, str) else c.credential_id,
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+        )
+        for c in existing
+    ]
+
+    options = _wn.generate_registration_options(
+        rp_id=rp_id,
+        rp_name="מערכת ניהול יערות קק״ל",
+        user_name=current_user.username,
+        user_display_name=current_user.full_name or current_user.username,
+        user_id=str(current_user.id).encode(),
+        attestation=_wn.helpers.structs.AttestationConveyancePreference.NONE,
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            user_verification=UserVerificationRequirement.REQUIRED,
+            resident_key=ResidentKeyRequirement.PREFERRED,
+        ),
+        exclude_credentials=exclude_creds,
+        timeout=60000,
+    )
+
+    # Store challenge for verification
+    _wn_reg_challenges[str(current_user.id)] = options.challenge
+
+    return _wn.options_to_json(options)
+
+
+@router.post("/webauthn/register/complete")
+async def webauthn_register_complete(
+    http_request: Request,
+    body: dict = Body(...),
+    current_user=Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """Step 2 of registration: verify attestation and store credential."""
+    if not _WN_OK:
+        raise HTTPException(status_code=501, detail="WebAuthn library not available on server")
+
+    expected_challenge = _wn_reg_challenges.pop(str(current_user.id), None)
+    if not expected_challenge:
+        raise HTTPException(status_code=400, detail="No pending registration challenge")
+
+    rp_id = http_request.headers.get("host", "forewise.co").split(":")[0]
+    origin = f"https://{rp_id}"
+
+    try:
+        credential_json = _wn.helpers.structs.RegistrationCredential.parse_raw(
+            __import__("json").dumps(body)
+        )
+        verification = _wn.verify_registration_response(
+            credential=credential_json,
+            expected_challenge=expected_challenge,
+            expected_rp_id=rp_id,
+            expected_origin=origin,
+            require_user_verification=True,
+        )
+    except Exception as e:
+        logger.error(f"WebAuthn registration verification failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Registration verification failed: {e}")
+
+    # Delete any old credential for this user+device (upsert)
+    db.query(BiometricCredential).filter(
+        BiometricCredential.credential_id == verification.credential_id.hex(),
+    ).delete()
+
+    cred = BiometricCredential(
+        user_id=current_user.id,
+        credential_id=verification.credential_id.hex(),
+        public_key=verification.credential_public_key,
+        sign_count=verification.sign_count,
+        device_name=body.get("device_name", None),
+        is_active=True,
+        created_at=datetime.utcnow(),
+    )
+    db.add(cred)
+    db.commit()
+
+    return {"ok": True, "credential_id": cred.credential_id}
+
+
+@router.post("/webauthn/login/begin")
+async def webauthn_login_begin(
+    http_request: Request,
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    """Step 1 of login: generate PublicKeyCredentialRequestOptions for a username."""
+    if not _WN_OK:
+        raise HTTPException(status_code=501, detail="WebAuthn library not available on server")
+
+    username: str = body.get("username", "").strip()
+    if not username:
+        raise HTTPException(status_code=400, detail="username required")
+
+    user = db.query(User).filter(
+        (User.username == username) | (User.email == username),
+        User.is_active == True,
+    ).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="משתמש לא נמצא")
+
+    creds = db.query(BiometricCredential).filter(
+        BiometricCredential.user_id == user.id,
+        BiometricCredential.is_active == True,
+    ).all()
+    if not creds:
+        raise HTTPException(status_code=404, detail="אין credential ביומטרי רשום למשתמש זה")
+
+    allow_creds = [
+        PublicKeyCredentialDescriptor(
+            id=bytes.fromhex(c.credential_id),
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+        )
+        for c in creds
+    ]
+
+    rp_id = http_request.headers.get("host", "forewise.co").split(":")[0]
+
+    options = _wn.generate_authentication_options(
+        rp_id=rp_id,
+        allow_credentials=allow_creds,
+        user_verification=UserVerificationRequirement.REQUIRED,
+        timeout=60000,
+    )
+
+    _wn_login_challenges[username] = {
+        "challenge": options.challenge,
+        "user_id": user.id,
+        "creds": {c.credential_id: c for c in creds},
+        "rp_id": rp_id,
+    }
+
+    return _wn.options_to_json(options)
+
+
+@router.post("/webauthn/login/complete")
+async def webauthn_login_complete(
+    http_request: Request,
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+):
+    """Step 2 of login: verify assertion and return access token."""
+    if not _WN_OK:
+        raise HTTPException(status_code=501, detail="WebAuthn library not available on server")
+
+    username: str = body.get("username", "").strip()
+    if not username:
+        raise HTTPException(status_code=400, detail="username required")
+
+    state = _wn_login_challenges.pop(username, None)
+    if not state:
+        raise HTTPException(status_code=400, detail="No pending authentication challenge")
+
+    rp_id   = state["rp_id"]
+    origin  = f"https://{rp_id}"
+
+    try:
+        credential_json = _wn.helpers.structs.AuthenticationCredential.parse_raw(
+            __import__("json").dumps(body.get("credential", body))
+        )
+        # Find the stored credential
+        cred_id_hex = credential_json.raw_id.hex() if hasattr(credential_json.raw_id, 'hex') else credential_json.id
+        stored_cred = state["creds"].get(cred_id_hex)
+        if not stored_cred:
+            # try id
+            stored_cred = state["creds"].get(credential_json.id)
+        if not stored_cred:
+            raise HTTPException(status_code=400, detail="Credential not recognised")
+
+        verification = _wn.verify_authentication_response(
+            credential=credential_json,
+            expected_challenge=state["challenge"],
+            expected_rp_id=rp_id,
+            expected_origin=origin,
+            credential_public_key=stored_cred.public_key,
+            credential_current_sign_count=stored_cred.sign_count,
+            require_user_verification=True,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"WebAuthn authentication verification failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Authentication failed: {e}")
+
+    # Update sign count
+    stored_cred.sign_count = verification.new_sign_count
+    stored_cred.last_used_at = datetime.utcnow()
+    db.commit()
+
+    # Load user and build tokens
+    user = db.query(User).options(
+        selectinload(User.role).selectinload(Role.permissions)
+    ).filter(User.id == state["user_id"]).first()
+
+    access_token = create_access_token(
+        subject=str(user.id),
+        email=user.email,
+        role=user.role.code if user.role else "USER",
+    )
+    refresh_token = create_refresh_token(subject=str(user.id))
+
+    user_payload = {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "full_name": user.full_name,
+        "name": user.full_name,
+        "role": {"code": user.role.code, "name": user.role.name} if user.role else None,
+        "role_code": user.role.code if user.role else None,
+        "last_login": user.last_login.isoformat() if user.last_login else None,
+    }
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "user": user_payload,
+    }

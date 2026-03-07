@@ -1,6 +1,5 @@
 // src/hooks/useWebSocket.ts
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useAuth } from './useAuth';
 
 export interface WebSocketMessage {
   type: string;
@@ -15,152 +14,151 @@ export interface UseWebSocketReturn {
   reconnect: () => void;
 }
 
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000;
+
 export const useWebSocket = (url?: string): UseWebSocketReturn => {
-  const { user, isAuthenticated } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
 
-  const connect = useCallback(() => {
-    if (!isAuthenticated || !user) return;
+  const wsRef             = useRef<WebSocket | null>(null);
+  const retryCountRef     = useRef(0);
+  const retryTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const destroyedRef      = useRef(false);   // true after unmount — prevents stale reconnects
+  const connectingRef     = useRef(false);   // prevents duplicate connections
 
-    try {
-      const wsUrl = url || `ws:///api/ws/notifications`;
-      const ws = new WebSocket(wsUrl);
+  // ── Build the correct WebSocket URL ────────────────────────────────────────
+  const buildUrl = useCallback((): string | null => {
+    if (url) return url;
 
-      ws.onopen = () => {
-        console.log('WebSocket connected');
-        setIsConnected(true);
-        reconnectAttempts.current = 0;
+    const token = localStorage.getItem('access_token');
+    if (!token) return null;
 
-        // שליחת הודעת אימות
-        ws.send(JSON.stringify({
-          type: 'auth',
-          token: localStorage.getItem('access_token')
-        }));
-      };
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const host  = window.location.host;                    // e.g. forewise.co
+    return `${proto}://${host}/api/v1/ws/notifications?token=${token}`;
+  }, [url]);
 
-      ws.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          setLastMessage(message);
-          
-          // טיפול בהודעות ספציפיות
-          handleMessage(message);
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setIsConnected(false);
-        
-        // ניסיון חיבור מחדש
-        if (reconnectAttempts.current < maxReconnectAttempts) {
-          reconnectAttempts.current++;
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-          
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, delay);
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
-
-      wsRef.current = ws;
-    } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
-    }
-  }, [isAuthenticated, user, url]);
-
+  // ── Disconnect helper ───────────────────────────────────────────────────────
   const disconnect = useCallback(() => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     if (wsRef.current) {
-      wsRef.current.close();
+      const ws = wsRef.current;
       wsRef.current = null;
+      // Suppress further events before closing
+      ws.onopen    = null;
+      ws.onclose   = null;
+      ws.onerror   = null;
+      ws.onmessage = null;
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close();
+      }
     }
-    
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
+    setIsConnected(false);
+    connectingRef.current = false;
   }, []);
 
+  // ── Main connect function ───────────────────────────────────────────────────
+  const connect = useCallback(() => {
+    if (destroyedRef.current) return;
+    if (connectingRef.current) return;          // already mid-connect
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+    const wsUrl = buildUrl();
+    if (!wsUrl) {
+      // No token — user not logged in, don't bother
+      return;
+    }
+
+    connectingRef.current = true;
+
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(wsUrl);
+    } catch (err) {
+      connectingRef.current = false;
+      return;
+    }
+
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      if (destroyedRef.current) { ws.close(); return; }
+      retryCountRef.current = 0;
+      connectingRef.current = false;
+      setIsConnected(true);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const message: WebSocketMessage = JSON.parse(event.data);
+        setLastMessage(message);
+      } catch {
+        // ignore malformed frames
+      }
+    };
+
+    ws.onerror = () => {
+      // onerror is always followed by onclose — handle everything there
+    };
+
+    ws.onclose = () => {
+      if (destroyedRef.current) return;       // component unmounted — stop
+
+      wsRef.current     = null;
+      connectingRef.current = false;
+      setIsConnected(false);
+
+      if (retryCountRef.current >= MAX_RETRIES) {
+        // Give up — fall back to polling (handled in useNotifications)
+        console.warn('[WS] Max retries reached — switching to polling');
+        return;
+      }
+
+      retryCountRef.current += 1;
+      const delay = BASE_DELAY_MS * Math.pow(2, retryCountRef.current - 1); // 1s, 2s, 4s
+      console.log(`[WS] Retry ${retryCountRef.current}/${MAX_RETRIES} in ${delay}ms`);
+
+      retryTimerRef.current = setTimeout(() => {
+        if (!destroyedRef.current) connect();
+      }, delay);
+    };
+  }, [buildUrl]);
+
+  // ── Manual reconnect (resets counter) ─────────────────────────────────────
+  const reconnect = useCallback(() => {
+    retryCountRef.current = 0;
+    disconnect();
+    connect();
+  }, [connect, disconnect]);
+
+  // ── Send a message ─────────────────────────────────────────────────────────
   const sendMessage = useCallback((message: any) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
     }
   }, []);
 
-  const reconnect = useCallback(() => {
-    disconnect();
-    reconnectAttempts.current = 0;
-    connect();
-  }, [connect, disconnect]);
+  // ── Lifecycle: connect when mounted, disconnect on unmount ─────────────────
+  useEffect(() => {
+    destroyedRef.current  = false;
+    retryCountRef.current = 0;
 
-  // טיפול בהודעות ספציפיות
-  const handleMessage = useCallback((message: WebSocketMessage) => {
-    switch (message.type) {
-      case 'work_order_accepted':
-        // הודעה על אישור הזמנת עבודה
-        console.log('Work order accepted:', message.data);
-        break;
-        
-      case 'worklog_approved':
-        // הודעה על אישור דיווח שעות
-        console.log('Work log approved:', message.data);
-        break;
-        
-      case 'new_message':
-        // הודעה חדשה בצ'אט
-        console.log('New message:', message.data);
-        break;
-        
-      case 'supplier_response':
-        // תגובת ספק
-        console.log('Supplier response:', message.data);
-        break;
-        
-      case 'system_notification':
-        // התראת מערכת
-        console.log('System notification:', message.data);
-        break;
-        
-      default:
-        console.log('Unknown message type:', message.type);
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      connect();
     }
+
+    return () => {
+      destroyedRef.current = true;
+      disconnect();
+    };
+    // connect/disconnect are stable — only run this once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // חיבור אוטומטי כשמתחברים
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      connect();
-    } else {
-      disconnect();
-    }
-
-    return () => {
-      disconnect();
-    };
-  }, [isAuthenticated, user, connect, disconnect]);
-
-  // ניקוי בעת unmount
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, [disconnect]);
-
-  return {
-    isConnected,
-    lastMessage,
-    sendMessage,
-    reconnect
-  };
+  return { isConnected, lastMessage, sendMessage, reconnect };
 };

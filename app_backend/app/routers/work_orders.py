@@ -13,6 +13,11 @@ from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.models.work_order import WorkOrder
 from app.models.project import Project
+from app.services.notification_service import (
+    notify_work_order_created,
+    notify_work_order_approved,
+    notify_work_order_rejected,
+)
 from app.schemas.work_order import (
     WorkOrderCreate,
     WorkOrderUpdate,
@@ -191,6 +196,7 @@ def create_work_order(
     
     try:
         work_order = work_order_service.create(db, data, current_user_id=current_user.id)
+        notify_work_order_created(db, work_order)
         return work_order
     
     except HTTPException:
@@ -337,7 +343,7 @@ def approve_work_order(
     
     try:
         work_order = work_order_service.approve(db, work_order_id, request, current_user_id=current_user.id)
-        # Activity log is handled in service
+        notify_work_order_approved(db, work_order)
         return work_order
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -368,7 +374,8 @@ def reject_work_order(
     
     try:
         work_order = work_order_service.reject(db, work_order_id, request, current_user_id=current_user.id)
-        # Activity log is handled in service
+        reason = getattr(request, 'reason', '') or getattr(request, 'notes', '') or ''
+        notify_work_order_rejected(db, work_order, reason=reason)
         return work_order
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -558,8 +565,9 @@ def send_work_order_to_supplier(
     Send work order to supplier via portal link.
     Generates portal_token (3h TTL) and sends email.
     Returns: { portal_token, portal_url, expires_at, work_order_id, status }
+    Only ORDER_COORDINATOR and ADMIN may distribute work orders.
     """
-    require_permission(current_user, "work_orders.update")
+    require_permission(current_user, "work_orders.distribute")
 
     try:
         result = work_order_service.send_to_supplier(db, work_order_id, current_user.id)

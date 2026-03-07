@@ -41,6 +41,7 @@ class WorklogService:
         # Derive missing fields from work_order
         user_id = data.user_id or current_user_id
         project_id = data.project_id or wo.project_id
+        supplier_id = data.supplier_id if hasattr(data, 'supplier_id') and data.supplier_id else wo.supplier_id
         
         # Validate FK: user
         user = db.query(User).filter_by(id=user_id).first()
@@ -76,6 +77,8 @@ class WorklogService:
         # Override with derived values
         worklog_dict['user_id'] = user_id
         worklog_dict['project_id'] = project_id
+        if supplier_id:
+            worklog_dict['supplier_id'] = supplier_id
         if activity_type_id:
             worklog_dict['activity_type_id'] = activity_type_id
         
@@ -456,6 +459,10 @@ def _audit_worklog(db, user_id: int, worklog_id: int, action: str):
         db.commit()
     except Exception as e:
         logging.getLogger(__name__).warning(f"Worklog audit log failed: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
 
 # ── Segments + Overnight calculation ──────────────────────────────────────────

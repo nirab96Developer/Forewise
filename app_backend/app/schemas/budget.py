@@ -10,10 +10,10 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class BudgetBase(BaseModel):
     """Base budget schema"""
-    name: str = Field(..., max_length=200, description="שם תקציב")
+    name: Optional[str] = Field(None, max_length=200, description="שם תקציב")
     description: Optional[str] = Field(None, description="תיאור")
-    budget_type: str = Field(..., max_length=50, description="סוג תקציב")
-    total_amount: Decimal = Field(..., ge=0, description="סכום כולל")
+    budget_type: Optional[str] = Field(None, max_length=50, description="סוג תקציב")
+    total_amount: Decimal = Field(default=Decimal("0"), ge=0, description="סכום כולל")
 
 
 class BudgetCreate(BudgetBase):
@@ -77,13 +77,13 @@ class BudgetResponse(BudgetBase):
 class BudgetBrief(BaseModel):
     """Brief budget"""
     id: int
-    name: str
+    name: Optional[str] = None
     code: Optional[str] = None
-    budget_type: str
-    total_amount: Decimal
-    status: str
-    is_active: bool
-    
+    budget_type: Optional[str] = None
+    total_amount: Decimal = Decimal("0")
+    status: Optional[str] = None
+    is_active: bool = True
+
     model_config = ConfigDict(from_attributes=True)
 
 

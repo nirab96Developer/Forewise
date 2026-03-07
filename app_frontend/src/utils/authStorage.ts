@@ -5,11 +5,6 @@ const IS_AUTH_KEY = "isAuthenticated";
 const USER_NAME_KEY = "userName";
 const REMEMBER_ME_KEY = "rememberMe";
 
-type StorageKind = "local" | "session";
-
-function getStorage(kind: StorageKind): Storage {
-  return kind === "local" ? localStorage : sessionStorage;
-}
 
 export function setRememberPreference(remember: boolean): void {
   localStorage.setItem(REMEMBER_ME_KEY, remember ? "true" : "false");
@@ -26,24 +21,22 @@ export function setAuthSession(params: {
   userName?: string;
   rememberMe: boolean;
 }): void {
-  const targetKind: StorageKind = params.rememberMe ? "local" : "session";
-  const target = getStorage(targetKind);
-  const other = getStorage(targetKind === "local" ? "session" : "local");
+  // Always write to localStorage so ProtectedRoute can read synchronously.
+  // sessionStorage is also cleared to avoid stale data.
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem(IS_AUTH_KEY);
+  sessionStorage.removeItem(USER_NAME_KEY);
 
-  other.removeItem(ACCESS_TOKEN_KEY);
-  other.removeItem(REFRESH_TOKEN_KEY);
-  other.removeItem(USER_KEY);
-  other.removeItem(IS_AUTH_KEY);
-  other.removeItem(USER_NAME_KEY);
-
-  target.setItem(ACCESS_TOKEN_KEY, params.accessToken);
+  localStorage.setItem(ACCESS_TOKEN_KEY, params.accessToken);
   if (params.refreshToken) {
-    target.setItem(REFRESH_TOKEN_KEY, params.refreshToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, params.refreshToken);
   }
-  target.setItem(USER_KEY, JSON.stringify(params.user));
-  target.setItem(IS_AUTH_KEY, "true");
+  localStorage.setItem(USER_KEY, JSON.stringify(params.user));
+  localStorage.setItem(IS_AUTH_KEY, "true");
   if (params.userName) {
-    target.setItem(USER_NAME_KEY, params.userName);
+    localStorage.setItem(USER_NAME_KEY, params.userName);
   }
 }
 

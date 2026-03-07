@@ -144,43 +144,63 @@ def update_notification(
     return notification
 
 
-@router.post("/{notification_id}/read", )
-def mark_notification_as_read(
-    notification_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """Mark notification as read."""
+def _mark_one_as_read(notification_id: int, db: Session, current_user: User):
+    """Internal helper — mark a single notification as read."""
     notification = notification_service.mark_as_read(
         db=db,
         notification_id=notification_id,
         user_id=current_user.id
     )
-    
     if not notification:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notification not found"
         )
-    
     return notification
 
 
-@router.post("/read-all", response_model=dict)
-def mark_all_notifications_as_read(
+# POST (original) + PATCH (frontend expects PATCH)
+@router.post("/{notification_id}/read")
+def mark_notification_as_read_post(
+    notification_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Mark all user notifications as read."""
-    updated_count = notification_service.mark_all_as_read(
-        db=db,
-        user_id=current_user.id
-    )
-    
-    return {
-        "message": f"Marked {updated_count} notifications as read",
-        "updated_count": updated_count
-    }
+    """Mark notification as read (POST)."""
+    return _mark_one_as_read(notification_id, db, current_user)
+
+
+@router.patch("/{notification_id}/read")
+def mark_notification_as_read_patch(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Mark notification as read (PATCH — frontend compat)."""
+    return _mark_one_as_read(notification_id, db, current_user)
+
+
+def _mark_all_read(db: Session, current_user: User):
+    updated_count = notification_service.mark_all_as_read(db=db, user_id=current_user.id)
+    return {"message": f"Marked {updated_count} notifications as read", "updated_count": updated_count}
+
+
+@router.post("/read-all", response_model=dict)
+def mark_all_notifications_as_read_post(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Mark all user notifications as read (POST)."""
+    return _mark_all_read(db, current_user)
+
+
+@router.patch("/read-all", response_model=dict)
+def mark_all_notifications_as_read_patch(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Mark all user notifications as read (PATCH — frontend compat)."""
+    return _mark_all_read(db, current_user)
 
 
 @router.post("/bulk-action", response_model=dict)

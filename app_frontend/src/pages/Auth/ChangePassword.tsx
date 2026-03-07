@@ -176,6 +176,14 @@ const ChangePassword: React.FC = () => {
           >
             {loading ? 'שומר...' : 'שמור סיסמה חדשה'}
           </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/login', { replace: true })}
+            className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            חזרה לכניסה
+          </button>
         </form>
       </div>
     </div>

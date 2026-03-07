@@ -185,31 +185,30 @@ class InvoiceService(BaseService[Invoice]):
             overdue_count=sum(1 for inv in invoices if inv.is_overdue)
         )
 
+    def approve(self, db, invoice_id: int, user_id: int):
+        """Mark invoice as approved + update budget spent_amount."""
+        invoice = self.get_by_id_or_404(db, invoice_id)
+        invoice.status = 'APPROVED'
+        import datetime
+        invoice.approved_at = datetime.datetime.now()
+        invoice.approved_by = user_id
+        db.commit()
+        # Update budget (best-effort - has its own try/except + rollback)
+        if invoice.project_id:
+            _update_budget_spent(db, invoice.project_id)
+        # Audit log (best-effort - has its own try/except + rollback)
+        _audit(db, user_id, 'invoices', invoice.id, 'APPROVE', {'status': 'APPROVED'})
+        # Final refresh after all side-effects
+        db.refresh(invoice)
+        return invoice
 
-# ── Missing methods required by router ──────────────────────
-def approve(self, db, invoice_id: int, user_id: int):
-    """Mark invoice as approved + update budget spent_amount."""
-    invoice = self.get_by_id_or_404(db, invoice_id)
-    invoice.status = 'APPROVED'
-    import datetime
-    invoice.approved_at = datetime.datetime.now()
-    invoice.approved_by = user_id
-    db.commit()
-    db.refresh(invoice)
-    # Update budget
-    if invoice.project_id:
-        _update_budget_spent(db, invoice.project_id)
-    # Audit log
-    _audit(db, user_id, 'invoices', invoice.id, 'APPROVE', {'status': 'APPROVED'})
-    return invoice
-
-def send_to_supplier(self, db, invoice_id: int, user_id: int):
-    """Mark invoice as sent to supplier."""
-    invoice = self.get_by_id_or_404(db, invoice_id)
-    invoice.status = 'sent'
-    db.commit()
-    db.refresh(invoice)
-    return invoice
+    def send_to_supplier(self, db, invoice_id: int, user_id: int):
+        """Mark invoice as sent to supplier."""
+        invoice = self.get_by_id_or_404(db, invoice_id)
+        invoice.status = 'sent'
+        db.commit()
+        db.refresh(invoice)
+        return invoice
 
 
 # ── Budget helpers ────────────────────────────────────────────────────────────
@@ -240,6 +239,10 @@ def _update_budget_spent(db, project_id: int):
                 if pct >= 90:
                     _send_budget_alert(db, project_id, pct, budget.id)
     except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         log.warning(f"update_budget_spent failed for project {project_id}: {e}")
 
 
@@ -310,6 +313,10 @@ def _audit(db, user_id, table_name: str, record_id: int, action: str, new_values
         })
         db.commit()
     except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         logging.getLogger(__name__).warning(f"Audit log failed [{table_name}/{action}]: {e}")
 
 
@@ -360,18 +367,25 @@ def generate_monthly_invoice(
     מרכזת כל worklogs APPROVED של ספק+פרויקט לחודש → חשבונית DRAFT.
     מקבצת לפי equipment_id (מספר רישוי).
     """
-    from sqlalchemy import extract
+    from sqlalchemy import extract, or_
     from app.models.worklog import Worklog
     from app.models.invoice_item import InvoiceItem
+    from app.models.work_order import WorkOrder
 
+    # Match by supplier_id on worklog, or via work_order.supplier_id when worklog.supplier_id is NULL
     worklogs = (
         db.query(Worklog)
+        .outerjoin(WorkOrder, WorkOrder.id == Worklog.work_order_id)
         .filter(
-            Worklog.supplier_id == supplier_id,
+            or_(
+                Worklog.supplier_id == supplier_id,
+                # Fallback: worklog has no direct supplier but the work order does
+                (Worklog.supplier_id.is_(None)) & (WorkOrder.supplier_id == supplier_id)
+            ),
             Worklog.project_id == project_id,
             Worklog.status == "APPROVED",
-            extract("month", Worklog.work_date) == month,
-            extract("year", Worklog.work_date) == year,
+            extract("month", Worklog.report_date) == month,
+            extract("year", Worklog.report_date) == year,
         )
         .all()
     )
@@ -389,7 +403,10 @@ def generate_monthly_invoice(
         by_equipment.setdefault(key, []).append(wl)
 
     # חשב סכום כולל
-    subtotal = sum(float(wl.cost_before_vat or wl.total_amount or 0) for wl in worklogs)
+    subtotal = sum(float(wl.cost_before_vat or 0) for wl in worklogs)
+    # If no cost_before_vat, fallback to hours * rate
+    if subtotal == 0:
+        subtotal = sum(float(wl.work_hours or 0) * float(wl.hourly_rate_snapshot or 100) for wl in worklogs)
     vat_pct = float(worklogs[0].vat_rate or 0.17) if worklogs else 0.17
     tax_amount = round(subtotal * vat_pct, 2)
     total_amount = round(subtotal + tax_amount, 2)
@@ -416,9 +433,9 @@ def generate_monthly_invoice(
     # צור invoice_items לפי ציוד
     line = 1
     for eq_id, wls in by_equipment.items():
-        paid_hours_total = sum(float(w.paid_hours or w.hours_worked or 0) for w in wls)
+        paid_hours_total = sum(float(w.paid_hours or w.work_hours or 0) for w in wls)
         overnight_total = sum(float(w.overnight_total or 0) for w in wls)
-        rate = float(wls[0].hourly_rate_snapshot or wls[0].hourly_rate or 0)
+        rate = float(wls[0].hourly_rate_snapshot or 100)
         item_subtotal = round(paid_hours_total * rate + overnight_total, 2)
         tax = round(item_subtotal * vat_pct, 2)
 
@@ -441,6 +458,7 @@ def generate_monthly_invoice(
             tax_amount=tax,
             total=item_subtotal + tax,
             equipment_type_id=getattr(wls[0].equipment, 'equipment_type_id', None) if wls[0].equipment else None,
+            is_active=True,
         )
         db.add(item)
         line += 1
@@ -476,8 +494,8 @@ def get_uninvoiced_suppliers(project_id: int, month: int, year: int, db: Session
         .filter(
             Worklog.project_id == project_id,
             Worklog.status == "APPROVED",
-            extract("month", Worklog.work_date) == month,
-            extract("year", Worklog.work_date) == year,
+            extract("month", Worklog.report_date) == month,
+            extract("year", Worklog.report_date) == year,
         )
         .distinct()
         .all()

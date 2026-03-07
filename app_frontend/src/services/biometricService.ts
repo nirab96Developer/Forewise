@@ -1,250 +1,223 @@
 // src/services/biometricService.ts
-// שירות לזיהוי ביומטרי (Face ID / Touch ID) באמצעות WebAuthn API
+// WebAuthn biometric service — register + authenticate via server
 
-interface BiometricCredentials {
-  credentialId: string;
-  publicKey: string;
-  userId: number;
-  username: string;
+const REGISTERED_KEY = 'biometric_registered';
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/** base64url → ArrayBuffer (handles missing padding) */
+function b64urlToBuffer(b64url: string): ArrayBuffer {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
+  const bin = atob(padded);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return buf.buffer;
 }
 
-class BiometricService {
-  private readonly STORAGE_KEY = 'biometric_credentials';
+/** ArrayBuffer → base64url */
+function bufToB64url(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  bytes.forEach(b => (bin += String.fromCharCode(b)));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
 
-  /**
-   * בדיקה אם הזיהוי הביומטרי נתמך בדפדפן
-   */
+
+/** Serialise a PublicKeyCredential to plain JSON for sending to server */
+function credentialToJSON(cred: PublicKeyCredential): Record<string, unknown> {
+  const r = cred.response;
+
+  const base: Record<string, unknown> = {
+    id:     cred.id,
+    rawId:  bufToB64url(cred.rawId),
+    type:   cred.type,
+  };
+
+  if ('attestationObject' in r) {
+    // Registration response
+    const attResp = r as AuthenticatorAttestationResponse;
+    base.response = {
+      clientDataJSON:    bufToB64url(attResp.clientDataJSON),
+      attestationObject: bufToB64url(attResp.attestationObject),
+    };
+  } else {
+    // Authentication response
+    const assResp = r as AuthenticatorAssertionResponse;
+    base.response = {
+      clientDataJSON:  bufToB64url(assResp.clientDataJSON),
+      authenticatorData: bufToB64url(assResp.authenticatorData),
+      signature:       bufToB64url(assResp.signature),
+      userHandle:      assResp.userHandle ? bufToB64url(assResp.userHandle) : null,
+    };
+  }
+
+  return base;
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────
+
+class BiometricService {
+  /** True when WebAuthn platform authenticator is available on this device */
   isSupported(): boolean {
     return (
       typeof window !== 'undefined' &&
       'PublicKeyCredential' in window &&
-      typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function'
+      typeof (PublicKeyCredential as any).isUserVerifyingPlatformAuthenticatorAvailable === 'function'
     );
   }
 
-  /**
-   * בדיקה אם יש זיהוי ביומטרי זמין (Face ID / Touch ID)
-   */
   async isAvailable(): Promise<boolean> {
-    if (!this.isSupported()) {
-      return false;
-    }
-
+    if (!this.isSupported()) return false;
     try {
-      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-    } catch (error) {
-      console.error('Error checking biometric availability:', error);
+      return await (PublicKeyCredential as any).isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch {
       return false;
     }
   }
 
+  /** Has the user completed registration on this device? */
+  isRegistered(): boolean {
+    return localStorage.getItem(REGISTERED_KEY) === 'true';
+  }
+
   /**
-   * רישום זיהוי ביומטרי למשתמש
+   * Full registration flow:
+   * 1. GET challenge from server (requires valid auth token)
+   * 2. navigator.credentials.create() → shows platform authenticator dialog
+   * 3. POST result to server
    */
-  async register(userId: number, username: string): Promise<BiometricCredentials | null> {
-    if (!(await this.isAvailable())) {
-      throw new Error('זיהוי ביומטרי לא זמין במכשיר זה');
+  async register(): Promise<void> {
+    const token = localStorage.getItem('access_token');
+    if (!token) throw new Error('יש להתחבר תחילה');
+
+    // Step 1 — get options from server
+    const beginRes = await fetch('/api/v1/auth/webauthn/register/begin', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!beginRes.ok) {
+      const err = await beginRes.json().catch(() => ({}));
+      throw new Error(err.detail || 'שגיאה בהתחלת רישום');
+    }
+    const options = await beginRes.json();
+
+    // Explicit conversion: only the fields WebAuthn requires as ArrayBuffer.
+    // rp.id must remain a plain string — do NOT convert it.
+    const publicKey: PublicKeyCredentialCreationOptions = {
+      ...options,
+      challenge: b64urlToBuffer(options.challenge),
+      user: {
+        ...options.user,
+        id: b64urlToBuffer(options.user.id),
+      },
+      excludeCredentials: (options.excludeCredentials ?? []).map((c: any) => ({
+        ...c,
+        id: b64urlToBuffer(c.id),
+      })),
+    };
+
+    // Step 2 — platform authenticator dialog
+    let credential: PublicKeyCredential;
+    try {
+      credential = (await navigator.credentials.create({ publicKey })) as PublicKeyCredential;
+    } catch (e: any) {
+      if (e.name === 'NotAllowedError') throw new Error('הפעולה בוטלה על ידי המשתמש');
+      throw e;
+    }
+    if (!credential) throw new Error('יצירת credential נכשלה');
+
+    // Step 3 — send to server
+    const completeRes = await fetch('/api/v1/auth/webauthn/register/complete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(credentialToJSON(credential)),
+    });
+    if (!completeRes.ok) {
+      const err = await completeRes.json().catch(() => ({}));
+      throw new Error(err.detail || 'שגיאה בשמירת הרישום');
     }
 
+    localStorage.setItem(REGISTERED_KEY, 'true');
+  }
+
+  /**
+   * Full authentication flow:
+   * 1. POST username → server returns challenge + allowCredentials
+   * 2. navigator.credentials.get() → shows platform authenticator dialog
+   * 3. POST assertion → server returns access_token + user
+   */
+  async authenticate(username: string): Promise<{ access_token: string; refresh_token?: string; user: any }> {
+    if (!this.isRegistered()) {
+      throw new Error('יש להפעיל תחילה התחברות ביומטרית מדף הברוכים הבאים');
+    }
+
+    // Step 1 — get options from server
+    const beginRes = await fetch('/api/v1/auth/webauthn/login/begin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+    if (!beginRes.ok) {
+      const err = await beginRes.json().catch(() => ({}));
+      // Credential not registered on server — clear local flag
+      if (beginRes.status === 404) {
+        localStorage.removeItem(REGISTERED_KEY);
+        throw new Error('לא נמצא credential במערכת. אנא הפעל מחדש את ההתחברות הביומטרית');
+      }
+      throw new Error(err.detail || 'שגיאה בהתחלת אימות');
+    }
+    const options = await beginRes.json();
+
+    // Explicit conversion — same rule: rp.id stays string, only binary fields become ArrayBuffer.
+    const publicKey: PublicKeyCredentialRequestOptions = {
+      ...options,
+      challenge: b64urlToBuffer(options.challenge),
+      allowCredentials: (options.allowCredentials ?? []).map((c: any) => ({
+        ...c,
+        id: b64urlToBuffer(c.id),
+      })),
+    };
+
+    // Step 2 — platform authenticator dialog
+    let assertion: PublicKeyCredential;
     try {
-      // קבלת challenge מהשרת
-      const challengeResponse = await fetch('/api/v1/auth/biometric/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId, username }),
-      });
+      assertion = (await navigator.credentials.get({ publicKey })) as PublicKeyCredential;
+    } catch (e: any) {
+      if (e.name === 'NotAllowedError') throw new Error('הפעולה בוטלה על ידי המשתמש');
+      throw e;
+    }
+    if (!assertion) throw new Error('אימות נכשל');
 
-      if (!challengeResponse.ok) {
-        throw new Error('שגיאה בקבלת challenge מהשרת');
-      }
-
-      const { challenge, rp, user } = await challengeResponse.json();
-
-      // יצירת credential
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge: Uint8Array.from(challenge, (c: string) => c.charCodeAt(0)),
-          rp: {
-            name: rp.name || 'מערכת ניהול יערות',
-            id: rp.id || window.location.hostname,
-          },
-          user: {
-            id: Uint8Array.from(user.id, (c: string) => c.charCodeAt(0)),
-            name: user.name || username,
-            displayName: user.displayName || username,
-          },
-          pubKeyCredParams: [
-            { alg: -7, type: 'public-key' }, // ES256
-            { alg: -257, type: 'public-key' }, // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: 'platform',
-            userVerification: 'required',
-          },
-          timeout: 60000,
-          attestation: 'direct',
-        },
-      }) as PublicKeyCredential;
-
-      if (!credential) {
-        throw new Error('יצירת credential נכשלה');
-      }
-
-      const response = credential.response as AuthenticatorAttestationResponse;
-
-      // שליחה לשרת לאימות ושמירה
-      const verifyResponse = await fetch('/api/v1/auth/biometric/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          credentialId: credential.id,
-          attestationObject: Array.from(new Uint8Array(response.attestationObject)),
-          clientDataJSON: Array.from(new Uint8Array(response.clientDataJSON)),
-        }),
-      });
-
-      if (!verifyResponse.ok) {
-        throw new Error('שגיאה באימות credential');
-      }
-
-      const { credentialId: savedCredentialId } = await verifyResponse.json();
-
-      // שמירה מקומית
-      const credentials: BiometricCredentials = {
-        credentialId: savedCredentialId,
-        publicKey: '', // לא נשמור את זה מקומית
-        userId,
+    // Step 3 — verify on server
+    const completeRes = await fetch('/api/v1/auth/webauthn/login/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         username,
-      };
-
-      this.saveCredentials(credentials);
-
-      return credentials;
-    } catch (error: any) {
-      console.error('Biometric registration error:', error);
-      throw error;
+        ...credentialToJSON(assertion),
+      }),
+    });
+    if (!completeRes.ok) {
+      const err = await completeRes.json().catch(() => ({}));
+      throw new Error(err.detail || 'אימות ביומטרי נכשל');
     }
+    return completeRes.json();
   }
 
-  /**
-   * התחברות באמצעות זיהוי ביומטרי
-   */
-  async authenticate(): Promise<{ access_token: string; refresh_token?: string; user: any } | null> {
-    if (!(await this.isAvailable())) {
-      throw new Error('זיהוי ביומטרי לא זמין במכשיר זה');
-    }
-
-    try {
-      // קבלת challenge מהשרת
-      const challengeResponse = await fetch('/api/v1/auth/biometric/challenge', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!challengeResponse.ok) {
-        throw new Error('שגיאה בקבלת challenge מהשרת');
-      }
-
-      const { challenge, allowCredentials } = await challengeResponse.json();
-
-      // אימות
-      const assertion = await navigator.credentials.get({
-        publicKey: {
-          challenge: Uint8Array.from(challenge, (c: string) => c.charCodeAt(0)),
-          allowCredentials: allowCredentials?.map((cred: any) => ({
-            id: Uint8Array.from(cred.id, (c: string) => c.charCodeAt(0)),
-            type: 'public-key',
-            transports: ['internal'],
-          })),
-          timeout: 60000,
-          userVerification: 'required',
-        },
-      }) as PublicKeyCredential;
-
-      if (!assertion) {
-        throw new Error('אימות נכשל');
-      }
-
-      const response = assertion.response as AuthenticatorAssertionResponse;
-
-      // שליחה לשרת לאימות
-      const verifyResponse = await fetch('/api/v1/auth/biometric/authenticate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          credentialId: assertion.id,
-          authenticatorData: Array.from(new Uint8Array(response.authenticatorData)),
-          clientDataJSON: Array.from(new Uint8Array(response.clientDataJSON)),
-          signature: Array.from(new Uint8Array(response.signature)),
-        }),
-      });
-
-      if (!verifyResponse.ok) {
-        throw new Error('שגיאה באימות');
-      }
-
-      return await verifyResponse.json();
-    } catch (error: any) {
-      console.error('Biometric authentication error:', error);
-      throw error;
-    }
+  /** Remove local registration flag (e.g. after user signs out) */
+  clearRegistration(): void {
+    localStorage.removeItem(REGISTERED_KEY);
   }
 
-  /**
-   * שמירת credentials מקומית
-   */
-  private saveCredentials(credentials: BiometricCredentials): void {
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(credentials));
-    } catch (error) {
-      console.error('Error saving biometric credentials:', error);
-    }
-  }
-
-  /**
-   * קבלת credentials שמורים
-   */
-  getSavedCredentials(): BiometricCredentials | null {
-    try {
-      const saved = localStorage.getItem(this.STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch (error) {
-      console.error('Error getting saved credentials:', error);
-      return null;
-    }
-  }
-
-  /**
-   * מחיקת credentials שמורים
-   */
-  clearCredentials(): void {
-    try {
-      localStorage.removeItem(this.STORAGE_KEY);
-    } catch (error) {
-      console.error('Error clearing credentials:', error);
-    }
-  }
-
-  /**
-   * בדיקה אם יש credentials שמורים
-   */
-  hasSavedCredentials(): boolean {
-    return this.getSavedCredentials() !== null;
-  }
+  // ── Legacy compat ───────────────────────────────────────────────────────
+  hasSavedCredentials(): boolean { return this.isRegistered(); }
+  getSavedCredentials() { return this.isRegistered() ? { registered: true } : null; }
+  clearCredentials(): void { this.clearRegistration(); }
 }
 
 const biometricService = new BiometricService();
 export default biometricService;
-
-
-
-

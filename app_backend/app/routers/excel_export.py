@@ -3,6 +3,7 @@ Excel Export Router — ייצוא נתונים ל-Excel
 GET /api/v1/reports/export/excel?type=worklogs|invoices|projects|equipment
 """
 import io
+import urllib.parse
 from datetime import date, datetime
 from typing import Annotated, Literal
 
@@ -68,10 +69,14 @@ def _workbook_to_response(wb: openpyxl.Workbook, filename: str) -> StreamingResp
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)
+    # Use RFC 5987 encoding so Hebrew filenames work in all browsers
+    encoded_name = urllib.parse.quote(filename, safe="")
+    ascii_name = filename.encode("ascii", errors="ignore").decode() or "export.xlsx"
+    content_disposition = f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{encoded_name}"
     return StreamingResponse(
         buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": content_disposition},
     )
 
 
@@ -144,11 +149,11 @@ def _export_invoices(db: Session) -> openpyxl.Workbook:
     rows = db.execute(text("""
         SELECT
             inv.invoice_number,
-            s.name     AS supplier_name,
-            p.name     AS project_name,
-            p.code     AS project_code,
-            inv.month,
-            inv.year,
+            s.name                              AS supplier_name,
+            p.name                              AS project_name,
+            p.code                              AS project_code,
+            EXTRACT(MONTH FROM inv.issue_date)  AS month,
+            EXTRACT(YEAR  FROM inv.issue_date)  AS year,
             inv.total_amount,
             inv.paid_amount,
             inv.status,
@@ -303,6 +308,13 @@ def _export_equipment(db: Session) -> openpyxl.Workbook:
 EXPORT_TYPES = Literal["worklogs", "invoices", "projects", "equipment"]
 
 TYPE_LABELS = {
+    "worklogs":  "worklogs",
+    "invoices":  "invoices",
+    "projects":  "projects",
+    "equipment": "equipment",
+}
+
+TYPE_LABELS_HE = {
     "worklogs":  "דיווחי_שעות",
     "invoices":  "חשבוניות",
     "projects":  "פרויקטים",
@@ -320,8 +332,8 @@ def export_excel(
     type: worklogs | invoices | projects | equipment
     """
     today = date.today().strftime("%Y-%m-%d")
-    label = TYPE_LABELS.get(type, type)
-    filename = f"forewise_{label}_{today}.xlsx"
+    label_he = TYPE_LABELS_HE.get(type, type)
+    filename = f"forewise_{label_he}_{today}.xlsx"
 
     builders = {
         "worklogs":  _export_worklogs,

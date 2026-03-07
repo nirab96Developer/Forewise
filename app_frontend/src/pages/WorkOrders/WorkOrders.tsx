@@ -75,25 +75,24 @@ const WorkOrders: React.FC = () => {
   };
 
   const getStatusText = (status: string) => {
-    const statusLower = status?.toLowerCase();
-    switch (statusLower) {
-      case 'pending':
-        return 'ממתין לתגובה';
-      case 'draft':
-        return 'טיוטה';
-      case 'accepted':
-      case 'approved':
-        return 'אושר';
-      case 'rejected':
-        return 'נדחה';
-      case 'completed':
-        return 'הושלם';
-      case 'cancelled':
-        return 'בוטל';
-      case 'sent':
-        return 'נשלח לספק';
-      default:
-        return status;
+    const s = (status || '').toUpperCase();
+    switch (s) {
+      case 'PENDING':        return 'ממתין לתיאום';
+      case 'DISTRIBUTING':   return 'בתיאום';
+      case 'DRAFT':          return 'טיוטה';
+      case 'ACCEPTED':
+      case 'APPROVED':
+      case 'COORDINATOR_APPROVED':
+      case 'APPROVED_AND_SENT': return 'אושר — ניתן לדווח';
+      case 'SENT_TO_SUPPLIER':
+      case 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': return 'אצל הספק';
+      case 'REJECTED':       return 'נדחה';
+      case 'COMPLETED':      return 'הושלם';
+      case 'CANCELLED':      return 'בוטל';
+      case 'ACTIVE':
+      case 'IN_PROGRESS':    return 'בביצוע';
+      case 'SENT':           return 'נשלח לספק';
+      default:               return status || '—';
     }
   };
 

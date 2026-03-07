@@ -2,6 +2,7 @@
 """WebSocket endpoints for real-time notifications."""
 import json
 import logging
+from datetime import datetime
 from typing import Dict, List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, status
 from jose import JWTError, jwt
@@ -207,5 +208,3 @@ async def broadcast_notification(notification: dict):
         "timestamp": str(datetime.now())
     })
 
-# Import datetime for timestamps
-from datetime import datetime

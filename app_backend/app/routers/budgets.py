@@ -33,6 +33,142 @@ def list_budgets(
     return BudgetList(items=budgets, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
 
+@router.get("/summary")
+def get_budget_summary(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Hierarchical budget summary: regions → areas → projects"""
+    require_permission(current_user, "budgets.read")
+    from app.models import Budget, Project, Region, Area
+    try:
+        from app.models.location import Location
+    except Exception:
+        Location = None
+
+    budgets = db.query(Budget).filter(Budget.is_active == True).all()
+
+    # Aggregate by region
+    region_map: dict = {}
+    area_map: dict = {}
+    project_rows = []
+
+    for b in budgets:
+        total = float(b.total_amount or 0)
+        committed = float(b.committed_amount or 0)
+        spent = float(b.spent_amount or 0)
+        remaining = total - committed - spent
+        utilized = committed + spent
+        pct = round(utilized / total * 100, 1) if total > 0 else 0
+
+        # Resolve region / area / project names
+        region_id = b.region_id
+        area_id = b.area_id
+        project_id = b.project_id
+        region_name = None
+        area_name = None
+        project_name = None
+        project_code = None
+        forest_name = None
+
+        if project_id:
+            proj = db.query(Project).filter(Project.id == project_id).first()
+            if proj:
+                project_name = proj.name
+                project_code = proj.code
+                area_id = area_id or proj.area_id
+                if Location and proj.location_id:
+                    loc = db.query(Location).filter(Location.id == proj.location_id).first()
+                    if loc:
+                        forest_name = loc.name
+
+        if area_id:
+            area = db.query(Area).filter(Area.id == area_id).first()
+            if area:
+                area_name = area.name
+                region_id = region_id or area.region_id
+
+        if region_id:
+            reg = db.query(Region).filter(Region.id == region_id).first()
+            if reg:
+                region_name = reg.name
+
+        # Region aggregation
+        if region_id:
+            if region_id not in region_map:
+                region_map[region_id] = {
+                    "id": region_id, "name": region_name or f"מרחב {region_id}",
+                    "budget_id": b.id if not project_id and not area_id else None,
+                    "total_amount": 0.0, "committed_amount": 0.0,
+                    "spent_amount": 0.0, "remaining_amount": 0.0,
+                }
+            rm = region_map[region_id]
+            rm["total_amount"] += total
+            rm["committed_amount"] += committed
+            rm["spent_amount"] += spent
+            rm["remaining_amount"] += remaining
+            if not project_id and not area_id:
+                rm["budget_id"] = b.id
+
+        # Area aggregation
+        if area_id:
+            if area_id not in area_map:
+                area_map[area_id] = {
+                    "id": area_id, "name": area_name or f"אזור {area_id}",
+                    "region_id": region_id, "region_name": region_name,
+                    "budget_id": b.id if not project_id else None,
+                    "total_amount": 0.0, "committed_amount": 0.0,
+                    "spent_amount": 0.0, "remaining_amount": 0.0,
+                }
+            am = area_map[area_id]
+            am["total_amount"] += total
+            am["committed_amount"] += committed
+            am["spent_amount"] += spent
+            am["remaining_amount"] += remaining
+            if not project_id:
+                am["budget_id"] = b.id
+
+        # Project row
+        if project_id and project_name:
+            project_rows.append({
+                "id": b.id,
+                "project_id": project_id,
+                "project_name": project_name,
+                "project_code": project_code,
+                "forest_name": forest_name,
+                "area_id": area_id,
+                "area_name": area_name,
+                "region_id": region_id,
+                "region_name": region_name,
+                "total_amount": total,
+                "committed_amount": committed,
+                "spent_amount": spent,
+                "remaining_amount": remaining,
+                "utilization_pct": pct,
+            })
+
+    # Finalize utilization pct
+    regions_out = []
+    for rm in region_map.values():
+        t = rm["total_amount"]
+        u = rm["committed_amount"] + rm["spent_amount"]
+        rm["utilization_pct"] = round(u / t * 100, 1) if t > 0 else 0
+        regions_out.append(rm)
+
+    areas_out = []
+    for am in area_map.values():
+        t = am["total_amount"]
+        u = am["committed_amount"] + am["spent_amount"]
+        am["utilization_pct"] = round(u / t * 100, 1) if t > 0 else 0
+        areas_out.append(am)
+
+    return {
+        "regions": regions_out,
+        "areas": areas_out,
+        "projects": project_rows,
+    }
+
+
 @router.get("/statistics", response_model=BudgetStatistics)
 def get_statistics(
     db: Annotated[Session, Depends(get_db)],

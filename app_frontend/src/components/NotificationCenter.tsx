@@ -1,5 +1,5 @@
 // src/components/NotificationCenter.tsx
-// פעמון התראות עם Polling אמיתי מהשרת
+// פעמון התראות עם Polling + WebSocket בזמן אמת
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, X, Check, Trash2, AlertCircle, Info, CheckCircle, ExternalLink, RefreshCw, Activity } from 'lucide-react';
@@ -44,6 +44,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ userId }) => {
   const navigate = useNavigate();
   const notificationRef = useRef<HTMLDivElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const wsReconnectRef = useRef<NodeJS.Timeout | null>(null);
 
   // סגירת הדרופדאון כשעוברים בין דפים
   useEffect(() => {
@@ -163,6 +165,73 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ userId }) => {
     return titles[action] || 'פעילות במערכת';
   };
 
+  // ── WebSocket real-time connection ──────────────────────────
+  const connectWebSocket = useCallback(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token || userId <= 0) return;
+
+    try {
+      // Derive WS URL from current API base URL
+      const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
+      let wsBase: string;
+      if (apiBase.startsWith('http://')) {
+        wsBase = apiBase.replace('http://', 'ws://');
+      } else if (apiBase.startsWith('https://')) {
+        wsBase = apiBase.replace('https://', 'wss://');
+      } else {
+        // relative path — use current host
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsBase = `${proto}//${window.location.host}${apiBase}`;
+      }
+
+      const wsUrl = `${wsBase}/ws/notifications?token=${token}`;
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log('[WS] Connected to notifications');
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'notification' && msg.data) {
+            const newNotif: Notification = {
+              id: msg.data.id,
+              title: msg.data.title,
+              message: msg.data.message,
+              notification_type: msg.data.notification_type || 'system',
+              priority: msg.data.priority || 'medium',
+              is_read: false,
+              created_at: msg.data.created_at || new Date().toISOString(),
+              entity_type: msg.data.entity_type,
+              entity_id: msg.data.entity_id,
+              action_url: msg.data.action_url,
+            };
+            setNotifications(prev => [newNotif, ...prev]);
+            setUnreadCount(prev => prev + 1);
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+
+      ws.onclose = () => {
+        wsRef.current = null;
+        // Reconnect after 15 seconds
+        wsReconnectRef.current = setTimeout(() => {
+          connectWebSocket();
+        }, 15000);
+      };
+    } catch {
+      // WebSocket not available — polling fallback will handle it
+    }
+  }, [userId]);
+
   // Initial load + Polling setup
   useEffect(() => {
     if (userId > 0) {
@@ -172,14 +241,24 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ userId }) => {
       pollingRef.current = setInterval(() => {
         loadNotifications(true); // Silent refresh
       }, POLLING_INTERVAL);
+
+      // Setup WebSocket
+      connectWebSocket();
     }
     
     return () => {
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
       }
+      if (wsReconnectRef.current) {
+        clearTimeout(wsReconnectRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
-  }, [userId, loadNotifications]);
+  }, [userId, loadNotifications, connectWebSocket]);
 
   const markAsRead = async (notificationId: number) => {
     try {

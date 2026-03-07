@@ -57,6 +57,7 @@ ROUTER_MODULES = [
     "settings",
     "equipment_rates",
     "excel_export",
+    "journal",
     # "supplier_distribution",  # removed — file deleted, not in use
 ]
 

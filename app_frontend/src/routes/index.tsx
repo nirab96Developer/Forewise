@@ -18,6 +18,7 @@ const ForgotPassword = lazy(() => import("../pages/Login/ForgotPassword"));
 const ResetPassword = lazy(() => import("../pages/Login/ResetPassword"));
 const OTP = lazy(() => import("../pages/OTP/OTP"));
 const ChangePassword = lazy(() => import("../pages/Auth/ChangePassword"));
+const WelcomeSplash = lazy(() => import("../pages/Auth/WelcomeSplash"));
 const PendingSync = lazy(() => import("../pages/PendingSync/PendingSync"));
 const BudgetTransfers = lazy(() => import("../pages/Budget/BudgetTransfers"));
 const SupplierPortal = lazy(() => import("../pages/SupplierPortal/SupplierPortal"));
@@ -68,6 +69,7 @@ const PricingReports = lazy(() => import("../pages/Reports/PricingReports"));
 const Notifications = lazy(() => import("../pages/Notifications/Notifications"));
 const SupportTicket = lazy(() => import("../pages/Support/Support"));
 const ActivityLog = lazy(() => import("../pages/ActivityLog/ActivityLogNew"));
+const MyJournal = lazy(() => import("../pages/Journal/MyJournal"));
 
 // Settings (EquipmentTypes, PricingOverrides, SettingsPlaceholder removed - redirects to catalog)
 const SystemSettings = lazy(() => import("../pages/Settings/SystemSettings"));
@@ -135,6 +137,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/otp" element={<OTP setGlobalLoading={setGlobalLoading} />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/welcome" element={<WelcomeSplash />} />
         <Route path="/pending-sync" element={<PendingSync />} />
         <Route path="/budget-transfers" element={<BudgetTransfers />} />
         {/* Supplier Portal - External landing page (no auth required) */}
@@ -190,6 +193,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/work-orders/new" element={<Guarded permission={PERMISSIONS.WORK_ORDERS_CREATE}><NewWorkOrder /></Guarded>} />
         <Route path="/work-orders/:id" element={<Guarded permission={PERMISSIONS.WORK_ORDERS_VIEW}><WorkOrderDetail /></Guarded>} />
         <Route path="/work-orders/:id/edit" element={<Guarded permission={PERMISSIONS.WORK_ORDERS_UPDATE}><EditWorkOrder /></Guarded>} />
+        <Route path="/work-orders/:id/report-hours" element={<Guarded permission={PERMISSIONS.WORKLOGS_CREATE}><WorklogCreateNew /></Guarded>} />
         <Route path="/order-coordination" element={<Guarded permission={PERMISSIONS.WORK_ORDERS_COORDINATE}><OrderCoordination /></Guarded>} />
 
         {/* ============================================
@@ -249,6 +253,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/notifications" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><Notifications /></Guarded>} />
         <Route path="/support" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><SupportTicket /></Guarded>} />
         <Route path="/activity-log" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><ActivityLog /></Guarded>} />
+        <Route path="/my-journal" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><MyJournal /></Guarded>} />
 
         {/* ============================================
               SETTINGS - ADMIN Only

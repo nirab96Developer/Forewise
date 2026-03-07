@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Fingerprint, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { User, Lock, Fingerprint, ScanFace, Monitor, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
+import { getBiometricLabel } from '../../utils/deviceDetector';
 import api from '../../services/api';
 import biometricService from '../../services/biometricService';
 import { setAuthSession, setRememberPreference } from '../../utils/authStorage';
@@ -21,7 +22,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
   const [error, setError] = useState('');
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricSupported, setBiometricSupported] = useState(false);
-  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const biometric = getBiometricLabel();
   
   // Refs for fallback DOM access (for browser automation compatibility)
   const usernameRef = useRef<HTMLInputElement>(null);
@@ -39,15 +40,11 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
   // בדיקת תמיכה בזיהוי ביומטרי
   useEffect(() => {
     const checkBiometric = async () => {
-      const mobile =
-        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
-        navigator.maxTouchPoints > 1;
-      setIsMobileDevice(mobile);
-
       const supported = biometricService.isSupported();
       setBiometricSupported(supported);
-      
-      if (supported && mobile) {
+
+      // Show button on both mobile AND desktop if WebAuthn is supported
+      if (supported) {
         try {
           const available = await biometricService.isAvailable();
           setBiometricAvailable(available);
@@ -174,14 +171,30 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
           }
           
           // הגדרת נתוני המשתמש - שמירת role מהשרת
+          const fullName = data.user.full_name || data.user.username || '';
+          const firstName = data.user.first_name || fullName.split(' ')[0] || fullName;
           const userObject = {
             id: data.user.id.toString(),
-            name: data.user.full_name || data.user.username,
+            name: fullName,
+            first_name: firstName,
+            full_name: fullName,
             email: data.user.email,
             role: roleCode,  // role code string from API
+            role_code: roleCode,
             roles: [roleCode],  // backwards compatibility
-            permissions: permissions
+            permissions: permissions,
+            last_login: data.user.last_login || null,
           };
+
+          // ── שמירה מפורשת ב-localStorage — תמיד, ללא תנאי ──────────────
+          localStorage.setItem('access_token',    data.access_token);
+          localStorage.setItem('token',           data.access_token);
+          localStorage.setItem('user',            JSON.stringify(userObject));
+          localStorage.setItem('isAuthenticated', 'true');
+          // refresh_token — רק אם הוחזר מהשרת
+          if (data.refresh_token) {
+            localStorage.setItem('refresh_token', data.refresh_token);
+          }
 
           setRememberPreference(rememberMe);
           setAuthSession({
@@ -215,7 +228,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
             });
           }
           
-          // עדכון הסטטוס של ההתחברות - חשוב מאוד לעשות את זה אחרי שמירת ה-localStorage
+          // עדכון הסטטוס של ההתחברות
           window.dispatchEvent(new Event('auth-change'));
           window.dispatchEvent(new Event('storage'));
           
@@ -226,14 +239,13 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
           setIsLoading(false);
           setGlobalLoading(false);
           
-          // המתנה קצרה נוספת כדי לוודא שה-globalLoading עודכן
           await new Promise(resolve => setTimeout(resolve, 50));
           
-          // אם must_change_password — redirect לשינוי סיסמה
+          // אם must_change_password — redirect לשינוי סיסמה, אחרת welcome
           if (data.user?.must_change_password) {
             navigate('/change-password', { replace: true });
           } else {
-            navigate('/', { replace: true });
+            navigate('/welcome', { replace: true });
           }
         } else {
           // אם אין user בנתונים
@@ -440,36 +452,48 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
               ) : 'התחברות'}
             </button>
 
-            {isMobileDevice && biometricSupported && biometricAvailable && (
+            {biometricSupported && biometricAvailable && biometricService.isRegistered() && (
               <button
                 type="button"
                 data-testid="login-bio"
                 disabled={isLoading}
                 onClick={async () => {
+                  const usernameVal = username.trim()
+                    || (usernameRef.current?.value?.trim() ?? '');
+
+                  if (!usernameVal) {
+                    setError('אנא הזן שם משתמש לפני שימוש בהתחברות הביומטרית');
+                    return;
+                  }
+
                   try {
                     setIsLoading(true);
                     setError('');
                     setGlobalLoading(true);
 
-                    const result = await biometricService.authenticate();
-                    
-                    if (result && result.access_token) {
+                    const result = await biometricService.authenticate(usernameVal);
+
+                    if (result?.access_token) {
+                      const userObject = result.user;
+                      localStorage.setItem('access_token',    result.access_token);
+                      localStorage.setItem('token',           result.access_token);
+                      localStorage.setItem('user',            JSON.stringify(userObject));
+                      localStorage.setItem('isAuthenticated', 'true');
+                      if (result.refresh_token) {
+                        localStorage.setItem('refresh_token', result.refresh_token);
+                      }
+
                       setAuthSession({
-                        accessToken: result.access_token,
+                        accessToken:  result.access_token,
                         refreshToken: result.refresh_token || '',
-                        user: result.user,
-                        userName: result.user?.name || result.user?.full_name || result.user?.username || '',
-                        rememberMe: true,
+                        user:         userObject,
+                        userName:     userObject?.name || userObject?.full_name || userObject?.username || '',
+                        rememberMe:   true,
                       });
-                      
-                      // עדכון הסטטוס
+
                       window.dispatchEvent(new Event('storage'));
-                      
-                      // המתנה קצרה לאנימציה
-                      await new Promise(resolve => setTimeout(resolve, 500));
-                      
                       setGlobalLoading(false);
-                      navigate('/', { replace: true });
+                      navigate('/welcome', { replace: true });
                     } else {
                       setError('אימות ביומטרי נכשל. אנא נסה שוב');
                       setGlobalLoading(false);
@@ -491,8 +515,13 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
                         active:scale-[0.98]
                         disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Fingerprint className="h-5 w-5 sm:h-6 sm:w-6" />
-                {isLoading ? 'מתחבר...' : 'התחברות ביומטרית (Face ID / Touch ID)'}
+                {biometric.icon === 'scan-face'
+                  ? <ScanFace className="h-5 w-5 sm:h-6 sm:w-6" />
+                  : biometric.icon === 'monitor'
+                  ? <Monitor className="h-5 w-5 sm:h-6 sm:w-6" />
+                  : <Fingerprint className="h-5 w-5 sm:h-6 sm:w-6" />
+                }
+                {isLoading ? 'מתחבר...' : biometric.text}
               </button>
             )}
           </form>

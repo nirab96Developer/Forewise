@@ -537,43 +537,59 @@ def get_portal_status(
 # ============================================
 
 def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: str):
-    """Send notification to work manager about supplier response"""
+    """Send notification to work manager and coordinators about supplier response."""
     try:
-        from app.core.config import settings
-        from app.core.email import send_email
-        
-        # Get project manager email
-        if work_order.project and work_order.project.manager_id:
-            from app.models.user import User
-            manager = db.query(User).filter(User.id == work_order.project.manager_id).first()
-            
-            if manager and manager.email:
-                action_text = "אושרה" if action == "accepted" else "נדחתה"
-                supplier_name = work_order.supplier.name if work_order.supplier else "לא ידוע"
-                
-                send_email(
-                    to=manager.email,
-                    subject=f"הזמנת עבודה {work_order.order_number} {action_text}",
-                    body=f"""
-שלום {manager.first_name or 'מנהל'},
+        from app.services.notification_service import notify_supplier_accepted, notify
+        from app.models.user import User
 
-הזמנת עבודה מספר {work_order.order_number} {action_text} על ידי הספק {supplier_name}.
+        action_text = "אושרה" if action == "accepted" else "נדחתה"
+        supplier_name = work_order.supplier.name if work_order.supplier else "לא ידוע"
+        wo_num = work_order.order_number or work_order.id
 
-פרטי ההזמנה:
-• מספר הזמנה: {work_order.order_number}
-• פרויקט: {work_order.project.name if work_order.project else 'לא ידוע'}
-• ספק: {supplier_name}
-• סטטוס: {action_text}
-
-בברכה,
-מערכת ניהול יערות קק"ל
-"""
+        # DB notification → ORDER_COORDINATORs in the area (supplier accepted)
+        if action == "accepted":
+            notify_supplier_accepted(db, work_order)
+        else:
+            # supplier rejected → notify WORK_MANAGER who created
+            creator_id = getattr(work_order, 'created_by', None)
+            if creator_id:
+                notify(
+                    db, creator_id,
+                    title=f"ספק דחה הזמנה — {supplier_name}",
+                    message=f"הזמנה #{wo_num} נדחתה על ידי {supplier_name}. הזמנה תועבר לספק הבא.",
+                    notification_type="supplier_response",
+                    entity_type="work_order",
+                    entity_id=work_order.id,
+                    priority="high",
+                    action_url=f"/work-orders/{work_order.id}",
                 )
-        
-        print(f"[Notification] Work order {work_order.order_number} was {action} by supplier")
-        
+
+        # Also send email (best-effort)
+        try:
+            from app.core.email import send_email
+            if work_order.project and work_order.project.manager_id:
+                manager = db.query(User).filter(User.id == work_order.project.manager_id).first()
+                if manager and manager.email:
+                    send_email(
+                        to=manager.email,
+                        subject=f"הזמנת עבודה {wo_num} {action_text}",
+                        body=(
+                            f"שלום {manager.first_name or 'מנהל'},\n\n"
+                            f"הזמנה מספר {wo_num} {action_text} על ידי הספק {supplier_name}.\n\n"
+                            f"בברכה,\nמערכת ניהול יערות קק\"ל"
+                        ),
+                    )
+        except Exception:
+            pass
+
+        import logging
+        logging.getLogger(__name__).info(
+            f"[Notification] Work order {wo_num} was {action} by supplier"
+        )
+
     except Exception as e:
-        print(f"[Error] Failed to send notification: {e}")
+        import logging
+        logging.getLogger(__name__).warning(f"[Notification] Failed: {e}")
 
 
 def _move_to_next_supplier(db: Session, work_order: WorkOrder):

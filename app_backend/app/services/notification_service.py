@@ -1,35 +1,393 @@
 # app/services/notification_service.py
 """Notification service - שירות התראות בזמן אמת"""
+import asyncio
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
 
 from app.models.notification import Notification
 from app.models.user import User
-from app.models.project import Project
-from app.models.work_order import WorkOrder
-from app.models.supplier import Supplier
 from app.schemas.notification import (
     NotificationCreate,
     NotificationUpdate,
     NotificationResponse,
-    NotificationType,
-    NotificationPriority
+    NotificationPriority,
 )
 
+log = logging.getLogger(__name__)
+
+# ─────────────────────────────────────────────────────────────
+# Internal helpers
+# ─────────────────────────────────────────────────────────────
+
+def _ws_send(user_id: int, payload: dict):
+    """Best-effort WebSocket push — never raises."""
+    try:
+        from app.routers.websocket import manager  # local import avoids circular
+        loop = asyncio.get_event_loop()
+        if not loop.is_closed():
+            loop.call_soon_threadsafe(
+                lambda: asyncio.ensure_future(manager.send_to_user(user_id, payload))
+            )
+    except Exception:
+        pass
+
+
+def notify(
+    db: Session,
+    user_id: int,
+    title: str,
+    message: str,
+    notification_type: str = "work_order",
+    entity_type: Optional[str] = None,
+    entity_id: Optional[int] = None,
+    priority: str = "medium",
+    action_url: Optional[str] = None,
+) -> Optional[Notification]:
+    """
+    Simple, direct notification creator.
+    Used internally from all routers — no Pydantic schema required.
+    """
+    try:
+        n = Notification(
+            user_id=user_id,
+            title=title,
+            message=message,
+            notification_type=notification_type,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            action_url=action_url,
+            is_read=False,
+            is_sent=False,
+        )
+        db.add(n)
+        db.commit()
+        db.refresh(n)
+
+        _ws_send(user_id, {
+            "type": "notification",
+            "data": {
+                "id": n.id,
+                "title": title,
+                "message": message,
+                "notification_type": notification_type,
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "action_url": action_url,
+                "priority": priority,
+                "is_read": False,
+                "created_at": n.created_at.isoformat() if n.created_at else datetime.utcnow().isoformat(),
+            },
+        })
+        return n
+    except Exception as e:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        log.warning(f"notify() failed [user={user_id} title={title!r}]: {e}")
+        return None
+
+
+def _find_users_by_role(db: Session, role_code: str, area_id: Optional[int] = None, region_id: Optional[int] = None) -> List[User]:
+    """Find active users with a given role, optionally filtered by area/region."""
+    from app.models.role import Role
+    q = (
+        db.query(User)
+        .join(Role, Role.id == User.role_id)
+        .filter(Role.code == role_code, User.is_active == True)
+    )
+    if area_id is not None:
+        q = q.filter(User.area_id == area_id)
+    elif region_id is not None:
+        q = q.filter(User.region_id == region_id)
+    return q.all()
+
+
+# ─────────────────────────────────────────────────────────────
+# Business-event notification helpers
+# ─────────────────────────────────────────────────────────────
+
+def notify_work_order_created(db: Session, work_order):
+    """
+    הזמנה חדשה נוצרה → התראה ל-ORDER_COORDINATOR של האזור.
+    """
+    try:
+        from app.models.project import Project
+        area_id = None
+        try:
+            if work_order.project:
+                area_id = work_order.project.area_id
+        except Exception:
+            pass
+        if area_id is None and work_order.project_id:
+            proj = db.query(Project).filter(Project.id == work_order.project_id).first()
+            if proj:
+                area_id = proj.area_id
+        coordinators = _find_users_by_role(db, "ORDER_COORDINATOR", area_id=area_id)
+        wo_num = getattr(work_order, 'order_number', work_order.id)
+        for coord in coordinators:
+            notify(
+                db, coord.id,
+                title="הזמנת עבודה חדשה ממתינה לתיאום",
+                message=f"הזמנה #{wo_num} נוצרה וממתינה לשליחה לספק",
+                notification_type="work_order",
+                entity_type="work_order",
+                entity_id=work_order.id,
+                action_url=f"/work-orders/{work_order.id}",
+            )
+    except Exception as e:
+        log.warning(f"notify_work_order_created failed: {e}")
+
+
+def notify_supplier_accepted(db: Session, work_order):
+    """
+    ספק אישר הזמנה → התראה ל-ORDER_COORDINATOR.
+    """
+    try:
+        from app.models.project import Project
+        area_id = None
+        # Try to get area_id from project (handle lazy-load / None)
+        try:
+            if work_order.project:
+                area_id = work_order.project.area_id
+        except Exception:
+            pass
+        if area_id is None and work_order.project_id:
+            proj = db.query(Project).filter(Project.id == work_order.project_id).first()
+            if proj:
+                area_id = proj.area_id
+
+        coordinators = _find_users_by_role(db, "ORDER_COORDINATOR", area_id=area_id)
+        wo_num = getattr(work_order, 'order_number', work_order.id)
+        try:
+            supplier_name = work_order.supplier.name if work_order.supplier else "ספק"
+        except Exception:
+            supplier_name = "ספק"
+        for coord in coordinators:
+            notify(
+                db, coord.id,
+                title="ספק אישר הזמנה — ממתין לאישור מתאם",
+                message=f"הזמנה #{wo_num}: {supplier_name} אישר. נדרש אישורך.",
+                notification_type="supplier_response",
+                entity_type="work_order",
+                entity_id=work_order.id,
+                priority="high",
+                action_url=f"/work-orders/{work_order.id}",
+            )
+    except Exception as e:
+        log.warning(f"notify_supplier_accepted failed: {e}")
+
+
+def notify_work_order_approved(db: Session, work_order):
+    """
+    ORDER_COORDINATOR אישר הזמנה → התראה ל-WORK_MANAGER שיצר.
+    """
+    try:
+        creator_id = getattr(work_order, 'created_by_id', None)
+        wo_num = getattr(work_order, 'order_number', work_order.id)
+        if creator_id:
+            notify(
+                db, creator_id,
+                title="הזמנת עבודה אושרה",
+                message=f"הזמנה #{wo_num} אושרה על ידי מתאם ההזמנות",
+                notification_type="work_order",
+                entity_type="work_order",
+                entity_id=work_order.id,
+                action_url=f"/work-orders/{work_order.id}",
+            )
+    except Exception as e:
+        log.warning(f"notify_work_order_approved failed: {e}")
+
+
+def notify_work_order_rejected(db: Session, work_order, reason: str = ""):
+    """
+    הזמנה נדחתה → התראה ל-WORK_MANAGER שיצר.
+    """
+    try:
+        creator_id = getattr(work_order, 'created_by_id', None)
+        wo_num = getattr(work_order, 'order_number', work_order.id)
+        if creator_id:
+            msg = f"הזמנה #{wo_num} נדחתה"
+            if reason:
+                msg += f": {reason}"
+            notify(
+                db, creator_id,
+                title="הזמנת עבודה נדחתה",
+                message=msg,
+                notification_type="work_order",
+                entity_type="work_order",
+                entity_id=work_order.id,
+                priority="high",
+                action_url=f"/work-orders/{work_order.id}",
+            )
+    except Exception as e:
+        log.warning(f"notify_work_order_rejected failed: {e}")
+
+
+def notify_worklog_created(db: Session, worklog):
+    """
+    דיווח שעות נוצר → התראה ל-AREA_MANAGER של האזור לאישור.
+    """
+    try:
+        from app.models.project import Project
+        area_id = getattr(worklog, 'area_id', None)
+        if area_id is None:
+            try:
+                if worklog.project:
+                    area_id = worklog.project.area_id
+            except Exception:
+                pass
+        if area_id is None and getattr(worklog, 'project_id', None):
+            proj = db.query(Project).filter(Project.id == worklog.project_id).first()
+            if proj:
+                area_id = proj.area_id
+
+        area_managers = _find_users_by_role(db, "AREA_MANAGER", area_id=area_id)
+        try:
+            reporter_name = worklog.user.full_name if worklog.user else "עובד"
+        except Exception:
+            reporter_name = f"משתמש #{getattr(worklog, 'user_id', '?')}"
+        report_date_obj = getattr(worklog, 'report_date', None) or getattr(worklog, 'work_date', None)
+        report_date = report_date_obj.strftime("%d/%m/%Y") if report_date_obj else ""
+        for mgr in area_managers:
+            notify(
+                db, mgr.id,
+                title="דיווח שעות ממתין לאישור",
+                message=f"דיווח של {reporter_name} מתאריך {report_date} ממתין לאישורך",
+                notification_type="work_log",
+                entity_type="worklog",
+                entity_id=worklog.id,
+                action_url=f"/work-logs/{worklog.id}",
+            )
+    except Exception as e:
+        log.warning(f"notify_worklog_created failed: {e}")
+
+
+def notify_worklog_approved(db: Session, worklog):
+    """
+    דיווח שעות אושר → התראה ל-WORK_MANAGER שדיווח.
+    """
+    try:
+        reporter_id = getattr(worklog, 'user_id', None)
+        report_date_obj = getattr(worklog, 'report_date', None) or getattr(worklog, 'work_date', None)
+        report_date = report_date_obj.strftime("%d/%m/%Y") if report_date_obj else ""
+        if reporter_id:
+            notify(
+                db, reporter_id,
+                title="דיווח שעות אושר ✓",
+                message=f"דיווח השעות שלך מתאריך {report_date} אושר על ידי מנהל האזור",
+                notification_type="work_log",
+                entity_type="worklog",
+                entity_id=worklog.id,
+                action_url=f"/work-logs/{worklog.id}",
+            )
+    except Exception as e:
+        log.warning(f"notify_worklog_approved failed: {e}")
+
+
+def notify_worklog_rejected(db: Session, worklog, reason: str = ""):
+    """
+    דיווח שעות נדחה → התראה ל-WORK_MANAGER שדיווח.
+    """
+    try:
+        reporter_id = getattr(worklog, 'user_id', None)
+        report_date_obj = getattr(worklog, 'report_date', None) or getattr(worklog, 'work_date', None)
+        report_date = report_date_obj.strftime("%d/%m/%Y") if report_date_obj else ""
+        if reporter_id:
+            msg = f"דיווח השעות שלך מתאריך {report_date} נדחה"
+            if reason:
+                msg += f": {reason}"
+            notify(
+                db, reporter_id,
+                title="דיווח שעות נדחה",
+                message=msg,
+                notification_type="work_log",
+                entity_type="worklog",
+                entity_id=worklog.id,
+                priority="high",
+                action_url=f"/work-logs/{worklog.id}",
+            )
+    except Exception as e:
+        log.warning(f"notify_worklog_rejected failed: {e}")
+
+
+def notify_invoice_created(db: Session, invoice):
+    """
+    חשבונית חדשה → התראה לכל מנהלות החשבונות.
+    """
+    try:
+        from app.models.project import Project
+        try:
+            project_name = invoice.project.name if invoice.project else "פרויקט"
+        except Exception:
+            proj = db.query(Project).filter(Project.id == invoice.project_id).first() if invoice.project_id else None
+            project_name = proj.name if proj else "פרויקט"
+        amount = float(invoice.total_amount or 0)
+        accountants = _find_users_by_role(db, "ACCOUNTANT")
+        for acct in accountants:
+            notify(
+                db, acct.id,
+                title="חשבונית חדשה לאישור",
+                message=f"חשבונית {invoice.invoice_number} עבור {project_name} (₪{amount:,.0f}) ממתינה לאישורך",
+                notification_type="invoice",
+                entity_type="invoice",
+                entity_id=invoice.id,
+                priority="high",
+                action_url=f"/invoices/{invoice.id}",
+            )
+    except Exception as e:
+        log.warning(f"notify_invoice_created failed: {e}")
+
+
+def notify_invoice_approved(db: Session, invoice):
+    """
+    חשבונית אושרה → התראה ל-AREA_MANAGER.
+    """
+    try:
+        from app.models.project import Project
+        area_id = None
+        project_name = "פרויקט"
+        try:
+            if invoice.project:
+                area_id = invoice.project.area_id
+                project_name = invoice.project.name
+        except Exception:
+            pass
+        if area_id is None and getattr(invoice, 'project_id', None):
+            proj = db.query(Project).filter(Project.id == invoice.project_id).first()
+            if proj:
+                area_id = proj.area_id
+                project_name = proj.name
+
+        amount = float(invoice.total_amount or 0)
+        if area_id:
+            for mgr in _find_users_by_role(db, "AREA_MANAGER", area_id=area_id):
+                notify(
+                    db, mgr.id,
+                    title="חשבונית אושרה",
+                    message=f"חשבונית {invoice.invoice_number} עבור {project_name} (₪{amount:,.0f}) אושרה",
+                    notification_type="invoice",
+                    entity_type="invoice",
+                    entity_id=invoice.id,
+                    action_url=f"/invoices/{invoice.id}",
+                )
+    except Exception as e:
+        log.warning(f"notify_invoice_approved failed: {e}")
+
+
+# ─────────────────────────────────────────────────────────────
+# NotificationService class (used by notifications router)
+# ─────────────────────────────────────────────────────────────
 
 class NotificationService:
-    """Service for notification operations."""
+    """Service for notification CRUD operations."""
 
     def get_notification(self, db: Session, notification_id: int) -> Optional[Notification]:
-        """Get notification by ID."""
-        return (
-            db.query(Notification)
-            .filter(Notification.id == notification_id)
-            .first()
-        )
+        return db.query(Notification).filter(Notification.id == notification_id).first()
 
     def get_user_notifications(
         self,
@@ -38,364 +396,99 @@ class NotificationService:
         skip: int = 0,
         limit: int = 50,
         unread_only: bool = False,
-        notification_type: Optional[str] = None
+        notification_type: Optional[str] = None,
     ) -> List[Notification]:
-        """Get user notifications."""
-        query = (
-            db.query(Notification)
-            .filter(Notification.user_id == user_id)
-        )
-
+        query = db.query(Notification).filter(Notification.user_id == user_id)
         if unread_only:
             query = query.filter(Notification.is_read == False)
-        
         if notification_type:
             query = query.filter(Notification.notification_type == notification_type)
+        return query.order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
 
+    def get_unread_count(self, db: Session, user_id: int) -> int:
         return (
-            query.order_by(Notification.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
+            db.query(Notification)
+            .filter(Notification.user_id == user_id, Notification.is_read == False)
+            .count()
         )
 
-    def create_notification(
-        self,
-        db: Session,
-        notification: NotificationCreate
-    ) -> Notification:
-        """Create new notification."""
-        db_notification = Notification(
+    def create_notification(self, db: Session, notification: NotificationCreate) -> Notification:
+        """Create notification from Pydantic schema (used by admin endpoint)."""
+        return notify(
+            db,
             user_id=notification.user_id,
             title=notification.title,
             message=notification.message,
-            notification_type=notification.notification_type,
-            priority=notification.priority,
-            channel=notification.channel,
-            entity_type=notification.entity_type,
-            entity_id=notification.entity_id,
-            data=notification.data,
-            action_url=notification.action_url,
-            expires_at=notification.expires_at,
-            is_read=False
+            notification_type=notification.notification_type.value if hasattr(notification.notification_type, 'value') else str(notification.notification_type),
+            entity_id=getattr(notification, 'work_order_id', None) or getattr(notification, 'project_id', None),
+            entity_type="work_order" if getattr(notification, 'work_order_id', None) else "project",
         )
 
-        db.add(db_notification)
-        db.commit()
-        db.refresh(db_notification)
-
-        # Send real-time notification via WebSocket
-        self._send_realtime_notification(db_notification)
-
-        return db_notification
-
-    def mark_as_read(
-        self,
-        db: Session,
-        notification_id: int,
-        user_id: int
-    ) -> Optional[Notification]:
-        """Mark notification as read."""
-        notification = (
-            db.query(Notification)
-            .filter(
-                and_(
-                    Notification.id == notification_id,
-                    Notification.user_id == user_id,
-                )
-            )
-            .first()
-        )
-
-        if notification:
-            notification.is_read = True
-            notification.read_at = datetime.utcnow()
+    def mark_as_read(self, db: Session, notification_id: int, user_id: int) -> Optional[Notification]:
+        n = db.query(Notification).filter(
+            Notification.id == notification_id, Notification.user_id == user_id
+        ).first()
+        if n:
+            n.is_read = True
+            n.read_at = datetime.utcnow()
             db.commit()
-            db.refresh(notification)
+            db.refresh(n)
+        return n
 
-        return notification
-
-    def mark_all_as_read(
-        self,
-        db: Session,
-        user_id: int
-    ) -> int:
-        """Mark all user notifications as read."""
-        updated_count = (
+    def mark_all_as_read(self, db: Session, user_id: int) -> int:
+        count = (
             db.query(Notification)
-            .filter(
-                and_(
-                    Notification.user_id == user_id,
-                    Notification.is_read == False,
-                )
-            )
-            .update({
-                "is_read": True,
-                "read_at": datetime.utcnow()
-            })
+            .filter(Notification.user_id == user_id, Notification.is_read == False)
+            .update({"is_read": True, "read_at": datetime.utcnow()})
         )
-
         db.commit()
-        return updated_count
+        return count
 
-    def delete_notification(
-        self,
-        db: Session,
-        notification_id: int,
-        user_id: int
-    ) -> bool:
-        """Delete notification (soft delete)."""
-        notification = (
-            db.query(Notification)
-            .filter(
-                and_(
-                    Notification.id == notification_id,
-                    Notification.user_id == user_id,
-                )
-            )
-            .first()
-        )
-
-        if notification:
-            # Soft delete by marking as read
-            notification.is_read = True
+    def delete_notification(self, db: Session, notification_id: int, user_id: int) -> bool:
+        n = db.query(Notification).filter(
+            Notification.id == notification_id, Notification.user_id == user_id
+        ).first()
+        if n:
+            db.delete(n)
             db.commit()
             return True
-
         return False
 
-    def create_work_order_notification(
-        self,
-        db: Session,
-        work_order: WorkOrder,
-        notification_type: str,
-        message: str
-    ):
-        """Create work order related notification."""
-        # Get project manager
-        if work_order.project and work_order.project.manager_id:
-            notification = NotificationCreate(
-                user_id=work_order.project.manager_id,
-                title=f"הזמנת עבודה {work_order.id}",
-                message=message,
-                notification_type=notification_type,
-                priority="medium",
-                channel="in_app",
-                entity_type="work_order",
-                entity_id=work_order.id,
-                data={
-                    "work_order_id": work_order.id,
-                    "supplier_id": work_order.supplier_id,
-                    "equipment_type": work_order.equipment_type
-                }
-            )
-            
-            self.create_notification(db, notification)
-
-    def create_supplier_response_notification(
-        self,
-        db: Session,
-        work_order: WorkOrder,
-        response: str
-    ):
-        """Create notification for supplier response."""
-        if work_order.project and work_order.project.manager_id:
-            message = f"ספק {work_order.supplier.company_name if work_order.supplier else 'לא ידוע'} {response} את ההזמנה"
-            
-            notification = NotificationCreate(
-                user_id=work_order.project.manager_id,
-                title=f"תגובת ספק - הזמנה {work_order.id}",
-                message=message,
-                notification_type="supplier_response",
-                priority="high",
-                channel="in_app",
-                entity_type="work_order",
-                entity_id=work_order.id,
-                data={
-                    "work_order_id": work_order.id,
-                    "supplier_response": response,
-                    "response_time": datetime.utcnow().isoformat()
-                }
-            )
-            
-            self.create_notification(db, notification)
-
-    def create_budget_alert_notification(
-        self,
-        db: Session,
-        project: Project,
-        budget_usage_percentage: float
-    ):
-        """Create budget alert notification."""
-        if project.manager_id:
-            if budget_usage_percentage >= 90:
-                priority = "critical"
-                message = f"אזהרה קריטית: התקציב של פרויקט {project.name} נוצל ב-{budget_usage_percentage:.1f}%"
-            elif budget_usage_percentage >= 75:
-                priority = "high"
-                message = f"אזהרה: התקציב של פרויקט {project.name} נוצל ב-{budget_usage_percentage:.1f}%"
-            else:
-                return  # No notification needed
-            
-            notification = NotificationCreate(
-                user_id=project.manager_id,
-                title="אזהרת תקציב",
-                message=message,
-                notification_type="budget_alert",
-                priority=priority,
-                channel="in_app",
-                entity_type="project",
-                entity_id=project.id,
-                data={
-                    "budget_usage_percentage": budget_usage_percentage,
-                    "project_name": project.name
-                }
-            )
-            
-            self.create_notification(db, notification)
-
-    def create_equipment_maintenance_notification(
-        self,
-        db: Session,
-        equipment_id: int,
-        maintenance_type: str,
-        message: str
-    ):
-        """Create equipment maintenance notification."""
-        # Get equipment manager or project manager
-        # This would need to be implemented based on your equipment assignment logic
-        
-        notification = NotificationCreate(
-            user_id=1,  # Placeholder - get actual manager ID
-            title=f"תחזוקת ציוד - {maintenance_type}",
-            message=message,
-            notification_type="equipment_maintenance",
-            priority="medium",
-            data={
-                "equipment_id": equipment_id,
-                "maintenance_type": maintenance_type
-            }
-        )
-        
-        self.create_notification(db, notification)
-
-    def create_system_notification(
-        self,
-        db: Session,
-        title: str,
-        message: str,
-        priority: str = "medium",
-        target_users: Optional[List[int]] = None
-    ):
-        """Create system-wide notification."""
-        if target_users:
-            for user_id in target_users:
-                notification = NotificationCreate(
-                    user_id=user_id,
-                    title=title,
-                    message=message,
-                    notification_type="system",
-                    priority=priority,
-                    data={"system_notification": True}
-                )
-                
-                self.create_notification(db, notification)
-        else:
-            # Send to all active users
-            users = db.query(User).filter(User.is_active == True).all()
-            for user in users:
-                notification = NotificationCreate(
-                    user_id=user.id,
-                    title=title,
-                    message=message,
-                    notification_type="system",
-                    priority=priority,
-                    data={"system_notification": True}
-                )
-                
-                self.create_notification(db, notification)
-
-    def cleanup_old_notifications(self, db: Session, days_old: int = 30):
-        """Clean up old notifications."""
-        cutoff_date = datetime.utcnow() - timedelta(days=days_old)
-        
-        deleted_count = (
-            db.query(Notification)
-            .filter(
-                and_(
-                    Notification.created_at < cutoff_date,
-                    Notification.is_read == True,
-                )
-            )
-            .update({"is_read": True})
-        )
-        
-        db.commit()
-        return deleted_count
-
     def get_notification_stats(self, db: Session, user_id: int) -> Dict[str, Any]:
-        """Get notification statistics for user."""
-        total_notifications = (
-            db.query(Notification)
-            .filter(
-                and_(
-                    Notification.user_id == user_id,
-                )
-            )
-            .count()
-        )
-        
-        unread_notifications = (
-            db.query(Notification)
-            .filter(
-                and_(
-                    Notification.user_id == user_id,
-                    Notification.is_read == False,
-                )
-            )
-            .count()
-        )
-        
-        critical_notifications = (
-            db.query(Notification)
-            .filter(
-                and_(
-                    Notification.user_id == user_id,
-                    Notification.priority == "critical",
-                    Notification.is_read == False,
-                )
-            )
-            .count()
-        )
-        
+        total = db.query(Notification).filter(Notification.user_id == user_id).count()
+        unread = db.query(Notification).filter(
+            Notification.user_id == user_id, Notification.is_read == False
+        ).count()
+        critical = db.query(Notification).filter(
+            Notification.user_id == user_id, Notification.is_read == False,
+            Notification.notification_type.in_(["budget_alert"])
+        ).count()
         return {
-            "total": total_notifications,
-            "unread": unread_notifications,
-            "critical": critical_notifications,
-            "read_percentage": (
-                (total_notifications - unread_notifications) / total_notifications * 100
-                if total_notifications > 0 else 0
-            )
+            "total": total,
+            "unread": unread,
+            "critical": critical,
+            "read_percentage": ((total - unread) / total * 100) if total > 0 else 0,
         }
 
-    def _send_realtime_notification(self, notification: Notification):
-        """Send real-time notification via WebSocket."""
-        try:
-            # This would integrate with your WebSocket service
-            # For now, just log the notification
-            print(f"Real-time notification sent: {notification.title} to user {notification.user_id}")
-            
-            # TODO: Implement WebSocket integration
-            # websocket_manager.send_to_user(notification.user_id, {
-            #     "type": "notification",
-            #     "data": {
-            #         "id": notification.id,
-            #         "title": notification.title,
-            #         "message": notification.message,
-            #         "priority": notification.priority,
-            #         "created_at": notification.created_at.isoformat()
-            #     }
-            # })
-            
-        except Exception as e:
-            print(f"Error sending real-time notification: {e}")
+    def cleanup_old_notifications(self, db: Session, days_old: int = 30) -> int:
+        cutoff = datetime.utcnow() - timedelta(days=days_old)
+        count = (
+            db.query(Notification)
+            .filter(Notification.created_at < cutoff, Notification.is_read == True)
+            .delete()
+        )
+        db.commit()
+        return count
+
+    # Legacy system notification (kept for compat)
+    def create_system_notification(self, db: Session, title: str, message: str,
+                                   priority: str = "medium", target_users: Optional[List[int]] = None):
+        if target_users:
+            for uid in target_users:
+                notify(db, uid, title=title, message=message, notification_type="system")
+        else:
+            for user in db.query(User).filter(User.is_active == True).all():
+                notify(db, user.id, title=title, message=message, notification_type="system")
+
+
+notification_service = NotificationService()
