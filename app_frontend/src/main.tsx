@@ -11,8 +11,13 @@ Sentry.init({
   environment: import.meta.env.MODE,
   integrations: [
     Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({
+      maskAllText: false,
+      blockAllMedia: false,
+    }),
   ],
-  tracesSampleRate: 0.1,
+  tracesSampleRate: 1.0,
+  replaysOnErrorSampleRate: 1.0,
   enabled: !!(import.meta.env.VITE_SENTRY_DSN) && import.meta.env.MODE === "production",
 });
 

@@ -26,13 +26,22 @@ from app.core.rate_limiting import rate_limit_middleware
 # Sentry — Error Monitoring (initialised only when DSN is configured)
 try:
     import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    from sentry_sdk.integrations.loguru import LoguruIntegration
     if settings.SENTRY_DSN:
         sentry_sdk.init(
             dsn=settings.SENTRY_DSN,
             environment=settings.ENVIRONMENT,
-            traces_sample_rate=0.1,
+            integrations=[
+                FastApiIntegration(),
+                SqlalchemyIntegration(),
+                LoguruIntegration(),
+            ],
+            traces_sample_rate=1.0,
+            send_default_pii=False,
         )
-        logger.info("Sentry initialised")
+        logger.info("Sentry initialised with FastAPI + SQLAlchemy + Loguru integrations")
 except ImportError:
     pass  # sentry-sdk not installed — skip silently
 
@@ -241,6 +250,28 @@ app.middleware("http")(rate_limit_middleware)
 
 # Add compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+# ============================================================
+# Sentry User Context Middleware
+# ============================================================
+@app.middleware("http")
+async def sentry_user_middleware(request: Request, call_next):
+    """Attach authenticated user info to every Sentry event."""
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        try:
+            import sentry_sdk as _sentry
+            from app.core.security import decode_token
+            payload = decode_token(auth.split(" ", 1)[1])
+            with _sentry.configure_scope() as scope:
+                scope.set_user({
+                    "id": payload.get("sub"),
+                    "username": payload.get("username"),
+                })
+        except Exception:
+            pass
+    return await call_next(request)
 
 
 # ============================================================

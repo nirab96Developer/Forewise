@@ -1,14 +1,39 @@
 # app/core/database.py
 """Database configuration"""
 import logging
+import time
 from typing import Generator
 
-from sqlalchemy import create_engine, text
+import sentry_sdk
+from sqlalchemy import create_engine, event, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# ── Slow-query monitoring ─────────────────────────────────────────────────────
+SLOW_QUERY_THRESHOLD_S = 0.5  # log + alert for queries slower than 500 ms
+
+@event.listens_for(Engine, "before_cursor_execute")
+def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    conn.info.setdefault("query_start_time", []).append(time.monotonic())
+
+@event.listens_for(Engine, "after_cursor_execute")
+def _after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+    elapsed = time.monotonic() - conn.info["query_start_time"].pop(-1)
+    if elapsed > SLOW_QUERY_THRESHOLD_S:
+        truncated = statement[:500]
+        logger.warning("SLOW QUERY (%.2fs): %s", elapsed, truncated)
+        try:
+            sentry_sdk.capture_message(
+                f"Slow DB query: {elapsed:.2f}s",
+                level="warning",
+                extras={"query": truncated, "duration_s": round(elapsed, 3)},
+            )
+        except Exception:
+            pass  # sentry not configured — ignore
 
 # Create engine with proper Unicode support for SQL Server
 engine = create_engine(

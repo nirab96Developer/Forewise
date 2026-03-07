@@ -55,10 +55,21 @@ def setup_logging(
         diagnose=True
     )
 
-    # File handler - JSON format
-    if environment == "production":
-        file_format = "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
+    # File handler — all environments write to logs/app.log
+    file_format = "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
 
+    logger.add(
+        logs_dir / "app.log",
+        format=file_format,
+        level="DEBUG",
+        rotation="10 MB",
+        retention="7 days",
+        encoding="utf-8",
+        enqueue=True,
+    )
+
+    # Extra production log (compressed, long retention)
+    if environment == "production":
         logger.add(
             logs_dir / f"{app_name}_{environment}.log",
             format=file_format,
@@ -66,6 +77,7 @@ def setup_logging(
             rotation="1 day",
             retention="30 days",
             compression="gz",
+            encoding="utf-8",
             enqueue=True,
         )
 
@@ -77,6 +89,7 @@ def setup_logging(
             level="DEBUG",
             rotation="100 MB",
             retention="7 days",
+            encoding="utf-8",
         )
 
     # Intercept standard logging
