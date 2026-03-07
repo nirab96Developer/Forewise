@@ -1,0 +1,30 @@
+[Unit]
+Description=KKL Forest Backend API
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/kkl-forest/app_backend
+Environment="PATH=/root/kkl-forest/app_backend/.venv/bin"
+
+# Before starting: kill ALL stray uvicorn processes (not just port-holders)
+# so a manually-launched rogue process can't block the port.
+ExecStartPre=/bin/sh -c 'pkill -9 -f "uvicorn app.main" 2>/dev/null; sleep 1; fuser -k 8000/tcp 2>/dev/null; sleep 1; true'
+
+ExecStart=/root/kkl-forest/app_backend/.venv/bin/uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --timeout-graceful-shutdown 30
+
+# On stop: send SIGTERM to main, then kill whole cgroup (catches child workers too)
+ExecStop=/bin/kill -s TERM $MAINPID
+KillMode=control-group
+KillSignal=SIGTERM
+TimeoutStopSec=35
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
