@@ -23,28 +23,28 @@ router = APIRouter(prefix="/supplier-rotations", tags=["Supplier Rotations"])
 
 class SupplierRotationCreate(BaseModel):
     supplier_id: int
-    rotation_date: Optional[date] = None
-    priority: int = 1
-    sequence_number: int = 1
-    status: str = "active"
+    equipment_type_id: Optional[int] = None
+    equipment_category_id: Optional[int] = None
+    region_id: Optional[int] = None
+    area_id: Optional[int] = None
+    rotation_position: Optional[int] = None
     is_active: bool = True
-    equipment_type: Optional[str] = None
-    notes: Optional[str] = None
-    usage_count: int = 0
-    skip_count: int = 0
+    is_available: Optional[bool] = True
+    priority_score: Optional[float] = None
 
 
 class SupplierRotationUpdate(BaseModel):
     supplier_id: Optional[int] = None
-    rotation_date: Optional[date] = None
-    priority: Optional[int] = None
-    sequence_number: Optional[int] = None
-    status: Optional[str] = None
+    equipment_type_id: Optional[int] = None
+    equipment_category_id: Optional[int] = None
+    region_id: Optional[int] = None
+    area_id: Optional[int] = None
+    rotation_position: Optional[int] = None
     is_active: Optional[bool] = None
-    equipment_type: Optional[str] = None
-    notes: Optional[str] = None
-    usage_count: Optional[int] = None
-    skip_count: Optional[int] = None
+    is_available: Optional[bool] = None
+    priority_score: Optional[float] = None
+    unavailable_until: Optional[str] = None
+    unavailable_reason: Optional[str] = None
 
 
 @router.get("/")
@@ -125,16 +125,21 @@ async def get_supplier_rotation(
             "id": rotation.id,
             "supplier_id": rotation.supplier_id,
             "supplier_name": supplier.name if supplier else f"ספק #{rotation.supplier_id}",
-            "rotation_date": rotation.rotation_date.isoformat() if rotation.rotation_date else None,
-            "priority": rotation.priority,
-            "sequence_number": rotation.sequence_number,
-            "status": rotation.status,
+            "rotation_position": rotation.rotation_position,
+            "equipment_type_id": rotation.equipment_type_id,
+            "equipment_category_id": rotation.equipment_category_id,
+            "region_id": rotation.region_id,
+            "area_id": rotation.area_id,
+            "total_assignments": rotation.total_assignments,
+            "successful_completions": rotation.successful_completions,
+            "rejection_count": rotation.rejection_count,
+            "priority_score": rotation.priority_score,
             "is_active": rotation.is_active,
-            "last_used_date": rotation.last_used_date.isoformat() if rotation.last_used_date else None,
-            "usage_count": rotation.usage_count,
-            "skip_count": rotation.skip_count,
-            "equipment_type": rotation.equipment_type,
-            "notes": rotation.notes,
+            "is_available": rotation.is_available,
+            "last_assignment_date": rotation.last_assignment_date.isoformat() if rotation.last_assignment_date else None,
+            "last_completion_date": rotation.last_completion_date.isoformat() if rotation.last_completion_date else None,
+            "unavailable_until": rotation.unavailable_until.isoformat() if rotation.unavailable_until else None,
+            "unavailable_reason": rotation.unavailable_reason,
         }
         
     except HTTPException:
@@ -165,15 +170,17 @@ async def create_supplier_rotation(
         
         rotation = SupplierRotation(
             supplier_id=data.supplier_id,
-            rotation_date=data.rotation_date or date.today(),
-            priority=data.priority,
-            sequence_number=data.sequence_number,
-            status=data.status,
+            equipment_type_id=data.equipment_type_id,
+            equipment_category_id=data.equipment_category_id,
+            region_id=data.region_id,
+            area_id=data.area_id,
+            rotation_position=data.rotation_position,
             is_active=data.is_active,
-            equipment_type=data.equipment_type,
-            notes=data.notes,
-            usage_count=data.usage_count,
-            skip_count=data.skip_count,
+            is_available=data.is_available,
+            priority_score=data.priority_score,
+            total_assignments=0,
+            successful_completions=0,
+            rejection_count=0,
         )
         
         db.add(rotation)

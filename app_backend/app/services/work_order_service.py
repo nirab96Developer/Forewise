@@ -105,6 +105,52 @@ class WorkOrderService:
                 )
             wo_dict["requested_equipment_model_id"] = model_row[0]
 
+        # ── Budget validation: block if project budget insufficient ──────────────
+        project_id = wo_dict.get("project_id")
+        estimated_hours = wo_dict.get("estimated_hours")
+        if project_id and estimated_hours:
+            try:
+                from app.models.budget import Budget
+                from decimal import Decimal as _Decimal
+
+                budget = (
+                    db.query(Budget)
+                    .filter(
+                        Budget.project_id == project_id,
+                        Budget.is_active.is_(True),
+                        Budget.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+                if budget is not None:
+                    # Estimate cost using equipment hourly rate from the category
+                    rate_row = db.execute(sa_text(
+                        """SELECT et.default_hourly_rate
+                           FROM equipment_categories ec
+                           JOIN equipment_models em ON em.category_id = ec.id
+                           JOIN equipment_types et ON et.name = ec.name
+                           WHERE em.id = :mid LIMIT 1"""
+                    ), {"mid": wo_dict.get("requested_equipment_model_id")}).fetchone()
+
+                    if rate_row and rate_row[0]:
+                        estimated_cost = _Decimal(str(estimated_hours)) * _Decimal(str(rate_row[0]))
+                        remaining = budget.remaining_amount
+                        if estimated_cost > remaining:
+                            raise HTTPException(
+                                status_code=422,
+                                detail={
+                                    "code": "BUDGET_INSUFFICIENT",
+                                    "message": "תקציב הפרויקט אינו מספיק ליצירת הזמנת העבודה",
+                                    "estimated_cost": float(estimated_cost),
+                                    "remaining_budget": float(remaining),
+                                    "currency": "ILS",
+                                }
+                            )
+            except HTTPException:
+                raise
+            except Exception:
+                pass  # budget check is advisory — do not block on unexpected errors
+
         # Auto-generate order_number
         max_on = db.execute(sa_text("SELECT COALESCE(MAX(order_number), 0) FROM work_orders")).scalar()
         next_on = int(max_on) + 1

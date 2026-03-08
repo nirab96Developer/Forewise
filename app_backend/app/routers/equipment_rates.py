@@ -160,13 +160,6 @@ def update_equipment_rate(
         UPDATE equipment_types SET default_hourly_rate=:rate, updated_at=NOW() WHERE id=:tid
     """), {"rate": data.hourly_rate, "tid": type_id})
 
-    # Update supplier_equipment that still had the old rate
-    if old_rate is not None:
-        db.execute(text("""
-            UPDATE supplier_equipment SET hourly_rate=:new_rate
-            WHERE equipment_type_id=:tid AND hourly_rate=:old_rate
-        """), {"new_rate": data.hourly_rate, "tid": type_id, "old_rate": old_rate})
-
     db.commit()
 
     return {"success": True, "old_rate": old_rate, "new_rate": data.hourly_rate}

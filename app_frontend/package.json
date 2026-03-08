@@ -1,5 +1,5 @@
 {
-  "name": "kkl-time-report",
+  "name": "forewise",
   "private": true,
   "version": "1.0.0",
   "main": "electron/main.js",
@@ -101,5 +101,6 @@
       ],
       "icon": "public/logo-kkl-transparent.png"
     }
-  }
+  },
+  "description": "Forewise - Field Operations Management"
 }

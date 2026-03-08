@@ -2,6 +2,7 @@
 Suppliers Router
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import Annotated, Optional, List
 
@@ -139,6 +140,8 @@ def delete_supplier(
 
 
 # ── Global supplier equipment list (all suppliers) ────────────────────────────
+import io
+import qrcode
 from app.models.supplier_equipment import SupplierEquipment
 from app.models.supplier import Supplier as SupplierModel
 from app.models.equipment_model import EquipmentModel
@@ -205,3 +208,53 @@ def list_supplier_equipment(
         }
         for se, em in rows
     ]
+
+
+@router.get("/{supplier_id}/equipment/{equipment_id}/qr-code", tags=["suppliers"])
+def get_supplier_equipment_qr_code(
+    supplier_id: int,
+    equipment_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Generate and return a QR code PNG image for a supplier's equipment tool.
+
+    The QR payload encodes a JSON string with supplier_id, equipment_id,
+    and license_plate so that field workers can scan and validate the tool.
+    """
+    require_permission(current_user, "suppliers.read")
+
+    se = (
+        db.query(SupplierEquipment)
+        .filter(
+            SupplierEquipment.id == equipment_id,
+            SupplierEquipment.supplier_id == supplier_id,
+            SupplierEquipment.is_active == True,
+        )
+        .first()
+    )
+    if not se:
+        raise HTTPException(status_code=404, detail="Equipment not found for this supplier")
+
+    import json
+    payload = json.dumps({
+        "supplier_id": supplier_id,
+        "equipment_id": equipment_id,
+        "license_plate": se.license_plate or "",
+    }, ensure_ascii=False)
+
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=10, border=4)
+    qr.add_data(payload)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    filename = f"qr_{se.license_plate or equipment_id}.png".replace(" ", "_")
+    return StreamingResponse(
+        buf,
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )

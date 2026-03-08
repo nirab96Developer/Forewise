@@ -1,7 +1,6 @@
 # app/main.py
 """
-Forest Management System - Main Application Entry Point
-מערכת ניהול יערות ופרויקטים
+Forewise - Main Application Entry Point
 """
 from app.routers import api_router
 from fastapi import APIRouter
@@ -47,34 +46,34 @@ except ImportError:
 
 # Custom API metadata בעברית
 API_METADATA = {
-    "title": "🌲 מערכת ניהול יערות ופרויקטים",
+    "title": "Forewise API",
     "description": """
-## מערכת ניהול מתקדמת לקק"ל
+## Forewise — Field Operations Management
 
-### 🎯 יכולות המערכת:
-* **ניהול פרויקטים** - יצירה, עדכון ומעקב אחר פרויקטים
-* **ניהול ציוד** - הקצאת ציוד, תחזוקה וסריקות
-* **ניהול ספקים** - סבב הוגן, הזמנות ומעקב ביצועים
-* **דיווחי שעות** - דיווח שעות עבודה וחישוב אוטומטי
-* **חשבוניות** - הפקת חשבוניות אוטומטיות
-* **תקציבים** - ניהול והקצאת תקציבים
-* **דוחות** - דוחות מנהלים ואנליטיקס
+### Capabilities:
+* **Projects** — create, update and track projects
+* **Equipment** — allocation, maintenance and QR scans
+* **Suppliers** — fair rotation, work orders and performance tracking
+* **Work Logs** — field reporting, hours and automatic calculation
+* **Invoices** — automatic invoice generation
+* **Budgets** — budget management and allocation
+* **Reports** — management reports and analytics
 
-### אבטחה:
-- הזדהות מאובטחת עם JWT
-- ניהול הרשאות מתקדם (RBAC)
-- תיעוד כל הפעולות במערכת
+### Security:
+- JWT-based authentication
+- Advanced permissions (RBAC)
+- Full audit trail
 
-### 📊 סטטוס המערכת:
-- **סביבה:** {environment}
-- **גרסה:** 1.0.0
+### Status:
+- **Environment:** {environment}
+- **Version:** 1.0.0
 - **Database:** PostgreSQL
     """.format(environment=settings.ENVIRONMENT),
     "version": "1.0.0",
     "terms_of_service": "/terms",
     "contact": {
         "name": "צוות פיתוח",
-        "email": "dev@forest-system.com"
+        "email": "dev@forewise.io"
     },
     "license": {
         "name": "Private License",
@@ -137,7 +136,7 @@ logger.info("Using pre-configured API router with all routers")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    logger.info("Starting Forest Management System...")
+    logger.info("Starting Forewise...")
     try:
         setup_logging(settings.LOG_LEVEL)
         logger.info("Initializing database...")
@@ -413,7 +412,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def root():
     """מידע בסיסי על המערכת."""
     return {
-        "שם": "מערכת ניהול יערות",
+        "name": "Forewise",
         "גרסה": "1.0.0",
         "סטטוס": "פעיל",
         "סביבה": settings.ENVIRONMENT,
