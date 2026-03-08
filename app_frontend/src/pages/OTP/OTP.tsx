@@ -287,7 +287,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
           <div className="w-20 h-20 mx-auto mb-4 hover:scale-105 transition-transform duration-300">
             <img
               src="/logo-kkl-transparent.png"
-              alt="KKL Logo"
+              alt="Forewise Logo"
               className="w-full h-full object-contain drop-shadow-xl"
             />
           </div>

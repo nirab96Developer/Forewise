@@ -36,7 +36,7 @@ class EquipmentRateCreate(BaseModel):
 
 class EquipmentRateUpdate(BaseModel):
     hourly_rate: float = Field(..., ge=0)
-    reason: str = Field(..., min_length=3)
+    reason: Optional[str] = Field(None, min_length=3)
 
 
 class RateHistoryItem(BaseModel):

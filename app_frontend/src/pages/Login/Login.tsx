@@ -306,7 +306,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
         <div className="w-24 h-24 sm:w-28 sm:h-28 mb-4 hover:scale-105 transition-transform duration-300">
           <img
             src="/logo-kkl-transparent.png"
-            alt="KKL Logo"
+            alt="Forewise Logo"
             className="w-full h-full object-contain drop-shadow-2xl"
           />
         </div>
@@ -528,8 +528,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
         </div>
 
         <footer className="text-center mt-6">
-          <p className="text-lg text-gray-700 font-medium">קרן קיימת לישראל</p>
-          <p className="text-base text-gray-500">KKL-JNF</p>
+          <p className="text-base text-gray-500">Forewise</p>
         </footer>
       </div>
     </div>

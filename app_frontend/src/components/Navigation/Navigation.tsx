@@ -128,8 +128,7 @@ const Navigation: React.FC = () => {
               </svg>
             </button>
             <div className="hidden sm:flex flex-col">
-              <h1 className="text-base font-bold">מערכת ניהול יערות</h1>
-              <p className="text-xs text-white/90">קרן קיימת לישראל</p>
+              <h1 className="text-base font-bold">Forewise</h1>
             </div>
           </div>
 
