@@ -100,8 +100,12 @@ class ProjectAssignmentApproval(BaseModel):
 class ProjectAssignmentResponse(ProjectAssignmentBase):
     """Project assignment response schema."""
 
+    # Override role and status to accept any string value from DB
+    # (DB may contain legacy/uppercase values not in the strict enum)
+    role: Optional[str] = None  # type: ignore[assignment]
+    status: Optional[str] = None  # type: ignore[assignment]
+
     id: int
-    status: AssignmentStatus
 
     # Work tracking
     actual_hours: Optional[float] = None
@@ -131,8 +135,9 @@ class ProjectAssignmentResponse(ProjectAssignmentBase):
 
     def model_post_init(self, __context):
         """Calculate computed fields."""
-        # Check if currently active
-        if self.status == AssignmentStatus.ACTIVE:
+        # Check if currently active (handle both enum and plain string)
+        status_val = self.status.value if hasattr(self.status, 'value') else (self.status or "")
+        if status_val.lower() == "active":
             today = date.today()
             self.is_currently_active = self.start_date <= today and (
                 not self.end_date or self.end_date >= today

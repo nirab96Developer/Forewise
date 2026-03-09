@@ -132,11 +132,11 @@ class ProjectAssignmentService:
             project_id=assignment.project_id,
             user_id=assignment.user_id,
             role=assignment.role,
-            responsibility=assignment.responsibility,
+            responsibilities=getattr(assignment, 'responsibilities', None) or getattr(assignment, 'responsibility', None),
             start_date=assignment.start_date or date.today(),
             end_date=assignment.end_date,
-            hours_allocated=assignment.estimated_hours,
-            can_approve_worklogs=assignment.can_approve_worklogs or False,
+            estimated_hours=assignment.estimated_hours,
+            can_approve_reports=getattr(assignment, 'can_approve_worklogs', False) or getattr(assignment, 'can_approve_reports', False),
             can_manage_team=assignment.can_manage_team or False,
             assigned_by_id=assigned_by_id,
             status="active",
@@ -199,7 +199,7 @@ class ProjectAssignmentService:
         """Get project team members."""
         query = (
             db.query(ProjectAssignment, User)
-            .join(User)
+            .join(User, ProjectAssignment.user_id == User.id)
             .filter(
                 and_(
                     ProjectAssignment.project_id == project_id,
@@ -222,7 +222,7 @@ class ProjectAssignmentService:
                     "full_name": user.full_name,
                     "email": user.email,
                     "role": assignment.role,
-                    "responsibility": assignment.responsibility,
+                    "responsibility": assignment.responsibilities,
                     "start_date": assignment.start_date.isoformat(),
                     "end_date": assignment.end_date.isoformat()
                     if assignment.end_date
@@ -230,7 +230,7 @@ class ProjectAssignmentService:
                     "estimated_hours": float(assignment.estimated_hours)
                     if assignment.estimated_hours
                     else None,
-                    "can_approve_worklogs": assignment.can_approve_worklogs,
+                    "can_approve_worklogs": getattr(assignment, 'can_approve_reports', False),
                     "can_manage_team": assignment.can_manage_team,
                 }
             )
