@@ -5,7 +5,7 @@ Handles all business logic for equipment management
 
 from datetime import datetime, date
 from typing import Optional, List, Tuple
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select, and_, or_, func
 
 from app.models.equipment import Equipment
@@ -37,7 +37,18 @@ class EquipmentService(BaseService[Equipment]):
     
     def __init__(self):
         super().__init__(Equipment)
-    
+
+    def _base_query(self, db: Session, include_deleted: bool = False):
+        """Override base query to add eager loading and avoid N+1."""
+        from sqlalchemy import select as _select
+        query = _select(Equipment).options(
+            selectinload(Equipment.equipment_type_obj),
+        )
+        if not include_deleted and hasattr(Equipment, 'deleted_at'):
+            query = query.where(Equipment.deleted_at.is_(None))
+        return query
+
+
     def create(
         self,
         db: Session,

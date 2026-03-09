@@ -44,9 +44,13 @@ class ProjectAssignmentService:
         user_id: Optional[int] = None,
         role: Optional[str] = None,
         status: Optional[str] = None,
+        include_past: bool = False,
     ) -> List[ProjectAssignment]:
         """Get list of project assignments with filters."""
         query = db.query(ProjectAssignment).filter(ProjectAssignment.is_active == True)
+
+        if not include_past:
+            query = query.filter(ProjectAssignment.status == "active")
 
         if project_id:
             query = query.filter(ProjectAssignment.project_id == project_id)
@@ -63,6 +67,32 @@ class ProjectAssignmentService:
             .limit(limit)
             .all()
         )
+
+    def count_assignments(
+        self,
+        db: Session,
+        project_id: Optional[int] = None,
+        user_id: Optional[int] = None,
+        role: Optional[str] = None,
+        status: Optional[str] = None,
+        include_past: bool = False,
+    ) -> int:
+        """Count project assignments matching filters."""
+        query = db.query(ProjectAssignment).filter(ProjectAssignment.is_active == True)
+
+        if not include_past:
+            query = query.filter(ProjectAssignment.status == "active")
+
+        if project_id:
+            query = query.filter(ProjectAssignment.project_id == project_id)
+        if user_id:
+            query = query.filter(ProjectAssignment.user_id == user_id)
+        if role:
+            query = query.filter(ProjectAssignment.role == role)
+        if status:
+            query = query.filter(ProjectAssignment.status == status)
+
+        return query.count()
 
     def assign_user_to_project(
         self, db: Session, assignment: AssignmentCreate, assigned_by_id: int
@@ -160,7 +190,11 @@ class ProjectAssignmentService:
         return True
 
     def get_project_team(
-        self, db: Session, project_id: int, active_only: bool = True
+        self,
+        db: Session,
+        project_id: int,
+        active_only: bool = True,
+        include_inactive: bool = False,
     ) -> List[Dict[str, Any]]:
         """Get project team members."""
         query = (
@@ -174,7 +208,7 @@ class ProjectAssignmentService:
             )
         )
 
-        if active_only:
+        if active_only and not include_inactive:
             query = query.filter(ProjectAssignment.status == "active")
 
         results = query.all()
@@ -245,6 +279,170 @@ class ProjectAssignmentService:
             )
 
         return projects
+
+    def can_access_assignment(
+        self, db: Session, user_id: int, assignment_id: int
+    ) -> bool:
+        """Check if user can access a specific assignment."""
+        assignment = (
+            db.query(ProjectAssignment)
+            .filter(ProjectAssignment.id == assignment_id, ProjectAssignment.is_active == True)
+            .first()
+        )
+        if not assignment:
+            return False
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return False
+        if hasattr(user, 'role') and user.role and getattr(user.role, 'code', None) in ('admin', 'region_manager', 'area_manager'):
+            return True
+        return assignment.user_id == user_id
+
+    def complete_assignment(
+        self, db: Session, assignment_id: int, completion_notes: Optional[str] = None
+    ) -> Optional[ProjectAssignment]:
+        """Mark assignment as completed."""
+        db_assignment = self.get_assignment(db, assignment_id)
+        if not db_assignment:
+            return None
+        db_assignment.status = "completed"
+        db_assignment.end_date = date.today()
+        if completion_notes and hasattr(db_assignment, 'notes'):
+            db_assignment.notes = completion_notes
+        db_assignment.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(db_assignment)
+        return db_assignment
+
+    def bulk_assign_users(
+        self,
+        db: Session,
+        project_id: int,
+        user_ids: List[int],
+        role: str,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        assigned_by_id: int = None,
+    ) -> Dict[str, Any]:
+        """Bulk assign multiple users to a project."""
+        results = {"assigned": [], "skipped": [], "errors": []}
+        for uid in user_ids:
+            try:
+                from app.schemas.project_assignment import AssignmentCreate
+                assignment_data = AssignmentCreate(
+                    project_id=project_id,
+                    user_id=uid,
+                    role=role,
+                    start_date=start_date or date.today(),
+                    end_date=end_date,
+                )
+                self.assign_user_to_project(db, assignment_data, assigned_by_id or 0)
+                results["assigned"].append(uid)
+            except ValueError as e:
+                results["skipped"].append({"user_id": uid, "reason": str(e)})
+            except Exception as e:
+                results["errors"].append({"user_id": uid, "error": str(e)})
+        return results
+
+    def get_workload_statistics(
+        self,
+        db: Session,
+        user_id: int,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+    ) -> Dict[str, Any]:
+        """Get workload statistics for a user."""
+        _start = start_date or date.today().replace(day=1)
+        _end = end_date or date.today()
+        analysis = self.get_workload_analysis(db, [user_id], _start, _end)
+        return analysis.get(user_id, {"total_hours": 0, "project_count": 0, "utilization_percent": 0})
+
+    def check_user_availability(
+        self,
+        db: Session,
+        user_id: int,
+        start_date: date,
+        end_date: date,
+        hours_required: float,
+    ) -> Dict[str, Any]:
+        """Check if user has capacity for the requested hours in the period."""
+        analysis = self.get_workload_analysis(db, [user_id], start_date, end_date)
+        data = analysis.get(user_id, {"available_hours": 0, "total_hours": 0})
+        available = data.get("available_hours", 0) - data.get("total_hours", 0)
+        return {
+            "user_id": user_id,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "hours_required": hours_required,
+            "hours_available": round(max(available, 0), 2),
+            "is_available": available >= hours_required,
+            "current_utilization_percent": data.get("utilization_percent", 0),
+        }
+
+    def check_assignment_conflicts(
+        self,
+        db: Session,
+        user_id: int,
+        project_id: int,
+        start_date: date,
+        end_date: date,
+    ) -> Dict[str, Any]:
+        """Check for overlapping assignments for a user in a date range."""
+        conflicts = (
+            db.query(ProjectAssignment)
+            .filter(
+                and_(
+                    ProjectAssignment.user_id == user_id,
+                    ProjectAssignment.status == "active",
+                    ProjectAssignment.is_active == True,
+                    ProjectAssignment.project_id != project_id,
+                    ProjectAssignment.start_date <= end_date,
+                    or_(
+                        ProjectAssignment.end_date.is_(None),
+                        ProjectAssignment.end_date >= start_date,
+                    ),
+                )
+            )
+            .all()
+        )
+        return {
+            "has_conflicts": len(conflicts) > 0,
+            "conflict_count": len(conflicts),
+            "conflicts": [
+                {"assignment_id": c.id, "project_id": c.project_id, "role": c.role}
+                for c in conflicts
+            ],
+        }
+
+    def transfer_assignments(
+        self,
+        db: Session,
+        from_user_id: int,
+        to_user_id: int,
+        project_ids: Optional[List[int]] = None,
+        transfer_reason: str = "",
+        transferred_by_id: int = None,
+    ) -> Dict[str, Any]:
+        """Transfer all active assignments from one user to another."""
+        query = db.query(ProjectAssignment).filter(
+            and_(
+                ProjectAssignment.user_id == from_user_id,
+                ProjectAssignment.status == "active",
+                ProjectAssignment.is_active == True,
+            )
+        )
+        if project_ids:
+            query = query.filter(ProjectAssignment.project_id.in_(project_ids))
+
+        assignments = query.all()
+        transferred = []
+        for a in assignments:
+            a.user_id = to_user_id
+            a.updated_at = datetime.utcnow()
+            transferred.append(a.id)
+
+        db.commit()
+        return {"transferred": transferred, "count": len(transferred), "reason": transfer_reason}
 
     def check_user_project_access(
         self,

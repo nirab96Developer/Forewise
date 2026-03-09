@@ -4,7 +4,7 @@ Budget Service
 
 from typing import Optional, List, Tuple
 from decimal import Decimal
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select, func, or_
 
 from app.models.budget import Budget
@@ -19,7 +19,17 @@ class BudgetService(BaseService[Budget]):
     
     def __init__(self):
         super().__init__(Budget)
-    
+
+    def _base_query(self, db: Session, include_deleted: bool = False):
+        """Override to eagerly load related objects and avoid N+1."""
+        query = select(Budget).options(
+            selectinload(Budget.items),
+            selectinload(Budget.created_by_user),
+        )
+        if not include_deleted:
+            query = query.where(Budget.deleted_at.is_(None))
+        return query
+
     def create(self, db: Session, data: BudgetCreate, current_user_id: int) -> Budget:
         """Create budget"""
         # UNIQUE: code

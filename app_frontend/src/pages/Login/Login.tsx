@@ -306,16 +306,16 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
         <div className="w-24 h-24 sm:w-28 sm:h-28 mb-4 hover:scale-105 transition-transform duration-300">
           <img
             src="/logo-kkl-transparent.png"
-            alt="Forewise Logo"
+            alt="Forewise"
             className="w-full h-full object-contain drop-shadow-2xl"
           />
         </div>
         
         <h1 className="text-2xl sm:text-3xl font-bold text-green-900 mb-2">
-          אפליקציית דיווחים
+          Forewise
         </h1>
         <p className="text-base text-gray-600 mb-6">
-          מערכת לניהול דיווחים קק"ל
+          מערכת ניהול פרויקטים ויערות
         </p>
 
         <div className="bg-white rounded-2xl shadow-2xl border-2 border-green-100 w-full p-6 hover:shadow-3xl transition-shadow duration-300">

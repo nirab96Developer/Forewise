@@ -282,6 +282,10 @@ async def add_security_headers(request: Request, call_next):
     Add security headers to all responses.
     Protects against common web vulnerabilities.
     """
+    # WebSocket connections don't return an HTTP response — skip header injection
+    if request.headers.get("upgrade", "").lower() == "websocket":
+        return await call_next(request)
+
     response = await call_next(request)
     
     # Prevent clickjacking
@@ -329,6 +333,9 @@ async def offline_sync_audit_middleware(request: Request, call_next):
     When request arrives with X-Offline-Sync: true header,
     record it in sync_queue for auditing after the response is sent.
     """
+    if request.headers.get("upgrade", "").lower() == "websocket":
+        return await call_next(request)
+
     is_offline_sync = request.headers.get("X-Offline-Sync") == "true"
     response = await call_next(request)
     if is_offline_sync and response.status_code < 300:
