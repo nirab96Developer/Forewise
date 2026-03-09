@@ -413,7 +413,7 @@ def create_invoice_from_worklogs(
         WHERE table_name='invoice_items' AND column_name='worklog_id'
     """)).scalar()
 
-    for w in worklogs:
+    for idx, w in enumerate(worklogs):
         # Re-calculate per-worklog cost (same logic as above)
         if w.cost_before_vat is not None:
             line_base = _Decimal(str(w.cost_before_vat))
@@ -435,14 +435,15 @@ def create_invoice_from_worklogs(
         if col_exists:
             db.execute(sa_text("""
                 INSERT INTO invoice_items
-                  (invoice_id, worklog_id, description, quantity, unit_price, total_price, created_at, updated_at)
-                VALUES (:invoice_id, :worklog_id, :desc, 1, :unit, :total, NOW(), NOW())
+                  (invoice_id, worklog_id, description, quantity, unit_price, total_price, line_number, created_at, updated_at)
+                VALUES (:invoice_id, :worklog_id, :desc, 1, :unit, :total, :line_num, NOW(), NOW())
             """), {
                 "invoice_id": invoice.id,
                 "worklog_id": w.id,
                 "desc": " | ".join(desc_parts),
                 "unit": float(line_total),
                 "total": float(line_total),
+                "line_num": idx + 1,
             })
         # Update worklog status
         w.status = 'invoiced'
