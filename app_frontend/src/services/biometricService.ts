@@ -5,11 +5,15 @@ const REGISTERED_KEY = 'biometric_registered';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/** base64url → ArrayBuffer (handles missing padding) */
-function b64urlToBuffer(b64url: string): ArrayBuffer {
-  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
-  const bin = atob(padded);
+/** base64 or base64url → ArrayBuffer */
+function b64urlToBuffer(input: string): ArrayBuffer {
+  let b64 = input.trim().replace(/-/g, '+').replace(/_/g, '/');
+  // Remove existing padding then re-pad correctly
+  b64 = b64.replace(/=+$/, '');
+  while (b64.length % 4 !== 0) b64 += '=';
+  // Strip any characters that aren't valid base64
+  b64 = b64.replace(/[^A-Za-z0-9+/=]/g, '');
+  const bin = atob(b64);
   const buf = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
   return buf.buffer;
