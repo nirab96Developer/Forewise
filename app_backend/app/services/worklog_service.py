@@ -453,7 +453,7 @@ def _audit_worklog(db, user_id: int, worklog_id: int, action: str):
         from sqlalchemy import text
         db.execute(text("""
             INSERT INTO audit_logs (user_id, table_name, record_id, action, new_values)
-            VALUES (:uid, 'worklogs', :rid, :act, :nv::jsonb)
+            VALUES (:uid, 'worklogs', :rid, :act, CAST(:nv AS jsonb))
         """), {"uid": user_id, "rid": worklog_id, "act": action,
                "nv": json.dumps({"action": action, "worklog_id": worklog_id})})
         db.commit()

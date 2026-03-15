@@ -300,7 +300,7 @@ def _audit(db, user_id, table_name: str, record_id: int, action: str, new_values
         from sqlalchemy import text
         db.execute(text("""
             INSERT INTO audit_logs (user_id, table_name, record_id, action, new_values)
-            VALUES (:uid, :tbl, :rid, :act, :nv::jsonb)
+            VALUES (:uid, :tbl, :rid, :act, CAST(:nv AS jsonb))
         """), {
             "uid": user_id,
             "tbl": table_name,

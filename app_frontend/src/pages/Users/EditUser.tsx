@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowRight, AlertCircle, User, Mail, Phone, Lock } from 'lucide-react';
 import api from '../../services/api';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface Role {
   id: number;
@@ -167,16 +168,7 @@ const EditUser: React.FC = () => {
     }
   };
 
-  if (loadingData) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-600">טוען נתונים...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loadingData) return <UnifiedLoader size="full" />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6" dir="rtl">

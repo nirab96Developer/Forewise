@@ -2,10 +2,11 @@
 // src/pages/WorkOrders/EditWorkOrder.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import workOrderService, { WorkOrder, WorkOrderUpdate } from '../../services/workOrderService';
 import projectService from '../../services/projectService';
 import supplierService from '../../services/supplierService';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface Project {
   id: number;
@@ -114,16 +115,7 @@ const EditWorkOrder: React.FC = () => {
     }
   };
 
-  if (loadingData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>טוען...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loadingData) return <UnifiedLoader size="full" />;
 
   if (error && !workOrder) {
     return (

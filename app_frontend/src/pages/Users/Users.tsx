@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, Users as UsersIcon, Edit3, MapPin, Building2, X, PauseCircle, RefreshCw } from "lucide-react";
 import api from "../../services/api";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'מנהל מערכת', REGION_MANAGER: 'מנהל מרחב', AREA_MANAGER: 'מנהל אזור',
@@ -282,16 +283,7 @@ const Users: React.FC = () => {
     loadData();
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">טוען משתמשים...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   return (
     <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4" dir="rtl">

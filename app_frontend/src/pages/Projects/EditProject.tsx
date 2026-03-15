@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import projectService, { Project, ProjectUpdate } from '../../services/projectService';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 import api from '../../services/api';
 
 interface User {
@@ -276,16 +277,7 @@ const EditProject: React.FC = () => {
     }
   };
 
-  if (loadingData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>טוען...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loadingData) return <UnifiedLoader size="full" />;
 
   if (error && !project) {
     return (

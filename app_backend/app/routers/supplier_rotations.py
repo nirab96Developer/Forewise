@@ -168,6 +168,19 @@ async def create_supplier_rotation(
                 detail="ספק לא נמצא"
             )
         
+        # Validate equipment_type_id FK if provided
+        if data.equipment_type_id:
+            from sqlalchemy import text as sa_text
+            et_exists = db.execute(
+                sa_text("SELECT 1 FROM equipment_types WHERE id = :id"),
+                {"id": data.equipment_type_id}
+            ).fetchone()
+            if not et_exists:
+                raise HTTPException(
+                    status_code=http_status.HTTP_400_BAD_REQUEST,
+                    detail=f"סוג ציוד {data.equipment_type_id} לא נמצא"
+                )
+        
         rotation = SupplierRotation(
             supplier_id=data.supplier_id,
             equipment_type_id=data.equipment_type_id,

@@ -651,7 +651,7 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
       {/* Map */}
       <div className="rounded-xl overflow-hidden shadow-lg border-2 border-gray-200 isolate" style={{ isolation: 'isolate' }}>
         <MapErrorBoundary>
-          <React.Suspense fallback={<div className="h-[400px] flex items-center justify-center bg-gray-50"><Loader2 className="w-8 h-8 text-green-600 animate-spin" /></div>}>
+          <React.Suspense fallback={<div className="h-[400px] flex items-center justify-center bg-gray-50"><div className="relative flex items-center justify-center w-12 h-12"><div className="absolute inset-0 rounded-full border-4 border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}}></div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="28" height="24"><defs><linearGradient id="pw_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#1565c0'}}/><stop offset="100%" style={{stopColor:'#0097a7'}}/></linearGradient><linearGradient id="pw_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#0097a7'}}/><stop offset="50%" style={{stopColor:'#2e7d32'}}/><stop offset="100%" style={{stopColor:'#66bb6a'}}/></linearGradient><linearGradient id="pw_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#2e7d32'}}/><stop offset="40%" style={{stopColor:'#66bb6a'}}/><stop offset="100%" style={{stopColor:'#8B5e3c'}}/></linearGradient></defs><path d="M46 20 Q60 9 74 20" stroke="url(#pw_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#pw_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#pw_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/><circle cx="60" cy="95" r="5" fill="#8B5e3c"/></svg></div></div>}>
             <LazyLeafletMap
               height="500px"
               center={[lat, lng]}
@@ -1298,7 +1298,23 @@ const ActivityLogTab: React.FC<{ projectId: number }> = ({ projectId }) => {
   if (loading && logs.length === 0) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+        <div className="relative">
+          <div className="w-10 h-10 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="20" height="17">
+                <defs>
+                  <linearGradient id="pw1_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#0097a7"/></linearGradient>
+                  <linearGradient id="pw1_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#0097a7"/><stop offset="50%" stopColor="#2e7d32"/><stop offset="100%" stopColor="#66bb6a"/></linearGradient>
+                  <linearGradient id="pw1_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2e7d32"/><stop offset="40%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#8B5e3c"/></linearGradient>
+                </defs>
+                <path d="M46 20 Q60 9 74 20" stroke="url(#pw1_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#pw1_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#pw1_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
+                <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
+              </svg>
+          </div>
+        </div>
       </div>
     );
   }

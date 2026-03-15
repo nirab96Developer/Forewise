@@ -2,8 +2,9 @@
 // src/pages/WorkOrders/WorkOrders.tsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Eye, Edit, Calendar, Clock, User, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Calendar, Clock, User, AlertCircle } from 'lucide-react';
 import workOrderService, { WorkOrder, WorkOrderFilters } from '../../services/workOrderService';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 import { useOffline } from '../../hooks/useOffline';
 
 const WorkOrders: React.FC = () => {
@@ -101,16 +102,7 @@ const WorkOrders: React.FC = () => {
   };
 
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-2 bg-white p-4 rounded-lg shadow-sm">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>טוען הזמנות עבודה...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

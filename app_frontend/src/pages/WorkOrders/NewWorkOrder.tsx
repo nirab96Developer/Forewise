@@ -348,7 +348,7 @@ const NewWorkOrder: React.FC = () => {
     return (
       <div className="min-h-screen bg-kkl-bg flex items-center justify-center" dir="rtl">
         <div className="flex items-center gap-3 bg-white p-6 rounded-xl shadow-sm">
-          <div className="w-6 h-6 border-2 border-kkl-green border-t-transparent rounded-full animate-spin" />
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="24" height="20" className="animate-pulse flex-shrink-0"><defs><linearGradient id="nwo_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#1565c0'}}/><stop offset="100%" style={{stopColor:'#0097a7'}}/></linearGradient><linearGradient id="nwo_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#0097a7'}}/><stop offset="50%" style={{stopColor:'#2e7d32'}}/><stop offset="100%" style={{stopColor:'#66bb6a'}}/></linearGradient><linearGradient id="nwo_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#2e7d32'}}/><stop offset="40%" style={{stopColor:'#66bb6a'}}/><stop offset="100%" style={{stopColor:'#8B5e3c'}}/></linearGradient></defs><path d="M46 20 Q60 9 74 20" stroke="url(#nwo_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#nwo_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#nwo_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/><circle cx="60" cy="95" r="5" fill="#8B5e3c"/></svg>
           <span className="text-kkl-text">טוען נתונים...</span>
         </div>
       </div>

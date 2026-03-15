@@ -140,7 +140,7 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
     id: "budgets",
     icon: Wallet,
     label: "תקציבים",
-    path: "/budgets",
+    path: "/settings/budgets",
     permission: PERMISSIONS.BUDGETS_VIEW,
   },
   settings: {

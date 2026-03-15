@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, AlertCircle, User, Mail, Phone, Lock, FolderOpen, Check, ChevronDown } from 'lucide-react';
 import api from '../../services/api';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface Role { id: number; code: string; name: string; }
 interface Department { id: number; name: string; }
@@ -144,16 +145,7 @@ const NewUser: React.FC = () => {
     }
   };
 
-  if (loadingData) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-600">טוען נתונים...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loadingData) return <UnifiedLoader size="full" />;
 
   const inputCls = "w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent text-base";
   const labelCls = "block text-sm font-medium text-gray-700 mb-1.5";

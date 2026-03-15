@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Truck, Search, Plus, Eye, Edit, X } from "lucide-react";
 import supplierService from "../../services/supplierService";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 
 interface Supplier {
   id: number;
@@ -56,16 +57,7 @@ const Suppliers: React.FC = () => {
   const hasFilters = searchTerm || statusFilter !== 'all';
   const activeCount = suppliers.filter(s => s.is_active).length;
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">טוען ספקים...</p>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <UnifiedLoader size="full" />;
 
   if (error) {
     return (

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import dashboardService from "../../services/dashboardService";
 import api from "../../services/api";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 
 const LeafletMap = lazy(() => import("../../components/Map/LeafletMap"));
 
@@ -545,7 +546,7 @@ const GenericDashboard: React.FC<{title?: string}> = ({ title }) => {
           </div>
           {isWorkManager && mapProjects.length > 0 ? (
             <div className="h-80 rounded-xl overflow-hidden border border-gray-100" style={{ isolation: 'isolate' }}>
-              <Suspense fallback={<div className="h-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm">טוען מפה...</div>}>
+              <Suspense fallback={<UnifiedLoader size="md" />}>
                 <LeafletMap
                   center={[mapProjects[0].lat!, mapProjects[0].lng!]}
                   zoom={9}

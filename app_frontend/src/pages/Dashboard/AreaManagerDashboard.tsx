@@ -7,7 +7,6 @@ import {
   DollarSign,
   AlertCircle,
   ArrowUpRight,
-  Loader2,
   TrendingUp,
   FileText,
   Wrench,
@@ -16,6 +15,7 @@ import {
   Truck,
 } from "lucide-react";
 import dashboardService from "../../services/dashboardService";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 import api from "../../services/api";
 
 const AreaManagerDashboard: React.FC = () => {
@@ -65,16 +65,7 @@ const AreaManagerDashboard: React.FC = () => {
 
   const maxCost = Math.max(...monthlyCosts.map((m) => m.cost), 1);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2 bg-white p-6 rounded-lg shadow-sm">
-          <Loader2 className="w-5 h-5 animate-spin text-green-600" />
-          <span>טוען לוח בקרה...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   const areaName = summary?.user?.area || "האזור";
 

@@ -14,6 +14,7 @@ class ProjectRole(str, Enum):
     MANAGER = "manager"
     SUPERVISOR = "supervisor"
     WORKER = "worker"
+    MEMBER = "member"
     INSPECTOR = "inspector"
     CONSULTANT = "consultant"
     VIEWER = "viewer"

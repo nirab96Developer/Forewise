@@ -10,7 +10,6 @@ import {
   Eye,
   Edit,
   MapPin,
-  Loader2,
   Navigation,
   Map,
   Home,
@@ -20,6 +19,7 @@ import {
   Target,
 } from 'lucide-react';
 import api from '../../services/api';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface Location {
   id: number;
@@ -77,16 +77,7 @@ const LocationsClean: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">טוען מיקומים...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   return (
     <div className="min-h-screen p-6">

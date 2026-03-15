@@ -3,7 +3,8 @@
 // Map Intelligence - responsive: mobile overlay sidebar, desktop side panel
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layers, Eye, EyeOff, Loader2, Home, Building2, ChevronLeft, Map as MapIcon, X } from 'lucide-react';
+import { Layers, Eye, EyeOff, Home, Building2, ChevronLeft, Map as MapIcon, X } from 'lucide-react';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 import LeafletMap from '../../components/Map/LeafletMap';
 import api from '../../services/api';
 // permissions utils available if needed
@@ -43,14 +44,7 @@ const ForestMap = () => {
     })();
   }, []);
 
-  if (loading) return (
-    <div className="h-[calc(100vh-64px)] flex items-center justify-center bg-gray-100" dir="rtl">
-      <div className="text-center bg-white p-8 rounded-xl shadow-lg">
-        <Loader2 className="w-12 h-12 text-green-600 animate-spin mx-auto mb-4" />
-        <p className="text-gray-700 font-medium">טוען מפה...</p>
-      </div>
-    </div>
-  );
+  if (loading) return <UnifiedLoader size="full" />;
 
   // Build layers
   const mapPolygons: any[] = [];

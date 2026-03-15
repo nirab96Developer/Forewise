@@ -1,7 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="32" fill="#00994C"/>
-  <circle cx="96" cy="72" r="28" fill="white" opacity="0.95"/>
-  <path d="M48 140 Q96 100 144 140" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
-  <path d="M60 130 Q96 108 132 130" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/>
-  <text x="96" y="176" text-anchor="middle" fill="white" font-size="18" font-family="Arial" font-weight="bold">çç"Ü</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120" width="100" height="120">
+  <defs>
+    <linearGradient id="lg" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="50%" stop-color="#16803d"/>
+      <stop offset="100%" stop-color="#052e16"/>
+    </linearGradient>
+  </defs>
+  <path d="M50 5 C50 5 92 26 92 60 C92 84 76 114 50 116 C24 114 8 84 8 60 C8 26 50 5 50 5Z" fill="url(#lg)"/>
+  <line x1="50" y1="24" x2="50" y2="104" stroke="rgba(255,255,255,0.26)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="46" x2="32" y2="66" stroke="rgba(255,255,255,0.17)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="50" y1="46" x2="68" y2="66" stroke="rgba(255,255,255,0.17)" stroke-width="1.8" stroke-linecap="round"/>
+  <line x1="50" y1="66" x2="36" y2="84" stroke="rgba(255,255,255,0.11)" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="50" y1="66" x2="64" y2="84" stroke="rgba(255,255,255,0.11)" stroke-width="1.4" stroke-linecap="round"/>
 </svg>

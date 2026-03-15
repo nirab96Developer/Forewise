@@ -108,7 +108,7 @@ const Navigation: React.FC = () => {
           : 'bg-kkl-green'
       }`}>
         <div className="h-full flex items-center justify-between px-6 md:px-8">
-          {/* Left side - Logo */}
+          {/* Left side - Logo & App Name */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -118,18 +118,36 @@ const Navigation: React.FC = () => {
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 md:w-9 md:h-9 rounded-xl bg-white flex items-center justify-center shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 105" className="w-7 h-7 md:w-6 md:h-6">
+                  <defs>
+                    <linearGradient id="nav_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#0097a7"/></linearGradient>
+                    <linearGradient id="nav_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#0097a7"/><stop offset="50%" stopColor="#2e7d32"/><stop offset="100%" stopColor="#66bb6a"/></linearGradient>
+                    <linearGradient id="nav_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2e7d32"/><stop offset="40%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#8B5e3c"/></linearGradient>
+                  </defs>
+                  <path d="M46 20 Q60 9 74 20" stroke="url(#nav_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                  <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#nav_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                  <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#nav_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                  <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
+                  <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
+                </svg>
+              </div>
+              <div className="flex flex-col leading-tight">
+                <h1 className="text-[15px] md:text-base font-bold tracking-wide" style={{fontFamily: "'Heebo', sans-serif"}}>Forewise</h1>
+                <span className="text-[10px] text-white/70 font-light hidden md:block">מערכת ניהול יערות</span>
+              </div>
+            </div>
+
             <button
               onClick={() => window.location.reload()}
-              className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 active:bg-white/40 transition-colors touch-manipulation"
+              className="md:hidden w-9 h-9 bg-white/15 rounded-full flex items-center justify-center hover:bg-white/25 active:bg-white/35 transition-colors touch-manipulation mr-1"
               aria-label="רענן"
             >
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
-            <div className="hidden sm:flex flex-col">
-              <h1 className="text-base font-bold">Forewise</h1>
-            </div>
           </div>
 
           {/* Right side - User Info */}

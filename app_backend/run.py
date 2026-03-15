@@ -23,9 +23,26 @@ from app.core.config import settings
 from app.core.logging import logger
 
 
+def kill_existing_port(port: int):
+    """Kill any process using the given port to prevent Errno 98."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["fuser", "-k", f"{port}/tcp"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            import time
+            time.sleep(1)
+            print(f"Killed existing process on port {port}")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+
+
 def main():
     """Run the application."""
-    
+    kill_existing_port(settings.APP_PORT)
+
     print("Forest Management System")
     print("=" * 50)
     

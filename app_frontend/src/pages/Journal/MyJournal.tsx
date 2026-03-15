@@ -10,6 +10,7 @@ import {
   Bell, Activity, Settings, BookOpen, Loader2
 } from "lucide-react";
 import api from '../../services/api';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 // Services
 import workOrderService, { CalendarEvent as WorkOrderEvent } from '../../services/workOrderService';
@@ -421,16 +422,7 @@ const MyJournal: React.FC = () => {
   
   const filteredActivitiesList = getFilteredActivities(allActivitiesSorted);
   
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-kkl-bg flex items-center justify-center" dir="rtl">
-        <div className="flex items-center gap-3 bg-white p-6 rounded-xl shadow-sm">
-          <div className="w-6 h-6 border-2 border-kkl-green border-t-transparent rounded-full animate-spin" />
-          <span className="text-kkl-text">טוען יומן...</span>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <UnifiedLoader size="full" />;
   
   return (
     <div className="min-h-screen bg-kkl-bg" dir="rtl">

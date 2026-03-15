@@ -572,13 +572,23 @@ def send_work_order_to_supplier(
     try:
         result = work_order_service.send_to_supplier(db, work_order_id, current_user.id)
         wo = result["work_order"]
+        email_sent = result.get("email_sent", False)
+        supplier_name = result.get("supplier_name", "ספק")
+        msg = f"ההזמנה נשלחה ל{supplier_name}."
+        if email_sent:
+            msg += " מייל עם קישור נשלח בהצלחה. הקישור תקף ל-3 שעות."
+        else:
+            msg += " שים לב: לא נשלח מייל — ודא שלספק יש כתובת אימייל."
         return {
             "portal_token": result["portal_token"],
             "portal_url": result["portal_url"],
             "expires_at": result["expires_at"],
             "work_order_id": wo.id,
+            "supplier_id": wo.supplier_id,
+            "supplier_name": supplier_name,
             "status": wo.status,
-            "message": f"ההזמנה נשלחה לספק. הקישור תקף ל-3 שעות.",
+            "email_sent": email_sent,
+            "message": msg,
         }
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

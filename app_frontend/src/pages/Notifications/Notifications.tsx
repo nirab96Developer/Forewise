@@ -1,8 +1,9 @@
 
 // src/pages/Notifications/Notifications.tsx
 import React, { useState, useEffect } from 'react';
-import { Bell, AlertTriangle, Info, CheckCircle, XCircle, Loader2, Eye, Trash2 } from 'lucide-react';
+import { Bell, AlertTriangle, Info, CheckCircle, XCircle, Eye, Trash2 } from 'lucide-react';
 import notificationService from '../../services/notificationService';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface Notification {
   id: number;
@@ -137,16 +138,7 @@ const Notifications: React.FC = () => {
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center">
-          <Loader2 className="w-8 h-8 text-kkl-green animate-spin mb-4" />
-          <p className="text-gray-600 font-medium">טוען התראות...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

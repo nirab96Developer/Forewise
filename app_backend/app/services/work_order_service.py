@@ -202,6 +202,7 @@ class WorkOrderService:
     def send_to_supplier(self, db: Session, work_order_id: int, current_user_id: int = None) -> dict:
         """
         Send work order to supplier — generates portal token and sends email.
+        If no supplier is assigned, uses Fair Rotation to select one.
         Returns dict with { work_order, portal_token, portal_url, expires_at }.
         """
         import secrets
@@ -213,13 +214,23 @@ class WorkOrderService:
             from app.core.exceptions import NotFoundException
             raise NotFoundException(f"Work order {work_order_id} not found")
 
-        # Accept PENDING, DISTRIBUTING, or pending statuses
         allowed = {'pending', 'PENDING', 'DISTRIBUTING', 'distributing', 'draft', 'DRAFT'}
         if work_order.status not in allowed:
             from app.core.exceptions import ValidationException
             raise ValidationException(
                 f"Work order must be in PENDING status to send to supplier (current: {work_order.status})"
             )
+
+        # If no supplier assigned, use Fair Rotation to find one
+        if not work_order.supplier_id:
+            selected_supplier_id = self._select_supplier_by_rotation(db, work_order)
+            if not selected_supplier_id:
+                from app.core.exceptions import ValidationException
+                raise ValidationException(
+                    "לא נמצא ספק זמין עבור הזמנה זו. "
+                    "ודא שקיימים ספקים פעילים עם הציוד המתאים."
+                )
+            work_order.supplier_id = selected_supplier_id
 
         # Generate portal token valid for 3 hours
         token = secrets.token_urlsafe(32)
@@ -234,14 +245,17 @@ class WorkOrderService:
         db.commit()
         db.refresh(work_order)
 
-        # Send email to supplier (best-effort)
-        if work_order.supplier_id:
-            try:
-                from app.models.supplier import Supplier
-                supplier = db.query(Supplier).filter(Supplier.id == work_order.supplier_id).first()
-                if supplier and (supplier.email or supplier.contact_email):
+        # Send email to supplier
+        email_sent = False
+        supplier_name = "ספק"
+        try:
+            from app.models.supplier import Supplier
+            supplier = db.query(Supplier).filter(Supplier.id == work_order.supplier_id).first()
+            if supplier:
+                supplier_name = supplier.name
+                to_email = supplier.email or supplier.contact_email
+                if to_email:
                     from app.core.email import send_email
-                    to_email = supplier.email or supplier.contact_email
                     send_email(
                         to=to_email,
                         subject=f"הזמנת עבודה מספר {work_order.order_number} - דורש תגובה",
@@ -254,16 +268,80 @@ class WorkOrderService:
                             "קק\"ל"
                         ),
                     )
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Failed to send portal email: {e}")
+                    email_sent = True
+                else:
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        f"Supplier {supplier.id} ({supplier.name}) has no email address"
+                    )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send portal email: {e}")
 
         return {
             "work_order": work_order,
             "portal_token": token,
             "portal_url": portal_url,
             "expires_at": expires_at.isoformat(),
+            "email_sent": email_sent,
+            "supplier_name": supplier_name,
         }
+
+    def _select_supplier_by_rotation(self, db: Session, work_order) -> Optional[int]:
+        """Select supplier using Fair Rotation algorithm."""
+        from app.models.supplier_rotation import SupplierRotation
+        from app.models.supplier import Supplier
+
+        # Get project's area for geographic filtering
+        area_id = None
+        if work_order.project_id:
+            from app.models.project import Project
+            project = db.query(Project).filter(Project.id == work_order.project_id).first()
+            if project:
+                area_id = project.area_id
+
+        # Find eligible suppliers with matching equipment
+        query = (
+            db.query(SupplierRotation)
+            .join(Supplier, Supplier.id == SupplierRotation.supplier_id)
+            .filter(
+                SupplierRotation.is_active == True,
+                SupplierRotation.is_available != False,
+                Supplier.is_active == True,
+            )
+        )
+
+        # Filter by equipment type if work order has one
+        if work_order.equipment_type_id:
+            query = query.filter(
+                SupplierRotation.equipment_type_id == work_order.equipment_type_id
+            )
+
+        # Prefer same area
+        if area_id:
+            area_query = query.filter(SupplierRotation.area_id == area_id)
+            rotations = area_query.order_by(SupplierRotation.rotation_position.asc()).all()
+            if not rotations:
+                rotations = query.order_by(SupplierRotation.rotation_position.asc()).all()
+        else:
+            rotations = query.order_by(SupplierRotation.rotation_position.asc()).all()
+
+        if not rotations:
+            # Fallback: any active supplier
+            fallback = db.query(Supplier).filter(Supplier.is_active == True).first()
+            return fallback.id if fallback else None
+
+        # Pick the one with lowest rotation_position (next in line)
+        selected = rotations[0]
+
+        # Update rotation position
+        selected.total_assignments = (selected.total_assignments or 0) + 1
+        selected.last_assignment_date = datetime.utcnow().date()
+        if selected.rotation_position is not None:
+            selected.rotation_position += 1
+
+        db.flush()
+        return selected.supplier_id
 
     def handle_supplier_response(
         self, db: Session, portal_token: str, response: str, reason: Optional[str] = None

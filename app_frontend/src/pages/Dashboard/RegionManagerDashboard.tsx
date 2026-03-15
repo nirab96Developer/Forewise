@@ -7,13 +7,13 @@ import {
   Clock,
   DollarSign,
   ArrowUpRight,
-  Loader2,
   TrendingUp,
   Building2,
   FileText,
   CheckCircle,
 } from "lucide-react";
 import dashboardService from "../../services/dashboardService";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 import api from "../../services/api";
 
 const RegionManagerDashboard: React.FC = () => {
@@ -60,16 +60,7 @@ const RegionManagerDashboard: React.FC = () => {
 
   const maxCost = Math.max(...monthlyCosts.map((m) => m.cost), 1);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2 bg-white p-6 rounded-lg shadow-sm">
-          <Loader2 className="w-5 h-5 animate-spin text-green-600" />
-          <span>טוען לוח בקרה...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   const regionName = summary?.user?.region || "המרחב";
   const totalOpenWO = areas.reduce((s, a) => s + a.open_work_orders, 0);

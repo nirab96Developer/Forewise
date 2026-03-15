@@ -4,7 +4,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Loader2,
   Users,
   Eye,
   Edit3,
@@ -20,6 +19,7 @@ import {
 import dashboardService, {
   DashboardSummary
 } from "../../services/dashboardService";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 
 // Types for PendingTasksEngine
 interface TaskKPI {
@@ -84,16 +84,7 @@ const AdminDashboard: React.FC = () => {
     loadData();
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-2 bg-white p-4 rounded-lg shadow-sm">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>טוען נתונים...</span>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <UnifiedLoader size="full" />;
 
   if (error) {
     return (

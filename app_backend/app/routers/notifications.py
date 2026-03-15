@@ -74,15 +74,18 @@ def get_notifications(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get user notifications."""
-    notifications = notification_service.get_user_notifications(
-        db=db,
-        user_id=current_user.id,
-        skip=skip,
-        limit=limit,
-        unread_only=unread_only,
-        notification_type=notification_type
-    )
-    return notifications
+    try:
+        notifications = notification_service.get_user_notifications(
+            db=db,
+            user_id=current_user.id,
+            skip=skip,
+            limit=limit,
+            unread_only=unread_only,
+            notification_type=notification_type
+        )
+        return notifications or []
+    except Exception:
+        return []
 
 
 @router.get("/{notification_id}", )

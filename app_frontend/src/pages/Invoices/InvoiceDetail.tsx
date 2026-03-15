@@ -10,6 +10,7 @@ import {
   DollarSign, Truck, CreditCard
 } from 'lucide-react';
 import api from '../../services/api';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface InvoiceItem {
   id: number;
@@ -113,14 +114,7 @@ const InvoiceDetail: React.FC = () => {
     window.print();
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-kkl-bg flex items-center justify-center" dir="rtl">
-      <div className="flex items-center gap-3 bg-white p-6 rounded-xl shadow-sm">
-        <Loader2 className="w-6 h-6 text-kkl-green animate-spin" />
-        <span className="text-kkl-text">טוען חשבונית...</span>
-      </div>
-    </div>
-  );
+  if (loading) return <UnifiedLoader size="full" />;
 
   if (error || !invoice) return (
     <div className="min-h-screen bg-kkl-bg flex items-center justify-center" dir="rtl">

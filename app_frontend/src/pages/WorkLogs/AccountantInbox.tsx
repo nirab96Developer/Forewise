@@ -403,7 +403,23 @@ const AccountantInbox: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 text-kkl-green animate-spin" />
+              <div className="relative">
+          <div className="w-10 h-10 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="20" height="17">
+                <defs>
+                  <linearGradient id="ai1_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#0097a7"/></linearGradient>
+                  <linearGradient id="ai1_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#0097a7"/><stop offset="50%" stopColor="#2e7d32"/><stop offset="100%" stopColor="#66bb6a"/></linearGradient>
+                  <linearGradient id="ai1_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2e7d32"/><stop offset="40%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#8B5e3c"/></linearGradient>
+                </defs>
+                <path d="M46 20 Q60 9 74 20" stroke="url(#ai1_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#ai1_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#ai1_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+                <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
+                <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
+              </svg>
+          </div>
+        </div>
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-gray-500">

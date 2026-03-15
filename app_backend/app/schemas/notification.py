@@ -12,11 +12,17 @@ class NotificationType(str, Enum):
     SYSTEM = "system"
     PROJECT = "project"
     WORK_ORDER = "work_order"
+    WORK_ORDER_APPROVED = "work_order_approved"
+    WORK_ORDER_REJECTED = "work_order_rejected"
     SUPPLIER_RESPONSE = "supplier_response"
     BUDGET_ALERT = "budget_alert"
     EQUIPMENT_MAINTENANCE = "equipment_maintenance"
+    EQUIPMENT_LOW_HOURS = "EQUIPMENT_LOW_HOURS"
     INVOICE = "invoice"
+    INVOICE_PENDING = "INVOICE_PENDING"
     WORK_LOG = "work_log"
+    WORKLOG_PENDING = "WORKLOG_PENDING"
+    WORKLOG_APPROVED = "WORKLOG_APPROVED"
     SUPPORT_TICKET = "support_ticket"
 
 
@@ -34,8 +40,14 @@ class NotificationBase(BaseModel):
     user_id: int = Field(..., description="מזהה משתמש")
     title: str = Field(..., description="כותרת ההתראה")
     message: str = Field(..., description="תוכן ההתראה")
-    notification_type: NotificationType = Field(..., description="סוג ההתראה")
-    priority: NotificationPriority = Field("medium", description="עדיפות")
+    notification_type: str = Field(..., description="סוג ההתראה")
+    priority: str = Field("medium", description="עדיפות")
+    channel: Optional[str] = Field(None, description="ערוץ שליחה")
+    entity_type: Optional[str] = Field(None, description="סוג ישות")
+    entity_id: Optional[int] = Field(None, description="מזהה ישות")
+    data: Optional[str] = Field(None, description="נתונים JSON")
+    action_url: Optional[str] = Field(None, description="קישור לפעולה")
+    link: Optional[str] = Field(None, description="קישור")
     project_id: Optional[int] = Field(None, description="מזהה פרויקט")
     work_order_id: Optional[int] = Field(None, description="מזהה הזמנת עבודה")
     supplier_id: Optional[int] = Field(None, description="מזהה ספק")

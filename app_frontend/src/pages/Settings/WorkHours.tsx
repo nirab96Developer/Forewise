@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Clock, Save, Loader2, Sun, Moon, Coffee, AlertTriangle, Shield } from 'lucide-react';
 import api from '../../services/api';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface WorkHoursSettings {
   standard_start_time: string;
@@ -78,16 +79,7 @@ const WorkHours: React.FC = () => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-green-600 animate-spin mx-auto mb-3" />
-          <p className="text-gray-600">טוען הגדרות...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">

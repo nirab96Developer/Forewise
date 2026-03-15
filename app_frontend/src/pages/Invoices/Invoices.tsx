@@ -4,7 +4,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
-  Loader2, 
   AlertCircle, 
   Receipt,
   Eye,
@@ -12,6 +11,7 @@ import {
   DollarSign
 } from "lucide-react";
 import invoiceService, { Invoice } from "../../services/invoiceService";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 import api from "../../services/api";
 
 const Invoices: React.FC = () => {
@@ -57,16 +57,7 @@ const Invoices: React.FC = () => {
     loadData();
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-2 bg-white p-4 rounded-lg shadow-sm">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>טוען נתונים...</span>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <UnifiedLoader size="full" />;
 
   if (error) {
     return (

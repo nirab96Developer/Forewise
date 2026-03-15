@@ -1,0 +1,275 @@
+<mxfile host="app.diagrams.net" modified="2026-03-14T12:00:00.000Z" agent="Forewise" version="24.0.0" type="device">
+  <diagram id="forewise-uc" name="Use Case Diagram">
+    <mxGraphModel dx="1600" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1400" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ===== SYSTEM BOUNDARY ===== -->
+        <mxCell id="sys" value="&lt;b&gt;מערכת Forewise - ניהול יערות KKL&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;dashPattern=8 8;fillColor=none;strokeColor=#666666;strokeWidth=2;fontSize=18;verticalAlign=top;align=center;spacingTop=8;" vertex="1" parent="1">
+          <mxGeometry x="310" y="30" width="1050" height="1100" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== ACTORS - LEFT SIDE ===== -->
+        <!-- עובד שטח (Field Worker) -->
+        <mxCell id="a_fw" value="עובד שטח" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="100" y="180" width="40" height="60" as="geometry"/>
+        </mxCell>
+        <!-- מנהל עבודה (Work Manager) -->
+        <mxCell id="a_wm" value="מנהל עבודה" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="100" y="400" width="40" height="60" as="geometry"/>
+        </mxCell>
+        <!-- מתאם הזמנות (Order Coordinator) -->
+        <mxCell id="a_oc" value="מתאם הזמנות" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="100" y="620" width="40" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== ACTORS - RIGHT SIDE ===== -->
+        <!-- אדמין (Admin) -->
+        <mxCell id="a_admin" value="אדמין" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="120" width="40" height="60" as="geometry"/>
+        </mxCell>
+        <!-- מנהל מרחב (Region Manager) -->
+        <mxCell id="a_rm" value="מנהל מרחב" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="310" width="40" height="60" as="geometry"/>
+        </mxCell>
+        <!-- מנהל אזור (Area Manager) -->
+        <mxCell id="a_am" value="מנהל אזור" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="490" width="40" height="60" as="geometry"/>
+        </mxCell>
+        <!-- מנהלת חשבונות (Accountant) -->
+        <mxCell id="a_acct" value="מנהלת חשבונות" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="670" width="40" height="60" as="geometry"/>
+        </mxCell>
+        <!-- צופה (Viewer) -->
+        <mxCell id="a_viewer" value="צופה" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="860" width="40" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== ACTORS - BOTTOM ===== -->
+        <!-- ספק (Supplier) -->
+        <mxCell id="a_sup" value="ספק" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="1200" width="40" height="60" as="geometry"/>
+        </mxCell>
+        <!-- API Email -->
+        <mxCell id="a_email" value="API&#xa;Brevo Email" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="1200" width="40" height="60" as="geometry"/>
+        </mxCell>
+        <!-- API Maps -->
+        <mxCell id="a_maps" value="API&#xa;Google Maps" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="950" width="40" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== USE CASES ===== -->
+
+        <!-- UC1 - התחברות למערכת -->
+        <mxCell id="uc1" value="&lt;b&gt;UC1&lt;/b&gt;&lt;br&gt;התחברות למערכת" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="600" y="70" width="170" height="80" as="geometry"/>
+        </mxCell>
+        <!-- UC0 - הרשמה -->
+        <mxCell id="uc0" value="&lt;b&gt;UC0&lt;/b&gt;&lt;br&gt;הרשמה" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="870" y="70" width="170" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- UC2 - ניהול משתמשים ותפקידים -->
+        <mxCell id="uc2" value="&lt;b&gt;UC2&lt;/b&gt;&lt;br&gt;ניהול משתמשים ותפקידים" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="190" width="190" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- UC11 - לוח בקרה -->
+        <mxCell id="uc11" value="&lt;b&gt;UC11&lt;/b&gt;&lt;br&gt;לוח בקרה" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="440" y="190" width="170" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- UC3 - ניהול פרויקטים -->
+        <mxCell id="uc3" value="&lt;b&gt;UC3&lt;/b&gt;&lt;br&gt;ניהול פרויקטים" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="440" y="320" width="170" height="80" as="geometry"/>
+        </mxCell>
+        <!-- UC10 - ניהול גיאוגרפי -->
+        <mxCell id="uc10" value="&lt;b&gt;UC10&lt;/b&gt;&lt;br&gt;ניהול גיאוגרפי ומפות" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="870" y="320" width="180" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- UC4 - ניהול הזמנות עבודה -->
+        <mxCell id="uc4" value="&lt;b&gt;UC4&lt;/b&gt;&lt;br&gt;ניהול הזמנות עבודה" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="450" width="190" height="80" as="geometry"/>
+        </mxCell>
+        <!-- UC4.1 - שליחת הזמנה לספק -->
+        <mxCell id="uc41" value="&lt;b&gt;UC4.1&lt;/b&gt;&lt;br&gt;שליחת הזמנה לספק" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="450" width="180" height="75" as="geometry"/>
+        </mxCell>
+        <!-- UC4.2 - קבלה/דחייה של הזמנה -->
+        <mxCell id="uc42" value="&lt;b&gt;UC4.2&lt;/b&gt;&lt;br&gt;קבלה/דחייה של הזמנה" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="450" width="190" height="75" as="geometry"/>
+        </mxCell>
+        <!-- UC4.3 - התחלה/סגירה של הזמנה -->
+        <mxCell id="uc43" value="&lt;b&gt;UC4.3&lt;/b&gt;&lt;br&gt;התחלה/סגירת הזמנה" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="560" width="180" height="75" as="geometry"/>
+        </mxCell>
+
+        <!-- UC5 - דוחות עבודה -->
+        <mxCell id="uc5" value="&lt;b&gt;UC5&lt;/b&gt;&lt;br&gt;ניהול דוחות עבודה" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="580" width="190" height="80" as="geometry"/>
+        </mxCell>
+        <!-- UC5.1 - אישור דוחות עבודה -->
+        <mxCell id="uc51" value="&lt;b&gt;UC5.1&lt;/b&gt;&lt;br&gt;אישור דוחות עבודה" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="580" width="190" height="75" as="geometry"/>
+        </mxCell>
+
+        <!-- UC6 - ניהול תקציבים -->
+        <mxCell id="uc6" value="&lt;b&gt;UC6&lt;/b&gt;&lt;br&gt;ניהול תקציבים" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="710" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <!-- UC6.1 - העברת תקציב -->
+        <mxCell id="uc61" value="&lt;b&gt;UC6.1&lt;/b&gt;&lt;br&gt;העברת תקציב" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="650" y="710" width="170" height="75" as="geometry"/>
+        </mxCell>
+        <!-- UC7 - ניהול חשבוניות -->
+        <mxCell id="uc7" value="&lt;b&gt;UC7&lt;/b&gt;&lt;br&gt;ניהול חשבוניות" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="950" y="710" width="180" height="80" as="geometry"/>
+        </mxCell>
+        <!-- UC7.1 - יצירת חשבונית חודשית -->
+        <mxCell id="uc71" value="&lt;b&gt;UC7.1&lt;/b&gt;&lt;br&gt;יצירת חשבונית חודשית" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="950" y="830" width="190" height="75" as="geometry"/>
+        </mxCell>
+
+        <!-- UC8 - ניהול ספקים -->
+        <mxCell id="uc8" value="&lt;b&gt;UC8&lt;/b&gt;&lt;br&gt;ניהול ספקים ורוטציה" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="840" width="190" height="80" as="geometry"/>
+        </mxCell>
+        <!-- UC9 - ניהול ציוד -->
+        <mxCell id="uc9" value="&lt;b&gt;UC9&lt;/b&gt;&lt;br&gt;ניהול ציוד וסריקת QR" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="680" y="840" width="190" height="80" as="geometry"/>
+        </mxCell>
+
+        <!-- UC12 - דוחות והפקת PDF -->
+        <mxCell id="uc12" value="&lt;b&gt;UC12&lt;/b&gt;&lt;br&gt;הפקת דוחות ו-PDF" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="380" y="970" width="180" height="75" as="geometry"/>
+        </mxCell>
+        <!-- UC13 - התראות -->
+        <mxCell id="uc13" value="&lt;b&gt;UC13&lt;/b&gt;&lt;br&gt;התראות ו-WebSocket" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="650" y="970" width="180" height="75" as="geometry"/>
+        </mxCell>
+        <!-- UC14 - פורטל ספק -->
+        <mxCell id="uc14" value="&lt;b&gt;UC14&lt;/b&gt;&lt;br&gt;פורטל ספק (Token)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="940" y="970" width="190" height="75" as="geometry"/>
+        </mxCell>
+        <!-- UC15 - תמיכה -->
+        <mxCell id="uc15" value="&lt;b&gt;UC15&lt;/b&gt;&lt;br&gt;תמיכה טכנית" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1170" y="190" width="150" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- ===== CONNECTIONS ===== -->
+
+        <!-- עובד שטח connections -->
+        <mxCell id="e_fw_1" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_fw" target="uc1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_fw_11" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_fw" target="uc11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_fw_5" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_fw" target="uc5" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_fw_9" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_fw" target="uc9" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- מנהל עבודה connections -->
+        <mxCell id="e_wm_1" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="a_wm" target="uc1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_wm_3" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="a_wm" target="uc3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_wm_4" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="a_wm" target="uc4" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_wm_41" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="a_wm" target="uc41" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_wm_5" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="a_wm" target="uc5" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_wm_11" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="a_wm" target="uc11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_wm_9" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="a_wm" target="uc9" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- מתאם הזמנות connections -->
+        <mxCell id="e_oc_1" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="a_oc" target="uc1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_oc_43" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="a_oc" target="uc43" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_oc_11" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="a_oc" target="uc11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- אדמין connections -->
+        <mxCell id="e_ad_1" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="a_admin" target="uc1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ad_0" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="a_admin" target="uc0" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ad_2" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="a_admin" target="uc2" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ad_3" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="a_admin" target="uc3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ad_4" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="a_admin" target="uc4" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ad_8" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="a_admin" target="uc8" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ad_11" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="a_admin" target="uc11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ad_15" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="a_admin" target="uc15" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- מנהל מרחב connections -->
+        <mxCell id="e_rm_1" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_rm" target="uc1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_rm_3" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_rm" target="uc3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_rm_4" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_rm" target="uc4" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_rm_6" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_rm" target="uc6" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_rm_61" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_rm" target="uc61" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_rm_10" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_rm" target="uc10" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_rm_11" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_rm" target="uc11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- מנהל אזור connections -->
+        <mxCell id="e_am_1" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_am" target="uc1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_am_3" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_am" target="uc3" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_am_4" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_am" target="uc4" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_am_51" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_am" target="uc51" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_am_6" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_am" target="uc6" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_am_61b" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_am" target="uc61" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_am_11" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="a_am" target="uc11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- מנהלת חשבונות connections -->
+        <mxCell id="e_ac_1" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_acct" target="uc1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ac_51" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_acct" target="uc51" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ac_6" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_acct" target="uc6" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ac_7" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_acct" target="uc7" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ac_71" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_acct" target="uc71" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ac_11" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_acct" target="uc11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_ac_12" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="a_acct" target="uc12" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- צופה connections -->
+        <mxCell id="e_vw_1" style="endArrow=none;html=1;strokeColor=#666666;dashed=1;" edge="1" source="a_viewer" target="uc1" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_vw_11" style="endArrow=none;html=1;strokeColor=#666666;dashed=1;" edge="1" source="a_viewer" target="uc11" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_vw_12" style="endArrow=none;html=1;strokeColor=#666666;dashed=1;" edge="1" source="a_viewer" target="uc12" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ספק connections -->
+        <mxCell id="e_sp_14" style="endArrow=none;html=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" source="a_sup" target="uc14" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_sp_42" style="endArrow=none;html=1;strokeColor=#d79b00;strokeWidth=2;" edge="1" source="a_sup" target="uc42" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- API Email connections -->
+        <mxCell id="e_em_41" style="endArrow=none;html=1;strokeColor=#9673a6;dashed=1;" edge="1" source="a_email" target="uc41" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_em_13" style="endArrow=none;html=1;strokeColor=#9673a6;dashed=1;" edge="1" source="a_email" target="uc13" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e_em_14" style="endArrow=none;html=1;strokeColor=#9673a6;dashed=1;" edge="1" source="a_email" target="uc14" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- API Maps connections -->
+        <mxCell id="e_mp_10" style="endArrow=none;html=1;strokeColor=#9673a6;dashed=1;" edge="1" source="a_maps" target="uc10" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ===== INCLUDE/EXTEND RELATIONSHIPS ===== -->
+        <!-- UC4 includes UC4.1 -->
+        <mxCell id="inc_4_41" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="endArrow=open;endSize=12;dashed=1;html=1;strokeColor=#d79b00;fontSize=10;" edge="1" source="uc4" target="uc41" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <!-- UC4.1 extends UC4.2 -->
+        <mxCell id="ext_41_42" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="endArrow=open;endSize=12;dashed=1;html=1;strokeColor=#d79b00;fontSize=10;" edge="1" source="uc42" target="uc41" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <!-- UC4 includes UC4.3 -->
+        <mxCell id="inc_4_43" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="endArrow=open;endSize=12;dashed=1;html=1;strokeColor=#d79b00;fontSize=10;" edge="1" source="uc4" target="uc43" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <!-- UC5 extends UC5.1 -->
+        <mxCell id="ext_5_51" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="endArrow=open;endSize=12;dashed=1;html=1;strokeColor=#6c8ebf;fontSize=10;" edge="1" source="uc5" target="uc51" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <!-- UC6 includes UC6.1 -->
+        <mxCell id="inc_6_61" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;" style="endArrow=open;endSize=12;dashed=1;html=1;strokeColor=#9673a6;fontSize=10;" edge="1" source="uc61" target="uc6" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <!-- UC7 includes UC7.1 -->
+        <mxCell id="inc_7_71" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="endArrow=open;endSize=12;dashed=1;html=1;strokeColor=#9673a6;fontSize=10;" edge="1" source="uc7" target="uc71" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <!-- UC14 extends UC4.2 -->
+        <mxCell id="ext_14_42" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;" style="endArrow=open;endSize=12;dashed=1;html=1;strokeColor=#d79b00;fontSize=10;" edge="1" source="uc14" target="uc42" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- ===== LEGEND ===== -->
+        <mxCell id="legend" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1050" width="220" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_title" value="&lt;b&gt;מקרא צבעים&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="110" y="1055" width="90" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1" value="" style="ellipse;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="220" y="1080" width="20" height="14" as="geometry"/></mxCell>
+        <mxCell id="leg1t" value="אימות וגישה" style="text;html=1;fontSize=10;align=right;" vertex="1" parent="1"><mxGeometry x="50" y="1076" width="160" height="20" as="geometry"/></mxCell>
+        <mxCell id="leg2" value="" style="ellipse;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1"><mxGeometry x="220" y="1098" width="20" height="14" as="geometry"/></mxCell>
+        <mxCell id="leg2t" value="הזמנות עבודה וספקים" style="text;html=1;fontSize=10;align=right;" vertex="1" parent="1"><mxGeometry x="50" y="1094" width="160" height="20" as="geometry"/></mxCell>
+        <mxCell id="leg3" value="" style="ellipse;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="220" y="1116" width="20" height="14" as="geometry"/></mxCell>
+        <mxCell id="leg3t" value="דוחות ולוח בקרה" style="text;html=1;fontSize=10;align=right;" vertex="1" parent="1"><mxGeometry x="50" y="1112" width="160" height="20" as="geometry"/></mxCell>
+        <mxCell id="leg4" value="" style="ellipse;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="220" y="1134" width="20" height="14" as="geometry"/></mxCell>
+        <mxCell id="leg4t" value="תקציב וחשבוניות" style="text;html=1;fontSize=10;align=right;" vertex="1" parent="1"><mxGeometry x="50" y="1130" width="160" height="20" as="geometry"/></mxCell>
+        <mxCell id="leg5" value="" style="ellipse;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="220" y="1152" width="20" height="14" as="geometry"/></mxCell>
+        <mxCell id="leg5t" value="פרויקטים וגיאוגרפיה" style="text;html=1;fontSize=10;align=right;" vertex="1" parent="1"><mxGeometry x="50" y="1148" width="160" height="20" as="geometry"/></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

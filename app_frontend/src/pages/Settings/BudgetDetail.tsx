@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DollarSign, ChevronLeft, Truck, Clock } from "lucide-react";
 import api from "../../services/api";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 
 const BudgetDetail: React.FC = () => {
   const { id } = useParams();
@@ -36,7 +37,7 @@ const BudgetDetail: React.FC = () => {
   const fmt = (n: any) => n ? Number(n).toLocaleString('he-IL') : '0';
   const pct = (v: any) => v !== undefined ? `${v}%` : '0%';
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="w-10 h-10 border-4 border-green-200 border-t-green-600 rounded-full animate-spin" /></div>;
+  if (loading) return <UnifiedLoader size="full" />;
   if (!budget) return <div className="p-8 text-center text-gray-500">תקציב לא נמצא</div>;
 
   const tabs = [

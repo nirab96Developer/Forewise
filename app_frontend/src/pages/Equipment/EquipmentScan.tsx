@@ -139,6 +139,7 @@ const EquipmentScan: React.FC = () => {
         setEquipment(eq);
         saveRecentScan(eq);
         registerScan(eq.id, eq.code || String(id), scanType);
+        findActiveWorkOrder(eq.id);
       }
     } catch (err: any) {
       setError(`לא נמצא ציוד עם מזהה: ${id}`);
@@ -164,6 +165,7 @@ const EquipmentScan: React.FC = () => {
         setEquipment(response.data);
         saveRecentScan(response.data);
         registerScan(response.data.id, query, scanType);
+        findActiveWorkOrder(response.data.id);
       }
     } catch (err: any) {
       if (err.response?.status === 404) {
@@ -209,8 +211,27 @@ const EquipmentScan: React.FC = () => {
     if (e.key === 'Enter') searchEquipment();
   };
 
+  const [activeWorkOrderId, setActiveWorkOrderId] = useState<number | null>(null);
+
+  const findActiveWorkOrder = async (equipmentId: number) => {
+    try {
+      const res = await api.get('/work-orders', {
+        params: { equipment_id: equipmentId, status: 'ACTIVE', limit: 1 }
+      });
+      const orders = res.data?.items || res.data || [];
+      if (orders.length > 0) {
+        setActiveWorkOrderId(orders[0].id);
+      }
+    } catch (e) { /* no active WO */ }
+  };
+
   const handleContinueToReport = () => {
-    if (equipment) navigate(`/work-logs/new?equipment_id=${equipment.id}`);
+    if (!equipment) return;
+    if (activeWorkOrderId) {
+      navigate(`/work-orders/${activeWorkOrderId}/report-hours?equipment_id=${equipment.id}`);
+    } else {
+      navigate(`/projects?equipment_id=${equipment.id}`);
+    }
   };
 
   const handleClear = () => {

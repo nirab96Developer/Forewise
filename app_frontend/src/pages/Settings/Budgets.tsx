@@ -6,6 +6,7 @@ import {
   X, Loader2, CheckCircle, AlertCircle, Search
 } from "lucide-react";
 import api from "../../services/api";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface BudgetItem {
@@ -427,16 +428,7 @@ const Budgets: React.FC = () => {
       </th>
     );
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" dir="rtl">
-        <div className="flex items-center gap-3 bg-white p-6 rounded-xl shadow-sm">
-          <div className="w-6 h-6 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
-          <span className="text-gray-600">טוען נתוני תקציבים...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   return (
     <div className="min-h-screen bg-gray-50 pt-16 sm:pt-0" dir="rtl">

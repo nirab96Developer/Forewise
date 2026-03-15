@@ -30,8 +30,8 @@ class InvoiceItem(BaseModel):
     invoice_id: Mapped[int] = mapped_column(Integer, ForeignKey("invoices.id"), nullable=False)
     worklog_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
-    # Line info - DB: int, NO / nvarchar(-1), NO / nvarchar(50), YES
-    line_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Line info
+    line_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     item_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
 

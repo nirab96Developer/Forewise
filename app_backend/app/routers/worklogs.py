@@ -541,7 +541,7 @@ def send_approval_pdf(db: Session, worklog, current_user):
             'equipment_code': '',
             'equipment_type': worklog.equipment_type or '',
             'total_hours': float(worklog.total_hours) if worklog.total_hours else 0,
-            'billable_hours': float(worklog.billable_hours or worklog.total_hours) if worklog.total_hours else 0,
+            'billable_hours': float(worklog.paid_hours or worklog.net_hours or worklog.total_hours or 0),
             'idle_hours': 0,
             'start_time': worklog.start_time.strftime('%H:%M') if worklog.start_time else '',
             'end_time': worklog.end_time.strftime('%H:%M') if worklog.end_time else '',
@@ -587,7 +587,7 @@ def send_approval_pdf(db: Session, worklog, current_user):
 פרטי הדיווח:
 • פרויקט: {worklog_data['project_name']}
 • תאריך: {worklog_data['work_date']}
-• שעות לתשלום: {worklog_data['billable_hours']}
+• שעות לתשלום: {worklog_data.get('billable_hours', 0)}
 
 בברכה,
 מערכת ניהול יערות קק"ל""",

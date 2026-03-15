@@ -1,12 +1,12 @@
 // KKL Forest Management - Service Worker
 // Caches app shell for offline support
 
-const CACHE_NAME = 'kkl-forest-v1';
+const CACHE_NAME = 'forewise-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/logo-kkl-transparent.png',
-  '/icons/icon-192.svg',
+  '/logo-forewise-transparent.png',
+  '/icons/forewise-icon-192.png',
 ];
 
 // Install: cache static shell

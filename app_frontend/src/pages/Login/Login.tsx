@@ -303,19 +303,37 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4">
       <div className="flex flex-col items-center w-full max-w-md animate-fadeIn">
-        <div className="w-24 h-24 sm:w-28 sm:h-28 mb-4 hover:scale-105 transition-transform duration-300">
-          <img
-            src="/logo-kkl-transparent.png"
-            alt="Forewise"
-            className="w-full h-full object-contain drop-shadow-2xl"
-          />
+        <div className="flex flex-col items-center mb-6 hover:scale-105 transition-transform duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="160" height="134">
+            <defs>
+              <linearGradient id="lt" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style={{stopColor:'#1565c0'}}/>
+                <stop offset="100%" style={{stopColor:'#0097a7'}}/>
+              </linearGradient>
+              <linearGradient id="lm" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style={{stopColor:'#0097a7'}}/>
+                <stop offset="50%" style={{stopColor:'#2e7d32'}}/>
+                <stop offset="100%" style={{stopColor:'#66bb6a'}}/>
+              </linearGradient>
+              <linearGradient id="lb" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style={{stopColor:'#2e7d32'}}/>
+                <stop offset="40%" style={{stopColor:'#66bb6a'}}/>
+                <stop offset="100%" style={{stopColor:'#8B5e3c'}}/>
+              </linearGradient>
+            </defs>
+            <path d="M46 20 Q60 9 74 20" stroke="url(#lt)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+            <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#lm)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+            <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#lb)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+            <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
+            <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
+          </svg>
+          <div style={{fontFamily:"'Montserrat',sans-serif", fontWeight:800, fontSize:'32px', letterSpacing:'6px', color:'#1F6F43', marginTop:'8px', lineHeight:1}}>
+            FOREWISE
+          </div>
         </div>
-        
-        <h1 className="text-2xl sm:text-3xl font-bold text-green-900 mb-2">
-          Forewise
-        </h1>
-        <p className="text-base text-gray-600 mb-6">
-          מערכת ניהול פרויקטים ויערות
+
+        <p className="text-base text-gray-500 mb-6 text-center font-medium">
+          מערכת לניהול פרויקטים ויערות
         </p>
 
         <div className="bg-white rounded-2xl shadow-2xl border-2 border-green-100 w-full p-6 hover:shadow-3xl transition-shadow duration-300">
@@ -528,7 +546,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
         </div>
 
         <footer className="text-center mt-6">
-          <p className="text-base text-gray-500">Forewise</p>
+          <p className="text-xs text-gray-400">Forewise © 2026 · כל הזכויות שמורות</p>
         </footer>
       </div>
     </div>

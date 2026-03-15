@@ -35,6 +35,7 @@ class SupplierRotation(BaseModel):
     area_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Rotation
+    rotation_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     rotation_position: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     total_assignments: Mapped[Optional[int]] = mapped_column(Integer, default=0)
     successful_completions: Mapped[Optional[int]] = mapped_column(Integer, default=0)

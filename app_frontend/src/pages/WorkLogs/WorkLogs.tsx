@@ -2,8 +2,9 @@
 // src/pages/WorkLogs/WorkLogs.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Eye, Edit, Calendar, Clock, User, Loader2, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Calendar, Clock, User, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import workLogService, { WorkLog, WorkLogFilters } from '../../services/workLogService';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 import { useOffline } from '../../hooks/useOffline';
 
 const WorkLogs: React.FC = () => {
@@ -103,16 +104,7 @@ const WorkLogs: React.FC = () => {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex items-center gap-2 bg-white p-4 rounded-lg shadow-sm">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>טוען דיווחי שעות...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

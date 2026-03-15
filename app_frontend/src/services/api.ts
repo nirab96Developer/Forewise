@@ -145,6 +145,17 @@ api.interceptors.response.use(
       if ((window as any).showToast) {
         (window as any).showToast('שגיאת שרת. אנא נסה שוב מאוחר יותר.', 'error');
       }
+    } else if (error.response?.status === 404) {
+      // 404 is often expected (no data, resource not found) — don't show toast
+      // Components handle 404 individually when needed
+    } else if (error.response?.status === 422) {
+      const detail = error.response?.data?.detail;
+      const errorMessage = typeof detail === 'object' && detail?.message
+        ? detail.message
+        : typeof detail === 'string' ? detail : 'שגיאה בנתונים';
+      if ((window as any).showToast) {
+        (window as any).showToast(errorMessage, 'error');
+      }
     } else if (error.response?.status >= 400) {
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || 'שגיאה לא ידועה';
       if ((window as any).showToast) {

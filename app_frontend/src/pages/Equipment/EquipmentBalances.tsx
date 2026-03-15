@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   ArrowRight,
-  Loader2,
   AlertCircle,
   Search,
   Package,
@@ -12,6 +11,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import equipmentService, { Equipment } from "../../services/equipmentService";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 
 interface EquipmentBalance {
   id: number;
@@ -122,16 +122,7 @@ const EquipmentBalances: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center gap-2 bg-white p-6 rounded-lg shadow-sm">
-          <Loader2 className="w-5 h-5 animate-spin text-green-600" />
-          <span className="text-gray-700">טוען יתרות ציוד...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   if (error) {
     return (

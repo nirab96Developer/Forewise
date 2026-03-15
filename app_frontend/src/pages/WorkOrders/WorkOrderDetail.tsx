@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, Calendar, Wrench, Edit, CheckCircle, XCircle, Loader2,
+  ArrowRight, Calendar, Wrench, Edit, CheckCircle, XCircle,
   Clock, User, ClipboardList
 } from 'lucide-react';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
+import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 const APPROVED_STATUSES = ['APPROVED', 'APPROVED_AND_SENT', 'COORDINATOR_APPROVED', 'ACTIVE', 'IN_PROGRESS'];
 
@@ -116,13 +117,7 @@ const WorkOrderDetail: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  if (loading) return <UnifiedLoader size="full" />;
 
   if (error) {
     return (
