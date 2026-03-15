@@ -23,9 +23,9 @@ class Settings(BaseSettings):
     # ==========================================
     # הגדרות כלליות
     # ==========================================
-    APP_NAME: str = "Reports Management System"
-    APP_VERSION: str = "1.0.0"
-    APP_DESCRIPTION: str = "Project and Equipment Reports Management System"
+    APP_NAME: str = "Forewise"
+    APP_VERSION: str = "1.1.0"
+    APP_DESCRIPTION: str = "מערכת לניהול פרויקטים ויערות"
     PROJECT_NAME: str = ""
     ENVIRONMENT: str = "development"
 

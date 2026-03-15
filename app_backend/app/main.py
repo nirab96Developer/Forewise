@@ -69,7 +69,7 @@ API_METADATA = {
 - **Version:** 1.0.0
 - **Database:** PostgreSQL
     """.format(environment=settings.ENVIRONMENT),
-    "version": "1.0.0",
+    "version": "1.1.0",
     "terms_of_service": "/terms",
     "contact": {
         "name": "צוות פיתוח",
@@ -420,7 +420,7 @@ async def root():
     """מידע בסיסי על המערכת."""
     return {
         "name": "Forewise",
-        "גרסה": "1.0.0",
+        "גרסה": "1.1.0",
         "סטטוס": "פעיל",
         "סביבה": settings.ENVIRONMENT,
         "תיעוד": "/docs",
@@ -441,7 +441,7 @@ async def health_check():
     return {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
-        "version": "1.0.0",
+        "version": "1.1.0",
         "environment": settings.ENVIRONMENT,
     }
 
@@ -499,7 +499,7 @@ async def system_info():
         router_info = {"סטטוס": "לא זמין"}
 
     return {
-        "גרסת_API": "1.0.0",
+        "גרסת_API": "1.1.0",
         "סביבה": settings.ENVIRONMENT,
         "ראוטרים": router_info,
         "database": "PostgreSQL",
