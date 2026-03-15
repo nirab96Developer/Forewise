@@ -5,18 +5,21 @@ const REGISTERED_KEY = 'biometric_registered';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/** base64 or base64url → ArrayBuffer */
+/** base64 or base64url string → ArrayBuffer (no atob dependency) */
 function b64urlToBuffer(input: string): ArrayBuffer {
-  let b64 = input.trim().replace(/-/g, '+').replace(/_/g, '/');
-  // Remove existing padding then re-pad correctly
-  b64 = b64.replace(/=+$/, '');
-  while (b64.length % 4 !== 0) b64 += '=';
-  // Strip any characters that aren't valid base64
-  b64 = b64.replace(/[^A-Za-z0-9+/=]/g, '');
-  const bin = atob(b64);
-  const buf = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-  return buf.buffer;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let str = String(input || '').trim().replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
+  const bytes: number[] = [];
+  for (let i = 0; i < str.length; i += 4) {
+    const a = chars.indexOf(str[i] || 'A');
+    const b = chars.indexOf(str[i + 1] || 'A');
+    const c = chars.indexOf(str[i + 2] || 'A');
+    const d = chars.indexOf(str[i + 3] || 'A');
+    bytes.push((a << 2) | (b >> 4));
+    if (i + 2 < str.length) bytes.push(((b & 15) << 4) | (c >> 2));
+    if (i + 3 < str.length) bytes.push(((c & 3) << 6) | d);
+  }
+  return new Uint8Array(bytes).buffer;
 }
 
 /** ArrayBuffer → base64url */
