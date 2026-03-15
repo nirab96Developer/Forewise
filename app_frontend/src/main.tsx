@@ -47,9 +47,50 @@ if ("serviceWorker" in navigator) {
     });
   } else {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch((err) => {
+      navigator.serviceWorker.register("/sw.js").then((reg) => {
+        // Check for updates every 5 minutes
+        setInterval(() => reg.update(), 5 * 60 * 1000);
+
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener("statechange", () => {
+              if (newWorker.state === "activated") {
+                showUpdateBanner();
+              }
+            });
+          }
+        });
+      }).catch((err) => {
         console.error("Service worker registration failed:", err);
       });
     });
+
+    // Listen for update messages from SW
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event.data?.type === "APP_UPDATED") {
+        showUpdateBanner(event.data.version);
+      }
+    });
   }
+}
+
+function showUpdateBanner(version?: string) {
+  if (document.getElementById("forewise-update-banner")) return;
+  const banner = document.createElement("div");
+  banner.id = "forewise-update-banner";
+  banner.dir = "rtl";
+  banner.style.cssText =
+    "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;" +
+    "background:#1a6b3a;color:#fff;padding:12px 20px;border-radius:14px;" +
+    "box-shadow:0 8px 32px rgba(0,0,0,0.25);display:flex;align-items:center;gap:12px;" +
+    "font-family:Heebo,sans-serif;font-size:14px;max-width:90vw;animation:slideUp .4s ease";
+  banner.innerHTML =
+    `<span>🌲 גרסה חדשה${version ? " " + version : ""} זמינה</span>` +
+    `<button onclick="window.location.reload()" style="background:#fff;color:#1a6b3a;border:none;` +
+    `padding:6px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">` +
+    `עדכן עכשיו</button>` +
+    `<button onclick="this.parentElement.remove()" style="background:none;border:none;color:#fff;` +
+    `cursor:pointer;font-size:18px;padding:0 4px">✕</button>`;
+  document.body.appendChild(banner);
 }

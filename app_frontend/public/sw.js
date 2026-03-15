@@ -1,7 +1,6 @@
-// KKL Forest Management - Service Worker
-// Caches app shell for offline support
-
-const CACHE_NAME = 'forewise-v3';
+// Forewise Service Worker v1.1.0
+const CACHE_NAME = 'forewise-v1.1.0';
+const APP_VERSION = '1.1.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,7 +8,7 @@ const STATIC_ASSETS = [
   '/icons/forewise-icon-192.png',
 ];
 
-// Install: cache static shell
+// Install: cache static shell + notify clients about update
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -19,29 +18,40 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// Activate: clean old caches + notify all clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    )
+    caches.keys().then((keys) => {
+      const oldKeys = keys.filter((key) => key !== CACHE_NAME);
+      if (oldKeys.length > 0) {
+        self.clients.matchAll().then((clients) => {
+          clients.forEach((client) => {
+            client.postMessage({
+              type: 'APP_UPDATED',
+              version: APP_VERSION,
+            });
+          });
+        });
+      }
+      return Promise.all(oldKeys.map((key) => caches.delete(key)));
+    })
   );
   self.clients.claim();
+});
+
+// Listen for skip-waiting message from frontend
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // Fetch: network-first for API, cache-first for assets
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-
-  // Skip non-GET and API requests
   if (event.request.method !== 'GET') return;
   if (url.pathname.startsWith('/api/')) return;
 
-  // Supplier portal pages — always network first (token-sensitive)
   if (url.pathname.startsWith('/supplier-portal/')) {
     event.respondWith(
       fetch(event.request).catch(() => caches.match('/index.html'))
@@ -49,7 +59,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests — return cached index.html for SPA routing
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -63,7 +72,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets — cache first
   event.respondWith(
     caches.match(event.request).then(
       (cached) =>
