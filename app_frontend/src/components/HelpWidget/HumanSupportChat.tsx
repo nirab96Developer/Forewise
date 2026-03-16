@@ -592,7 +592,7 @@ const HumanSupportChat: React.FC = () => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 left-6 z-50 p-4 rounded-full shadow-xl transition-all duration-300 ${
+        className={`fixed bottom-6 left-6 z-30 p-3.5 rounded-full shadow-lg transition-all duration-300 ${
           isOpen 
             ? 'bg-gray-700 hover:bg-gray-800 scale-90' 
             : 'bg-gradient-to-br from-kkl-green to-kkl-green-dark hover:shadow-2xl hover:scale-110'

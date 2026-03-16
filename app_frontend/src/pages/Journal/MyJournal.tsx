@@ -610,7 +610,7 @@ const MyJournal: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={goToPreviousMonth}
-                    className="p-2 hover:bg-kkl-green-light rounded-lg transition-colors"
+                    className="p-2.5 hover:bg-kkl-green-light rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
                     <ChevronRight className="w-5 h-5 text-kkl-green" />
                   </button>
@@ -622,7 +622,7 @@ const MyJournal: React.FC = () => {
                   </button>
                   <button 
                     onClick={goToNextMonth}
-                    className="p-2 hover:bg-kkl-green-light rounded-lg transition-colors"
+                    className="p-2.5 hover:bg-kkl-green-light rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
                     <ChevronLeft className="w-5 h-5 text-kkl-green" />
                   </button>

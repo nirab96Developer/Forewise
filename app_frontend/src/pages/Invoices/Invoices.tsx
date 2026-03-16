@@ -73,17 +73,18 @@ const Invoices: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'draft':
-      case 'טיוטה':
         return 'bg-gray-100 text-gray-700';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-700';
       case 'approved':
-      case 'מאושר':
         return 'bg-green-100 text-green-700';
       case 'sent':
-      case 'נשלח':
         return 'bg-blue-100 text-blue-700';
       case 'paid':
-      case 'שולם':
         return 'bg-purple-100 text-purple-700';
+      case 'cancelled':
+      case 'rejected':
+        return 'bg-red-100 text-red-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }
@@ -93,12 +94,18 @@ const Invoices: React.FC = () => {
     switch (status?.toLowerCase()) {
       case 'draft':
         return 'טיוטה';
+      case 'pending':
+        return 'ממתין לאישור';
       case 'approved':
         return 'מאושר';
       case 'sent':
         return 'נשלח';
       case 'paid':
         return 'שולם';
+      case 'cancelled':
+        return 'בוטל';
+      case 'rejected':
+        return 'נדחה';
       default:
         return status || 'לא ידוע';
     }
@@ -247,10 +254,10 @@ const Invoices: React.FC = () => {
                         <span className="text-sm font-medium text-gray-900">{invoice.invoice_number || `#${invoice.id}`}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600">{invoice.project_name || 'לא צוין'}</span>
+                        <span className={`text-sm ${invoice.project_name ? 'text-gray-900' : 'text-gray-300'}`}>{invoice.project_name || '—'}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600">{invoice.supplier_name || 'לא צוין'}</span>
+                        <span className={`text-sm ${invoice.supplier_name ? 'text-gray-900' : 'text-gray-300'}`}>{invoice.supplier_name || '—'}</span>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-gray-900">

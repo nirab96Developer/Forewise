@@ -135,7 +135,7 @@ const Navigation: React.FC = () => {
               </div>
               <div className="flex flex-col leading-tight">
                 <h1 className="text-[15px] md:text-base font-bold tracking-wide" style={{fontFamily: "'Heebo', sans-serif"}}>Forewise</h1>
-                <span className="text-[10px] text-white/70 font-light hidden md:block">מערכת ניהול יערות</span>
+                <span className="text-xs text-white/70 font-light hidden md:block">מערכת ניהול יערות</span>
               </div>
             </div>
 
@@ -185,13 +185,13 @@ const Navigation: React.FC = () => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed right-0 top-16 bottom-0 w-64 z-30 shadow-lg
-          transform transition-all duration-500 ease-in-out
+          fixed right-0 top-16 bottom-0 w-64 z-40 shadow-xl
+          transform transition-all duration-300 ease-in-out
           ${isMobile 
             ? 'bg-gradient-to-b from-white via-green-50/30 to-white border-l border-green-200' 
             : 'bg-white border-l border-gray-200'
           }
-          ${isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'translate-x-full md:translate-x-0 opacity-0 md:opacity-100'}
+          ${isMobileMenuOpen ? 'translate-x-0 opacity-100 pointer-events-auto' : 'translate-x-full md:translate-x-0 opacity-0 md:opacity-100 pointer-events-none md:pointer-events-auto'}
         `}
         dir="rtl"
         role="navigation"
