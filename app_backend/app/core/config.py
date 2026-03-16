@@ -98,17 +98,8 @@ class Settings(BaseSettings):
     # הגדרות CORS
     # ==========================================
     BACKEND_CORS_ORIGINS: List[str] = [
-        # Production
         "https://forewise.co",
         "https://www.forewise.co",
-        # Local development
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://10.0.0.20:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://10.0.0.20:5174",
     ]
     # Alias for backward compatibility
     CORS_ORIGINS: List[str] = BACKEND_CORS_ORIGINS
