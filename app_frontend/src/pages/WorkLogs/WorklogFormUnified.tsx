@@ -72,7 +72,9 @@ const WorklogFormUnified: React.FC = () => {
     activity: '',
     description: '',
     notes: '',
-    includes_guard: false,  // האם כולל שמירת כלים
+    includes_guard: false,
+    non_standard_reason: '' as string,
+    non_standard_notes: '' as string,
   });
 
   // Load equipment if scanned
@@ -254,6 +256,8 @@ const WorklogFormUnified: React.FC = () => {
       equipment_id: formData.equipment_id,
       work_date: formData.work_date,
       is_standard: !isNonStandard,
+      non_standard_reason: isNonStandard ? (formData.non_standard_reason || null) : null,
+      non_standard_notes: isNonStandard ? (formData.non_standard_notes || null) : null,
       total_hours: totals.totalPresence,
       billable_hours: totals.totalBillable,
       break_hours: totals.restHours,
@@ -413,6 +417,42 @@ const WorklogFormUnified: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Non-standard reason */}
+          {isNonStandard && (
+            <div>
+              <label className="block text-sm font-medium text-orange-700 mb-1.5">
+                <AlertCircle className="w-3.5 h-3.5 inline ml-1" />
+                סיבת חריגה מדיווח תקן
+              </label>
+              <select
+                value={formData.non_standard_reason || ''}
+                onChange={(e) => setFormData({ ...formData, non_standard_reason: e.target.value })}
+                className="w-full p-2.5 border border-orange-300 rounded-lg text-sm bg-orange-50"
+                required
+              >
+                <option value="">בחר סיבה...</option>
+                <option value="weather">תנאי מזג אוויר</option>
+                <option value="equipment_failure">תקלה בכלי</option>
+                <option value="access_issue">בעיית גישה לשטח</option>
+                <option value="partial_day">יום עבודה חלקי</option>
+                <option value="overtime">שעות נוספות</option>
+                <option value="safety">עצירה בטיחותית</option>
+                <option value="client_request">דרישת מנהל</option>
+                <option value="other">אחר</option>
+              </select>
+              {formData.non_standard_reason === 'other' && (
+                <textarea
+                  value={formData.non_standard_notes || ''}
+                  onChange={(e) => setFormData({ ...formData, non_standard_notes: e.target.value })}
+                  placeholder="פרט את סיבת החריגה..."
+                  className="w-full mt-2 p-2.5 border border-orange-300 rounded-lg text-sm bg-orange-50"
+                  rows={2}
+                  required
+                />
+              )}
+            </div>
+          )}
 
           {/* Date & Activity */}
           <div className="grid grid-cols-2 gap-3">

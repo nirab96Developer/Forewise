@@ -161,15 +161,18 @@ async def lifespan(app: FastAPI):
         logger.error(f"Startup failed: {str(e)}")
         raise
 
-    # Start nightly CRON for anonymizing expired/suspended users
+    # Start background tasks
     import asyncio as _asyncio
     from app.tasks.user_lifecycle import schedule_nightly_cleanup
+    from app.tasks.portal_expiry import schedule_portal_expiry_check
     _cleanup_task = _asyncio.create_task(schedule_nightly_cleanup())
+    _expiry_task = _asyncio.create_task(schedule_portal_expiry_check())
 
     yield
 
     # Shutdown
     _cleanup_task.cancel()
+    _expiry_task.cancel()
     logger.info("Shutting down...")
     try:
         engine.dispose()
