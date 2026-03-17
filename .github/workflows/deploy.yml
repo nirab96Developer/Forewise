@@ -1,6 +1,6 @@
 # Forewise — CI/CD Pipeline
+# Tests → Build → Deploy
 # Triggers on push to main branch
-# Builds frontend, deploys to production server via SSH
 
 name: Deploy Forewise
 
@@ -10,16 +10,14 @@ on:
 
 jobs:
   deploy:
-    name: Build & Deploy to Production
+    name: Test, Build & Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      # ── Step 1: Checkout repository ──
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ── Step 2: Deploy to production server via SSH ──
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
@@ -37,7 +35,14 @@ jobs:
             echo ">> Pulling latest code..."
             git pull origin main
 
-            # Build frontend on server
+            # Run backend tests BEFORE deploy
+            echo ">> Running tests..."
+            cd app_backend
+            .venv/bin/python3 -m pytest tests/test_health_and_auth.py -v --tb=short
+            echo "✅ All tests passed!"
+            cd ..
+
+            # Build frontend
             echo ">> Building frontend..."
             cd app_frontend
             npm install --legacy-peer-deps
@@ -51,7 +56,7 @@ jobs:
             sleep 3
             nohup .venv/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
 
-            # Wait for backend to start
+            # Wait for backend
             echo ">> Waiting for backend..."
             for i in 1 2 3 4 5 6; do
               sleep 5
