@@ -622,7 +622,7 @@ const HumanSupportChat: React.FC = () => {
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-bold">תמיכה קק"ל</h3>
+                <h3 className="font-bold">תמיכה Forewise</h3>
                 <p className="text-xs text-white/80 flex items-center gap-1">
                   <span className="w-2 h-2 bg-green-300 rounded-full animate-pulse" />
                   מחובר עכשיו

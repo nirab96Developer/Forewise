@@ -579,7 +579,7 @@ def send_approval_pdf(db: Session, worklog, current_user):
             try:
                 send_email_with_pdf(
                     to=worklog_data['supplier_email'],
-                    subject=f"אישור דיווח עבודה מס' {worklog.report_number} - קק\"ל",
+                    subject=f"אישור דיווח עבודה מס' {worklog.report_number} - Forewise",
                     body=f"""שלום רב,
 
 מצורף אישור דיווח עבודה יומי מספר {worklog.report_number}.
@@ -590,7 +590,7 @@ def send_approval_pdf(db: Session, worklog, current_user):
 • שעות לתשלום: {worklog_data.get('billable_hours', 0)}
 
 בברכה,
-מערכת ניהול יערות קק"ל""",
+מערכת ניהול יערות Forewise""",
                     pdf_bytes=pdf_bytes,
                     pdf_filename=pdf_filename
                 )

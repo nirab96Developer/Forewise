@@ -198,7 +198,7 @@ const PricingReports: React.FC = () => {
     }).join("");
 
     return `<!DOCTYPE html>
-<html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>דוח תמחור — קק"ל</title>
+<html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>דוח תמחור — Forewise</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,Helvetica,sans-serif;direction:rtl;color:#1a1a1a;padding:28px;font-size:13px}
@@ -227,7 +227,7 @@ const PricingReports: React.FC = () => {
   @media print{body{padding:12px}@page{margin:12mm;size:A4}}
 </style></head><body>
   <div class="header">
-    <div><h1>דוח תמחור — קק"ל</h1><div class="sub">סיכום עלויות דיווחי שעות לפי פרויקט, ספק ומספר כלי</div></div>
+    <div><h1>דוח תמחור — Forewise</h1><div class="sub">סיכום עלויות דיווחי שעות לפי פרויקט, ספק ומספר כלי</div></div>
     <div class="date">הופק: ${now}</div>
   </div>
   ${unverifiedBanner}
@@ -238,7 +238,7 @@ const PricingReports: React.FC = () => {
     <div class="summary-card"><div class="label">כולל מע"מ</div><div class="value" style="color:#15803d">₪${Number(summary?.total_cost_with_vat ?? 0).toLocaleString("he-IL")}</div><div class="hint">ממוצע ₪${Math.round(summary?.average_hourly_rate ?? 0)}/שעה</div></div>
   </div>
   <table style="width:100%"><tbody>${projectRows}</tbody></table>
-  <div class="footer"><span>מערכת ניהול יערות — קק"ל</span><span>forewise.co</span></div>
+  <div class="footer"><span>מערכת ניהול יערות — Forewise</span><span>forewise.co</span></div>
 </body></html>`;
   };
 

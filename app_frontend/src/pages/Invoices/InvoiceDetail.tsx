@@ -189,7 +189,7 @@ const InvoiceDetail: React.FC = () => {
           {/* Print header */}
           <div className="hidden print:block text-center mb-6">
             <h1 className="text-2xl font-bold">חשבונית מספר: {invoice.invoice_number}</h1>
-            <p className="text-gray-500">קרן קיימת לישראל — מערכת ניהול יערות</p>
+            <p className="text-gray-500">Forewise — מערכת ניהול יערות</p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -341,7 +341,7 @@ const InvoiceDetail: React.FC = () => {
 
         {/* Print Footer */}
         <div className="hidden print:block text-center mt-8 text-xs text-gray-400">
-          <p>מסמך זה הופק אוטומטית ממערכת Forewise — קרן קיימת לישראל</p>
+          <p>מסמך זה הופק אוטומטית ממערכת Forewise — Forewise</p>
           <p>{invoice.invoice_number} | {fmtDate(invoice.issue_date)}</p>
         </div>
       </div>

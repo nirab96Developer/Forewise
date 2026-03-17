@@ -1,6 +1,6 @@
 
 // src/pages/WorkOrders/NewWorkOrder.tsx
-// דרישת כלים - עיצוב נקי בסגנון קק"ל עם 4 בלוקים ברורים
+// דרישת כלים - עיצוב נקי בסגנון Forewise עם 4 בלוקים ברורים
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { 
@@ -689,7 +689,7 @@ const NewWorkOrder: React.FC = () => {
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-kkl-border space-y-4">
                 <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
                   <Info className="w-4 h-4 mt-0.5 text-kkl-info flex-shrink-0" />
-                  <span>נדרש לפי נהלי קק"ל כאשר סוטים מסבב הוגן</span>
+                  <span>נדרש לפי נהלי Forewise כאשר סוטים מסבב הוגן</span>
                 </div>
 
                 <div className="grid grid-cols-12 gap-4">

@@ -120,7 +120,7 @@ const SmartHelpWidget: React.FC = () => {
     setIsOpen(true);
     if (messages.length === 0) {
       setTimeout(() => {
-        addMsg('bot', `שלום ${userInfo.current.name}! 👋 אני הבוט של מערכת קק"ל. במה אוכל לעזור?`, { showButtons: 'none' });
+        addMsg('bot', `שלום ${userInfo.current.name}! 👋 אני הבוט של מערכת Forewise. במה אוכל לעזור?`, { showButtons: 'none' });
       }, 200);
     }
   };
@@ -251,7 +251,7 @@ const SmartHelpWidget: React.FC = () => {
                 <HelpCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-white font-bold text-sm">בוט תמיכה קק"ל</p>
+                <p className="text-white font-bold text-sm">בוט תמיכה Forewise</p>
                 <p className="text-green-100 text-xs flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-green-300 rounded-full inline-block" />
                   מחובר

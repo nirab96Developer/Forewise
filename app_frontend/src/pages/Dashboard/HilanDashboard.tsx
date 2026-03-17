@@ -1,6 +1,6 @@
 
 // src/pages/Dashboard/HilanDashboard.tsx
-// דשבורד בסגנון חילן - נקי, מודרני, צבעי קק"ל
+// דשבורד בסגנון חילן - נקי, מודרני, צבעי Forewise
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {

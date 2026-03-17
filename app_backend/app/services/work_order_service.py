@@ -261,11 +261,11 @@ class WorkOrderService:
                         subject=f"הזמנת עבודה מספר {work_order.order_number} - דורש תגובה",
                         body=(
                             f"שלום {supplier.name},\n\n"
-                            f"קיבלת הזמנת עבודה חדשה מקק\"ל.\n"
+                            f"קיבלת הזמנת עבודה חדשה מForewise.\n"
                             f"הזמנה: {work_order.title or work_order.order_number}\n\n"
                             f"לצפייה ואישור/דחייה:\n{portal_url}\n\n"
                             f"הקישור תקף עד: {expires_at.strftime('%d/%m/%Y %H:%M')}\n\n"
-                            "קק\"ל"
+                            "Forewise"
                         ),
                     )
                     email_sent = True
@@ -760,7 +760,7 @@ class WorkOrderService:
                             f"{location_line}"
                             f"{waze_line}\n\n"
                             f"לפרטים נוספים יש לפנות למתאם.\n\n"
-                            "קק\"ל"
+                            "Forewise"
                         )
                         html_body = f"""
 <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
@@ -774,7 +774,7 @@ class WorkOrderService:
     {"<p><a href='" + waze_link + "' style='background:#00b4e8;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:8px;'>🧭 נווט ב-Waze</a></p>" if waze_link else ""}
     <hr style="margin:20px 0;border:none;border-top:1px solid #e5e7eb;"/>
     <p style="color:#6b7280;font-size:13px;">לפרטים נוספים יש לפנות למתאם ההזמנות.</p>
-    <p style="color:#6b7280;font-size:13px;">קק"ל</p>
+    <p style="color:#6b7280;font-size:13px;">Forewise</p>
   </div>
 </div>"""
                         send_email(to=to_email, subject=subject, body=body, html_body=html_body)
@@ -818,7 +818,7 @@ class WorkOrderService:
                     f"{location_line}"
                     f"{waze_line}\n\n"
                     f"אושר על ידי: {admin_name}\n\n"
-                    "קק\"ל"
+                    "Forewise"
                 )
                 send_email(to=recipient_user.email, subject=subject, body=body)
                 log.info(f"Approval email sent to work manager {recipient_user.email} for WO {wo_id}")

@@ -810,7 +810,7 @@ async def biometric_register_start(
         return {
             "challenge": challenge,
             "rp": {
-                "name": "מערכת דיווח שעות קק״ל",
+                "name": "מערכת דיווח שעות Forewise",
                 "id": rp_id
             },
             "user": {
@@ -1441,7 +1441,7 @@ async def webauthn_register_begin(
 
     options = _wn.generate_registration_options(
         rp_id=rp_id,
-        rp_name="מערכת ניהול יערות קק״ל",
+        rp_name="מערכת ניהול יערות Forewise",
         user_name=current_user.username,
         user_display_name=current_user.full_name or current_user.username,
         user_id=str(current_user.id).encode(),

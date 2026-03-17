@@ -25,7 +25,7 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  // בחירת המחלקות המתאימות לפי הוריאנט - סגנון KKL/Hillan מקצועי
+  // בחירת המחלקות המתאימות לפי הוריאנט - סגנון Forewise/Hillan מקצועי
   const getVariantClasses = (): string => {
     switch (variant) {
       case 'primary':

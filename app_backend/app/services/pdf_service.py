@@ -24,7 +24,7 @@ def generate_worklog_pdf(worklog_data: Dict[str, Any], segments: List[Dict[str, 
     from weasyprint import HTML
     from weasyprint.text.fonts import FontConfiguration
     
-    # Load KKL logo
+    # Load Forewise logo
     logo_base64 = ""
     try:
         import os
@@ -99,7 +99,7 @@ def generate_worklog_pdf(worklog_data: Dict[str, Any], segments: List[Dict[str, 
 <html dir="rtl" lang="he">
 <head>
     <meta charset="UTF-8">
-    <title>אישור דיווח עבודה יומי - קק"ל</title>
+    <title>אישור דיווח עבודה יומי - Forewise</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
         
@@ -329,11 +329,11 @@ def generate_worklog_pdf(worklog_data: Dict[str, Any], segments: List[Dict[str, 
         <div class="header">
             <div class="header-right">
                 <div class="logo-container">
-                    {'<img src="' + logo_base64 + '" alt="KKL Logo">' if logo_base64 else ''}
+                    {'<img src="' + logo_base64 + '" alt="Forewise Logo">' if logo_base64 else ''}
                 </div>
                 <div class="title-section">
                     <h1>אישור דיווח עבודה יומי</h1>
-                    <div class="subtitle">מערכת ניהול יערות - קרן קיימת לישראל</div>
+                    <div class="subtitle">מערכת ניהול יערות — Forewise</div>
                 </div>
             </div>
             <div class="approval-box">
@@ -458,8 +458,8 @@ def generate_worklog_pdf(worklog_data: Dict[str, Any], segments: List[Dict[str, 
         </div>
         
         <div class="footer">
-            <div>מזהה: KKL-WR-{datetime.now().strftime('%Y%m%d')}-{worklog_data.get('id', '')}</div>
-            <div>מערכת ניהול יערות קק"ל</div>
+            <div>מזהה: FW-WR-{datetime.now().strftime('%Y%m%d')}-{worklog_data.get('id', '')}</div>
+            <div>מערכת ניהול יערות Forewise</div>
             <div>{datetime.now().strftime('%d/%m/%Y %H:%M')}</div>
         </div>
     </div>

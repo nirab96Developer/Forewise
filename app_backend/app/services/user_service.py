@@ -156,25 +156,25 @@ class UserService(BaseService[User]):
             from app.core.config import settings
             login_url = getattr(settings, "FRONTEND_URL", "http://167.99.228.10")
             full_name = getattr(user_data, "full_name", "") or user_data.email
-            subject = "ברוך הבא למערכת קק\"ל — פרטי כניסה"
+            subject = "ברוך הבא למערכת Forewise — פרטי כניסה"
             body = (
                 f"שלום {full_name},\n\n"
-                f"נוצר עבורך חשבון חדש במערכת קק\"ל.\n\n"
+                f"נוצר עבורך חשבון חדש במערכת Forewise.\n\n"
                 f"פרטי כניסה:\n"
                 f"  אימייל:  {user_data.email}\n"
                 f"  סיסמה:  {plain_password}\n\n"
                 f"קישור לכניסה:\n{login_url}\n\n"
                 f"מומלץ לשנות את הסיסמה לאחר הכניסה הראשונה.\n\n"
-                "קק\"ל"
+                "Forewise"
             )
             html_body = f"""
 <div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
   <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
-    <h2 style="margin:0;">ברוך הבא למערכת קק&quot;ל 🌲</h2>
+    <h2 style="margin:0;">ברוך הבא למערכת Forewise 🌲</h2>
   </div>
   <div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
     <p>שלום <strong>{full_name}</strong>,</p>
-    <p>נוצר עבורך חשבון חדש במערכת ניהול ההזמנות של קק&quot;ל.</p>
+    <p>נוצר עבורך חשבון חדש במערכת ניהול ההזמנות של Forewise.</p>
     <table style="background:#f9fafb;border-radius:8px;padding:16px;width:100%;border-collapse:collapse;margin:16px 0;">
       <tr><td style="padding:6px 8px;color:#6b7280;">אימייל</td><td style="padding:6px 8px;font-weight:bold;">{user_data.email}</td></tr>
       <tr><td style="padding:6px 8px;color:#6b7280;">סיסמה זמנית</td><td style="padding:6px 8px;font-weight:bold;font-family:monospace;font-size:16px;">{plain_password}</td></tr>
@@ -183,7 +183,7 @@ class UserService(BaseService[User]):
       כניסה למערכת →
     </a>
     <p style="color:#6b7280;font-size:13px;margin-top:20px;">מומלץ לשנות את הסיסמה לאחר הכניסה הראשונה.</p>
-    <p style="color:#6b7280;font-size:13px;">קק&quot;ל</p>
+    <p style="color:#6b7280;font-size:13px;">Forewise</p>
   </div>
 </div>"""
             send_email(to=user_data.email, subject=subject, body=body, html_body=html_body)

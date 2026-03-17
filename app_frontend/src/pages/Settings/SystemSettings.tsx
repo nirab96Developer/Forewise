@@ -124,7 +124,7 @@ const settingsCategories: SettingsCategory[] = [
       {
         id: 'regions',
         title: 'מרחבים',
-        description: 'ניהול מרחבי קק"ל',
+        description: 'ניהול מרחבי Forewise',
         icon: <Building2 className="w-5 h-5" />,
         path: '/settings/organization/regions',
       },

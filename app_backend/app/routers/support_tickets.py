@@ -103,7 +103,7 @@ def _send_new_ticket_email(ticket_id: int, title: str, description: str, user_na
 http://167.99.228.10/support
 
 ---
-מערכת ניהול יערות קק״ל
+מערכת ניהול יערות Forewise
 """
         send_email(to=ADMIN_EMAIL, subject=subject, body=body)
     except Exception as e:

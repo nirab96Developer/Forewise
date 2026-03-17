@@ -310,7 +310,7 @@ def send_worklog_approval_email(
 לעיונך בלבד.
 
 בברכה,
-מערכת קק"ל
+מערכת Forewise
 """
     elif recipient_type == "accountant":
         body = f"""
@@ -329,7 +329,7 @@ def send_worklog_approval_email(
 {'נימוק חריגה: ' + worklog_data.get('non_standard_reason', '') if not worklog_data.get('is_standard', True) else ''}
 
 בברכה,
-מערכת קק"ל
+מערכת Forewise
 """
     else:  # manager
         body = f"""
@@ -346,7 +346,7 @@ def send_worklog_approval_email(
 • סה"כ שעות: {worklog_data.get('total_hours', 0)}
 
 בברכה,
-מערכת קק"ל
+מערכת Forewise
 """
     
     return send_email_with_pdf(

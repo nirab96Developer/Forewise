@@ -576,7 +576,7 @@ def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: st
                         body=(
                             f"שלום {manager.first_name or 'מנהל'},\n\n"
                             f"הזמנה מספר {wo_num} {action_text} על ידי הספק {supplier_name}.\n\n"
-                            f"בברכה,\nמערכת ניהול יערות קק\"ל"
+                            f"בברכה,\nמערכת ניהול יערות Forewise"
                         ),
                     )
         except Exception:
@@ -676,7 +676,7 @@ def _send_order_to_supplier(db: Session, work_order: WorkOrder):
                 body=f"""
 שלום {supplier.name},
 
-קיבלת הזמנת עבודה חדשה מקק"ל.
+קיבלת הזמנת עבודה חדשה מForewise.
 
 פרטי ההזמנה:
 • מספר הזמנה: {work_order.order_number}
@@ -690,7 +690,7 @@ def _send_order_to_supplier(db: Session, work_order: WorkOrder):
 שים לב: הקישור תקף ל-3 שעות בלבד.
 
 בברכה,
-מערכת ניהול יערות קק"ל
+מערכת ניהול יערות Forewise
 """
             )
         

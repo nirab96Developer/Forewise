@@ -341,7 +341,7 @@ const SupplierPortal: React.FC = () => {
               <img src={kklLogo} alt="Forewise Logo" className="w-14 h-14 object-contain" />
               <div>
                 <h1 className="text-xl font-bold text-slate-800">הזמנת עבודה</h1>
-                <p className="text-sm text-slate-500">קק"ל - ניהול יערות</p>
+                <p className="text-sm text-slate-500">Forewise - ניהול יערות</p>
               </div>
             </div>
             <div className="text-left">
@@ -638,7 +638,7 @@ const SupplierPortal: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 mt-12">
         <div className="max-w-2xl mx-auto px-4 py-4 text-center">
           <p className="text-sm text-slate-500">
-            קרן קיימת לישראל - מערכת ניהול יערות
+            Forewise — מערכת ניהול יערות
           </p>
           <p className="text-xs text-slate-400 mt-1">
             לשאלות או בעיות טכניות, פנה למנהל העבודה

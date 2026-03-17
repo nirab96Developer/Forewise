@@ -197,7 +197,7 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
 <body>
 <div class="header">
   <div>
-    <h1>דוח יומי — קק"ל</h1>
+    <h1>דוח יומי — Forewise</h1>
     <span class="badge">{wl.status or 'PENDING'}</span>
   </div>
   <div style="text-align:left; color:#888; font-size:11px;">

@@ -111,19 +111,19 @@ class AuthService:
             try:
                 from app.core.email import send_email
                 full_name = user.full_name or user.username or "משתמש"
-                subject = "קוד אימות — כניסה למערכת קק\"ל"
+                subject = "קוד אימות — כניסה למערכת Forewise"
                 body = (
                     f"שלום {full_name},\n\n"
                     f"קוד האימות שלך הוא:\n\n"
                     f"    {otp_code}\n\n"
                     f"הקוד תקף ל-10 דקות.\n\n"
                     "אם לא ביקשת להתחבר, התעלם מהודעה זו.\n\n"
-                    "קק\"ל"
+                    "Forewise"
                 )
                 html_body = f"""
 <div dir="rtl" style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
   <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
-    <h2 style="margin:0;">קוד אימות — קק&quot;ל 🌲</h2>
+    <h2 style="margin:0;">קוד אימות — Forewise 🌲</h2>
   </div>
   <div style="padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
     <p>שלום <strong>{full_name}</strong>,</p>
@@ -134,7 +134,7 @@ class AuthService:
     <p style="color:#6b7280;font-size:13px;">הקוד תקף ל-10 דקות בלבד.</p>
     <p style="color:#6b7280;font-size:13px;">אם לא ביקשת להתחבר — התעלם מהודעה זו.</p>
     <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
-    <p style="color:#9ca3af;font-size:12px;">קק&quot;ל — מערכת ניהול הזמנות</p>
+    <p style="color:#9ca3af;font-size:12px;">Forewise — מערכת ניהול הזמנות</p>
   </div>
 </div>"""
                 send_email(to=user.email, subject=subject, body=body, html_body=html_body)
