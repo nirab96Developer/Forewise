@@ -118,24 +118,24 @@ const Navigation: React.FC = () => {
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 md:w-9 md:h-9 rounded-xl bg-white flex items-center justify-center shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 105" className="w-7 h-7 md:w-6 md:h-6">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 md:w-10 md:h-10 rounded-2xl bg-white/95 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/10 border border-white/20">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="5 5 110 95" className="w-7 h-6 md:w-6 md:h-5">
                   <defs>
-                    <linearGradient id="nav_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#0097a7"/></linearGradient>
-                    <linearGradient id="nav_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#0097a7"/><stop offset="50%" stopColor="#2e7d32"/><stop offset="100%" stopColor="#66bb6a"/></linearGradient>
-                    <linearGradient id="nav_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2e7d32"/><stop offset="40%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#8B5e3c"/></linearGradient>
+                    <linearGradient id="nav_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#26a69a"/></linearGradient>
+                    <linearGradient id="nav_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#26a69a"/><stop offset="50%" stopColor="#2e7d32"/><stop offset="100%" stopColor="#66bb6a"/></linearGradient>
+                    <linearGradient id="nav_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#388e3c"/><stop offset="50%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#8d6e63"/></linearGradient>
                   </defs>
-                  <path d="M46 20 Q60 9 74 20" stroke="url(#nav_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                  <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#nav_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                  <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#nav_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                  <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
-                  <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
+                  <path d="M46 18 Q60 6 74 18" stroke="url(#nav_t)" strokeWidth="6" fill="none" strokeLinecap="round"/>
+                  <path d="M28 46 Q42 32 60 42 Q78 32 92 46" stroke="url(#nav_m)" strokeWidth="6" fill="none" strokeLinecap="round"/>
+                  <path d="M12 74 Q28 58 46 68 Q60 76 74 68 Q92 58 108 74" stroke="url(#nav_b)" strokeWidth="6" fill="none" strokeLinecap="round"/>
+                  <line x1="60" y1="76" x2="60" y2="90" stroke="#8d6e63" strokeWidth="4" strokeLinecap="round"/>
+                  <circle cx="60" cy="94" r="4.5" fill="#8d6e63"/>
                 </svg>
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="text-[13px] font-bold text-white">מערכת ניהול יערות</span>
-                <span className="text-[10px] text-white/60 font-light hidden sm:block">Forewise</span>
+                <span className="text-[13px] md:text-sm font-bold text-white tracking-wide">מערכת ניהול יערות</span>
+                <span className="text-[10px] text-white/50 hidden sm:block tracking-widest uppercase" style={{fontFamily:"'Heebo',sans-serif",letterSpacing:'2px'}}>FOREWISE</span>
               </div>
             </div>
 
