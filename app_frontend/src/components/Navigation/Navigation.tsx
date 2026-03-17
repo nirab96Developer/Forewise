@@ -133,9 +133,9 @@ const Navigation: React.FC = () => {
                   <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
                 </svg>
               </div>
-              <div className="flex items-baseline gap-2">
-                <h1 className="text-[15px] md:text-base font-bold tracking-wide" style={{fontFamily: "'Heebo', sans-serif"}}>Forewise</h1>
-                <span className="text-[11px] text-white/60 font-light hidden md:inline">מערכת ניהול יערות</span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[13px] font-bold text-white">מערכת ניהול יערות</span>
+                <span className="text-[10px] text-white/60 font-light hidden sm:block">Forewise</span>
               </div>
             </div>
 
