@@ -102,20 +102,24 @@ const Navigation: React.FC = () => {
   return (
     <>
       {/* Header */}
-      <header className="text-white h-16 shadow-lg z-50 fixed top-0 left-0 right-0 transition-all duration-300 bg-white border-b border-gray-200">
+      <header className={`text-white h-16 shadow-lg z-50 fixed top-0 left-0 right-0 transition-all duration-300 ${
+        isMobile 
+          ? 'bg-gradient-to-r from-green-600 via-kkl-green to-green-700' 
+          : 'bg-kkl-green'
+      }`}>
         <div className="h-full flex items-center justify-between px-6 md:px-8">
           {/* Left side - Logo & App Name */}
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden w-12 h-12 flex items-center justify-center rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors touch-manipulation min-h-[44px] min-w-[44px] text-gray-700"
+              className="md:hidden w-12 h-12 flex items-center justify-center rounded-lg hover:bg-white/20 active:bg-white/30 transition-colors touch-manipulation min-h-[44px] min-w-[44px]"
               aria-label="תפריט"
             >
               {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 md:w-10 md:h-10 rounded-2xl bg-emerald-50 flex items-center justify-center border border-emerald-200">
+              <div className="w-11 h-11 md:w-10 md:h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="5 5 110 95" className="w-7 h-6 md:w-6 md:h-5">
                   <defs>
                     <linearGradient id="nav_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#26a69a"/></linearGradient>
@@ -130,17 +134,17 @@ const Navigation: React.FC = () => {
                 </svg>
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="text-[13px] md:text-sm font-bold text-gray-800 tracking-wide">מערכת ניהול יערות</span>
-                <span className="text-[10px] text-gray-400 hidden sm:block tracking-widest uppercase" style={{fontFamily:"'Heebo',sans-serif",letterSpacing:'2px'}}>FOREWISE</span>
+                <span className="text-[13px] md:text-sm font-bold text-white tracking-wide">מערכת ניהול יערות</span>
+                <span className="text-[10px] text-white/50 hidden sm:block tracking-widest uppercase" style={{fontFamily:"'Heebo',sans-serif",letterSpacing:'2px'}}>FOREWISE</span>
               </div>
             </div>
 
             <button
               onClick={() => window.location.reload()}
-              className="md:hidden w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 active:bg-gray-300 transition-colors touch-manipulation mr-1"
+              className="md:hidden w-9 h-9 bg-white/15 rounded-full flex items-center justify-center hover:bg-white/25 active:bg-white/35 transition-colors touch-manipulation mr-1"
               aria-label="רענן"
             >
-              <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
@@ -150,15 +154,15 @@ const Navigation: React.FC = () => {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center">
-                  <span className="text-emerald-700 text-sm font-bold">{username.charAt(0)}</span>
+                <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">{username.charAt(0)}</span>
                 </div>
                 <div className="hidden sm:flex flex-col text-right">
-                  <span className="text-sm font-medium text-gray-800">{username}</span>
-                  <span className="text-xs text-gray-400">{getRoleDisplayName(userRole)}</span>
+                  <span className="text-sm font-medium">{username}</span>
+                  <span className="text-xs text-white/80">{getRoleDisplayName(userRole)}</span>
                 </div>
               </div>
-              <div className="hidden sm:block w-px h-8 bg-gray-200"></div>
+              <div className="hidden sm:block w-px h-8 bg-white/30"></div>
             </div>
 
             {userId > 0 && (
