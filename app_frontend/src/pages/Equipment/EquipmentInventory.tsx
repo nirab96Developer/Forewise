@@ -45,8 +45,8 @@ const EquipmentInventory: React.FC = () => {
     setLoading(true);
     try {
       const [equipmentRes, suppliersRes] = await Promise.all([
-        api.get('/equipment'),
-        api.get('/suppliers')
+        api.get('/equipment', { params: { page_size: 500 } }),
+        api.get('/suppliers', { params: { page_size: 200 } })
       ]);
       
       const eqData = equipmentRes.data?.items || equipmentRes.data || [];
