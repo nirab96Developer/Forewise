@@ -375,7 +375,7 @@ const EquipmentInventory: React.FC = () => {
                               </div>
                               <div className="col-span-1 text-left">
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); navigate(`/equipment/${eq.id}`); }}
+                                  onClick={(e) => { e.stopPropagation(); if (eq.id) navigate(`/equipment/${eq.id}`); }}
                                   className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-emerald-600"
                                 >
                                   <Eye className="w-4 h-4" />
@@ -406,7 +406,7 @@ const EquipmentInventory: React.FC = () => {
                       <Truck className="w-4 h-4 text-slate-300" />
                       <span className="font-bold tracking-wider">{eq.license_plate || eq.code}</span>
                     </div>
-                    <button onClick={() => navigate(`/equipment/${eq.id}`)} className="p-1.5 hover:bg-white/10 rounded-lg">
+                    <button onClick={() => { if (eq.id) navigate(`/equipment/${eq.id}`); }} className="p-1.5 hover:bg-white/10 rounded-lg">
                       <Eye className="w-3.5 h-3.5" />
                     </button>
                   </div>

@@ -29,8 +29,12 @@ const EquipmentDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      fetchEquipmentDetail(parseInt(id));
+    const numId = parseInt(id || '');
+    if (id && !isNaN(numId) && numId > 0) {
+      fetchEquipmentDetail(numId);
+    } else {
+      setLoading(false);
+      setError('מזהה ציוד לא תקין');
     }
   }, [id]);
 
