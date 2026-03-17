@@ -20,7 +20,7 @@ router = APIRouter(prefix="/equipment-types", tags=["Equipment Types"])
 eq_type_service = EquipmentTypeService()
 
 
-@router.get("", response_model=EquipmentTypeList)
+@router.get("")
 def list_equipment_types(
     search: Annotated[EquipmentTypeSearch, Depends()],
     db: Annotated[Session, Depends(get_db)],
@@ -30,7 +30,13 @@ def list_equipment_types(
     require_permission(current_user, "equipment_types.read")
     items, total = eq_type_service.list(db, search)
     total_pages = (total + search.page_size - 1) // search.page_size if total > 0 else 1
-    return EquipmentTypeList(items=items, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
+    result_items = []
+    for it in items:
+        d = {c.name: getattr(it, c.name, None) for c in it.__table__.columns}
+        d['hourly_rate'] = float(d.get('hourly_rate') or 0)
+        d['overnight_rate'] = float(d.get('overnight_rate') or 0)
+        result_items.append(d)
+    return {"items": result_items, "total": total, "page": search.page, "page_size": search.page_size, "total_pages": total_pages}
 
 
 @router.get("/statistics", response_model=EquipmentTypeStatistics)
