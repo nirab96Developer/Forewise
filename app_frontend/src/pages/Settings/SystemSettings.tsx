@@ -52,19 +52,12 @@ const settingsCategories: SettingsCategory[] = [
         icon: <Shield className="w-5 h-5" />,
         path: '/settings/admin/roles',
       },
-      {
-        id: 'suppliers-manage',
-        title: 'ניהול ספקים',
-        description: 'הוספה, עריכה והפעלת ספקים',
-        icon: <Truck className="w-5 h-5" />,
-        path: '/suppliers',
-      },
     ],
   },
   {
     id: 'suppliers',
-    title: 'הגדרות ספקים',
-    description: 'ניהול ספקים וציוד',
+    title: 'ספקים וציוד',
+    description: 'ניהול ספקים, ציוד ומלאי כלים',
     icon: <Truck className="w-6 h-6" />,
     color: 'bg-kkl-green',
     items: [
@@ -77,8 +70,8 @@ const settingsCategories: SettingsCategory[] = [
       },
       {
         id: 'supplier-equipment',
-        title: 'ציוד ספקים',
-        description: 'ניהול הכלים של כל ספק',
+        title: 'מלאי כלים',
+        description: 'כל הכלים לפי ספקים וסוגי ציוד',
         icon: <Wrench className="w-5 h-5" />,
         path: '/equipment/inventory',
       },
