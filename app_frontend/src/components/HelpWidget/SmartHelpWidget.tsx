@@ -223,7 +223,7 @@ const SmartHelpWidget: React.FC = () => {
       {/* ── Floating Button ── */}
       <button
         onClick={isOpen ? closeWidget : openWidget}
-        className={`fixed bottom-6 left-6 z-50 p-4 rounded-full shadow-lg transition-all duration-300 ${
+        className={`fixed bottom-4 left-4 md:bottom-6 md:left-6 z-50 p-2.5 md:p-3.5 rounded-full shadow-lg transition-all duration-300 ${
           isOpen
             ? 'bg-gray-700 hover:bg-gray-800'
             : 'bg-gradient-to-br from-green-600 to-green-700 hover:shadow-xl hover:scale-110'
@@ -240,7 +240,7 @@ const SmartHelpWidget: React.FC = () => {
       {/* ── Chat Panel ── */}
       {isOpen && (
         <div
-          className="fixed bottom-24 left-6 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200"
+          className="fixed bottom-20 left-4 md:bottom-24 md:left-6 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200"
           dir="rtl"
           style={{ animation: 'slideUp 0.25s ease-out' }}
         >

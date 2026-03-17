@@ -146,7 +146,7 @@ const Invoices: React.FC = () => {
 
         {/* Summary Cards */}
         {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>

@@ -289,12 +289,12 @@ const PricingReports: React.FC = () => {
         </div>
 
         {/* Report Type Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto">
           {reportTabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setReportType(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                 reportType === tab.key
                   ? "bg-green-600 text-white shadow-sm"
                   : "bg-white text-gray-600 hover:bg-gray-100 shadow-sm"
@@ -308,7 +308,7 @@ const PricingReports: React.FC = () => {
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-wrap items-end gap-4 overflow-x-auto">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">מתאריך</label>
               <input

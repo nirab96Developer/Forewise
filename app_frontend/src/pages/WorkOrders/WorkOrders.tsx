@@ -137,7 +137,7 @@ const WorkOrders: React.FC = () => {
           </div>
 
           {/* Search and Filter */}
-          <div className="flex gap-4 animate-slideIn">
+          <div className="flex flex-col sm:flex-row gap-4 animate-slideIn">
             <div className="relative flex-1">
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input

@@ -157,12 +157,12 @@ const Navigation: React.FC = () => {
                 <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-bold">{username.charAt(0)}</span>
                 </div>
-                <div className="flex flex-col text-right">
+                <div className="hidden sm:flex flex-col text-right">
                   <span className="text-sm font-medium">{username}</span>
                   <span className="text-xs text-white/80">{getRoleDisplayName(userRole)}</span>
                 </div>
               </div>
-              <div className="w-px h-8 bg-white/30"></div>
+              <div className="hidden sm:block w-px h-8 bg-white/30"></div>
             </div>
 
             {userId > 0 && (
