@@ -331,6 +331,100 @@ const EquipmentAccordion: React.FC<{ equipment: EqItem[]; suppliers: any[]; navi
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Pricing Tab (equipment types with rates)
+// ──────────────────────────────────────────────────────────────────────────────
+const PricingTab: React.FC = () => {
+  const [types, setTypes] = React.useState<any[]>([]);
+  const [loadingPricing, setLoadingPricing] = React.useState(true);
+  const [editingId, setEditingId] = React.useState<number | null>(null);
+  const [editRate, setEditRate] = React.useState({ hourly_rate: '', overnight_rate: '' });
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/equipment-types');
+        const data = res.data?.items || res.data || [];
+        setTypes(Array.isArray(data) ? data : []);
+      } catch { setTypes([]); }
+      setLoadingPricing(false);
+    })();
+  }, []);
+
+  const startEdit = (t: any) => {
+    setEditingId(t.id);
+    setEditRate({ hourly_rate: String(t.hourly_rate || ''), overnight_rate: String(t.overnight_rate || '') });
+  };
+
+  const saveRate = async (id: number) => {
+    try {
+      await api.put(`/equipment-types/${id}`, {
+        hourly_rate: parseFloat(editRate.hourly_rate) || 0,
+        overnight_rate: parseFloat(editRate.overnight_rate) || 0,
+      });
+      setTypes(prev => prev.map(t => t.id === id ? { ...t, hourly_rate: parseFloat(editRate.hourly_rate) || 0, overnight_rate: parseFloat(editRate.overnight_rate) || 0 } : t));
+      setEditingId(null);
+      if ((window as any).showToast) (window as any).showToast('תעריף עודכן', 'success');
+    } catch (e: any) {
+      if ((window as any).showToast) (window as any).showToast(e?.response?.data?.detail || 'שגיאה', 'error');
+    }
+  };
+
+  if (loadingPricing) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-3 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;
+
+  return (
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h3 className="font-bold text-gray-900">תעריפי ציוד</h3>
+          <p className="text-xs text-gray-500">{types.length} סוגי ציוד</p>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {types.map(t => (
+          <div key={t.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${getTypeColor(t.name)}`}>
+                <Wrench className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <div className="font-bold text-gray-900">{t.name}</div>
+                <div className="text-xs text-gray-500">{t.code || `TYPE-${t.id}`}</div>
+              </div>
+              {editingId === t.id ? (
+                <div className="flex items-center gap-3">
+                  <div className="text-center">
+                    <div className="text-[10px] text-gray-500 mb-1">שעתי ₪</div>
+                    <input value={editRate.hourly_rate} onChange={e => setEditRate(p => ({ ...p, hourly_rate: e.target.value }))} className="w-20 px-2 py-1.5 border border-emerald-300 rounded-lg text-sm text-center font-bold" dir="ltr" autoFocus />
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] text-gray-500 mb-1">לילה ₪</div>
+                    <input value={editRate.overnight_rate} onChange={e => setEditRate(p => ({ ...p, overnight_rate: e.target.value }))} className="w-20 px-2 py-1.5 border border-emerald-300 rounded-lg text-sm text-center font-bold" dir="ltr" />
+                  </div>
+                  <button onClick={() => saveRate(t.id)} className="p-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark"><Save className="w-4 h-4" /></button>
+                  <button onClick={() => setEditingId(null)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className="text-center">
+                    <div className="text-[10px] text-gray-500">שעתי</div>
+                    <div className="font-bold text-emerald-600 text-lg">{t.hourly_rate ? `₪${Number(t.hourly_rate).toLocaleString()}` : '—'}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] text-gray-500">לילה</div>
+                    <div className="font-bold text-blue-600">{t.overnight_rate ? `₪${Number(t.overnight_rate).toLocaleString()}` : '—'}</div>
+                  </div>
+                  <button onClick={() => startEdit(t)} className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg"><Edit className="w-4 h-4" /></button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Main Component
 // ──────────────────────────────────────────────────────────────────────────────
 const SupplierSettings: React.FC = () => {
@@ -638,18 +732,8 @@ const SupplierSettings: React.FC = () => {
               navigate={navigate}
             />
           ) : activeTab === 'pricing' ? (
-            /* ── Pricing Tab — redirect ── */
-            <div className="p-8 text-center">
-              <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-kkl-text mb-2">תמחור כלים</h3>
-              <p className="text-gray-500 mb-4">ניהול תעריפי שעה לכל סוגי הכלים</p>
-              <button
-                onClick={() => navigate('/settings/equipment-catalog?tab=rates')}
-                className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors"
-              >
-                עבור לניהול תעריפים
-              </button>
-            </div>
+            /* ── Pricing Tab — inline ── */
+            <PricingTab />
           ) : activeTab === 'rotation' ? (
             /* ── Fair Rotation Tab — redirect ── */
             <div className="p-8 text-center">
