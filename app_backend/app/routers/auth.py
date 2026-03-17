@@ -807,14 +807,17 @@ async def biometric_register_start(
             "created_at": datetime.utcnow()
         }
 
+        # user.id must be base64url-encoded for WebAuthn
+        user_id_b64 = base64.urlsafe_b64encode(str(user_id).encode()).decode()
+
         return {
             "challenge": challenge,
             "rp": {
-                "name": "מערכת דיווח שעות Forewise",
+                "name": "Forewise — מערכת ניהול יערות",
                 "id": rp_id
             },
             "user": {
-                "id": str(user_id),
+                "id": user_id_b64,
                 "name": username,
                 "displayName": current_user.full_name or username
             }
@@ -849,9 +852,8 @@ async def biometric_register_verify(
         # Clear challenge
         del _biometric_challenges[str(user_id)]
         
-        # Store the credential
-        # In production, properly parse attestationObject to extract public key
-        public_key = bytes(attestation_object) if attestation_object else b"demo_key"
+        # Store the credential (base64url string → bytes)
+        public_key = attestation_object.encode('utf-8') if attestation_object else b"demo_key"
         
         credential = BiometricCredential(
             user_id=user_id,
@@ -885,6 +887,8 @@ async def biometric_get_challenge(
 ):
     """Get challenge for biometric authentication."""
     try:
+        username = (request or {}).get("username", "")
+
         # Generate random challenge
         challenge = base64.b64encode(os.urandom(32)).decode('utf-8')
         challenge_id = secrets.token_urlsafe(16)
@@ -895,10 +899,18 @@ async def biometric_get_challenge(
             "created_at": datetime.utcnow()
         }
         
-        # Get all active credentials
-        credentials = db.query(BiometricCredential).filter(
-            BiometricCredential.is_active == True
-        ).all()
+        # Get credentials for this user (by username)
+        query = db.query(BiometricCredential).filter(BiometricCredential.is_active == True)
+        if username:
+            user = db.query(User).filter(User.username == username, User.is_active == True).first()
+            if user:
+                query = query.filter(BiometricCredential.user_id == user.id)
+            else:
+                raise HTTPException(status_code=404, detail="משתמש לא נמצא")
+
+        credentials = query.all()
+        if not credentials:
+            raise HTTPException(status_code=404, detail="לא נמצאו credentials ביומטריים למשתמש זה")
         
         allow_credentials = [
             {"id": cred.credential_id, "type": "public-key"}
@@ -908,6 +920,7 @@ async def biometric_get_challenge(
         return {
             "challenge": challenge,
             "challengeId": challenge_id,
+            "rpId": "forewise.co",
             "allowCredentials": allow_credentials
         }
         
@@ -954,11 +967,11 @@ async def biometric_authenticate(
         
         # Generate tokens
         access_token = create_access_token(
-            subject=str(user.id),
-            email=user.email,
-            role=user.role.code if user.role else "USER"
+            {"sub": str(user.id), "email": user.email, "role": user.role.code if user.role else "USER"}
         )
-        refresh_token = create_refresh_token(subject=str(user.id), email=user.email)
+        refresh_token = create_refresh_token(
+            {"sub": str(user.id)}
+        )
         
         # Create session
         session = UserSession(
