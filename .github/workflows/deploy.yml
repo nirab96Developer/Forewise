@@ -1,0 +1,87 @@
+# Forewise — CI/CD Pipeline
+# Triggers on push to main branch
+# Builds frontend, deploys to production server via SSH
+
+name: Deploy Forewise
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Build & Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # ── Step 1: Checkout repository ──
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── Step 2: Setup Node.js ──
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app_frontend/package-lock.json
+
+      # ── Step 3: Build frontend ──
+      - name: Install frontend dependencies
+        working-directory: app_frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: app_frontend
+        run: npm run build
+
+      # ── Step 4: Deploy to production server via SSH ──
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT }}
+          script_stop: true
+          script: |
+            set -e
+
+            echo "=== Forewise Deploy Started ==="
+            cd /root/kkl-forest
+
+            # Pull latest code
+            echo ">> Pulling latest code..."
+            git pull origin main
+
+            # Build frontend on server
+            echo ">> Building frontend..."
+            cd app_frontend
+            npm ci --production=false
+            npm run build
+            cd ..
+
+            # Restart backend
+            echo ">> Restarting backend..."
+            cd app_backend
+            fuser -k 8000/tcp 2>/dev/null || true
+            sleep 2
+            nohup .venv/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
+            sleep 5
+
+            # Verify health
+            echo ">> Checking health..."
+            HEALTH=$(curl -s http://localhost:8000/health)
+            echo "$HEALTH"
+
+            if echo "$HEALTH" | grep -q '"ok"'; then
+              echo "✅ Deploy successful!"
+            else
+              echo "❌ Health check failed!"
+              exit 1
+            fi
+
+            # Reload nginx
+            systemctl reload nginx
+            echo "=== Forewise Deploy Complete ==="
