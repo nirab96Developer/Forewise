@@ -29,7 +29,7 @@ jobs:
             set -e
 
             echo "=== Forewise Deploy Started ==="
-            cd /root/kkl-forest
+            cd /root/forewise
 
             # Pull latest code
             echo ">> Pulling latest code..."
