@@ -40,7 +40,7 @@ jobs:
             # Build frontend on server
             echo ">> Building frontend..."
             cd app_frontend
-            npm ci --production=false
+            npm install --legacy-peer-deps
             npm run build
             cd ..
 
