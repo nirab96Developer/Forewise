@@ -235,7 +235,7 @@ class EquipmentSearch(BaseModel):
     
     # Pagination
     page: int = Field(1, ge=1, description="עמוד")
-    page_size: int = Field(50, ge=1, le=200, description="גודל עמוד")
+    page_size: int = Field(50, ge=1, le=1000, description="גודל עמוד")
     
     # Sorting
     sort_by: str = Field("name", description="מיון לפי: name, code, created_at, status")
