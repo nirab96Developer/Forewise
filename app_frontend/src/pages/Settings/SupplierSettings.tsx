@@ -6,7 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowRight, Truck, Plus, Search, Edit, Trash2,
   DollarSign, Wrench, Filter, Eye,
-  CheckCircle, XCircle, AlertCircle, X, Save, RotateCcw
+  AlertCircle, X, Save, RotateCcw
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -56,6 +56,17 @@ const pathToTab: Record<string, TabType> = {
 // ──────────────────────────────────────────────────────────────────────────────
 // Add/Edit Supplier Modal
 // ──────────────────────────────────────────────────────────────────────────────
+const REGIONS = [
+  { id: 1, name: 'צפון' },
+  { id: 2, name: 'מרכז' },
+  { id: 3, name: 'דרום' },
+];
+const AREAS: Record<number, { id: number; name: string }[]> = {
+  1: [{ id: 12, name: 'גליל עליון ורמת הגולן' }, { id: 13, name: 'גליל מערבי וכרמל' }, { id: 14, name: 'גליל תחתון וגלבוע' }, { id: 16, name: 'עמק החולה' }],
+  2: [{ id: 31, name: 'שפלה וחוף' }, { id: 33, name: 'ההר' }, { id: 34, name: 'מנשה ושרון' }, { id: 37, name: 'מנסרה מרכז' }],
+  3: [{ id: 41, name: 'נגב צפוני' }, { id: 42, name: 'נגב מערבי' }, { id: 43, name: 'הר הנגב וערבה' }, { id: 45, name: 'שימור קרקע' }],
+};
+
 const SupplierModal: React.FC<{
   supplier: Supplier | null;
   onClose: () => void;
@@ -69,70 +80,157 @@ const SupplierModal: React.FC<{
     email: supplier?.email || '',
     address: supplier?.address || '',
     tax_id: supplier?.tax_id || '',
+    region_id: supplier?.region_id || '',
+    area_id: supplier?.area_id || '',
+    service_regions: [] as number[],
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
+  const selectedRegionAreas = form.region_id ? AREAS[Number(form.region_id)] || [] : [];
+
   const handleSave = async () => {
     if (!form.name.trim()) { setErr('שם ספק הוא שדה חובה'); return; }
+    if (!form.tax_id.trim()) { setErr('ח.פ / עוסק מורשה הוא שדה חובה'); return; }
+    if (!form.phone.trim()) { setErr('טלפון הוא שדה חובה'); return; }
+    if (!form.email.trim()) { setErr('אימייל הוא שדה חובה'); return; }
+    if (!form.region_id) { setErr('יש לבחור מרחב'); return; }
     setSaving(true);
     setErr('');
     try {
+      const payload = {
+        ...form,
+        region_id: Number(form.region_id) || null,
+        area_id: Number(form.area_id) || null,
+      };
       if (isEdit) {
-        await api.put(`/suppliers/${supplier.id}`, form);
+        await api.put(`/suppliers/${supplier.id}`, payload);
       } else {
-        // Generate code from name
         const code = 'SUP-' + Date.now().toString().slice(-6);
-        await api.post('/suppliers', { ...form, code });
+        await api.post('/suppliers', { ...payload, code });
       }
       onSaved();
       onClose();
     } catch (e: any) {
       const msg = e?.response?.data?.detail || 'שגיאה בשמירה';
       setErr(typeof msg === 'string' ? msg : JSON.stringify(msg));
-      if ((window as any).showToast) (window as any).showToast(msg, 'error');
     } finally {
       setSaving(false);
     }
   };
 
+  const toggleServiceRegion = (id: number) => {
+    setForm(prev => ({
+      ...prev,
+      service_regions: prev.service_regions.includes(id)
+        ? prev.service_regions.filter(r => r !== id)
+        : [...prev.service_regions, id]
+    }));
+  };
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-5 border-b border-kkl-border">
-          <h2 className="text-lg font-bold text-kkl-text">{isEdit ? 'עריכת ספק' : 'הוספת ספק חדש'}</h2>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl z-10">
+          <h2 className="text-lg font-bold text-gray-900">{isEdit ? 'עריכת ספק' : 'הקמת ספק חדש'}</h2>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
-        <div className="p-5 space-y-4">
-          {err && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{err}</div>}
-          {[
-            { key: 'name', label: 'שם ספק *', placeholder: 'שם מלא של הספק' },
-            { key: 'contact_name', label: 'איש קשר', placeholder: 'שם איש הקשר' },
-            { key: 'phone', label: 'טלפון', placeholder: '050-0000000' },
-            { key: 'email', label: 'אימייל', placeholder: 'example@supplier.com' },
-            { key: 'tax_id', label: 'ח.פ / עוסק מורשה', placeholder: '000000000' },
-            { key: 'address', label: 'כתובת', placeholder: 'כתובת הספק' },
-          ].map(f => (
-            <div key={f.key}>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{f.label}</label>
-              <input
-                value={(form as any)[f.key]}
-                onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
-                placeholder={f.placeholder}
-                className="w-full px-3 py-2 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent text-sm"
-              />
+        <div className="p-5 space-y-5">
+          {err && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">{err}</div>}
+          
+          {/* Section: פרטי חברה */}
+          <div>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+              <Truck className="w-4 h-4 text-kkl-green" /> פרטי חברה
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">שם ספק *</label>
+                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="שם מלא של הספק / חברה" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">ח.פ / עוסק מורשה *</label>
+                <input value={form.tax_id} onChange={e => setForm(p => ({ ...p, tax_id: e.target.value }))} placeholder="512345678" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" dir="ltr" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">כתובת</label>
+                <input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="רחוב, עיר" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" />
+              </div>
             </div>
-          ))}
+          </div>
+
+          <div className="border-t border-gray-100" />
+
+          {/* Section: איש קשר */}
+          <div>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+              <User className="w-4 h-4 text-blue-500" /> איש קשר
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">שם איש קשר</label>
+                <input value={form.contact_name} onChange={e => setForm(p => ({ ...p, contact_name: e.target.value }))} placeholder="שם מלא" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">טלפון *</label>
+                <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="050-0000000" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" dir="ltr" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">אימייל *</label>
+                <input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="supplier@example.com" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" dir="ltr" type="email" />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100" />
+
+          {/* Section: מיקום ושירות */}
+          <div>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-purple-500" /> מיקום ואזור שירות
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">מרחב *</label>
+                <select value={form.region_id} onChange={e => setForm(p => ({ ...p, region_id: e.target.value, area_id: '' }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm">
+                  <option value="">בחר מרחב...</option>
+                  {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">אזור</label>
+                <select value={form.area_id} onChange={e => setForm(p => ({ ...p, area_id: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" disabled={!form.region_id}>
+                  <option value="">בחר אזור...</option>
+                  {selectedRegionAreas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-gray-600 mb-2">נותן שירות למרחבים</label>
+              <div className="flex gap-2 flex-wrap">
+                {REGIONS.map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => toggleServiceRegion(r.id)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                      form.service_regions.includes(r.id)
+                        ? 'bg-kkl-green text-white border-kkl-green'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-kkl-green'
+                    }`}
+                  >
+                    {r.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-3 p-5 border-t border-kkl-border">
-          <button onClick={onClose} className="flex-1 px-4 py-2 border border-kkl-border rounded-lg text-gray-600 hover:bg-gray-50 text-sm">ביטול</button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-          >
+        <div className="flex gap-3 p-5 border-t border-gray-200 sticky bottom-0 bg-white rounded-b-2xl">
+          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium">ביטול</button>
+          <button onClick={handleSave} disabled={saving} className="flex-1 px-4 py-2.5 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
             {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-            {isEdit ? 'שמור שינויים' : 'הוסף ספק'}
+            {isEdit ? 'שמור שינויים' : 'הקם ספק'}
           </button>
         </div>
       </div>
@@ -447,81 +545,81 @@ const SupplierSettings: React.FC = () => {
         </div>
             </div>
           ) : activeTab === 'suppliers' ? (
-            /* ── Suppliers Table ── */
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-kkl-border">
-                  <tr>
-                    <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">שם ספק</th>
-                    <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">איש קשר</th>
-                    <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">טלפון</th>
-                    <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">מרחב</th>
-                    <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600">סטטוס</th>
-                    <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600">פעולות</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSuppliers.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-12 text-gray-500">לא נמצאו ספקים</td>
-                    </tr>
-                  ) : (
-                    filteredSuppliers.map((supplier) => (
-                      <tr key={supplier.id} className="border-b border-kkl-border hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-kkl-green-light rounded-lg flex items-center justify-center">
-                              <Truck className="w-5 h-5 text-kkl-green" />
+            /* ── Suppliers Cards ── */
+            <div className="p-4">
+              {filteredSuppliers.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">לא נמצאו ספקים</div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredSuppliers.map((supplier) => (
+                    <div key={supplier.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start gap-4">
+                        {/* Avatar */}
+                        <div className="w-12 h-12 bg-kkl-green-light rounded-xl flex items-center justify-center flex-shrink-0">
+                          <span className="text-lg font-bold text-kkl-green">{supplier.name?.charAt(0)}</span>
+                        </div>
+                        
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-gray-900 text-base">{supplier.name}</span>
+                            <button
+                              onClick={() => toggleSupplierStatus(supplier)}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                                supplier.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                              }`}
+                            >
+                              {supplier.is_active ? 'פעיל' : 'מושבת'}
+                            </button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">ח.פ:</span>
+                              <span className="font-mono text-xs">{supplier.tax_id || supplier.code || '—'}</span>
                             </div>
-                            <div>
-                              <span className="font-medium text-kkl-text">{supplier.name}</span>
-                              {supplier.code && <p className="text-xs text-gray-400">{supplier.code}</p>}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">קשר:</span>
+                              <span>{supplier.contact_name || supplier.contact_person || '—'}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">טלפון:</span>
+                              <span dir="ltr">{supplier.phone || '—'}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">אימייל:</span>
+                              <span className="text-xs truncate" dir="ltr">{supplier.email || '—'}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">מרחב:</span>
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${supplier.region_name ? 'bg-purple-50 text-purple-700' : 'text-gray-400'}`}>
+                                {supplier.region_name || '—'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">כלים:</span>
+                              <span className="font-bold text-kkl-green">{supplier.equipment_count || '—'}</span>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">{supplier.contact_name || supplier.contact_person || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600 direction-ltr">{supplier.phone || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{supplier.region_name || '-'}</td>
-                        <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => toggleSupplierStatus(supplier)}
-                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm transition-colors ${
-                              supplier.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            }`}
-                          >
-                            {supplier.is_active ? <><CheckCircle className="w-4 h-4" />פעיל</> : <><XCircle className="w-4 h-4" />מושבת</>}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button onClick={() => setEditingSupplier(supplier)} className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg" title="עריכה">
+                            <Edit className="w-4 h-4" />
                           </button>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => navigate(`/suppliers/${supplier.id}`)}
-                              className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
-                              title="צפייה מלאה"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => setEditingSupplier(supplier)}
-                              className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
-                              title="עריכה"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteSupplier(supplier)}
-                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              title="מחיקה"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                          <button onClick={() => navigate(`/suppliers/${supplier.id}`)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="צפייה מלאה">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => deleteSupplier(supplier)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg" title="מחיקה">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : activeTab === 'equipment' ? (
             /* ── Equipment by Supplier (Accordion) ── */

@@ -24,7 +24,32 @@ def list_suppliers(
     require_permission(current_user, "suppliers.list")
     suppliers, total = supplier_service.list_with_filters(db, filters)
     total_pages = (total + filters.page_size - 1) // filters.page_size
-    return SupplierListResponse(items=suppliers, total=total, page=filters.page, page_size=filters.page_size, total_pages=total_pages)
+
+    from app.models.region import Region
+    from app.models.area import Area
+    from sqlalchemy import text as sa_text
+
+    region_map = {r.id: r.name for r in db.query(Region.id, Region.name).all()}
+    area_map = {a.id: a.name for a in db.query(Area.id, Area.name).all()}
+
+    eq_counts = {}
+    try:
+        rows = db.execute(sa_text(
+            "SELECT supplier_id, COUNT(*) FROM equipment WHERE is_active = true AND supplier_id IS NOT NULL GROUP BY supplier_id"
+        )).fetchall()
+        eq_counts = {r[0]: r[1] for r in rows}
+    except Exception:
+        pass
+
+    items = []
+    for s in suppliers:
+        d = {c.name: getattr(s, c.name, None) for c in s.__table__.columns}
+        d['region_name'] = region_map.get(s.region_id)
+        d['area_name'] = area_map.get(s.area_id)
+        d['equipment_count'] = eq_counts.get(s.id, 0)
+        items.append(d)
+
+    return {"items": items, "total": total, "page": filters.page, "page_size": filters.page_size, "total_pages": total_pages}
 
 
 @router.get("/active")
