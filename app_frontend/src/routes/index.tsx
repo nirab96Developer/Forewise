@@ -54,8 +54,8 @@ const EquipmentRequestsStatus = lazy(() => import("../pages/Equipment/EquipmentR
 const EquipmentBalances = lazy(() => import("../pages/Equipment/EquipmentBalances"));
 const EquipmentInventory = lazy(() => import("../pages/Equipment/EquipmentInventory"));
 
-// Suppliers
-const Suppliers = lazy(() => import("../pages/Suppliers/Suppliers"));
+// Suppliers (standalone page replaced by /settings/suppliers)
+// const Suppliers = lazy(() => import("../pages/Suppliers/Suppliers"));
 const NewSupplier = lazy(() => import("../pages/Suppliers/NewSupplier"));
 const EditSupplier = lazy(() => import("../pages/Suppliers/EditSupplier"));
 const AddSupplierEquipment = lazy(() => import("../pages/Suppliers/AddSupplierEquipment"));
@@ -232,7 +232,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         {/* ============================================
               SUPPLIERS
           ============================================ */}
-        <Route path="/suppliers" element={<Guarded permission={PERMISSIONS.SUPPLIERS_VIEW}><Suppliers /></Guarded>} />
+        <Route path="/suppliers" element={<Navigate to="/settings/suppliers" replace />} />
         <Route path="/suppliers/new" element={<Guarded permission={PERMISSIONS.SUPPLIERS_CREATE}><NewSupplier /></Guarded>} />
         <Route path="/suppliers/:id" element={<Guarded permission={PERMISSIONS.SUPPLIERS_VIEW}><EditSupplier /></Guarded>} />
         <Route path="/suppliers/:id/edit" element={<Guarded permission={PERMISSIONS.SUPPLIERS_UPDATE}><EditSupplier /></Guarded>} />

@@ -76,8 +76,8 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
   suppliers: {
     id: "suppliers",
     icon: Truck,
-    label: "ספקים",
-    path: "/suppliers",
+    label: "ספקים וציוד",
+    path: "/settings/suppliers",
     permission: PERMISSIONS.SUPPLIERS_VIEW,
   },
   equipmentScan: {

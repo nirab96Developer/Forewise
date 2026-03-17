@@ -147,7 +147,12 @@ const SupplierSettings: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const getInitialTab = (): TabType => pathToTab[location.pathname] || 'suppliers';
+  const getInitialTab = (): TabType => {
+    const params = new URLSearchParams(location.search);
+    const urlTab = params.get('tab') as TabType | null;
+    if (urlTab && ['suppliers', 'equipment', 'pricing', 'rotation', 'constraints'].includes(urlTab)) return urlTab;
+    return pathToTab[location.pathname] || 'suppliers';
+  };
 
   const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -158,9 +163,15 @@ const SupplierSettings: React.FC = () => {
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
   useEffect(() => {
-    const newTab = pathToTab[location.pathname];
-    if (newTab && newTab !== activeTab) setActiveTab(newTab);
-  }, [location.pathname]);
+    const params = new URLSearchParams(location.search);
+    const urlTab = params.get('tab') as TabType | null;
+    if (urlTab && ['suppliers', 'equipment', 'pricing', 'rotation', 'constraints'].includes(urlTab)) {
+      setActiveTab(urlTab);
+    } else {
+      const newTab = pathToTab[location.pathname];
+      if (newTab && newTab !== activeTab) setActiveTab(newTab);
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => { loadData(); }, [activeTab]);
 
