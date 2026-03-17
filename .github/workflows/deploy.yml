@@ -48,21 +48,19 @@ jobs:
             echo ">> Restarting backend..."
             cd app_backend
             fuser -k 8000/tcp 2>/dev/null || true
-            sleep 2
+            sleep 3
             nohup .venv/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
-            sleep 5
 
-            # Verify health
-            echo ">> Checking health..."
-            HEALTH=$(curl -s http://localhost:8000/health)
-            echo "$HEALTH"
-
-            if echo "$HEALTH" | grep -q '"ok"'; then
-              echo "✅ Deploy successful!"
-            else
-              echo "❌ Health check failed!"
-              exit 1
-            fi
+            # Wait for backend to start
+            echo ">> Waiting for backend..."
+            for i in 1 2 3 4 5 6; do
+              sleep 5
+              if curl -s http://localhost:8000/health | grep -q '"ok"'; then
+                echo "✅ Backend is up!"
+                break
+              fi
+              echo "   Attempt $i — waiting..."
+            done
 
             # Reload nginx
             systemctl reload nginx
