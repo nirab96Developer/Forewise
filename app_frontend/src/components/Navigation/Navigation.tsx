@@ -132,15 +132,6 @@ const Navigation: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => window.location.reload()}
-              className="md:hidden w-9 h-9 bg-white/15 rounded-full flex items-center justify-center hover:bg-white/25 active:bg-white/35 transition-colors touch-manipulation mr-1"
-              aria-label="רענן"
-            >
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
           </div>
 
           {/* Right side - User Info */}
