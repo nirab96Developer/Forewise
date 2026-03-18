@@ -96,7 +96,10 @@ const App: React.FC = () => {
   const isSupplierPortal = location.pathname.startsWith("/supplier-portal");
   const isChangePassword = location.pathname === "/change-password";
   const isWelcomeSplash = location.pathname === "/welcome";
-  const isPublicPage = isLoginPage || isSupplierPortal || isChangePassword || isWelcomeSplash;
+  const isForgotPassword = location.pathname === "/forgot-password";
+  const isResetPassword = location.pathname === "/reset-password";
+  const isOtpPage = location.pathname === "/otp";
+  const isPublicPage = isLoginPage || isSupplierPortal || isChangePassword || isWelcomeSplash || isForgotPassword || isResetPassword || isOtpPage;
 
   return (
     <ToastProvider>
