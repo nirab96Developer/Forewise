@@ -1,9 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
-  <g transform="translate(0, 8)">
-    <path d="M46 20 Q60 9 74 20" stroke="#1a5c2a" stroke-width="7" fill="none" stroke-linecap="round"/>
-    <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="#2e7d32" stroke-width="7" fill="none" stroke-linecap="round"/>
-    <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="#43a047" stroke-width="7" fill="none" stroke-linecap="round"/>
-    <line x1="60" y1="76" x2="60" y2="92" stroke="#8d6e63" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="60" cy="98" r="6" fill="#8d6e63"/>
-  </g>
+  <defs>
+    <linearGradient id="t" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1565c0"/>
+      <stop offset="100%" stop-color="#0097a7"/>
+    </linearGradient>
+    <linearGradient id="m" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0097a7"/>
+      <stop offset="50%" stop-color="#2e7d32"/>
+      <stop offset="100%" stop-color="#66bb6a"/>
+    </linearGradient>
+    <linearGradient id="b" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2e7d32"/>
+      <stop offset="40%" stop-color="#66bb6a"/>
+      <stop offset="100%" stop-color="#8B5e3c"/>
+    </linearGradient>
+  </defs>
+  <path d="M46 22 Q60 10 74 22"
+    stroke="url(#t)" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M28 52 Q42 36 60 46 Q78 36 92 52"
+    stroke="url(#m)" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M10 82 Q28 64 46 73 Q60 80 74 73 Q92 64 110 82"
+    stroke="url(#b)" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <line x1="60" y1="82" x2="60" y2="100"
+    stroke="#8B5e3c" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="60" cy="108" r="7" fill="#8B5e3c"/>
 </svg>
