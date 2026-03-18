@@ -135,7 +135,7 @@ const Navigation: React.FC = () => {
           </div>
 
           {/* Right side - User Info */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3" style={{gap:'12px'}}>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center">
