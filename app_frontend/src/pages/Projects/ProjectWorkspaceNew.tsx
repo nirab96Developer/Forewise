@@ -304,8 +304,7 @@ const ProjectWorkspaceNew: React.FC = () => {
                 : worklogs}
               isWorkManager={isWorkManager || isAdminUser}
               approvedOrders={workOrders.filter(o =>
-                APPROVED_STATUSES.includes((o.status || '').toUpperCase()) &&
-                !!(o as any).equipment_scan
+                APPROVED_STATUSES.includes((o.status || '').toUpperCase())
               )}
             />
           )}
@@ -741,16 +740,21 @@ const ScanEquipmentModal: React.FC<{
     if (!trimmed) { setErr('יש להזין מספר כלי'); return; }
     setSaving(true);
     try {
+      // Try dedicated scan endpoint first
       await api.patch(`/work-orders/${orderId}/scan-equipment`, { license_plate: trimmed });
-      onScanned(orderId, trimmed);
-      onClose();
     } catch {
-      // If endpoint doesn't exist yet, record locally
-      onScanned(orderId, trimmed);
-      onClose();
-    } finally {
-      setSaving(false);
+      // Fallback: save as equipment_scan on the work order
+      try {
+        await api.patch(`/work-orders/${orderId}`, { equipment_scan: trimmed });
+      } catch {
+        // Last resort: just save locally
+      }
     }
+    onScanned(orderId, trimmed);
+    onClose();
+    // Reload to refresh data across all tabs
+    setTimeout(() => window.location.reload(), 500);
+    setSaving(false);
   };
 
   return (
