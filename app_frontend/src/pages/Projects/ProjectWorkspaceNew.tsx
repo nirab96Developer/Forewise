@@ -219,19 +219,17 @@ const ProjectWorkspaceNew: React.FC = () => {
       <div className="sticky top-16 z-10 bg-white shadow-sm">
         {/* Header קומפקטי */}
         <div className="border-b">
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
-                <button
-                  onClick={() => navigate('/projects')}
-                  className="text-green-600 hover:text-green-800 flex-shrink-0"
-                >
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-                <div className="min-w-0">
-                  <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">{project.name}</h1>
-                  <p className="text-xs text-gray-500 truncate">#{project.code}</p>
-                </div>
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 py-1.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => navigate('/projects')}
+                className="text-green-600 hover:text-green-800 flex-shrink-0 p-1"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              <div className="min-w-0 flex items-baseline gap-2">
+                <h1 className="text-base sm:text-lg font-bold text-gray-900 truncate">{project.name}</h1>
+                <span className="text-xs text-gray-400 flex-shrink-0">#{project.code}</span>
               </div>
             </div>
           </div>
@@ -806,7 +804,7 @@ const OrdersTab: React.FC<{
   orders: WorkOrder[];
   isWorkManager?: boolean;
   onSwitchToWorklogs?: () => void;
-}> = ({ projectId, orders, isWorkManager, onSwitchToWorklogs }) => {
+}> = ({ projectCode, projectId, orders, isWorkManager, onSwitchToWorklogs }) => {
   const navigate = useNavigate();
 
   // localScans: orderId → equipment number (persists within the session until reload)
@@ -881,7 +879,7 @@ const OrdersTab: React.FC<{
 
                 <div className="p-4">
                   {/* Top row: order number + status */}
-                  <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
                       <p className="font-semibold text-gray-900">
                         דרישה #{(order as any).order_number || order.id}
@@ -896,11 +894,52 @@ const OrdersTab: React.FC<{
                   {/* Details */}
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600 mb-3">
                     {order.equipment_type && <span>🚜 {order.equipment_type}</span>}
-                    {isApproved && order.supplier_name && <span>🏢 {order.supplier_name}</span>}
+                    {order.supplier_name && <span>🏢 {order.supplier_name}</span>}
                     {scanned && equipmentNum && (
                       <span className="text-green-700 font-medium">🔢 {equipmentNum}</span>
                     )}
+                    {(order as any).estimated_hours && (
+                      <span>⏱️ {(order as any).estimated_hours} שעות</span>
+                    )}
                   </div>
+
+                  {/* Pipeline — visual process stages */}
+                  {(() => {
+                    const s = (order.status || '').toUpperCase();
+                    const stages = [
+                      { key: 'PENDING', label: 'ממתין', short: 'ממתין' },
+                      { key: 'SENT', label: 'נשלח לספק', short: 'נשלח' },
+                      { key: 'SUPPLIER_OK', label: 'ספק אישר', short: 'ספק ✓' },
+                      { key: 'APPROVED', label: 'אושר — ניתן לדווח', short: 'מאושר' },
+                    ];
+                    const stageMap: Record<string, number> = {
+                      'PENDING': 0, 'DRAFT': 0,
+                      'DISTRIBUTING': 1, 'SENT_TO_SUPPLIER': 1,
+                      'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': 2,
+                      'APPROVED_AND_SENT': 3, 'APPROVED': 3, 'ACTIVE': 3, 'IN_PROGRESS': 3, 'COMPLETED': 3,
+                    };
+                    const currentStage = stageMap[s] ?? 0;
+                    if (isRejected) return null;
+                    return (
+                      <div className="flex items-center gap-0.5 mb-3">
+                        {stages.map((st, i) => (
+                          <React.Fragment key={st.key}>
+                            <div className="flex flex-col items-center" style={{flex: '0 0 auto'}}>
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                                i <= currentStage ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
+                              }`}>{i < currentStage ? '✓' : i + 1}</div>
+                              <span className={`text-[9px] mt-0.5 text-center leading-tight ${
+                                i <= currentStage ? 'text-green-700 font-semibold' : 'text-gray-400'
+                              }`}>{st.short}</span>
+                            </div>
+                            {i < stages.length - 1 && (
+                              <div className={`flex-1 h-0.5 min-w-[16px] mt-[-10px] ${i < currentStage ? 'bg-green-400' : 'bg-gray-200'}`} />
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   {/* WORK_MANAGER action */}
                   {isWorkManager && isApproved && !isRejected && (
@@ -915,11 +954,11 @@ const OrdersTab: React.FC<{
                         </button>
                       ) : (
                         <button
-                          onClick={() => onSwitchToWorklogs?.()}
-                          className="w-full flex items-center justify-center gap-2 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                          onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/new?work_order_id=${order.id}&equipment_id=${(order as any).equipment_id || ''}&project_id=${projectId}`)}
+                          className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                         >
                           <Clock className="w-4 h-4" />
-                          עבור לדיווחים
+                          📝 דווח על הזמנה זו
                         </button>
                       )}
                     </div>
