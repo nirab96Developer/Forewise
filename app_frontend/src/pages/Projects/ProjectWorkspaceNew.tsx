@@ -632,12 +632,14 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
       {/* Navigation buttons */}
       <div className="flex gap-2 mb-3">
         <a href={wazeUrl} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors">
-          <span>🗺️</span> נווט עם Waze
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#33ccff]/10 border border-[#33ccff]/30 rounded-xl text-sm font-semibold text-[#05b5cc] hover:bg-[#33ccff]/20 transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.54 6.63c.41.9.63 1.87.63 2.87 0 1.76-.5 3.43-1.51 4.93-.91 1.36-2.17 2.49-3.63 3.26-.02.99-.41 1.92-1.11 2.59-.72.7-1.68 1.08-2.72 1.08-.79 0-1.56-.25-2.2-.71-.63.46-1.4.71-2.2.71-1.04 0-2-.38-2.72-1.08-.7-.67-1.09-1.6-1.11-2.59C2.51 16.93 1.25 15.8.34 14.43-.17 13.43-.34 12.36-.34 11.25c0-1 .22-1.97.63-2.87C.87 7.07 1.72 5.97 2.82 5.18c1.06-.76 2.27-1.2 3.52-1.35C7.1 2.34 8.52 1.35 10.15 1c.53-.12 1.07-.18 1.6-.18.54 0 1.08.06 1.61.18 1.63.35 3.05 1.34 3.81 2.83 1.25.15 2.46.59 3.52 1.35 1.1.79 1.95 1.89 2.53 3.2zM7.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm9 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm-8.5 4c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2H8z"/></svg>
+          נווט עם Waze
         </a>
         <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700 hover:bg-red-100 transition-colors">
-          <span>📍</span> נווט עם Google Maps
+          className="flex items-center gap-2 px-4 py-2.5 bg-[#4285f4]/10 border border-[#4285f4]/30 rounded-xl text-sm font-semibold text-[#4285f4] hover:bg-[#4285f4]/20 transition-colors">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#EA4335"/><circle cx="12" cy="9" r="2.5" fill="#fff"/></svg>
+          נווט עם Google Maps
         </a>
       </div>
 
