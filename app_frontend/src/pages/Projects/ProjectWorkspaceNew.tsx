@@ -930,7 +930,7 @@ const OrdersTab: React.FC<{
                           <Eye className="w-4 h-4" />
                           צפה בפרטים
                         </button>
-                        {isWorkManager && isApproved && !isRejected && !scanned && (
+                        {isApproved && !isRejected && !scanned && (
                           <button
                             onClick={() => setScanModal({ orderId: order.id, orderNumber: (order as any).order_number || order.id })}
                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
@@ -939,7 +939,7 @@ const OrdersTab: React.FC<{
                             הוספת כלי לפרויקט
                           </button>
                         )}
-                        {isWorkManager && isApproved && scanned && (
+                        {isApproved && scanned && (
                           <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-center text-xs text-green-700 font-medium">
                             ✅ כלי נסרק — עבור לטאב "כלים בפרויקט" לדיווח
                           </div>
