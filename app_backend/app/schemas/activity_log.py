@@ -86,6 +86,49 @@ class ActivityLogUpdate(BaseModel):
     status_code: Optional[int] = Field(None, ge=100, le=599)
 
 
+ACTION_LABELS_HE = {
+    "login": "כניסה למערכת",
+    "logout": "יציאה מהמערכת",
+    "login_failed": "כניסה נכשלה",
+    "password_change": "שינוי סיסמה",
+    "password_reset": "איפוס סיסמה",
+    "create": "יצירה",
+    "update": "עדכון",
+    "delete": "מחיקה",
+    "approve": "אישור",
+    "reject": "דחייה",
+    "submit": "הגשה",
+    "cancel": "ביטול",
+    "assign": "הקצאה",
+    "work_order_created": "הזמנת עבודה נוצרה",
+    "work_order_approved": "הזמנת עבודה אושרה",
+    "work_order_rejected": "הזמנת עבודה נדחתה",
+    "work_order_sent": "הזמנה נשלחה לספק",
+    "work_order_completed": "הזמנה הושלמה",
+    "worklog_created": "דיווח שעות חדש",
+    "worklog_approved": "דיווח שעות אושר",
+    "worklog_rejected": "דיווח שעות נדחה",
+    "invoice_created": "חשבונית נוצרה",
+    "invoice_approved": "חשבונית אושרה",
+    "project_created": "פרויקט חדש נוצר",
+    "supplier_added": "ספק חדש נוסף",
+    "equipment_assigned": "ציוד הוקצה",
+    "budget_updated": "תקציב עודכן",
+    "user_created": "משתמש חדש נוסף",
+}
+
+ENTITY_LABELS_HE = {
+    "work_order": "הזמנת עבודה",
+    "worklog": "דיווח שעות",
+    "project": "פרויקט",
+    "invoice": "חשבונית",
+    "user": "משתמש",
+    "supplier": "ספק",
+    "equipment": "ציוד",
+    "budget": "תקציב",
+}
+
+
 class ActivityLogResponse(ActivityLogBase):
     """Activity log response."""
     id: int
@@ -97,15 +140,25 @@ class ActivityLogResponse(ActivityLogBase):
     user_email: Optional[str] = None
     user_name: Optional[str] = None
 
+    # Hebrew display
+    display_name_he: Optional[str] = None
+    entity_name_he: Optional[str] = None
+
     # JSON fields - stored as string in DB, parsed here
-    custom_metadata: Optional[Any] = None  # Can be str or dict
-    changes: Optional[Any] = None  # Can be str or dict
+    custom_metadata: Optional[Any] = None
+    changes: Optional[Any] = None
 
     model_config = ConfigDict(
         from_attributes=True,
-        # Ignore SQLAlchemy internal attributes
         extra='ignore'
     )
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        action_key = (data.get('action') or '').lower()
+        activity_key = (data.get('activity_type') or '').lower()
+        self.display_name_he = ACTION_LABELS_HE.get(action_key) or ACTION_LABELS_HE.get(activity_key) or data.get('action', '')
+        self.entity_name_he = ENTITY_LABELS_HE.get((data.get('entity_type') or '').lower(), data.get('entity_type', ''))
 
 
 class ActivityLogFilter(BaseModel):

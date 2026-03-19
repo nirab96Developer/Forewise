@@ -40,7 +40,7 @@ const NewProject: React.FC = () => {
     description: '',
     planned_start_date: '',
     planned_end_date: '',
-    priority: 'medium',
+    
     allocated_budget: undefined,
     region_id: undefined,
     area_id: undefined,
@@ -371,25 +371,8 @@ const NewProject: React.FC = () => {
               )}
             </div>
 
-            {/* Priority and Budget */}
+            {/* Budget */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="priority" className="block text-sm font-medium text-primary mb-2">
-                  עדיפות
-                </label>
-                <select
-                  id="priority"
-                  name="priority"
-                  value={formData.priority || 'medium'}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
-                >
-                  <option value="low">נמוכה</option>
-                  <option value="medium">בינונית</option>
-                  <option value="high">גבוהה</option>
-                  <option value="urgent">דחופה</option>
-                </select>
-              </div>
               <div>
                 <label htmlFor="allocated_budget" className="block text-sm font-medium text-primary mb-2">
                   תקציב מוקצה (ש"ח)

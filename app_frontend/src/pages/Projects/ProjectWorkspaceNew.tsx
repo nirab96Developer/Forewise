@@ -76,16 +76,8 @@ const ProjectWorkspaceNew: React.FC = () => {
   const currentUserId: number | undefined = storedUser?.id ? Number(storedUser.id) : undefined;
 
   const isWorkManager = userRoleCode === 'WORK_MANAGER';
-  const isAreaManager = userRoleCode === 'AREA_MANAGER';
 
-  // Tabs available per role
-  const WORK_MANAGER_TABS   = ['overview', 'orders', 'worklogs', 'map'];
-  const AREA_MANAGER_TABS   = ['overview', 'orders', 'worklogs', 'budget', 'map', 'documents'];
-  const FULL_TABS           = ['overview', 'orders', 'worklogs', 'budget', 'map', 'documents', 'activity'];
-
-  const allowedTabs = isWorkManager   ? WORK_MANAGER_TABS
-                    : isAreaManager   ? AREA_MANAGER_TABS
-                    : FULL_TABS; // REGION_MANAGER + ADMIN + others
+  const allowedTabs = ['overview', 'orders', 'worklogs', 'map'];
 
   type TabId = 'overview' | 'map' | 'orders' | 'worklogs' | 'activity' | 'budget' | 'documents';
 
@@ -213,24 +205,12 @@ const ProjectWorkspaceNew: React.FC = () => {
         { id: 'worklogs',  label: 'דיווחים',       icon: Clock, badge: stats.openReports },
         { id: 'map',       label: 'מפה',            icon: Map },
       ]
-    : isAreaManager
-    ? [
-        { id: 'overview',   label: 'סקירה',         icon: Eye },
-        { id: 'orders',     label: 'הזמנות עבודה',  icon: ClipboardList, badge: stats.activeOrders },
-        { id: 'worklogs',   label: 'דיווחים',       icon: Clock, badge: stats.openReports },
-        { id: 'budget',     label: 'תקציב',          icon: Calculator },
-        { id: 'map',        label: 'מפה',             icon: Map },
-        { id: 'documents',  label: 'מסמכים',         icon: FileText },
-      ]
-    : /* REGION_MANAGER + ADMIN + others */
+    : /* All other roles — same 4 tabs */
       [
         { id: 'overview',   label: 'סקירה',         icon: Eye },
         { id: 'orders',     label: 'הזמנות עבודה',  icon: ClipboardList, badge: stats.activeOrders },
         { id: 'worklogs',   label: 'דיווחים',       icon: Clock, badge: stats.openReports },
-        { id: 'budget',     label: 'תקציב',          icon: Calculator },
         { id: 'map',        label: 'מפה',             icon: Map },
-        { id: 'documents',  label: 'מסמכים',         icon: FileText },
-        { id: 'activity',   label: 'יומן פעילות',   icon: Activity },
       ];
 
   return (

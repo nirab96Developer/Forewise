@@ -639,6 +639,21 @@ textarea {
   box-sizing: border-box;
 }
 
+/* Horizontal scroll tabs — for any row with 3+ tabs on mobile */
+[role="tablist"],
+.tabs-row,
+.tab-buttons {
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+[role="tablist"]::-webkit-scrollbar,
+.tabs-row::-webkit-scrollbar,
+.tab-buttons::-webkit-scrollbar {
+  display: none;
+}
+
 /* React-Select / custom select library support */
 .select__single-value,
 .select__option {

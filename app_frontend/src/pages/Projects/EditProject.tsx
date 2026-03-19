@@ -186,7 +186,7 @@ const EditProject: React.FC = () => {
         code: projectData.code,
         description: projectData.description,
         status: projectData.status,
-        priority: projectData.priority,
+
         planned_start_date: projectData.planned_start_date,
         planned_end_date: projectData.planned_end_date,
         allocated_budget: projectData.allocated_budget,

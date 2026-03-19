@@ -7,11 +7,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
-  Edit, 
   Calendar, 
   MapPin, 
   User, 
-  Eye,
   ChevronRight,
   Briefcase
 } from 'lucide-react';
@@ -278,9 +276,12 @@ const ProjectsClean: React.FC = () => {
                   </div>
 
                   {/* Description — fixed 2 lines, fills space */}
-                  <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1 leading-relaxed">
-                    {project.description || '—'}
-                  </p>
+                  {project.description && (
+                    <p className="text-sm text-gray-500 line-clamp-2 mb-4 flex-1 leading-relaxed">
+                      {project.description}
+                    </p>
+                  )}
+                  {!project.description && <div className="flex-1" />}
 
                   {/* Metadata chips */}
                   <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-gray-500 mb-4">
@@ -324,24 +325,7 @@ const ProjectsClean: React.FC = () => {
                 {/* Card Footer — always at bottom */}
                 <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/70 rounded-b-2xl">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.code}/workspace`); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
-                        title="צפה בפרויקט"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        צפייה
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.code}/edit`); }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                        title="ערוך פרויקט"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                        עריכה
-                      </button>
-                    </div>
+                    <span className="text-xs text-gray-400">לחץ לכניסה</span>
                     <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
                   </div>
                 </div>

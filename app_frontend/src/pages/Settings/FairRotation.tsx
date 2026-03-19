@@ -235,13 +235,13 @@ const FairRotation: React.FC = () => {
           </div>
           <div className="bg-white rounded-xl border border-kkl-border p-4">
             <div className="text-2xl font-bold text-blue-600">
-              {rotations.reduce((sum, r) => sum + r.usage_count, 0)}
+              {rotations.reduce((sum, r) => sum + (r.usage_count || 0), 0)}
             </div>
             <div className="text-sm text-gray-500">סה"כ הקצאות</div>
           </div>
           <div className="bg-white rounded-xl border border-kkl-border p-4">
             <div className="text-2xl font-bold text-orange-600">
-              {rotations.reduce((sum, r) => sum + r.skip_count, 0)}
+              {rotations.reduce((sum, r) => sum + (r.skip_count || 0), 0)}
             </div>
             <div className="text-sm text-gray-500">דילוגים</div>
           </div>

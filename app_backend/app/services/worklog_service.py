@@ -27,9 +27,15 @@ class WorklogService:
     """
     
     def _generate_report_number(self, db: Session) -> int:
-        """Generate unique report number"""
+        """Generate unique report number (sequential integer, displayed as WL-YYYY-XXXX)"""
         max_num = db.query(func.max(Worklog.report_number)).scalar() or 0
         return max_num + 1
+
+    @staticmethod
+    def format_report_number(report_number: int) -> str:
+        """Format report number for display: WL-2026-0047"""
+        from datetime import datetime
+        return f"WL-{datetime.now().year}-{str(report_number).zfill(4)}"
     
     def create(self, db: Session, data: WorklogCreate, current_user_id: int) -> Worklog:
         """Create worklog with FK validation"""

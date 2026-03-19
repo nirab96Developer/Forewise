@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<title>Forewise — Class Diagram</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Heebo',sans-serif;background:#fff;display:flex;justify-content:center;padding:10px}
+svg{width:100%;max-width:1400px;height:auto}
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1380 1700" xmlns="http://www.w3.org/2000/svg" font-family="Heebo,sans-serif">
+<defs>
+  <marker id="dia" markerWidth="14" markerHeight="10" refX="0" refY="5" orient="auto"><polygon points="0 5,7 0,14 5,7 10" fill="#fff" stroke="#555" stroke-width="1.5"/></marker>
+  <marker id="comp" markerWidth="14" markerHeight="10" refX="0" refY="5" orient="auto"><polygon points="0 5,7 0,14 5,7 10" fill="#555" stroke="#555" stroke-width="1"/></marker>
+  <marker id="tri" markerWidth="12" markerHeight="10" refX="0" refY="5" orient="auto"><polygon points="0 5,12 0,12 10" fill="#fff" stroke="#555" stroke-width="1.2"/></marker>
+</defs>
+
+<!-- TITLE -->
+<text x="690" y="28" text-anchor="middle" font-size="22" font-weight="900" fill="#1a2e1f">תרשים מחלקות — Forewise Class Diagram</text>
+<text x="690" y="48" text-anchor="middle" font-size="11" fill="#999">מבנה טבלאות מרכזיות · שדות · מפתחות · קשרים · PostgreSQL 16</text>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- HELPER: Class box template -->
+<!-- Header: class name | Separator | PK | Fields | Separator | Keys -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+
+<!-- ══════════ ROW 1: User, Role, Region, Area ══════════ -->
+
+<!-- ──── USER ──── -->
+<g>
+<rect x="20" y="75" width="285" height="265" rx="5" fill="#fff" stroke="#1565c0" stroke-width="2.2"/>
+<rect x="20" y="75" width="285" height="32" rx="5" fill="#1565c0"/>
+<rect x="20" y="101" width="285" height="6" fill="#1565c0"/>
+<text x="163" y="97" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">User</text>
+<line x1="20" y1="107" x2="305" y2="107" stroke="#1565c0" stroke-width="1"/>
+<!-- PK -->
+<text x="30" y="124" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="20" y1="130" x2="305" y2="130" stroke="#eee"/>
+<!-- Fields -->
+<text x="30" y="147" font-size="10" fill="#333" font-family="JetBrains Mono">   username : String(50)</text>
+<text x="30" y="162" font-size="10" fill="#333" font-family="JetBrains Mono">   email : String(255)</text>
+<text x="30" y="177" font-size="10" fill="#333" font-family="JetBrains Mono">   full_name : String(200)</text>
+<text x="30" y="192" font-size="10" fill="#333" font-family="JetBrains Mono">   password_hash : String</text>
+<text x="30" y="207" font-size="10" fill="#333" font-family="JetBrains Mono">   phone : String(20)</text>
+<text x="30" y="222" font-size="10" fill="#333" font-family="JetBrains Mono">   two_factor_enabled : Bool</text>
+<text x="30" y="237" font-size="10" fill="#333" font-family="JetBrains Mono">   last_login : DateTime</text>
+<text x="30" y="252" font-size="10" fill="#333" font-family="JetBrains Mono">   status : String(20)</text>
+<line x1="20" y1="258" x2="305" y2="258" stroke="#eee"/>
+<!-- FK -->
+<text x="30" y="275" font-size="10" fill="#1565c0" font-family="JetBrains Mono" font-weight="600">🔗 role_id → roles.id «FK»</text>
+<text x="30" y="290" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 region_id → regions.id «FK»</text>
+<text x="30" y="305" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 area_id → areas.id «FK»</text>
+<text x="30" y="320" font-size="10" fill="#1565c0" font-family="JetBrains Mono" font-weight="600">🔗 manager_id → users.id «FK»</text>
+</g>
+
+<!-- ──── ROLE ──── -->
+<g>
+<rect x="355" y="75" width="240" height="195" rx="5" fill="#fff" stroke="#1565c0" stroke-width="2.2"/>
+<rect x="355" y="75" width="240" height="32" rx="5" fill="#1565c0"/>
+<rect x="355" y="101" width="240" height="6" fill="#1565c0"/>
+<text x="475" y="97" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Role</text>
+<line x1="355" y1="107" x2="595" y2="107" stroke="#1565c0"/>
+<text x="365" y="124" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="355" y1="130" x2="595" y2="130" stroke="#eee"/>
+<text x="365" y="147" font-size="10" fill="#333" font-family="JetBrains Mono">   code : String(50) UNIQUE</text>
+<text x="365" y="162" font-size="10" fill="#333" font-family="JetBrains Mono">   name : String(100)</text>
+<text x="365" y="177" font-size="10" fill="#333" font-family="JetBrains Mono">   description : Text</text>
+<line x1="355" y1="183" x2="595" y2="183" stroke="#eee"/>
+<text x="365" y="200" font-size="10" fill="#888" font-family="JetBrains Mono">   «M:N» → permissions</text>
+<text x="365" y="215" font-size="10" fill="#888" font-family="JetBrains Mono">   «1:N» → users</text>
+<line x1="355" y1="222" x2="595" y2="222" stroke="#eee"/>
+<text x="365" y="237" font-size="9" fill="#aaa">via role_permissions (association)</text>
+<text x="365" y="252" font-size="9" fill="#aaa">ADMIN, REGION_MANAGER, AREA_MANAGER...</text>
+</g>
+
+<!-- ──── REGION ──── -->
+<g>
+<rect x="645" y="75" width="240" height="185" rx="5" fill="#fff" stroke="#2e7d32" stroke-width="2.2"/>
+<rect x="645" y="75" width="240" height="32" rx="5" fill="#2e7d32"/>
+<rect x="645" y="101" width="240" height="6" fill="#2e7d32"/>
+<text x="765" y="97" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Region</text>
+<line x1="645" y1="107" x2="885" y2="107" stroke="#2e7d32"/>
+<text x="655" y="124" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="645" y1="130" x2="885" y2="130" stroke="#eee"/>
+<text x="655" y="147" font-size="10" fill="#333" font-family="JetBrains Mono">   name : String(200)</text>
+<text x="655" y="162" font-size="10" fill="#333" font-family="JetBrains Mono">   code : String(50) UNIQUE</text>
+<text x="655" y="177" font-size="10" fill="#333" font-family="JetBrains Mono">   description : String</text>
+<text x="655" y="192" font-size="10" fill="#333" font-family="JetBrains Mono">   total_budget : Decimal</text>
+<line x1="645" y1="198" x2="885" y2="198" stroke="#eee"/>
+<text x="655" y="215" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 manager_id → users.id «FK»</text>
+<line x1="645" y1="222" x2="885" y2="222" stroke="#eee"/>
+<text x="655" y="240" font-size="9" fill="#aaa">«1:N» → areas, projects, suppliers</text>
+</g>
+
+<!-- ──── AREA ──── -->
+<g>
+<rect x="935" y="75" width="240" height="195" rx="5" fill="#fff" stroke="#2e7d32" stroke-width="2.2"/>
+<rect x="935" y="75" width="240" height="32" rx="5" fill="#2e7d32"/>
+<rect x="935" y="101" width="240" height="6" fill="#2e7d32"/>
+<text x="1055" y="97" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Area</text>
+<line x1="935" y1="107" x2="1175" y2="107" stroke="#2e7d32"/>
+<text x="945" y="124" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="935" y1="130" x2="1175" y2="130" stroke="#eee"/>
+<text x="945" y="147" font-size="10" fill="#333" font-family="JetBrains Mono">   name : String(200)</text>
+<text x="945" y="162" font-size="10" fill="#333" font-family="JetBrains Mono">   code : String(50) UNIQUE</text>
+<text x="945" y="177" font-size="10" fill="#333" font-family="JetBrains Mono">   description : String</text>
+<line x1="935" y1="183" x2="1175" y2="183" stroke="#eee"/>
+<text x="945" y="200" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 region_id → regions.id «FK»</text>
+<text x="945" y="215" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 manager_id → users.id «FK»</text>
+<line x1="935" y1="222" x2="1175" y2="222" stroke="#eee"/>
+<text x="945" y="240" font-size="9" fill="#aaa">«1:N» → projects, suppliers</text>
+</g>
+
+<!-- ═══ ROW 1 RELATIONSHIPS ═══ -->
+<!-- User N:1 → Role -->
+<line x1="305" y1="140" x2="355" y2="140" stroke="#1565c0" stroke-width="2"/>
+<text x="330" y="135" text-anchor="middle" fill="#1565c0" font-size="9" font-weight="800">N        1</text>
+
+<!-- Region 1:N → Area -->
+<line x1="885" y1="150" x2="935" y2="150" stroke="#2e7d32" stroke-width="2"/>
+<text x="910" y="145" text-anchor="middle" fill="#2e7d32" font-size="9" font-weight="800">1        N</text>
+
+
+<!-- ══════════ ROW 2: Project, Supplier, Equipment, EquipmentType ══════════ -->
+
+<!-- ──── PROJECT ──── -->
+<g>
+<rect x="20" y="380" width="285" height="265" rx="5" fill="#fff" stroke="#7b1fa2" stroke-width="2.2"/>
+<rect x="20" y="380" width="285" height="32" rx="5" fill="#7b1fa2"/>
+<rect x="20" y="406" width="285" height="6" fill="#7b1fa2"/>
+<text x="163" y="402" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Project</text>
+<text x="163" y="422" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="20" y1="428" x2="305" y2="428" stroke="#eee"/>
+<text x="30" y="445" font-size="10" fill="#333" font-family="JetBrains Mono">   code : String(50) UNIQUE</text>
+<text x="30" y="460" font-size="10" fill="#333" font-family="JetBrains Mono">   name : String(200)</text>
+<text x="30" y="475" font-size="10" fill="#333" font-family="JetBrains Mono">   description : Text</text>
+<text x="30" y="490" font-size="10" fill="#333" font-family="JetBrains Mono">   status : String(50)</text>
+<text x="30" y="505" font-size="10" fill="#333" font-family="JetBrains Mono">   start_date : Date</text>
+<text x="30" y="520" font-size="10" fill="#333" font-family="JetBrains Mono">   end_date : Date</text>
+<text x="30" y="535" font-size="10" fill="#333" font-family="JetBrains Mono">   budget : Decimal(15,2)</text>
+<line x1="20" y1="541" x2="305" y2="541" stroke="#eee"/>
+<text x="30" y="558" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 region_id → regions.id «FK»</text>
+<text x="30" y="573" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 area_id → areas.id «FK»</text>
+<text x="30" y="588" font-size="10" fill="#6A1B9A" font-family="JetBrains Mono" font-weight="600">🔗 budget_id → budgets.id «FK»</text>
+<text x="30" y="603" font-size="10" fill="#1565c0" font-family="JetBrains Mono" font-weight="600">🔗 manager_id → users.id «FK»</text>
+<line x1="20" y1="609" x2="305" y2="609" stroke="#eee"/>
+<text x="30" y="626" font-size="9" fill="#aaa">«1:N» → work_orders, worklogs, invoices</text>
+</g>
+
+<!-- ──── SUPPLIER ──── -->
+<g>
+<rect x="355" y="380" width="260" height="255" rx="5" fill="#fff" stroke="#c62828" stroke-width="2.2"/>
+<rect x="355" y="380" width="260" height="32" rx="5" fill="#c62828"/>
+<rect x="355" y="406" width="260" height="6" fill="#c62828"/>
+<text x="485" y="402" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Supplier</text>
+<text x="365" y="422" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="355" y1="428" x2="615" y2="428" stroke="#eee"/>
+<text x="365" y="445" font-size="10" fill="#333" font-family="JetBrains Mono">   name : String(200)</text>
+<text x="365" y="460" font-size="10" fill="#333" font-family="JetBrains Mono">   code : String(50) UNIQUE</text>
+<text x="365" y="475" font-size="10" fill="#333" font-family="JetBrains Mono">   tax_id : String(50)</text>
+<text x="365" y="490" font-size="10" fill="#333" font-family="JetBrains Mono">   contact_name : String</text>
+<text x="365" y="505" font-size="10" fill="#333" font-family="JetBrains Mono">   phone : String(50)</text>
+<text x="365" y="520" font-size="10" fill="#333" font-family="JetBrains Mono">   email : String(200)</text>
+<text x="365" y="535" font-size="10" fill="#333" font-family="JetBrains Mono">   rating : Decimal(3,2)</text>
+<line x1="355" y1="541" x2="615" y2="541" stroke="#eee"/>
+<text x="365" y="558" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 region_id → regions.id «FK»</text>
+<text x="365" y="573" font-size="10" fill="#2e7d32" font-family="JetBrains Mono" font-weight="600">🔗 area_id → areas.id «FK»</text>
+<line x1="355" y1="579" x2="615" y2="579" stroke="#eee"/>
+<text x="365" y="596" font-size="9" fill="#aaa">«1:N» → work_orders, equipment</text>
+<text x="365" y="611" font-size="9" fill="#aaa">«1:N» → rotations, invoices</text>
+</g>
+
+<!-- ──── EQUIPMENT ──── -->
+<g>
+<rect x="665" y="380" width="260" height="240" rx="5" fill="#fff" stroke="#f57f17" stroke-width="2.2"/>
+<rect x="665" y="380" width="260" height="32" rx="5" fill="#f57f17"/>
+<rect x="665" y="406" width="260" height="6" fill="#f57f17"/>
+<text x="795" y="402" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Equipment</text>
+<text x="675" y="422" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="665" y1="428" x2="925" y2="428" stroke="#eee"/>
+<text x="675" y="445" font-size="10" fill="#333" font-family="JetBrains Mono">   name : String(255)</text>
+<text x="675" y="460" font-size="10" fill="#333" font-family="JetBrains Mono">   code : String(50) UNIQUE</text>
+<text x="675" y="475" font-size="10" fill="#333" font-family="JetBrains Mono">   license_plate : String(20)</text>
+<text x="675" y="490" font-size="10" fill="#333" font-family="JetBrains Mono">   qr_code : String(100)</text>
+<text x="675" y="505" font-size="10" fill="#333" font-family="JetBrains Mono">   equipment_type : String</text>
+<text x="675" y="520" font-size="10" fill="#333" font-family="JetBrains Mono">   hourly_rate : Decimal</text>
+<text x="675" y="535" font-size="10" fill="#333" font-family="JetBrains Mono">   status : String(50)</text>
+<line x1="665" y1="541" x2="925" y2="541" stroke="#eee"/>
+<text x="675" y="558" font-size="10" fill="#f57f17" font-family="JetBrains Mono" font-weight="600">🔗 type_id → equipment_types.id «FK»</text>
+<text x="675" y="573" font-size="10" fill="#c62828" font-family="JetBrains Mono" font-weight="600">🔗 supplier_id → suppliers.id</text>
+<line x1="665" y1="579" x2="925" y2="579" stroke="#eee"/>
+<text x="675" y="596" font-size="9" fill="#aaa">«1:N» → scans, worklogs, assignments</text>
+</g>
+
+<!-- ──── EQUIPMENT TYPE ──── -->
+<g>
+<rect x="975" y="380" width="240" height="195" rx="5" fill="#fff" stroke="#f57f17" stroke-width="2.2"/>
+<rect x="975" y="380" width="240" height="32" rx="5" fill="#f57f17"/>
+<rect x="975" y="406" width="240" height="6" fill="#f57f17"/>
+<text x="1095" y="402" text-anchor="middle" fill="#fff" font-size="14" font-weight="900">EquipmentType</text>
+<text x="985" y="422" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="975" y1="428" x2="1215" y2="428" stroke="#eee"/>
+<text x="985" y="445" font-size="10" fill="#333" font-family="JetBrains Mono">   code : String(50) UNIQUE</text>
+<text x="985" y="460" font-size="10" fill="#333" font-family="JetBrains Mono">   name : String(200)</text>
+<text x="985" y="475" font-size="10" fill="#333" font-family="JetBrains Mono">   hourly_rate : Decimal</text>
+<text x="985" y="490" font-size="10" fill="#333" font-family="JetBrains Mono">   daily_rate : Decimal</text>
+<text x="985" y="505" font-size="10" fill="#333" font-family="JetBrains Mono">   storage_rate : Decimal</text>
+<line x1="975" y1="511" x2="1215" y2="511" stroke="#eee"/>
+<text x="985" y="530" font-size="9" fill="#aaa">«1:N» → equipment, rotations</text>
+<text x="985" y="545" font-size="9" fill="#aaa">דחפור, מחפרון, טרקטור, משאית...</text>
+</g>
+
+<!-- ═══ ROW 2 RELATIONSHIPS ═══ -->
+<line x1="925" y1="465" x2="975" y2="465" stroke="#f57f17" stroke-width="2"/>
+<text x="950" y="458" text-anchor="middle" fill="#f57f17" font-size="9" font-weight="800">N        1</text>
+
+
+<!-- ══════════ ROW 3: WorkOrder, Worklog, WorklogSegment ══════════ -->
+
+<!-- ──── WORK ORDER ──── -->
+<g>
+<rect x="20" y="720" width="320" height="310" rx="5" fill="#fff" stroke="#e65100" stroke-width="2.2"/>
+<rect x="20" y="720" width="320" height="32" rx="5" fill="#e65100"/>
+<rect x="20" y="746" width="320" height="6" fill="#e65100"/>
+<text x="180" y="742" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">WorkOrder</text>
+<text x="30" y="762" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="20" y1="768" x2="340" y2="768" stroke="#eee"/>
+<text x="30" y="785" font-size="10" fill="#333" font-family="JetBrains Mono">   order_number : Integer UNIQUE</text>
+<text x="30" y="800" font-size="10" fill="#333" font-family="JetBrains Mono">   title : String(200)</text>
+<text x="30" y="815" font-size="10" fill="#333" font-family="JetBrains Mono">   status : String(50)</text>
+<text x="30" y="830" font-size="10" fill="#333" font-family="JetBrains Mono">   priority : String(20)</text>
+<text x="30" y="845" font-size="10" fill="#333" font-family="JetBrains Mono">   is_forced_selection : Boolean</text>
+<text x="30" y="860" font-size="10" fill="#333" font-family="JetBrains Mono">   portal_token : String(255)</text>
+<text x="30" y="875" font-size="10" fill="#333" font-family="JetBrains Mono">   hourly_rate : Decimal</text>
+<text x="30" y="890" font-size="10" fill="#333" font-family="JetBrains Mono">   total_amount : Decimal</text>
+<text x="30" y="905" font-size="10" fill="#333" font-family="JetBrains Mono">   work_start_date : Date</text>
+<line x1="20" y1="911" x2="340" y2="911" stroke="#eee"/>
+<text x="30" y="928" font-size="10" fill="#7b1fa2" font-family="JetBrains Mono" font-weight="600">🔗 project_id → projects.id «FK»</text>
+<text x="30" y="943" font-size="10" fill="#c62828" font-family="JetBrains Mono" font-weight="600">🔗 supplier_id → suppliers.id «FK»</text>
+<text x="30" y="958" font-size="10" fill="#f57f17" font-family="JetBrains Mono" font-weight="600">🔗 equipment_id → equipment.id «FK»</text>
+<text x="30" y="973" font-size="10" fill="#1565c0" font-family="JetBrains Mono" font-weight="600">🔗 created_by_id → users.id «FK»</text>
+<text x="30" y="988" font-size="10" fill="#e65100" font-family="JetBrains Mono" font-weight="600">🔗 constraint_reason_id «FK»</text>
+<line x1="20" y1="995" x2="340" y2="995" stroke="#eee"/>
+<text x="30" y="1012" font-size="9" fill="#aaa">«1:N» → worklogs, scans, invitations</text>
+</g>
+
+<!-- ──── WORKLOG ──── -->
+<g>
+<rect x="400" y="720" width="310" height="310" rx="5" fill="#fff" stroke="#00838f" stroke-width="2.2"/>
+<rect x="400" y="720" width="310" height="32" rx="5" fill="#00838f"/>
+<rect x="400" y="746" width="310" height="6" fill="#00838f"/>
+<text x="555" y="742" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Worklog</text>
+<text x="410" y="762" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="400" y1="768" x2="710" y2="768" stroke="#eee"/>
+<text x="410" y="785" font-size="10" fill="#333" font-family="JetBrains Mono">   report_type : String(50)</text>
+<text x="410" y="800" font-size="10" fill="#333" font-family="JetBrains Mono">   is_standard : Boolean</text>
+<text x="410" y="815" font-size="10" fill="#333" font-family="JetBrains Mono">   status : String(50)</text>
+<text x="410" y="830" font-size="10" fill="#333" font-family="JetBrains Mono">   report_date : Date</text>
+<text x="410" y="845" font-size="10" fill="#333" font-family="JetBrains Mono">   work_hours : Decimal</text>
+<text x="410" y="860" font-size="10" fill="#333" font-family="JetBrains Mono">   total_hours : Decimal</text>
+<text x="410" y="875" font-size="10" fill="#333" font-family="JetBrains Mono">   is_overnight : Boolean</text>
+<text x="410" y="890" font-size="10" fill="#333" font-family="JetBrains Mono">   cost_with_vat : Decimal</text>
+<text x="410" y="905" font-size="10" fill="#333" font-family="JetBrains Mono">   equipment_scanned : Boolean</text>
+<line x1="400" y1="911" x2="710" y2="911" stroke="#eee"/>
+<text x="410" y="928" font-size="10" fill="#e65100" font-family="JetBrains Mono" font-weight="600">🔗 work_order_id → work_orders.id «FK»</text>
+<text x="410" y="943" font-size="10" fill="#1565c0" font-family="JetBrains Mono" font-weight="600">🔗 user_id → users.id «FK»</text>
+<text x="410" y="958" font-size="10" fill="#7b1fa2" font-family="JetBrains Mono" font-weight="600">🔗 project_id → projects.id «FK»</text>
+<text x="410" y="973" font-size="10" fill="#f57f17" font-family="JetBrains Mono" font-weight="600">🔗 equipment_id → equipment.id «FK»</text>
+<line x1="400" y1="980" x2="710" y2="980" stroke="#eee"/>
+<text x="410" y="997" font-size="9" fill="#aaa">report_type: standard | manual | storage</text>
+<text x="410" y="1012" font-size="9" fill="#aaa">«1:N» → segments   «N:1» → invoice</text>
+</g>
+
+<!-- ──── WORKLOG SEGMENT ──── -->
+<g>
+<rect x="770" y="720" width="250" height="200" rx="5" fill="#fff" stroke="#00838f" stroke-width="1.8"/>
+<rect x="770" y="720" width="250" height="32" rx="5" fill="#00838f"/>
+<rect x="770" y="746" width="250" height="6" fill="#00838f"/>
+<text x="895" y="742" text-anchor="middle" fill="#fff" font-size="13" font-weight="900">WorklogSegment</text>
+<text x="780" y="762" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="770" y1="768" x2="1020" y2="768" stroke="#eee"/>
+<text x="780" y="785" font-size="10" fill="#333" font-family="JetBrains Mono">   segment_type : String(50)</text>
+<text x="780" y="800" font-size="10" fill="#333" font-family="JetBrains Mono">   start_time : Time</text>
+<text x="780" y="815" font-size="10" fill="#333" font-family="JetBrains Mono">   end_time : Time</text>
+<text x="780" y="830" font-size="10" fill="#333" font-family="JetBrains Mono">   duration_hours : Decimal</text>
+<text x="780" y="845" font-size="10" fill="#333" font-family="JetBrains Mono">   payment_pct : Integer</text>
+<line x1="770" y1="851" x2="1020" y2="851" stroke="#eee"/>
+<text x="780" y="868" font-size="10" fill="#00838f" font-family="JetBrains Mono" font-weight="600">🔗 worklog_id → worklogs.id «FK»</text>
+<line x1="770" y1="875" x2="1020" y2="875" stroke="#eee"/>
+<text x="780" y="892" font-size="9" fill="#aaa">work, rest, idle, travel,</text>
+<text x="780" y="907" font-size="9" fill="#aaa">equipment_change</text>
+</g>
+
+<!-- ═══ ROW 3 RELATIONSHIPS ═══ -->
+<!-- WO 1:N → Worklog -->
+<line x1="340" y1="840" x2="400" y2="840" stroke="#e65100" stroke-width="2.5"/>
+<text x="370" y="833" text-anchor="middle" fill="#e65100" font-size="9" font-weight="800">1        N</text>
+
+<!-- Worklog 1:N → Segment -->
+<line x1="710" y1="820" x2="770" y2="820" stroke="#00838f" stroke-width="2"/>
+<text x="740" y="813" text-anchor="middle" fill="#00838f" font-size="9" font-weight="800">1        N</text>
+
+<!-- Project 1:N → WO -->
+<line x1="163" y1="645" x2="163" y2="720" stroke="#7b1fa2" stroke-width="2"/>
+<text x="175" y="685" fill="#7b1fa2" font-size="9" font-weight="800">1:N</text>
+
+<!-- Supplier 1:N → WO (diagonal) -->
+<path d="M485,635 L485,680 L280,680 L280,720" fill="none" stroke="#c62828" stroke-width="1.8"/>
+<text x="380" y="675" text-anchor="middle" fill="#c62828" font-size="9" font-weight="800">1:N</text>
+
+<!-- Equipment → WO (diagonal) -->
+<path d="M795,620 L795,690 L310,690 L310,720" fill="none" stroke="#f57f17" stroke-width="1.5" stroke-dasharray="5 3"/>
+<text x="550" y="685" text-anchor="middle" fill="#f57f17" font-size="8">1:N</text>
+
+
+<!-- ══════════ ROW 4: Invoice, InvoiceItem, Budget ══════════ -->
+
+<!-- ──── INVOICE ──── -->
+<g>
+<rect x="20" y="1110" width="290" height="235" rx="5" fill="#fff" stroke="#00695c" stroke-width="2.2"/>
+<rect x="20" y="1110" width="290" height="32" rx="5" fill="#00695c"/>
+<rect x="20" y="1136" width="290" height="6" fill="#00695c"/>
+<text x="165" y="1132" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Invoice</text>
+<text x="30" y="1152" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="20" y1="1158" x2="310" y2="1158" stroke="#eee"/>
+<text x="30" y="1175" font-size="10" fill="#333" font-family="JetBrains Mono">   invoice_number : String UNIQUE</text>
+<text x="30" y="1190" font-size="10" fill="#333" font-family="JetBrains Mono">   status : String(50)</text>
+<text x="30" y="1205" font-size="10" fill="#333" font-family="JetBrains Mono">   issue_date : Date</text>
+<text x="30" y="1220" font-size="10" fill="#333" font-family="JetBrains Mono">   subtotal : Decimal(18,2)</text>
+<text x="30" y="1235" font-size="10" fill="#333" font-family="JetBrains Mono">   tax_amount : Decimal(18,2)</text>
+<text x="30" y="1250" font-size="10" fill="#333" font-family="JetBrains Mono">   total_amount : Decimal(18,2)</text>
+<line x1="20" y1="1256" x2="310" y2="1256" stroke="#eee"/>
+<text x="30" y="1273" font-size="10" fill="#c62828" font-family="JetBrains Mono" font-weight="600">🔗 supplier_id → suppliers.id</text>
+<text x="30" y="1288" font-size="10" fill="#7b1fa2" font-family="JetBrains Mono" font-weight="600">🔗 project_id → projects.id</text>
+<text x="30" y="1303" font-size="10" fill="#1565c0" font-family="JetBrains Mono" font-weight="600">🔗 created_by → users.id</text>
+<line x1="20" y1="1309" x2="310" y2="1309" stroke="#eee"/>
+<text x="30" y="1326" font-size="9" fill="#aaa">DRAFT → APPROVED → SENT → PAID</text>
+</g>
+
+<!-- ──── INVOICE ITEM ──── -->
+<g>
+<rect x="370" y="1110" width="260" height="195" rx="5" fill="#fff" stroke="#00695c" stroke-width="1.8"/>
+<rect x="370" y="1110" width="260" height="32" rx="5" fill="#00695c"/>
+<rect x="370" y="1136" width="260" height="6" fill="#00695c"/>
+<text x="500" y="1132" text-anchor="middle" fill="#fff" font-size="13" font-weight="900">InvoiceItem</text>
+<text x="380" y="1152" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="370" y1="1158" x2="630" y2="1158" stroke="#eee"/>
+<text x="380" y="1175" font-size="10" fill="#333" font-family="JetBrains Mono">   description : Text</text>
+<text x="380" y="1190" font-size="10" fill="#333" font-family="JetBrains Mono">   quantity : Decimal</text>
+<text x="380" y="1205" font-size="10" fill="#333" font-family="JetBrains Mono">   unit_price : Decimal</text>
+<text x="380" y="1220" font-size="10" fill="#333" font-family="JetBrains Mono">   total : Decimal</text>
+<line x1="370" y1="1226" x2="630" y2="1226" stroke="#eee"/>
+<text x="380" y="1243" font-size="10" fill="#00695c" font-family="JetBrains Mono" font-weight="600">🔗 invoice_id → invoices.id «FK»</text>
+<text x="380" y="1258" font-size="10" fill="#00838f" font-family="JetBrains Mono" font-weight="600">🔗 worklog_id → worklogs.id</text>
+<line x1="370" y1="1265" x2="630" y2="1265" stroke="#eee"/>
+<text x="380" y="1282" font-size="9" fill="#aaa">שורת חשבונית = דיווח מאושר</text>
+</g>
+
+<!-- ──── BUDGET ──── -->
+<g>
+<rect x="690" y="1110" width="260" height="220" rx="5" fill="#fff" stroke="#6A1B9A" stroke-width="2.2"/>
+<rect x="690" y="1110" width="260" height="32" rx="5" fill="#6A1B9A"/>
+<rect x="690" y="1136" width="260" height="6" fill="#6A1B9A"/>
+<text x="820" y="1132" text-anchor="middle" fill="#fff" font-size="15" font-weight="900">Budget</text>
+<text x="700" y="1152" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="690" y1="1158" x2="950" y2="1158" stroke="#eee"/>
+<text x="700" y="1175" font-size="10" fill="#333" font-family="JetBrains Mono">   name : String(200)</text>
+<text x="700" y="1190" font-size="10" fill="#333" font-family="JetBrains Mono">   code : String(50) UNIQUE</text>
+<text x="700" y="1205" font-size="10" fill="#333" font-family="JetBrains Mono">   total_amount : Decimal</text>
+<text x="700" y="1220" font-size="10" fill="#333" font-family="JetBrains Mono">   spent_amount : Decimal</text>
+<text x="700" y="1235" font-size="10" fill="#333" font-family="JetBrains Mono">   committed_amount : Decimal</text>
+<text x="700" y="1250" font-size="10" fill="#333" font-family="JetBrains Mono">   fiscal_year : Integer</text>
+<text x="700" y="1265" font-size="10" fill="#333" font-family="JetBrains Mono">   status : String(50)</text>
+<line x1="690" y1="1271" x2="950" y2="1271" stroke="#eee"/>
+<text x="700" y="1288" font-size="10" fill="#1565c0" font-family="JetBrains Mono" font-weight="600">🔗 created_by → users.id «FK»</text>
+<text x="700" y="1303" font-size="10" fill="#6A1B9A" font-family="JetBrains Mono" font-weight="600">🔗 parent_budget_id → budgets.id</text>
+<line x1="690" y1="1309" x2="950" y2="1309" stroke="#eee"/>
+<text x="700" y="1326" font-size="9" fill="#aaa">«1:N» → budget_items, transfers</text>
+</g>
+
+<!-- ──── NOTIFICATION ──── -->
+<g>
+<rect x="1010" y="1110" width="240" height="175" rx="5" fill="#fff" stroke="#546e7a" stroke-width="1.8"/>
+<rect x="1010" y="1110" width="240" height="32" rx="5" fill="#546e7a"/>
+<rect x="1010" y="1136" width="240" height="6" fill="#546e7a"/>
+<text x="1130" y="1132" text-anchor="middle" fill="#fff" font-size="13" font-weight="900">Notification</text>
+<text x="1020" y="1152" font-size="10" fill="#d4a017" font-family="JetBrains Mono" font-weight="700">🔑 id : Integer  «PK»</text>
+<line x1="1010" y1="1158" x2="1250" y2="1158" stroke="#eee"/>
+<text x="1020" y="1175" font-size="10" fill="#333" font-family="JetBrains Mono">   type : String(50)</text>
+<text x="1020" y="1190" font-size="10" fill="#333" font-family="JetBrains Mono">   title : String(255)</text>
+<text x="1020" y="1205" font-size="10" fill="#333" font-family="JetBrains Mono">   message : Text</text>
+<text x="1020" y="1220" font-size="10" fill="#333" font-family="JetBrains Mono">   is_read : Boolean</text>
+<line x1="1010" y1="1226" x2="1250" y2="1226" stroke="#eee"/>
+<text x="1020" y="1243" font-size="10" fill="#1565c0" font-family="JetBrains Mono" font-weight="600">🔗 user_id → users.id «FK»</text>
+<line x1="1010" y1="1250" x2="1250" y2="1250" stroke="#eee"/>
+<text x="1020" y="1267" font-size="9" fill="#aaa">info, warning, error, success</text>
+</g>
+
+<!-- ═══ ROW 4 RELATIONSHIPS ═══ -->
+<!-- Invoice 1:N → InvoiceItem -->
+<line x1="310" y1="1200" x2="370" y2="1200" stroke="#00695c" stroke-width="2.5"/>
+<text x="340" y="1193" text-anchor="middle" fill="#00695c" font-size="9" font-weight="800">1        N</text>
+
+<!-- Worklog → Invoice (generates) -->
+<path d="M555,1030 L555,1070 L165,1070 L165,1110" fill="none" stroke="#00695c" stroke-width="2" stroke-dasharray="6 3"/>
+<text x="360" y="1065" text-anchor="middle" fill="#00695c" font-size="9" font-weight="700" font-style="italic">דיווח מאושר → חשבונית</text>
+
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- LEGEND -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<rect x="20" y="1400" width="1340" height="95" rx="10" fill="#fafafa" stroke="#ddd" stroke-width="1"/>
+<text x="690" y="1425" text-anchor="middle" font-size="14" font-weight="800" fill="#333">מקרא — Class Diagram · 15 ישויות מרכזיות מתוך 58 · PostgreSQL 16 + PostGIS</text>
+
+<!-- Symbols -->
+<text x="40" y="1452" font-size="11" fill="#d4a017" font-weight="700">🔑</text><text x="58" y="1452" font-size="10" fill="#555">Primary Key (מפתח ראשי)</text>
+<text x="240" y="1452" font-size="11" fill="#1565c0" font-weight="700">🔗</text><text x="258" y="1452" font-size="10" fill="#555">Foreign Key (מפתח זר)</text>
+<text x="450" y="1452" font-size="10" fill="#555">UNIQUE = שדה ייחודי</text>
+<line x1="620" y1="1449" x2="660" y2="1449" stroke="#555" stroke-width="2"/>
+<text x="670" y="1452" font-size="10" fill="#555">קשר ישיר</text>
+<line x1="770" y1="1449" x2="810" y2="1449" stroke="#555" stroke-width="1.5" stroke-dasharray="5 3"/>
+<text x="820" y="1452" font-size="10" fill="#555">קשר עקיף</text>
+<text x="940" y="1452" font-size="10" fill="#555" font-weight="700">1    N</text><text x="985" y="1452" font-size="10" fill="#555">= One-to-Many</text>
+<text x="1110" y="1452" font-size="10" fill="#555" font-weight="700">N    1</text><text x="1155" y="1452" font-size="10" fill="#555">= Many-to-One</text>
+
+<!-- Domain colors -->
+<text x="40" y="1478" font-size="10" fill="#1565c0" font-weight="700">■ אימות</text>
+<text x="110" y="1478" font-size="10" fill="#2e7d32" font-weight="700">■ ארגון</text>
+<text x="180" y="1478" font-size="10" fill="#7b1fa2" font-weight="700">■ פרויקטים</text>
+<text x="275" y="1478" font-size="10" fill="#c62828" font-weight="700">■ ספקים</text>
+<text x="345" y="1478" font-size="10" fill="#f57f17" font-weight="700">■ ציוד</text>
+<text x="410" y="1478" font-size="10" fill="#e65100" font-weight="700">■ הזמנות</text>
+<text x="500" y="1478" font-size="10" fill="#00838f" font-weight="700">■ דיווחים</text>
+<text x="585" y="1478" font-size="10" fill="#00695c" font-weight="700">■ חשבוניות</text>
+<text x="685" y="1478" font-size="10" fill="#6A1B9A" font-weight="700">■ תקציב</text>
+<text x="770" y="1478" font-size="10" fill="#546e7a" font-weight="700">■ מערכת</text>
+
+<text x="690" y="1510" text-anchor="middle" font-size="9" fill="#ccc">Forewise v1.2 — Class Diagram — Database Entity Model</text>
+</svg>
+</body>
+</html>

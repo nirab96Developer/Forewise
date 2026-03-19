@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<title>Forewise — Use Case Diagram</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Heebo',sans-serif;background:#fff;display:flex;justify-content:center;padding:10px}
+svg{width:100%;max-width:1300px;height:auto}
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1260 1680" xmlns="http://www.w3.org/2000/svg" font-family="Heebo,sans-serif">
+<defs>
+  <marker id="a" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#888"/></marker>
+  <marker id="ab" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#1565c0"/></marker>
+  <marker id="ag" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#2e7d32"/></marker>
+  <marker id="ao" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#e65100"/></marker>
+  <marker id="ap" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#ad1457"/></marker>
+  <marker id="av" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#7b1fa2"/></marker>
+  <marker id="ar" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#c62828"/></marker>
+  <marker id="at" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#00695c"/></marker>
+  <marker id="ay" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#546e7a"/></marker>
+  <marker id="ai" markerWidth="8" markerHeight="5" refX="8" refY="2.5" orient="auto"><path d="M0,0 L8,2.5 L0,5" fill="none" stroke="#888" stroke-width="1.2"/></marker>
+</defs>
+
+<!-- TITLE -->
+<text x="630" y="30" text-anchor="middle" font-size="22" font-weight="900" fill="#1a2e1f">תרשים תרחישי שימוש — Forewise</text>
+<text x="630" y="52" text-anchor="middle" font-size="12" fill="#999">Use Case Diagram — מערכת ניהול יערות · 7 שחקנים · 20 תרחישים · include / extend</text>
+
+<!-- ═══ SYSTEM BOUNDARY ═══ -->
+<rect x="280" y="65" width="640" height="1500" rx="16" fill="#fafffe" stroke="#2e7d32" stroke-width="2.5"/>
+<text x="600" y="88" text-anchor="middle" fill="#2e7d32" font-size="15" font-weight="800">מערכת Forewise</text>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODULE A: אימות — Authentication -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<rect x="295" y="95" width="610" height="22" rx="4" fill="#E8F5E9"/>
+<text x="600" y="112" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="800">מודול א׳ — אימות והרשאות</text>
+
+<ellipse cx="480" cy="150" rx="115" ry="26" fill="#f5f5f5" stroke="#9e9e9e" stroke-width="1.5"/>
+<text x="480" y="145" text-anchor="middle" fill="#666" font-size="9" font-weight="700">UC1</text>
+<text x="480" y="159" text-anchor="middle" fill="#333" font-size="12" font-weight="600">התחברות למערכת</text>
+
+<ellipse cx="720" cy="150" rx="100" ry="26" fill="#E3F2FD" stroke="#1565c0" stroke-width="1.5"/>
+<text x="720" y="145" text-anchor="middle" fill="#1565c0" font-size="9" font-weight="700">UC2</text>
+<text x="720" y="159" text-anchor="middle" fill="#333" font-size="12" font-weight="600">אימות ביומטרי</text>
+
+<ellipse cx="380" cy="215" rx="95" ry="26" fill="#FFF3E0" stroke="#e65100" stroke-width="1.5"/>
+<text x="380" y="210" text-anchor="middle" fill="#e65100" font-size="9" font-weight="700">UC3</text>
+<text x="380" y="224" text-anchor="middle" fill="#333" font-size="12" font-weight="600">איפוס סיסמה / OTP</text>
+
+<ellipse cx="620" cy="215" rx="100" ry="26" fill="#E3F2FD" stroke="#1565c0" stroke-width="1.5"/>
+<text x="620" y="210" text-anchor="middle" fill="#1565c0" font-size="9" font-weight="700">UC4</text>
+<text x="620" y="224" text-anchor="middle" fill="#333" font-size="12" font-weight="600">ניהול משתמשים</text>
+
+<!-- include/extend -->
+<path d="M595,150 L625,150" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="610" y="142" text-anchor="middle" fill="#888" font-size="8" font-weight="600">«extend»</text>
+<path d="M440,173 L400,192" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="410" y="178" text-anchor="end" fill="#888" font-size="8" font-weight="600">«extend»</text>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODULE B: ניהול — Management -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<rect x="295" y="260" width="610" height="22" rx="4" fill="#F3E5F5"/>
+<text x="600" y="277" text-anchor="middle" fill="#7b1fa2" font-size="10" font-weight="800">מודול ב׳ — ניהול פרויקטים ותקציב</text>
+
+<ellipse cx="430" cy="315" rx="115" ry="26" fill="#F3E5F5" stroke="#7b1fa2" stroke-width="1.5"/>
+<text x="430" y="310" text-anchor="middle" fill="#7b1fa2" font-size="9" font-weight="700">UC5</text>
+<text x="430" y="324" text-anchor="middle" fill="#333" font-size="12" font-weight="600">ניהול פרויקטים</text>
+
+<ellipse cx="700" cy="315" rx="105" ry="26" fill="#F3E5F5" stroke="#6A1B9A" stroke-width="1.5"/>
+<text x="700" y="310" text-anchor="middle" fill="#6A1B9A" font-size="9" font-weight="700">UC6</text>
+<text x="700" y="324" text-anchor="middle" fill="#333" font-size="12" font-weight="600">ניהול תקציב</text>
+
+<ellipse cx="430" cy="385" rx="115" ry="26" fill="#E8F5E9" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="430" y="380" text-anchor="middle" fill="#2e7d32" font-size="9" font-weight="700">UC7</text>
+<text x="430" y="394" text-anchor="middle" fill="#333" font-size="12" font-weight="600">צפייה במפה</text>
+
+<ellipse cx="700" cy="385" rx="105" ry="26" fill="#F1F8E9" stroke="#558b2f" stroke-width="1.5"/>
+<text x="700" y="380" text-anchor="middle" fill="#558b2f" font-size="9" font-weight="700">UC8</text>
+<text x="700" y="394" text-anchor="middle" fill="#333" font-size="12" font-weight="600">צפייה בדוחות</text>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODULE C: הזמנות — Work Orders -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<rect x="295" y="430" width="610" height="22" rx="4" fill="#FFF3E0"/>
+<text x="600" y="447" text-anchor="middle" fill="#e65100" font-size="10" font-weight="800">מודול ג׳ — הזמנות עבודה וספקים</text>
+
+<ellipse cx="470" cy="495" rx="125" ry="28" fill="#FFF3E0" stroke="#e65100" stroke-width="1.8"/>
+<text x="470" y="489" text-anchor="middle" fill="#e65100" font-size="9" font-weight="700">UC9</text>
+<text x="470" y="504" text-anchor="middle" fill="#333" font-size="13" font-weight="600">יצירת הזמנת עבודה</text>
+
+<ellipse cx="730" cy="495" rx="115" ry="28" fill="#FFF3E0" stroke="#e65100" stroke-width="1.5"/>
+<text x="730" y="489" text-anchor="middle" fill="#e65100" font-size="9" font-weight="700">UC10</text>
+<text x="730" y="504" text-anchor="middle" fill="#333" font-size="12" font-weight="600">אילוץ ספק ידני</text>
+
+<ellipse cx="470" cy="575" rx="130" ry="28" fill="#FCE4EC" stroke="#ad1457" stroke-width="1.5"/>
+<text x="470" y="569" text-anchor="middle" fill="#ad1457" font-size="9" font-weight="700">UC11</text>
+<text x="470" y="584" text-anchor="middle" fill="#333" font-size="12" font-weight="600">שליחת הזמנה לספק</text>
+
+<ellipse cx="730" cy="575" rx="110" ry="28" fill="#ECEFF1" stroke="#546e7a" stroke-width="1.5"/>
+<text x="730" y="569" text-anchor="middle" fill="#546e7a" font-size="9" font-weight="700">UC12</text>
+<text x="730" y="584" text-anchor="middle" fill="#333" font-size="12" font-weight="600">רוטציה הוגנת (מערכת)</text>
+
+<ellipse cx="600" cy="650" rx="125" ry="28" fill="#FFEBEE" stroke="#c62828" stroke-width="1.5"/>
+<text x="600" y="644" text-anchor="middle" fill="#c62828" font-size="9" font-weight="700">UC13</text>
+<text x="600" y="659" text-anchor="middle" fill="#333" font-size="12" font-weight="600">אישור / דחיית הזמנה</text>
+
+<ellipse cx="430" cy="720" rx="120" ry="26" fill="#FCE4EC" stroke="#ad1457" stroke-width="1.5"/>
+<text x="430" y="715" text-anchor="middle" fill="#ad1457" font-size="9" font-weight="700">UC14</text>
+<text x="430" y="729" text-anchor="middle" fill="#333" font-size="12" font-weight="600">אישור קבלת ספק</text>
+
+<!-- include/extend for work orders -->
+<path d="M595,495 L620,495" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="615" y="487" text-anchor="middle" fill="#888" font-size="8" font-weight="600">«extend»</text>
+
+<path d="M470,523 L470,547" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="485" y="538" fill="#888" font-size="8" font-weight="600">«include»</text>
+
+<path d="M600,575 L620,575" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="614" y="567" text-anchor="middle" fill="#888" font-size="8" font-weight="600">«include»</text>
+
+<path d="M540,603 L565,625" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+
+<path d="M530,672 L480,698" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="490" y="684" fill="#888" font-size="8" font-weight="600">«include»</text>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODULE D: דיווח — Worklogs -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<rect x="295" y="770" width="610" height="22" rx="4" fill="#E0F7FA"/>
+<text x="600" y="787" text-anchor="middle" fill="#00838f" font-size="10" font-weight="800">מודול ד׳ — ביצוע עבודה ודיווח</text>
+
+<ellipse cx="450" cy="835" rx="120" ry="26" fill="#F3E5F5" stroke="#7b1fa2" stroke-width="1.5"/>
+<text x="450" y="830" text-anchor="middle" fill="#7b1fa2" font-size="9" font-weight="700">UC15</text>
+<text x="450" y="844" text-anchor="middle" fill="#333" font-size="12" font-weight="600">סריקת ציוד QR</text>
+
+<ellipse cx="720" cy="835" rx="120" ry="26" fill="#F3E5F5" stroke="#7b1fa2" stroke-width="1.5"/>
+<text x="720" y="830" text-anchor="middle" fill="#7b1fa2" font-size="9" font-weight="700">UC16</text>
+<text x="720" y="844" text-anchor="middle" fill="#333" font-size="12" font-weight="600">התחלת עבודה בשטח</text>
+
+<ellipse cx="430" cy="910" rx="115" ry="26" fill="#E8F5E9" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="430" y="905" text-anchor="middle" fill="#2e7d32" font-size="9" font-weight="700">UC17a</text>
+<text x="430" y="919" text-anchor="middle" fill="#333" font-size="12" font-weight="600">דיווח תקני (9 שעות)</text>
+
+<ellipse cx="730" cy="910" rx="115" ry="26" fill="#FFEBEE" stroke="#c62828" stroke-width="1.5"/>
+<text x="730" y="905" text-anchor="middle" fill="#c62828" font-size="9" font-weight="700">UC17b</text>
+<text x="730" y="919" text-anchor="middle" fill="#333" font-size="12" font-weight="600">דיווח לא תקני / אחסנה</text>
+
+<ellipse cx="580" cy="980" rx="120" ry="28" fill="#F3E5F5" stroke="#7b1fa2" stroke-width="1.5"/>
+<text x="580" y="974" text-anchor="middle" fill="#7b1fa2" font-size="9" font-weight="700">UC18</text>
+<text x="580" y="989" text-anchor="middle" fill="#333" font-size="12" font-weight="600">הגשת דיווח לאישור</text>
+
+<!-- include for worklogs -->
+<path d="M470,861 L450,884" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<path d="M500,858 L680,888" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="600" y="870" text-anchor="middle" fill="#888" font-size="8" font-weight="600">«extend» סוג דיווח</text>
+
+<path d="M490,934 L545,957" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<path d="M680,934" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3"/>
+<text x="520" y="950" fill="#888" font-size="8" font-weight="600">«include»</text>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODULE E: אישור וחשבונית — Approval & Invoicing -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<rect x="295" y="1030" width="610" height="22" rx="4" fill="#E0F2F1"/>
+<text x="600" y="1047" text-anchor="middle" fill="#00695c" font-size="10" font-weight="800">מודול ה׳ — אישור, חשבוניות ודוחות</text>
+
+<ellipse cx="470" cy="1095" rx="130" ry="28" fill="#E0F2F1" stroke="#00695c" stroke-width="1.8"/>
+<text x="470" y="1089" text-anchor="middle" fill="#00695c" font-size="9" font-weight="700">UC19</text>
+<text x="470" y="1104" text-anchor="middle" fill="#333" font-size="13" font-weight="600">אישור דיווח עבודה</text>
+
+<ellipse cx="470" cy="1175" rx="130" ry="28" fill="#E0F2F1" stroke="#00695c" stroke-width="1.8"/>
+<text x="470" y="1169" text-anchor="middle" fill="#00695c" font-size="9" font-weight="700">UC20</text>
+<text x="470" y="1184" text-anchor="middle" fill="#333" font-size="13" font-weight="600">הפקת חשבונית מדיווחים</text>
+
+<ellipse cx="730" cy="1095" rx="110" ry="26" fill="#ECEFF1" stroke="#546e7a" stroke-width="1.5"/>
+<text x="730" y="1090" text-anchor="middle" fill="#546e7a" font-size="9" font-weight="700">UC21</text>
+<text x="730" y="1104" text-anchor="middle" fill="#333" font-size="12" font-weight="600">עדכון תקציב (מערכת)</text>
+
+<ellipse cx="730" cy="1175" rx="110" ry="26" fill="#ECEFF1" stroke="#546e7a" stroke-width="1.5"/>
+<text x="730" y="1170" text-anchor="middle" fill="#546e7a" font-size="9" font-weight="700">UC22</text>
+<text x="730" y="1184" text-anchor="middle" fill="#333" font-size="12" font-weight="600">שליחת התראות (מערכת)</text>
+
+<!-- include -->
+<path d="M470,1123 L470,1147" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="485" y="1140" fill="#888" font-size="8" font-weight="600">«include»</text>
+
+<path d="M600,1095 L625,1095" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="615" y="1087" text-anchor="middle" fill="#888" font-size="8" font-weight="600">«include»</text>
+
+<path d="M600,1175 L625,1175" fill="none" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3" marker-end="url(#ai)"/>
+<text x="615" y="1167" text-anchor="middle" fill="#888" font-size="8" font-weight="600">«include»</text>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MODULE F: תמיכה -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<rect x="295" y="1225" width="610" height="22" rx="4" fill="#FFF8E1"/>
+<text x="600" y="1242" text-anchor="middle" fill="#f57f17" font-size="10" font-weight="800">מודול ו׳ — תמיכה</text>
+
+<ellipse cx="480" cy="1285" rx="120" ry="26" fill="#FFF8E1" stroke="#f57f17" stroke-width="1.5"/>
+<text x="480" y="1280" text-anchor="middle" fill="#f57f17" font-size="9" font-weight="700">UC23</text>
+<text x="480" y="1294" text-anchor="middle" fill="#333" font-size="12" font-weight="600">פנייה לתמיכה / FAQ</text>
+
+<ellipse cx="730" cy="1285" rx="110" ry="26" fill="#E0F7FA" stroke="#00838f" stroke-width="1.5"/>
+<text x="730" y="1280" text-anchor="middle" fill="#00838f" font-size="9" font-weight="700">UC24</text>
+<text x="730" y="1294" text-anchor="middle" fill="#333" font-size="12" font-weight="600">יומן פעילות אישי</text>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- ═══ ACTORS + CONNECTIONS ═══ -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+
+<!-- ──── מנהל מערכת (BLUE) ──── -->
+<g>
+<circle cx="100" cy="170" r="15" fill="none" stroke="#1565c0" stroke-width="2.5"/>
+<line x1="100" y1="185" x2="100" y2="218" stroke="#1565c0" stroke-width="2.5"/>
+<line x1="77" y1="200" x2="123" y2="200" stroke="#1565c0" stroke-width="2.5"/>
+<line x1="100" y1="218" x2="84" y2="242" stroke="#1565c0" stroke-width="2.5"/>
+<line x1="100" y1="218" x2="116" y2="242" stroke="#1565c0" stroke-width="2.5"/>
+<text x="100" y="260" text-anchor="middle" fill="#1565c0" font-size="13" font-weight="800">מנהל מערכת</text>
+</g>
+<line x1="123" y1="190" x2="365" y2="150" stroke="#1565c0" stroke-width="1.6" opacity="0.7" marker-end="url(#ab)"/>
+<line x1="123" y1="200" x2="520" y2="215" stroke="#1565c0" stroke-width="1.6" opacity="0.7" marker-end="url(#ab)"/>
+<line x1="123" y1="210" x2="315" y2="315" stroke="#1565c0" stroke-width="1.6" opacity="0.7" marker-end="url(#ab)"/>
+
+<!-- ──── מנהל מרחב (GREEN) ──── -->
+<g>
+<circle cx="100" cy="350" r="15" fill="none" stroke="#2e7d32" stroke-width="2.5"/>
+<line x1="100" y1="365" x2="100" y2="398" stroke="#2e7d32" stroke-width="2.5"/>
+<line x1="77" y1="380" x2="123" y2="380" stroke="#2e7d32" stroke-width="2.5"/>
+<line x1="100" y1="398" x2="84" y2="422" stroke="#2e7d32" stroke-width="2.5"/>
+<line x1="100" y1="398" x2="116" y2="422" stroke="#2e7d32" stroke-width="2.5"/>
+<text x="100" y="440" text-anchor="middle" fill="#2e7d32" font-size="13" font-weight="800">מנהל מרחב</text>
+</g>
+<line x1="123" y1="370" x2="315" y2="315" stroke="#2e7d32" stroke-width="1.6" opacity="0.7" marker-end="url(#ag)"/>
+<line x1="123" y1="375" x2="595" y2="315" stroke="#2e7d32" stroke-width="1.6" opacity="0.7" marker-end="url(#ag)"/>
+<line x1="123" y1="380" x2="315" y2="385" stroke="#2e7d32" stroke-width="1.6" opacity="0.7" marker-end="url(#ag)"/>
+<line x1="123" y1="385" x2="595" y2="385" stroke="#2e7d32" stroke-width="1.6" opacity="0.7" marker-end="url(#ag)"/>
+
+<!-- ──── מנהל אזור (ORANGE) ──── -->
+<g>
+<circle cx="100" cy="530" r="15" fill="none" stroke="#e65100" stroke-width="2.5"/>
+<line x1="100" y1="545" x2="100" y2="578" stroke="#e65100" stroke-width="2.5"/>
+<line x1="77" y1="560" x2="123" y2="560" stroke="#e65100" stroke-width="2.5"/>
+<line x1="100" y1="578" x2="84" y2="602" stroke="#e65100" stroke-width="2.5"/>
+<line x1="100" y1="578" x2="116" y2="602" stroke="#e65100" stroke-width="2.5"/>
+<text x="100" y="620" text-anchor="middle" fill="#e65100" font-size="13" font-weight="800">מנהל אזור</text>
+</g>
+<line x1="123" y1="550" x2="345" y2="495" stroke="#e65100" stroke-width="1.6" opacity="0.7" marker-end="url(#ao)"/>
+<path d="M123,560 Q200,650 475,650" fill="none" stroke="#e65100" stroke-width="1.5" opacity="0.6" marker-end="url(#ao)"/>
+
+<!-- ──── מתאם הזמנות (PINK) ──── -->
+<g>
+<circle cx="100" cy="700" r="15" fill="none" stroke="#ad1457" stroke-width="2.5"/>
+<line x1="100" y1="715" x2="100" y2="748" stroke="#ad1457" stroke-width="2.5"/>
+<line x1="77" y1="730" x2="123" y2="730" stroke="#ad1457" stroke-width="2.5"/>
+<line x1="100" y1="748" x2="84" y2="772" stroke="#ad1457" stroke-width="2.5"/>
+<line x1="100" y1="748" x2="116" y2="772" stroke="#ad1457" stroke-width="2.5"/>
+<text x="100" y="790" text-anchor="middle" fill="#ad1457" font-size="12" font-weight="800">מתאם הזמנות</text>
+</g>
+<path d="M123,710 Q200,600 345,575" fill="none" stroke="#ad1457" stroke-width="1.6" opacity="0.7" marker-end="url(#ap)"/>
+<path d="M123,720 Q200,680 310,720" fill="none" stroke="#ad1457" stroke-width="1.6" opacity="0.7" marker-end="url(#ap)"/>
+<line x1="123" y1="730" x2="615" y2="495" stroke="#ad1457" stroke-width="1.4" opacity="0.5" marker-end="url(#ap)"/>
+
+<!-- ──── מנהל עבודה (PURPLE) ──── -->
+<g>
+<circle cx="100" cy="890" r="15" fill="none" stroke="#7b1fa2" stroke-width="2.5"/>
+<line x1="100" y1="905" x2="100" y2="938" stroke="#7b1fa2" stroke-width="2.5"/>
+<line x1="77" y1="920" x2="123" y2="920" stroke="#7b1fa2" stroke-width="2.5"/>
+<line x1="100" y1="938" x2="84" y2="962" stroke="#7b1fa2" stroke-width="2.5"/>
+<line x1="100" y1="938" x2="116" y2="962" stroke="#7b1fa2" stroke-width="2.5"/>
+<text x="100" y="980" text-anchor="middle" fill="#7b1fa2" font-size="13" font-weight="800">מנהל עבודה</text>
+</g>
+<path d="M123,880 Q200,800 330,835" fill="none" stroke="#7b1fa2" stroke-width="1.6" opacity="0.7" marker-end="url(#av)"/>
+<line x1="123" y1="890" x2="600" y2="835" stroke="#7b1fa2" stroke-width="1.6" opacity="0.7" marker-end="url(#av)"/>
+<line x1="123" y1="910" x2="345" y2="495" stroke="#7b1fa2" stroke-width="1.4" opacity="0.5" marker-end="url(#av)"/>
+<line x1="123" y1="920" x2="315" y2="910" stroke="#7b1fa2" stroke-width="1.6" opacity="0.7" marker-end="url(#av)"/>
+<path d="M123,930 Q250,960 460,980" fill="none" stroke="#7b1fa2" stroke-width="1.6" opacity="0.7" marker-end="url(#av)"/>
+
+<!-- ──── ספק (RED) — right side ──── -->
+<g>
+<circle cx="1170" cy="620" r="15" fill="none" stroke="#c62828" stroke-width="2.5"/>
+<line x1="1170" y1="635" x2="1170" y2="668" stroke="#c62828" stroke-width="2.5"/>
+<line x1="1147" y1="650" x2="1193" y2="650" stroke="#c62828" stroke-width="2.5"/>
+<line x1="1170" y1="668" x2="1154" y2="692" stroke="#c62828" stroke-width="2.5"/>
+<line x1="1170" y1="668" x2="1186" y2="692" stroke="#c62828" stroke-width="2.5"/>
+<text x="1170" y="710" text-anchor="middle" fill="#c62828" font-size="14" font-weight="800">ספק</text>
+</g>
+<line x1="1147" y1="650" x2="725" y2="650" stroke="#c62828" stroke-width="2" opacity="0.8" marker-end="url(#ar)"/>
+
+<!-- ──── מנהלת חשבונות (TEAL) — right side ──── -->
+<g>
+<circle cx="1170" cy="1100" r="15" fill="none" stroke="#00695c" stroke-width="2.5"/>
+<line x1="1170" y1="1115" x2="1170" y2="1148" stroke="#00695c" stroke-width="2.5"/>
+<line x1="1147" y1="1130" x2="1193" y2="1130" stroke="#00695c" stroke-width="2.5"/>
+<line x1="1170" y1="1148" x2="1154" y2="1172" stroke="#00695c" stroke-width="2.5"/>
+<line x1="1170" y1="1148" x2="1186" y2="1172" stroke="#00695c" stroke-width="2.5"/>
+<text x="1170" y="1192" text-anchor="middle" fill="#00695c" font-size="12" font-weight="800">מנהלת חשבונות</text>
+</g>
+<line x1="1147" y1="1095" x2="600" y2="1095" stroke="#00695c" stroke-width="1.8" opacity="0.7" marker-end="url(#at)"/>
+<line x1="1147" y1="1110" x2="600" y2="1175" stroke="#00695c" stroke-width="1.8" opacity="0.7" marker-end="url(#at)"/>
+<line x1="1147" y1="1130" x2="840" y2="1095" stroke="#00695c" stroke-width="1.4" opacity="0.5" marker-end="url(#at)"/>
+<path d="M1147,1140 Q1050,1280 600,1285" fill="none" stroke="#00695c" stroke-width="1.4" opacity="0.5" marker-end="url(#at)"/>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- LEGEND -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<rect x="20" y="1580" width="1220" height="85" rx="12" fill="#fafafa" stroke="#ddd" stroke-width="1.2"/>
+<text x="630" y="1603" text-anchor="middle" font-size="14" font-weight="800" fill="#333">מקרא — Use Case Diagram</text>
+
+<!-- Actors -->
+<circle cx="40" cy="1625" r="5" fill="#1565c0"/><text x="52" y="1629" font-size="10" fill="#555">מנהל מערכת</text>
+<circle cx="155" cy="1625" r="5" fill="#2e7d32"/><text x="167" y="1629" font-size="10" fill="#555">מנהל מרחב</text>
+<circle cx="265" cy="1625" r="5" fill="#e65100"/><text x="277" y="1629" font-size="10" fill="#555">מנהל אזור</text>
+<circle cx="370" cy="1625" r="5" fill="#ad1457"/><text x="382" y="1629" font-size="10" fill="#555">מתאם הזמנות</text>
+<circle cx="495" cy="1625" r="5" fill="#7b1fa2"/><text x="507" y="1629" font-size="10" fill="#555">מנהל עבודה</text>
+<circle cx="610" cy="1625" r="5" fill="#c62828"/><text x="622" y="1629" font-size="10" fill="#555">ספק</text>
+<circle cx="680" cy="1625" r="5" fill="#00695c"/><text x="692" y="1629" font-size="10" fill="#555">מנהלת חשבונות</text>
+
+<!-- Symbols -->
+<line x1="820" y1="1625" x2="860" y2="1625" stroke="#555" stroke-width="1.5"/><text x="868" y="1629" font-size="10" fill="#888">קשר שחקן-פעולה</text>
+<line x1="980" y1="1625" x2="1020" y2="1625" stroke="#888" stroke-width="1.2" stroke-dasharray="5 3"/><text x="1028" y="1629" font-size="10" fill="#888">include / extend</text>
+
+<!-- Modules -->
+<text x="40" y="1653" font-size="10" fill="#2e7d32" font-weight="700">א׳ אימות</text>
+<text x="120" y="1653" font-size="10" fill="#7b1fa2" font-weight="700">ב׳ ניהול</text>
+<text x="200" y="1653" font-size="10" fill="#e65100" font-weight="700">ג׳ הזמנות</text>
+<text x="290" y="1653" font-size="10" fill="#00838f" font-weight="700">ד׳ דיווח</text>
+<text x="370" y="1653" font-size="10" fill="#00695c" font-weight="700">ה׳ אישור וחשבונית</text>
+<text x="520" y="1653" font-size="10" fill="#f57f17" font-weight="700">ו׳ תמיכה</text>
+<text x="620" y="1653" font-size="10" fill="#999">| 7 שחקנים · 24 תרחישים · 6 מודולים</text>
+
+</svg>
+</body>
+</html>

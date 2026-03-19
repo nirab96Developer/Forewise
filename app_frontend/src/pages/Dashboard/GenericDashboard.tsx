@@ -433,7 +433,7 @@ const GenericDashboard: React.FC<{title?: string}> = ({ title }) => {
                   </div>
                 ) : (
                   activities.map((act) => {
-                    const actionLabel = (act.action || '').replace(/_/g, ' ').toLowerCase();
+                    const actionLabel = (act as any).display_name_he || (act.action || '').replace(/_/g, ' ');
                     const timeStr = act.created_at
                       ? new Date(act.created_at).toLocaleDateString('he-IL') + ' ' +
                         new Date(act.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })

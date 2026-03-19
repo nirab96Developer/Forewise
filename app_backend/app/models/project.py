@@ -33,7 +33,7 @@ class Project(Base):
     budget = Column(Numeric(15, 2))
     scope = Column(Text)
     total_hours = Column(Numeric(10, 2))
-    priority = Column(Integer)
+
     work_type = Column(String(100))
     execution_type = Column(String(100))
     contractor_name = Column(String(255))
