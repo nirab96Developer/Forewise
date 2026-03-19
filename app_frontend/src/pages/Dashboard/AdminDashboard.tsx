@@ -14,8 +14,10 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react";
+import api from "../../services/api";
 import dashboardService, {
   DashboardSummary
 } from "../../services/dashboardService";
@@ -210,70 +212,8 @@ const AdminDashboard: React.FC = () => {
               {/* Mini Calendar */}
               <MiniCalendar />
               
-              {/* Activity Log - יומן פעילות מרכזי למעלה */}
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-blue-600" />
-                    <h3 className="font-semibold text-gray-900">יומן פעילות</h3>
-                  </div>
-                  <button onClick={() => navigate('/activity-log')} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                    לכל היומן ←
-                  </button>
-                </div>
-                <div className="divide-y divide-gray-50">
-                  <div className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer">
-                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">דיווח שעות חדש</p>
-                      <p className="text-xs text-gray-500 truncate">פרויקט: יער חולדה</p>
-                    </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0">5 דק׳</span>
-                  </div>
-                  <div className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer">
-                    <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Trees className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">הזמנת עבודה נוצרה</p>
-                      <p className="text-xs text-gray-500 truncate">פרויקט: אגמון החולה</p>
-                    </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0">15 דק׳</span>
-                  </div>
-                  <div className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer">
-                    <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Users className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">משתמש חדש נוסף</p>
-                      <p className="text-xs text-gray-500 truncate">יוסי כהן</p>
-                    </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0">שעה</span>
-                  </div>
-                  <div className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer">
-                    <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Wrench className="w-4 h-4 text-orange-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">ציוד הוקצה</p>
-                      <p className="text-xs text-gray-500 truncate">טרקטור CAT</p>
-                    </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0">2 שע׳</span>
-                  </div>
-                  <div className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer">
-                    <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <FileText className="w-4 h-4 text-red-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">דיווח דורש אישור</p>
-                      <p className="text-xs text-gray-500 truncate">עובד: דני לוי</p>
-                    </div>
-                    <span className="text-xs text-gray-400 flex-shrink-0">3 שע׳</span>
-                  </div>
-                </div>
-              </div>
+              {/* Activity Log - real data from API */}
+              <RealActivityLog />
               
             </div>
 
@@ -376,6 +316,101 @@ const MiniCalendar: React.FC = () => {
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+// Real Activity Log — fetches from /activity-logs API
+const ICON_MAP: Record<string, { icon: React.ElementType; bg: string; color: string }> = {
+  login:                 { icon: Activity,  bg: 'bg-gray-50',   color: 'text-gray-600' },
+  logout:                { icon: Activity,  bg: 'bg-gray-50',   color: 'text-gray-500' },
+  create:                { icon: FileText,  bg: 'bg-green-50',  color: 'text-green-600' },
+  update:                { icon: Edit3,     bg: 'bg-blue-50',   color: 'text-blue-600' },
+  approve:               { icon: FileText,  bg: 'bg-green-50',  color: 'text-green-600' },
+  reject:                { icon: FileText,  bg: 'bg-red-50',    color: 'text-red-600' },
+  submit:                { icon: FileText,  bg: 'bg-blue-50',   color: 'text-blue-600' },
+  assign:                { icon: Users,     bg: 'bg-purple-50', color: 'text-purple-600' },
+  work_order_created:    { icon: Trees,     bg: 'bg-green-50',  color: 'text-green-600' },
+  work_order_approved:   { icon: Trees,     bg: 'bg-green-50',  color: 'text-green-600' },
+  work_order_sent:       { icon: Trees,     bg: 'bg-blue-50',   color: 'text-blue-600' },
+  worklog_created:       { icon: FileText,  bg: 'bg-blue-50',   color: 'text-blue-600' },
+  worklog_approved:      { icon: FileText,  bg: 'bg-green-50',  color: 'text-green-600' },
+  worklog_rejected:      { icon: FileText,  bg: 'bg-red-50',    color: 'text-red-600' },
+  invoice_created:       { icon: FileText,  bg: 'bg-orange-50', color: 'text-orange-600' },
+  user_created:          { icon: Users,     bg: 'bg-purple-50', color: 'text-purple-600' },
+  equipment_assigned:    { icon: Wrench,    bg: 'bg-orange-50', color: 'text-orange-600' },
+  budget_updated:        { icon: FileText,  bg: 'bg-yellow-50', color: 'text-yellow-600' },
+};
+
+const timeAgo = (dateStr: string): string => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'עכשיו';
+  if (mins < 60) return `${mins} דק׳`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} שע׳`;
+  const days = Math.floor(hrs / 24);
+  return `${days} ימים`;
+};
+
+const RealActivityLog: React.FC = () => {
+  const navigate = useNavigate();
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/activity-logs', { params: { limit: 8, scope: 'system' } })
+      .then(r => {
+        const items = Array.isArray(r.data) ? r.data : r.data?.items || [];
+        setLogs(items.slice(0, 8));
+      })
+      .catch(() => setLogs([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Activity className="w-5 h-5 text-blue-600" />
+          <h3 className="font-semibold text-gray-900">יומן פעילות</h3>
+        </div>
+        <button onClick={() => navigate('/activity-log')} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+          לכל היומן ←
+        </button>
+      </div>
+      <div className="divide-y divide-gray-50">
+        {loading ? (
+          <div className="p-8 text-center">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-300 mx-auto" />
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="p-6 text-center">
+            <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">אין פעילות אחרונה</p>
+          </div>
+        ) : (
+          logs.map((log) => {
+            const actionKey = (log.action || log.activity_type || '').toLowerCase();
+            const iconCfg = ICON_MAP[actionKey] || { icon: Activity, bg: 'bg-gray-50', color: 'text-gray-500' };
+            const Icon = iconCfg.icon;
+            const label = log.display_name_he || log.action || '';
+            const sub = log.entity_name || log.user_name || '';
+            return (
+              <div key={log.id} className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer">
+                <div className={`w-8 h-8 ${iconCfg.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`w-4 h-4 ${iconCfg.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{label}</p>
+                  {sub && <p className="text-xs text-gray-500 truncate">{sub}</p>}
+                </div>
+                <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(log.created_at)}</span>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );
