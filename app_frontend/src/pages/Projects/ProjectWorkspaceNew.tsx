@@ -6,9 +6,9 @@ import {
   ArrowRight, Eye, Map, ClipboardList, Clock,
   Loader2, AlertCircle, CheckCircle2,
   Calendar, User, TreeDeciduous, MapPin, ExternalLink, Package,
-  FileText, Plus, ChevronLeft, Calculator, Activity,
+  FileText, Plus, Calculator, Activity,
   LogIn, CheckCircle, XCircle, Send, FilePlus, FileCheck, Info,
-  Camera, X, ScanLine
+  Camera, X, ScanLine, Wrench
 } from 'lucide-react';
 import projectService from '../../services/projectService';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
@@ -202,14 +202,14 @@ const ProjectWorkspaceNew: React.FC = () => {
     ? [
         { id: 'overview',  label: 'סקירה',         icon: Eye },
         { id: 'orders',    label: 'הזמנות עבודה',  icon: ClipboardList, badge: stats.activeOrders },
-        { id: 'worklogs',  label: 'דיווחים',       icon: Clock, badge: stats.openReports },
+        { id: 'worklogs',  label: 'כלים בפרויקט',  icon: Wrench, badge: stats.openReports },
         { id: 'map',       label: 'מפה',            icon: Map },
       ]
     : /* All other roles — same 4 tabs */
       [
         { id: 'overview',   label: 'סקירה',         icon: Eye },
         { id: 'orders',     label: 'הזמנות עבודה',  icon: ClipboardList, badge: stats.activeOrders },
-        { id: 'worklogs',   label: 'דיווחים',       icon: Clock, badge: stats.openReports },
+        { id: 'worklogs',   label: 'כלים בפרויקט',  icon: Wrench, badge: stats.openReports },
         { id: 'map',        label: 'מפה',             icon: Map },
       ];
 
@@ -804,7 +804,7 @@ const OrdersTab: React.FC<{
   orders: WorkOrder[];
   isWorkManager?: boolean;
   onSwitchToWorklogs?: () => void;
-}> = ({ projectCode, projectId, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs }) => {
+}> = ({ projectCode: _projectCode, projectId, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs }) => {
   const navigate = useNavigate();
 
   // localScans: orderId → equipment number (persists within the session until reload)
@@ -923,35 +923,27 @@ const OrdersTab: React.FC<{
                     <div>
                       <h4 className="text-xs font-semibold text-gray-500 mb-2">פעולות</h4>
                       <div className="space-y-2">
-                        {/* WM: scan or report */}
-                        {isWorkManager && isApproved && !isRejected && (
-                          <>
-                            {!scanned ? (
-                              <button
-                                onClick={() => setScanModal({ orderId: order.id, orderNumber: (order as any).order_number || order.id })}
-                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
-                              >
-                                <Camera className="w-4 h-4" />
-                                📷 סרוק כלי
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/new?work_order_id=${order.id}&equipment_id=${(order as any).equipment_id || ''}&project_id=${projectId}`)}
-                                className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors"
-                              >
-                                <Clock className="w-4 h-4" />
-                                📝 דווח שעות
-                              </button>
-                            )}
-                          </>
-                        )}
                         <button
                           onClick={() => navigate(`/work-orders/${order.id}`)}
-                          className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition-colors"
+                          className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition-colors"
                         >
                           <Eye className="w-4 h-4" />
                           צפה בפרטים
                         </button>
+                        {isWorkManager && isApproved && !isRejected && !scanned && (
+                          <button
+                            onClick={() => setScanModal({ orderId: order.id, orderNumber: (order as any).order_number || order.id })}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
+                          >
+                            <Camera className="w-4 h-4" />
+                            הוספת כלי לפרויקט
+                          </button>
+                        )}
+                        {isWorkManager && isApproved && scanned && (
+                          <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-center text-xs text-green-700 font-medium">
+                            ✅ כלי נסרק — עבור לטאב "כלים בפרויקט" לדיווח
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1065,28 +1057,6 @@ const WorklogsTab: React.FC<{
     draft: 'טיוטה', pending: 'ממתין', submitted: 'הוגש', approved: 'מאושר', rejected: 'נדחה', invoiced: 'חשבונית',
   }[s?.toLowerCase()] ?? s);
 
-  const PROGRESS_STAGES = ['ממתין לאישור', 'מאושר', 'חשבונית'];
-  const getStageIndex = (s: string) => ({ pending: 0, submitted: 0, approved: 1, invoiced: 2 }[s?.toLowerCase()] ?? -1);
-
-  const WorklogProgress = ({ status }: { status: string }) => {
-    const idx = getStageIndex(status);
-    if (idx < 0) return null;
-    return (
-      <div className="flex items-center gap-1 mt-2">
-        {PROGRESS_STAGES.map((label, i) => (
-          <React.Fragment key={i}>
-            <div className="flex flex-col items-center">
-              <div className={`w-3 h-3 rounded-full ${i <= idx ? 'bg-green-500' : 'bg-gray-200'}`} />
-              <span className={`text-[9px] mt-0.5 ${i <= idx ? 'text-green-700 font-semibold' : 'text-gray-400'}`}>{label}</span>
-            </div>
-            {i < PROGRESS_STAGES.length - 1 && (
-              <div className={`flex-1 h-0.5 ${i < idx ? 'bg-green-400' : 'bg-gray-200'}`} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-3">
@@ -1206,92 +1176,130 @@ const WorklogsTab: React.FC<{
         </div>
       )}
 
-      {/* ── Approved Orders — ready for reporting ── */}
+      {/* ── כלים בפרויקט — Equipment cards from approved orders ── */}
       {approvedOrders.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-600 mt-2">הזמנות מאושרות — מוכנות לדיווח</h3>
+        <div className="space-y-3">
           {approvedOrders.map((order) => {
-            const usedHours = worklogs
-              .filter(wl => (wl as any).work_order_id === order.id)
-              .reduce((sum: number, wl) => sum + (Number(wl.total_hours) || 0), 0);
-            const estimatedHours = (order as any).estimated_hours || 0;
+            const orderWorklogs = worklogs.filter(wl => (wl as any).work_order_id === order.id);
+            const usedHours = orderWorklogs.reduce((sum: number, wl) => sum + (Number(wl.total_hours) || 0), 0);
+            const estimatedHours = Number((order as any).estimated_hours) || 0;
             const remainingHours = Math.max(0, estimatedHours - usedHours);
+            const licensePlate = (order as any).equipment_license_plate || (order as any).equipment_scan || '';
 
             return (
-              <div key={`wo-${order.id}`} className="bg-white rounded-xl border-2 border-green-100 shadow-sm overflow-hidden">
-                {/* Header row */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div key={`eq-${order.id}`} className="bg-white rounded-2xl border-2 border-green-100 shadow-sm overflow-hidden">
+                {/* Header — like coordinator style */}
+                <div className="px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900">#{(order as any).order_number || order.id}</span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">אושר ונשלח</span>
+                    <div className="w-9 h-9 bg-green-100 rounded-xl flex items-center justify-center">
+                      <Wrench className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">{order.equipment_type || 'ציוד'}</p>
+                      {licensePlate && <p className="text-xs text-green-700 font-mono font-bold">{licensePlate}</p>}
+                    </div>
                   </div>
-                  {(order as any).is_forced_selection && (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">אילוץ ספק</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">פעיל</span>
+                    <span className="text-xs text-gray-400 font-mono">#{(order as any).order_number || order.id}</span>
+                  </div>
                 </div>
 
-                {/* Details — like coordinator view */}
-                <div className="px-4 py-3">
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400">🚜</span>
-                      <span className="text-gray-500">סוג ציוד:</span>
+                {/* Details grid */}
+                <div className="px-4 py-3 border-t border-gray-100">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
+                    <div>
+                      <span className="text-gray-400 text-xs block">סוג כלי</span>
                       <span className="font-medium text-gray-900">{order.equipment_type || '—'}</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400">🏢</span>
-                      <span className="text-gray-500">ספק:</span>
+                    <div>
+                      <span className="text-gray-400 text-xs block">מספר כלי</span>
+                      <span className="font-bold text-green-700">{licensePlate || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 text-xs block">ספק</span>
                       <span className="font-medium text-gray-900">{order.supplier_name || '—'}</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400">🔢</span>
-                      <span className="text-gray-500">מס׳ כלי:</span>
-                      <span className="font-medium text-gray-900">{(order as any).equipment_license_plate || (order as any).equipment_scan || '—'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400">📍</span>
-                      <span className="text-gray-500">מיקום:</span>
+                    <div>
+                      <span className="text-gray-400 text-xs block">מיקום</span>
                       <span className="font-medium text-gray-900">{(order as any).location_name || (order as any).area_name || '—'}</span>
                     </div>
+                    <div>
+                      <span className="text-gray-400 text-xs block">תאריכי עבודה</span>
+                      <span className="font-medium text-gray-900">{safeWODate((order as any).work_start_date, order.created_at)}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-400 text-xs block">כמות שעות</span>
+                      <span className="font-bold text-gray-900">{estimatedHours}</span>
+                    </div>
                   </div>
+                </div>
 
-                  {/* Hours balance */}
-                  {estimatedHours > 0 && (
-                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-blue-700 font-medium">יתרת שעות</span>
-                        <span className="text-lg font-bold text-blue-800">{remainingHours} / {estimatedHours}</span>
+                {/* Hours balance */}
+                {estimatedHours > 0 && (
+                  <div className="px-4 py-3 border-t border-gray-100">
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-blue-700 font-semibold">יתרת שעות</span>
+                        <span className="text-lg font-black text-blue-800">{remainingHours} / {estimatedHours}</span>
                       </div>
-                      <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
+                      <div className="w-full bg-blue-200 rounded-full h-2.5">
                         <div
-                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          className={`h-2.5 rounded-full transition-all ${remainingHours < estimatedHours * 0.2 ? 'bg-red-500' : 'bg-blue-600'}`}
                           style={{ width: `${Math.min(100, estimatedHours > 0 ? (usedHours / estimatedHours) * 100 : 0)}%` }}
                         />
                       </div>
-                      <div className="flex justify-between text-xs text-blue-600 mt-1">
-                        <span>דווח: {usedHours} שעות</span>
-                        <span>נותר: {remainingHours} שעות</span>
+                      <div className="flex justify-between text-xs mt-1.5">
+                        <span className="text-blue-600">דווח: {usedHours} שעות</span>
+                        <span className={remainingHours < estimatedHours * 0.2 ? 'text-red-600 font-bold' : 'text-blue-600'}>
+                          נותר: {remainingHours} שעות
+                        </span>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* Worklog history for this order */}
+                {orderWorklogs.length > 0 && (
+                  <div className="px-4 py-2 border-t border-gray-100">
+                    <p className="text-xs font-semibold text-gray-500 mb-1.5">דיווחים ({orderWorklogs.length})</p>
+                    <div className="space-y-1">
+                      {orderWorklogs.slice(0, 3).map(log => (
+                        <div key={log.id}
+                          onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/${log.id}`)}
+                          className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                        >
+                          <span className="text-gray-700">{fmtDate(log)} · {log.total_hours} שעות</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusColor(log.status)}`}>
+                            {statusLabel(log.status)}
+                          </span>
+                        </div>
+                      ))}
+                      {orderWorklogs.length > 3 && (
+                        <p className="text-[10px] text-gray-400 text-center">+ עוד {orderWorklogs.length - 3} דיווחים</p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
-                <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex gap-2">
-                  <button
-                    onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/new?work_order_id=${order.id}&equipment_id=${(order as any).equipment_id || ''}&project_id=${projectId}`)}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <Clock className="w-4 h-4" />
-                    📝 דווח שעות
-                  </button>
-                  <button
-                    onClick={() => navigate(`/work-orders/${order.id}`)}
-                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <Eye className="w-4 h-4" />
-                    צפה בפרטים
-                  </button>
+                <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/new?work_order_id=${order.id}&equipment_id=${(order as any).equipment_id || ''}&project_id=${projectId}`)}
+                      className="flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
+                    >
+                      <Clock className="w-4 h-4" />
+                      דיווח על הכלי
+                    </button>
+                    <button
+                      onClick={() => navigate(`/work-orders/${order.id}`)}
+                      className="flex items-center justify-center gap-1.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      צפה בפרטים
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -1299,41 +1307,12 @@ const WorklogsTab: React.FC<{
         </div>
       )}
 
-      {/* ── Worklogs List ── */}
-      {worklogs.length === 0 && !showForm && approvedOrders.length === 0 && (
+      {/* Empty state */}
+      {approvedOrders.length === 0 && worklogs.length === 0 && !showForm && (
         <div className="bg-white rounded-xl border p-8 text-center">
-          <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">אין דיווחים לפרויקט זה</p>
-        </div>
-      )}
-
-      {worklogs.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-gray-600 mt-4">דיווחים שהוגשו</h3>
-          {worklogs.map((log) => (
-            <div key={log.id}
-              onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/${log.id}`)}
-              className="bg-white rounded-xl border p-4 hover:shadow-md transition-shadow cursor-pointer"
-            >
-              <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-gray-900">
-                    דיווח #{log.report_number_formatted || log.report_number}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {log.user_name || 'לא ידוע'} • {fmtDate(log)} • {log.total_hours} שעות
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColor(log.status)}`}>
-                    {statusLabel(log.status)}
-                  </span>
-                  <ChevronLeft className="w-4 h-4 text-gray-400" />
-                </div>
-              </div>
-              <WorklogProgress status={log.status} />
-            </div>
-          ))}
+          <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">אין כלים פעילים בפרויקט</p>
+          <p className="text-xs text-gray-400 mt-1">צור הזמנת עבודה וסרוק כלי כדי להתחיל</p>
         </div>
       )}
     </div>
