@@ -527,6 +527,9 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
   const lat = forestCenterLat ?? projLat;
   const lng = forestCenterLng ?? projLng;
 
+  const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
   // Build map layers
   const LazyLeafletMap = React.lazy(() => import('../../components/Map/LeafletMap'));
   
@@ -627,6 +630,18 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
           </span>
         </div>
       )}
+
+      {/* Navigation buttons */}
+      <div className="flex gap-2 mb-3">
+        <a href={wazeUrl} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors">
+          <span>🗺️</span> נווט עם Waze
+        </a>
+        <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700 hover:bg-red-100 transition-colors">
+          <span>📍</span> נווט עם Google Maps
+        </a>
+      </div>
 
       {/* Map */}
       <div className="rounded-xl overflow-hidden shadow-lg border-2 border-gray-200 isolate" style={{ isolation: 'isolate' }}>
@@ -1022,12 +1037,35 @@ const WorklogsTab: React.FC<{
   const statusColor = (s: string) => ({
     draft: 'bg-gray-100 text-gray-800', pending: 'bg-yellow-100 text-yellow-800',
     submitted: 'bg-blue-100 text-blue-800', approved: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-  }[s] ?? 'bg-gray-100 text-gray-800');
+    rejected: 'bg-red-100 text-red-800', invoiced: 'bg-indigo-100 text-indigo-800',
+  }[s?.toLowerCase()] ?? 'bg-gray-100 text-gray-800');
 
   const statusLabel = (s: string) => ({
-    draft: 'טיוטה', pending: 'ממתין', submitted: 'הוגש', approved: 'מאושר', rejected: 'נדחה',
-  }[s] ?? s);
+    draft: 'טיוטה', pending: 'ממתין', submitted: 'הוגש', approved: 'מאושר', rejected: 'נדחה', invoiced: 'חשבונית',
+  }[s?.toLowerCase()] ?? s);
+
+  const PROGRESS_STAGES = ['ממתין לאישור', 'מאושר', 'חשבונית'];
+  const getStageIndex = (s: string) => ({ pending: 0, submitted: 0, approved: 1, invoiced: 2 }[s?.toLowerCase()] ?? -1);
+
+  const WorklogProgress = ({ status }: { status: string }) => {
+    const idx = getStageIndex(status);
+    if (idx < 0) return null;
+    return (
+      <div className="flex items-center gap-1 mt-2">
+        {PROGRESS_STAGES.map((label, i) => (
+          <React.Fragment key={i}>
+            <div className="flex flex-col items-center">
+              <div className={`w-3 h-3 rounded-full ${i <= idx ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <span className={`text-[9px] mt-0.5 ${i <= idx ? 'text-green-700 font-semibold' : 'text-gray-400'}`}>{label}</span>
+            </div>
+            {i < PROGRESS_STAGES.length - 1 && (
+              <div className={`flex-1 h-0.5 ${i < idx ? 'bg-green-400' : 'bg-gray-200'}`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-3">
@@ -1178,6 +1216,7 @@ const WorklogsTab: React.FC<{
                   <ChevronLeft className="w-4 h-4 text-gray-400" />
                 </div>
               </div>
+              <WorklogProgress status={log.status} />
             </div>
           ))}
         </div>

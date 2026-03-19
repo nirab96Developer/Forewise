@@ -275,6 +275,13 @@ class WorklogService:
         # Audit log
         _audit_worklog(db, current_user_id, worklog.id, 'APPROVE')
 
+        # Send approval emails (stage 2)
+        try:
+            _send_worklog_approved_emails(db, worklog)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Worklog approval email failed: {e}")
+
         return worklog
     
     def reject(self, db: Session, worklog_id: int, current_user_id: int, reason: str = None) -> Worklog:
@@ -612,3 +619,59 @@ def save_worklog_with_segments(
     db.commit()
     db.refresh(wl)
     return totals
+
+
+def _send_worklog_approved_emails(db, worklog):
+    """Send Stage 2 approval emails to supplier and work manager."""
+    from app.core.email import send_email
+    from app.templates.email_worklog import stage2_approved
+    from sqlalchemy import text
+
+    report_number = WorklogService.format_report_number(worklog.report_number or worklog.id)
+    project_name = ""
+    supplier_name = ""
+    supplier_email = ""
+    worker_email = ""
+    worker_name = ""
+    equipment_type = worklog.equipment_type or ""
+
+    if worklog.project_id:
+        row = db.execute(text("SELECT name FROM projects WHERE id=:pid"), {"pid": worklog.project_id}).first()
+        if row:
+            project_name = row[0]
+
+    if worklog.work_order_id:
+        row = db.execute(text(
+            "SELECT s.name, s.email FROM work_orders wo JOIN suppliers s ON wo.supplier_id=s.id WHERE wo.id=:wid"
+        ), {"wid": worklog.work_order_id}).first()
+        if row:
+            supplier_name, supplier_email = row[0], row[1]
+
+    if worklog.user_id:
+        row = db.execute(text("SELECT full_name, email FROM users WHERE id=:uid"), {"uid": worklog.user_id}).first()
+        if row:
+            worker_name, worker_email = row[0] or "", row[1] or ""
+
+    work_date = str(worklog.report_date or "")
+    total_hours = float(worklog.total_hours or worklog.work_hours or 0)
+    hourly_rate = float(worklog.hourly_rate_snapshot or 0)
+    overnight_nights = int(worklog.overnight_nights or 0)
+    overnight_rate = float(worklog.overnight_rate or 250)
+
+    for role, email in [("supplier", supplier_email), ("worker", worker_email)]:
+        if not email:
+            continue
+        tmpl = stage2_approved(
+            report_number=report_number,
+            project_name=project_name,
+            supplier_name=supplier_name,
+            equipment_type=equipment_type,
+            work_date=work_date,
+            total_hours=total_hours,
+            hourly_rate=hourly_rate,
+            overnight_nights=overnight_nights,
+            overnight_rate=overnight_rate,
+            worker_name=worker_name,
+            recipient_role=role,
+        )
+        send_email(to=email, subject=tmpl["subject"], body="", html_body=tmpl["html"])
