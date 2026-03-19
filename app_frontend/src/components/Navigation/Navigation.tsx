@@ -127,8 +127,10 @@ const Navigation: React.FC = () => {
                 <circle cx="60" cy="95" r="5" fill="rgba(255,255,255,0.6)"/>
               </svg>
               <div className="flex flex-col leading-tight">
-                <span className="text-[15px] md:text-base font-bold text-white tracking-wide">Forewise</span>
-                <span className="text-[10px] text-white/50 hidden sm:block" style={{fontFamily:"'Heebo',sans-serif"}}>ניהול יערות</span>
+                <span className="text-[13px] font-bold text-white tracking-wide md:hidden">Forewise</span>
+                <span className="text-[10px] text-white/50 md:hidden" style={{fontFamily:"'Heebo',sans-serif"}}>ניהול יערות</span>
+                <span className="hidden md:block text-sm font-bold text-white tracking-wide">מערכת לניהול פרויקטים ויערות</span>
+                <span className="hidden md:block text-[10px] text-white/50 tracking-widest uppercase" style={{fontFamily:"'Heebo',sans-serif",letterSpacing:'2px'}}>FOREWISE</span>
               </div>
             </div>
 
