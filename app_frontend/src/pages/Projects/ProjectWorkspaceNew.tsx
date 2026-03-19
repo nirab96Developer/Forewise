@@ -76,6 +76,7 @@ const ProjectWorkspaceNew: React.FC = () => {
   const currentUserId: number | undefined = storedUser?.id ? Number(storedUser.id) : undefined;
 
   const isWorkManager = userRoleCode === 'WORK_MANAGER';
+  const isAdminUser = userRoleCode === 'ADMIN';
 
   const allowedTabs = ['overview', 'orders', 'worklogs', 'map'];
 
@@ -198,7 +199,7 @@ const ProjectWorkspaceNew: React.FC = () => {
   }
 
   // ── Tabs per role ────────────────────────────────────────────────────────
-  const tabs = isWorkManager
+  const tabs = (isWorkManager || isAdminUser)
     ? [
         { id: 'overview',  label: 'סקירה',         icon: Eye },
         { id: 'orders',    label: 'הזמנות עבודה',  icon: ClipboardList, badge: stats.activeOrders },
@@ -277,31 +278,31 @@ const ProjectWorkspaceNew: React.FC = () => {
             <OrdersTab
               projectCode={project.code}
               projectId={project.id}
-              orders={isWorkManager
+              orders={(isWorkManager || isAdminUser)
                 ? workOrders.filter(o =>
                     Number((o as any).created_by)    === Number(currentUserId) ||
                     Number((o as any).created_by_id) === Number(currentUserId) ||
                     Number((o as any).reporter_id)   === Number(currentUserId)
                   )
                 : workOrders}
-              isWorkManager={isWorkManager}
+              isWorkManager={isWorkManager || isAdminUser}
               onSwitchToWorklogs={() => setActiveTab('worklogs')}
             />
           )}
 
-          {/* דיווחים */}
+          {/* כלים בפרויקט */}
           {activeTab === 'worklogs' && (
             <WorklogsTab
               projectCode={project.code}
               projectId={project.id}
-              worklogs={isWorkManager
+              worklogs={(isWorkManager && !isAdminUser)
                 ? worklogs.filter(l =>
                     Number((l as any).reporter_id) === Number(currentUserId) ||
                     Number((l as any).created_by)  === Number(currentUserId) ||
                     Number((l as any).user_id)     === Number(currentUserId)
                   )
                 : worklogs}
-              isWorkManager={isWorkManager}
+              isWorkManager={isWorkManager || isAdminUser}
               approvedOrders={workOrders.filter(o =>
                 APPROVED_STATUSES.includes((o.status || '').toUpperCase()) &&
                 !!(o as any).equipment_scan
