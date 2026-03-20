@@ -655,8 +655,17 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
             db.commit()
             return
         
-        # Update work order with new supplier
+        # Update rotation stats for rejected supplier
         old_supplier_id = work_order.supplier_id
+        old_rotation = db.query(SupplierRotation).filter(
+            SupplierRotation.supplier_id == old_supplier_id,
+            SupplierRotation.area_id == area_id if area_id else True,
+            SupplierRotation.equipment_type_id == eq_type_id if eq_type_id else True,
+        ).first()
+        if old_rotation:
+            old_rotation.rejection_count = (old_rotation.rejection_count or 0) + 1
+
+        # Update work order with new supplier
         work_order.supplier_id = next_rotation.supplier_id
         work_order.portal_token = secrets.token_urlsafe(32)
         work_order.portal_expiry = datetime.utcnow() + timedelta(hours=3)
@@ -665,6 +674,10 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
         work_order.response_received_at = None
         work_order.rejection_reason_id = None
         work_order.rejection_notes = None
+
+        # Update rotation stats for new supplier
+        next_rotation.total_assignments = (next_rotation.total_assignments or 0) + 1
+        next_rotation.last_assignment_date = datetime.utcnow().date()
         
         db.commit()
         

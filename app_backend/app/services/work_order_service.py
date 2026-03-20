@@ -317,7 +317,7 @@ class WorkOrderService:
             from app.models.equipment import Equipment
             eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
             if eq:
-                eq_type_id = eq.equipment_type_id
+                eq_type_id = getattr(eq, 'type_id', None) or getattr(eq, 'equipment_type_id', None)
         if eq_type_id:
             query = query.filter(
                 SupplierRotation.equipment_type_id == eq_type_id
