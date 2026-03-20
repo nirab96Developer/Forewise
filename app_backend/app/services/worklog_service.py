@@ -90,9 +90,24 @@ class WorklogService:
         if activity_type_id:
             worklog_dict['activity_type_id'] = activity_type_id
         
+        # Map frontend field names to model field names
+        if 'work_date' in worklog_dict and not worklog_dict.get('report_date'):
+            worklog_dict['report_date'] = worklog_dict.pop('work_date')
+        else:
+            worklog_dict.pop('work_date', None)
+        
+        if 'description' in worklog_dict and not worklog_dict.get('activity_description'):
+            worklog_dict['activity_description'] = worklog_dict.pop('description')
+        else:
+            worklog_dict.pop('description', None)
+            
+        if not worklog_dict.get('work_hours') and worklog_dict.get('total_hours'):
+            worklog_dict['work_hours'] = worklog_dict['total_hours']
+        
         # Remove fields that don't exist on the Worklog model
         for key in ['activity_type', 'activity', 'segments', 'includes_guard',
-                     'billable_hours', 'non_standard_reason', 'non_standard_notes']:
+                     'billable_hours', 'non_standard_reason', 'non_standard_notes',
+                     'supplier_id', 'equipment_scanned']:
             worklog_dict.pop(key, None)
         
         worklog = Worklog(**worklog_dict)

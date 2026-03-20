@@ -10,32 +10,44 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class WorklogBase(BaseModel):
     """Base worklog schema"""
-    report_date: date = Field(..., description="תאריך דיווח")
-    work_hours: Decimal = Field(..., ge=0, description="שעות עבודה")
+    report_date: Optional[date] = Field(None, description="תאריך דיווח")
+    work_date: Optional[date] = Field(None, description="תאריך עבודה (alias)")
+    work_hours: Optional[Decimal] = Field(None, ge=0, description="שעות עבודה")
     activity_description: Optional[str] = Field(None, description="תיאור פעילות")
+    description: Optional[str] = Field(None, description="תיאור (alias)")
     notes: Optional[str] = None
+
+    model_config = ConfigDict(extra='allow')
 
 
 class WorklogCreate(WorklogBase):
-    """Create worklog"""
+    """Create worklog — accepts frontend field names"""
     work_order_id: Optional[int] = Field(None, description="הזמנת עבודה")
     
-    # These can be optional (derived from work_order or current_user)
     user_id: Optional[int] = Field(None, description="משתמש")
     project_id: Optional[int] = Field(None, description="פרויקט")
     activity_type_id: Optional[int] = Field(None, description="סוג פעילות")
     
-    # Optional
     equipment_id: Optional[int] = None
     start_time: Optional[time] = None
     end_time: Optional[time] = None
-    break_hours: Optional[Decimal] = Field(Decimal("0"), ge=0)
+    break_hours: Optional[Decimal] = Field(None, ge=0)
     total_hours: Optional[Decimal] = Field(None, ge=0, description="סה\"כ שעות")
+    billable_hours: Optional[Decimal] = Field(None, ge=0)
     work_type: Optional[str] = None
+    equipment_scanned: Optional[bool] = None
     
-    # Type flags
     report_type: Optional[str] = Field("standard", description="standard/manual/storage")
     is_standard: bool = Field(True, description="דיווח תקן")
+    
+    # Frontend sends these — accepted but handled separately
+    activity_type: Optional[str] = Field(None, description="סוג פעילות (שם)")
+    activity: Optional[str] = Field(None, description="פעילות")
+    non_standard_reason: Optional[str] = None
+    non_standard_notes: Optional[str] = None
+    includes_guard: Optional[bool] = None
+    segments: Optional[list] = None
+    supplier_id: Optional[int] = None
 
 
 class WorklogUpdate(BaseModel):
