@@ -71,6 +71,17 @@ async def get_supplier_rotations(
         suppliers = db.query(Supplier).filter(Supplier.id.in_(supplier_ids)).all()
         supplier_map = {s.id: s.name for s in suppliers}
         
+        # Get equipment type names
+        from sqlalchemy import text as sa_text
+        et_rows = db.execute(sa_text("SELECT id, name FROM equipment_types WHERE is_active = true")).fetchall()
+        et_map = {r[0]: r[1] for r in et_rows}
+        
+        # Get area/region names
+        area_rows = db.execute(sa_text("SELECT id, name FROM areas")).fetchall()
+        area_map = {r[0]: r[1] for r in area_rows}
+        region_rows = db.execute(sa_text("SELECT id, name FROM regions")).fetchall()
+        region_map = {r[0]: r[1] for r in region_rows}
+        
         result = []
         for rot in rotations:
             result.append({
@@ -78,16 +89,20 @@ async def get_supplier_rotations(
                 "supplier_id": rot.supplier_id,
                 "supplier_name": supplier_map.get(rot.supplier_id, f"ספק #{rot.supplier_id}"),
                 "rotation_position": rot.rotation_position,
-                "total_assignments": rot.total_assignments,
-                "successful_completions": rot.successful_completions,
-                "rejection_count": rot.rejection_count,
-                "priority_score": rot.priority_score,
+                "total_assignments": rot.total_assignments or 0,
+                "successful_completions": rot.successful_completions or 0,
+                "rejection_count": rot.rejection_count or 0,
+                "priority_score": rot.priority_score or 0,
                 "is_active": rot.is_active,
                 "is_available": rot.is_available,
                 "last_assignment_date": rot.last_assignment_date.isoformat() if rot.last_assignment_date else None,
                 "last_completion_date": rot.last_completion_date.isoformat() if rot.last_completion_date else None,
                 "equipment_type_id": rot.equipment_type_id,
-                "equipment_category_id": rot.equipment_category_id,
+                "equipment_type": et_map.get(rot.equipment_type_id, ''),
+                "area_id": rot.area_id,
+                "area_name": area_map.get(rot.area_id, ''),
+                "region_id": rot.region_id,
+                "region_name": region_map.get(rot.region_id, ''),
             })
         
         return result

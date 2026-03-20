@@ -291,6 +291,8 @@ const FairRotation: React.FC = () => {
                     <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600 w-16">עדיפות</th>
                     <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">ספק</th>
                     <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600">סוג ציוד</th>
+                    <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600">אזור</th>
+                    <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600">מרחב</th>
                     <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600">הקצאות</th>
                     <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600">דילוגים</th>
                     <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600">שימוש אחרון</th>
@@ -341,24 +343,30 @@ const FairRotation: React.FC = () => {
                         </td>
                         <td className="px-4 py-3 text-center">
                           {rotation.equipment_type ? (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
                               {rotation.equipment_type}
                             </span>
                           ) : (
-                            <span className="text-gray-400">כל הסוגים</span>
+                            <span className="text-gray-400 text-xs">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className="font-medium text-kkl-green">{rotation.usage_count}</span>
+                        <td className="px-4 py-3 text-center text-xs text-gray-600">
+                          {(rotation as any).area_name || '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs text-gray-600">
+                          {(rotation as any).region_name || '—'}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className={rotation.skip_count > 0 ? 'text-orange-600' : 'text-gray-400'}>
-                            {rotation.skip_count}
+                          <span className="font-medium text-kkl-green">{rotation.usage_count || (rotation as any).total_assignments || 0}</span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={(rotation.skip_count || (rotation as any).rejection_count) > 0 ? 'text-orange-600' : 'text-gray-400'}>
+                            {rotation.skip_count || (rotation as any).rejection_count || 0}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center text-sm text-gray-500">
-                          {rotation.last_used_date
-                            ? new Date(rotation.last_used_date).toLocaleDateString('he-IL')
+                          {(rotation.last_used_date || (rotation as any).last_assignment_date)
+                            ? new Date(rotation.last_used_date || (rotation as any).last_assignment_date).toLocaleDateString('he-IL')
                             : '-'
                           }
                         </td>
