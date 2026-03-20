@@ -170,6 +170,13 @@ def create_worklog(
     try:
         worklog = worklog_service.create(db, data, current_user.id)
         notify_worklog_created(db, worklog)
+        
+        # Send Stage 1 emails (best-effort)
+        try:
+            _send_worklog_stage1_emails(db, worklog, current_user)
+        except Exception as e:
+            logger.warning(f"Stage 1 email failed: {e}")
+        
         return worklog
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -630,3 +637,69 @@ def reject_worklog(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reject worklog: {str(e)}"
         )
+
+
+def _send_worklog_stage1_emails(db, worklog, current_user):
+    """Send Stage 1 emails: accountant + supplier + worker."""
+    from app.core.email import send_email
+    from app.templates.email_worklog import stage1_pending
+    from app.services.worklog_service import WorklogService
+    from sqlalchemy import text
+
+    report_number = WorklogService.format_report_number(worklog.report_number or worklog.id)
+    project_name = ""
+    supplier_name = ""
+    supplier_email = ""
+    equipment_type = getattr(worklog, 'equipment_type', '') or ''
+    license_plate = ""
+    hourly_rate = float(getattr(worklog, 'hourly_rate_snapshot', 0) or 0)
+
+    if worklog.project_id:
+        row = db.execute(text("SELECT name FROM projects WHERE id=:pid"), {"pid": worklog.project_id}).first()
+        if row: project_name = row[0]
+
+    if getattr(worklog, 'work_order_id', None):
+        row = db.execute(text(
+            "SELECT s.name, s.email FROM work_orders wo JOIN suppliers s ON wo.supplier_id=s.id WHERE wo.id=:wid"
+        ), {"wid": worklog.work_order_id}).first()
+        if row: supplier_name, supplier_email = row[0] or "", row[1] or ""
+
+    if getattr(worklog, 'equipment_id', None):
+        row = db.execute(text("SELECT license_plate, equipment_type FROM equipment WHERE id=:eid"), {"eid": worklog.equipment_id}).first()
+        if row:
+            license_plate = row[0] or ""
+            if not equipment_type: equipment_type = row[1] or ""
+
+    work_date = str(getattr(worklog, 'report_date', '') or '')
+    work_hours = float(getattr(worklog, 'work_hours', 0) or getattr(worklog, 'total_hours', 0) or 0)
+    report_type = getattr(worklog, 'report_type', 'standard') or 'standard'
+    worker_name = current_user.full_name or current_user.username or ''
+    overnight = int(getattr(worklog, 'overnight_nights', 0) or 0)
+
+    common = dict(
+        report_number=report_number, project_name=project_name,
+        supplier_name=supplier_name, equipment_type=equipment_type,
+        license_plate=license_plate, work_date=work_date,
+        work_hours=work_hours, report_type=report_type,
+        worker_name=worker_name, hourly_rate=hourly_rate,
+        overnight_nights=overnight,
+    )
+
+    # 1. Accountant
+    acct_rows = db.execute(text("""
+        SELECT u.email FROM users u JOIN roles r ON u.role_id=r.id
+        WHERE r.code='ACCOUNTANT' AND u.is_active=true AND u.email IS NOT NULL
+    """)).fetchall()
+    for row in acct_rows:
+        tmpl = stage1_pending(**common, recipient_role="accountant")
+        send_email(to=row[0], subject=tmpl["subject"], body="", html_body=tmpl["html"])
+
+    # 2. Supplier
+    if supplier_email:
+        tmpl = stage1_pending(**common, recipient_role="supplier")
+        send_email(to=supplier_email, subject=tmpl["subject"], body="", html_body=tmpl["html"])
+
+    # 3. Worker
+    if current_user.email:
+        tmpl = stage1_pending(**common, recipient_role="worker")
+        send_email(to=current_user.email, subject=tmpl["subject"], body="", html_body=tmpl["html"])

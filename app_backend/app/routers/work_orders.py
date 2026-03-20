@@ -344,6 +344,49 @@ def approve_work_order(
     try:
         work_order = work_order_service.approve(db, work_order_id, request, current_user_id=current_user.id)
         notify_work_order_approved(db, work_order)
+        
+        # Send Email 4 — work order approved to all stakeholders
+        try:
+            from app.templates.email_worklog import work_order_approved
+            from app.core.email import send_email
+            from sqlalchemy import text as sa_text
+            
+            project = work_order.project
+            supplier = work_order.supplier
+            eq = db.execute(sa_text("SELECT equipment_type, license_plate FROM equipment WHERE id=:eid"),
+                           {"eid": work_order.equipment_id}).first() if work_order.equipment_id else None
+            
+            common = dict(
+                order_number=work_order.order_number or work_order.id,
+                project_name=project.name if project else '',
+                project_code=project.code if project else '',
+                supplier_name=supplier.name if supplier else '',
+                equipment_type=eq[0] if eq else (work_order.equipment_type or ''),
+                license_plate=eq[1] if eq else '',
+                work_start=str(work_order.work_start_date or ''),
+                work_end=str(work_order.work_end_date or ''),
+                estimated_hours=work_order.estimated_hours or 0,
+                area_name=getattr(project, 'area', None) and project.area.name if project else '',
+                region_name=getattr(project, 'region', None) and project.region.name if project else '',
+                worker_name=current_user.full_name or current_user.username or '',
+            )
+            
+            recipients = db.execute(sa_text("""
+                SELECT DISTINCT u.email, r.code FROM users u JOIN roles r ON u.role_id=r.id
+                WHERE r.code IN ('ORDER_COORDINATOR','ADMIN','AREA_MANAGER','WORK_MANAGER')
+                AND u.is_active=true AND u.email IS NOT NULL
+            """)).fetchall()
+            
+            role_labels = {'ORDER_COORDINATOR':'עותק למתאם הזמנות','ADMIN':'עותק למנהל מערכת',
+                          'AREA_MANAGER':'עותק למנהל אזור','WORK_MANAGER':'עותק למנהל עבודה'}
+            
+            for row in recipients:
+                tmpl = work_order_approved(**common, recipient_label=role_labels.get(row[1],''))
+                send_email(to=row[0], subject=tmpl["subject"], body="", html_body=tmpl["html"])
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Email 4 (WO approved) failed: {e}")
+        
         return work_order
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
