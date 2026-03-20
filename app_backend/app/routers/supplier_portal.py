@@ -550,19 +550,38 @@ def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: st
         if action == "accepted":
             notify_supplier_accepted(db, work_order)
         else:
-            # supplier rejected → notify WORK_MANAGER who created
-            creator_id = getattr(work_order, 'created_by', None)
+            # supplier rejected → notify WORK_MANAGER who created + all ORDER_COORDINATORs
+            reject_msg = f"הזמנה #{wo_num} נדחתה על ידי {supplier_name}. הזמנה מועברת לספק הבא בסבב."
+            creator_id = getattr(work_order, 'created_by', None) or getattr(work_order, 'created_by_id', None)
             if creator_id:
                 notify(
                     db, creator_id,
                     title=f"ספק דחה הזמנה — {supplier_name}",
-                    message=f"הזמנה #{wo_num} נדחתה על ידי {supplier_name}. הזמנה תועבר לספק הבא.",
+                    message=reject_msg,
                     notification_type="supplier_response",
                     entity_type="work_order",
                     entity_id=work_order.id,
                     priority="high",
                     action_url=f"/work-orders/{work_order.id}",
                 )
+            # Notify all coordinators immediately
+            from sqlalchemy import text
+            coordinators = db.execute(text("""
+                SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                WHERE r.code IN ('ORDER_COORDINATOR', 'ADMIN') AND u.is_active = true
+            """)).fetchall()
+            for row in coordinators:
+                if row[0] != creator_id:
+                    notify(
+                        db, row[0],
+                        title=f"ספק דחה הזמנה #{wo_num}",
+                        message=reject_msg,
+                        notification_type="supplier_response",
+                        entity_type="work_order",
+                        entity_id=work_order.id,
+                        priority="high",
+                        action_url=f"/order-coordination",
+                    )
 
         # Also send email (best-effort)
         try:
@@ -605,31 +624,34 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
         # Find next available supplier in the area
         from app.models.supplier_rotation import SupplierRotation
         
-        # Get current supplier's position and find next
-        current_rotation = db.query(SupplierRotation).filter(
-            SupplierRotation.area_id == work_order.project.area_id,
-            SupplierRotation.equipment_type == work_order.equipment_type,
-            SupplierRotation.supplier_id == work_order.supplier_id
+        area_id = work_order.project.area_id
+        
+        # Get equipment type ID (from equipment or work order)
+        eq_type_id = getattr(work_order, 'equipment_type_id', None)
+        if not eq_type_id and work_order.equipment_id:
+            from app.models.equipment import Equipment
+            eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
+            if eq:
+                eq_type_id = getattr(eq, 'type_id', None)
+        
+        # Build query for available suppliers in rotation
+        query = db.query(SupplierRotation).filter(
+            SupplierRotation.is_active == True,
+            SupplierRotation.supplier_id != work_order.supplier_id,
+        )
+        if area_id:
+            query = query.filter(SupplierRotation.area_id == area_id)
+        if eq_type_id:
+            query = query.filter(SupplierRotation.equipment_type_id == eq_type_id)
+        
+        next_rotation = query.order_by(
+            SupplierRotation.rotation_position.asc()
         ).first()
         
-        if not current_rotation:
-            print(f"[Rotation] No rotation record found for current supplier")
-            work_order.status = "REJECTED"
-            db.commit()
-            return
-        
-        # Find next supplier in rotation
-        next_rotation = db.query(SupplierRotation).filter(
-            SupplierRotation.area_id == work_order.project.area_id,
-            SupplierRotation.equipment_type == work_order.equipment_type,
-            SupplierRotation.position > current_rotation.position,
-            SupplierRotation.is_active == True
-        ).order_by(SupplierRotation.position).first()
-        
         if not next_rotation:
-            # No more suppliers - mark as rejected
-            print(f"[Rotation] No more suppliers available")
+            print(f"[Rotation] No more suppliers available for area={area_id}, eq_type={eq_type_id}")
             work_order.status = "REJECTED"
+            _send_notification_to_manager(db, work_order, "rejected")
             db.commit()
             return
         
