@@ -82,15 +82,20 @@ class WorkOrderService:
                     detail="חובה לציין סוג כלי (equipment_type)"
                 )
 
-            # Step 1: find category by exact name match
+            # Step 1: find category by name (case-insensitive, try exact then ILIKE)
             cat_row = db.execute(sa_text(
-                "SELECT id FROM equipment_categories WHERE name = :n AND deleted_at IS NULL LIMIT 1"
+                "SELECT id FROM equipment_categories WHERE LOWER(name) = LOWER(:n) AND deleted_at IS NULL LIMIT 1"
             ), {"n": equipment_type_name}).fetchone()
+
+            if not cat_row:
+                cat_row = db.execute(sa_text(
+                    "SELECT id FROM equipment_categories WHERE name ILIKE :n AND deleted_at IS NULL LIMIT 1"
+                ), {"n": f"%{equipment_type_name}%"}).fetchone()
 
             if not cat_row:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"סוג כלי לא קיים במערכת: '{equipment_type_name}'"
+                    detail=f"סוג כלי '{equipment_type_name}' לא נמצא במערכת. ודא שהשם תואם לקטגוריות הקיימות."
                 )
             cat_id = cat_row[0]
 
@@ -138,13 +143,7 @@ class WorkOrderService:
                         if estimated_cost > remaining:
                             raise HTTPException(
                                 status_code=422,
-                                detail={
-                                    "code": "BUDGET_INSUFFICIENT",
-                                    "message": "תקציב הפרויקט אינו מספיק ליצירת הזמנת העבודה",
-                                    "estimated_cost": float(estimated_cost),
-                                    "remaining_budget": float(remaining),
-                                    "currency": "ILS",
-                                }
+                                detail=f"תקציב הפרויקט אינו מספיק. עלות משוערת: ₪{float(estimated_cost):,.0f}, יתרה: ₪{float(remaining):,.0f}"
                             )
             except HTTPException:
                 raise
