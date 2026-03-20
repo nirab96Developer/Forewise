@@ -325,7 +325,7 @@ def get_pagination_params(
     per_page: int = Query(None, ge=1, le=100, description="Items per page"),
     page_size: int = Query(None, ge=1, le=100, description="Items per page (alias for per_page)"),
     sort_by: str = Query("created_at", description="Sort field"),
-    order: str = Query("desc", regex="^(asc|desc)$", description="Sort order")
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order")
 ):
     """Get pagination parameters."""
     from app.schemas.common import PaginationParams
