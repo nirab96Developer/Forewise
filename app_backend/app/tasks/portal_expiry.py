@@ -122,9 +122,15 @@ def _find_next_supplier(db, work_order, area_id, exclude_id=None):
     if exclude_id:
         query = query.filter(SupplierRotation.supplier_id != exclude_id)
 
-    if work_order.equipment_type_id:
+    eq_type_id = getattr(work_order, 'equipment_type_id', None)
+    if not eq_type_id and work_order.equipment_id:
+        from app.models.equipment import Equipment
+        eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
+        if eq:
+            eq_type_id = getattr(eq, 'type_id', None) or getattr(eq, 'equipment_type_id', None)
+    if eq_type_id:
         query = query.filter(
-            SupplierRotation.equipment_type_id == work_order.equipment_type_id
+            SupplierRotation.equipment_type_id == eq_type_id
         )
 
     # Prefer same area first
