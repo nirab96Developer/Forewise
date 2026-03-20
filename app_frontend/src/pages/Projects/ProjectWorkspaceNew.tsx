@@ -1188,7 +1188,7 @@ const WorklogsTab: React.FC<{
         <div className="space-y-3">
           {approvedOrders.map((order) => {
             const orderWorklogs = worklogs.filter(wl => (wl as any).work_order_id === order.id);
-            const usedHours = orderWorklogs.reduce((sum: number, wl) => sum + (Number(wl.total_hours) || 0), 0);
+            const usedHours = orderWorklogs.reduce((sum: number, wl) => sum + (Number((wl as any).work_hours || wl.total_hours) || 0), 0);
             const estimatedHours = Number((order as any).estimated_hours) || 0;
             const remainingHours = Math.max(0, estimatedHours - usedHours);
             const licensePlate = (order as any).equipment_license_plate || (order as any).equipment_scan || '';
