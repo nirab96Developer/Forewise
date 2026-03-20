@@ -75,22 +75,25 @@ if ("serviceWorker" in navigator) {
   }
 }
 
-function showUpdateBanner(version?: string) {
+function showUpdateBanner(_version?: string) {
   if (document.getElementById("forewise-update-banner")) return;
   const banner = document.createElement("div");
   banner.id = "forewise-update-banner";
   banner.dir = "rtl";
   banner.style.cssText =
-    "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;" +
-    "background:#1a6b3a;color:#fff;padding:12px 20px;border-radius:14px;" +
-    "box-shadow:0 8px 32px rgba(0,0,0,0.25);display:flex;align-items:center;gap:12px;" +
-    "font-family:Heebo,sans-serif;font-size:14px;max-width:90vw;animation:slideUp .4s ease";
+    "position:fixed;bottom:16px;right:16px;z-index:9999;" +
+    "background:#fff;color:#333;padding:10px 14px;border-radius:12px;" +
+    "box-shadow:0 4px 20px rgba(0,0,0,0.12);border:1px solid #e0e0e0;" +
+    "display:flex;align-items:center;gap:10px;" +
+    "font-family:Heebo,sans-serif;font-size:13px;" +
+    "animation:slideUp .3s ease;max-width:280px";
   banner.innerHTML =
-    `<span>🌲 גרסה חדשה${version ? " " + version : ""} זמינה</span>` +
-    `<button onclick="window.location.reload()" style="background:#fff;color:#1a6b3a;border:none;` +
-    `padding:6px 16px;border-radius:8px;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">` +
-    `עדכן עכשיו</button>` +
-    `<button onclick="this.parentElement.remove()" style="background:none;border:none;color:#fff;` +
-    `cursor:pointer;font-size:18px;padding:0 4px">✕</button>`;
+    `<div style="width:8px;height:8px;background:#2e7d32;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite"></div>` +
+    `<span style="flex:1;color:#555">עדכון זמין</span>` +
+    `<button onclick="window.location.reload()" style="background:#2e7d32;color:#fff;border:none;` +
+    `padding:5px 12px;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;font-size:12px">` +
+    `רענן</button>` +
+    `<button onclick="this.parentElement.remove()" style="background:none;border:none;color:#bbb;` +
+    `cursor:pointer;font-size:16px;padding:0 2px;line-height:1">✕</button>`;
   document.body.appendChild(banner);
 }
