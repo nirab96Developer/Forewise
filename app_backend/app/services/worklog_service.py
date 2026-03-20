@@ -39,15 +39,17 @@ class WorklogService:
     
     def create(self, db: Session, data: WorklogCreate, current_user_id: int) -> Worklog:
         """Create worklog with FK validation"""
-        # Validate FK: work_order (REQUIRED)
-        wo = db.query(WorkOrder).filter_by(id=data.work_order_id).first()
-        if not wo:
-            raise ValidationException(f"Work order {data.work_order_id} not found")
+        # Validate FK: work_order (optional — can create standalone worklog)
+        wo = None
+        if data.work_order_id:
+            wo = db.query(WorkOrder).filter_by(id=data.work_order_id).first()
+            if not wo:
+                raise ValidationException(f"Work order {data.work_order_id} not found")
         
         # Derive missing fields from work_order
         user_id = data.user_id or current_user_id
-        project_id = data.project_id or wo.project_id
-        supplier_id = data.supplier_id if hasattr(data, 'supplier_id') and data.supplier_id else wo.supplier_id
+        project_id = data.project_id or (wo.project_id if wo else None)
+        supplier_id = (data.supplier_id if hasattr(data, 'supplier_id') and data.supplier_id else None) or (wo.supplier_id if wo else None)
         
         # Validate FK: user
         user = db.query(User).filter_by(id=user_id).first()
@@ -78,7 +80,7 @@ class WorklogService:
         # Create
         worklog_dict = data.model_dump(exclude_unset=True)
         worklog_dict['report_number'] = report_number
-        worklog_dict['report_type'] = data.report_type or 'standard'  # use provided or default
+        worklog_dict['report_type'] = data.report_type or 'standard'
         
         # Override with derived values
         worklog_dict['user_id'] = user_id
@@ -87,6 +89,11 @@ class WorklogService:
             worklog_dict['supplier_id'] = supplier_id
         if activity_type_id:
             worklog_dict['activity_type_id'] = activity_type_id
+        
+        # Remove fields that don't exist on the Worklog model
+        for key in ['activity_type', 'activity', 'segments', 'includes_guard',
+                     'billable_hours', 'non_standard_reason', 'non_standard_notes']:
+            worklog_dict.pop(key, None)
         
         worklog = Worklog(**worklog_dict)
         db.add(worklog)

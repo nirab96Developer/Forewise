@@ -18,8 +18,7 @@ class WorklogBase(BaseModel):
 
 class WorklogCreate(WorklogBase):
     """Create worklog"""
-    # Required - but work_order_id can derive project/user
-    work_order_id: int = Field(..., description="הזמנת עבודה")
+    work_order_id: Optional[int] = Field(None, description="הזמנת עבודה")
     
     # These can be optional (derived from work_order or current_user)
     user_id: Optional[int] = Field(None, description="משתמש")
