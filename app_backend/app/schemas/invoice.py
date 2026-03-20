@@ -34,9 +34,14 @@ class InvoiceBase(BaseModel):
 
 class InvoiceCreate(InvoiceBase):
     """Create invoice"""
-    invoice_number: str = Field(..., max_length=50, description="מספר חשבונית")
+    invoice_number: Optional[str] = Field(None, max_length=50, description="מספר חשבונית")
+    invoice_date: Optional[date] = Field(None, description="תאריך (alias for issue_date)")
     payment_method: Optional[str] = Field(None, max_length=50)
     paid_amount: Decimal = Field(Decimal('0'), ge=0, description="סכום ששולם")
+    work_order_id: Optional[int] = Field(None, description="הזמנת עבודה")
+    items: Optional[list] = Field(None, description="שורות חשבונית")
+
+    model_config = ConfigDict(extra='allow')
 
     @field_validator('due_date')
     @classmethod

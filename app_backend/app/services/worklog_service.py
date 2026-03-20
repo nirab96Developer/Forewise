@@ -104,10 +104,14 @@ class WorklogService:
         if not worklog_dict.get('work_hours') and worklog_dict.get('total_hours'):
             worklog_dict['work_hours'] = worklog_dict['total_hours']
         
+        # Persist equipment_scanned if sent
+        if 'equipment_scanned' in worklog_dict:
+            pass  # model has this column, keep it
+        
         # Remove fields that don't exist on the Worklog model
         for key in ['activity_type', 'activity', 'segments', 'includes_guard',
-                     'billable_hours', 'non_standard_reason', 'non_standard_notes',
-                     'supplier_id', 'equipment_scanned']:
+                     'billable_hours', 'non_standard_notes',
+                     'supplier_id']:
             worklog_dict.pop(key, None)
         
         worklog = Worklog(**worklog_dict)
