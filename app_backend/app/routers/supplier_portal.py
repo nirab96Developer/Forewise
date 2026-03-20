@@ -634,22 +634,36 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
             if eq:
                 eq_type_id = getattr(eq, 'type_id', None)
         
-        # Build query for available suppliers in rotation
-        query = db.query(SupplierRotation).filter(
+        # Build base query — exclude current supplier
+        base_query = db.query(SupplierRotation).filter(
             SupplierRotation.is_active == True,
+            SupplierRotation.is_available != False,
             SupplierRotation.supplier_id != work_order.supplier_id,
         )
-        if area_id:
-            query = query.filter(SupplierRotation.area_id == area_id)
         if eq_type_id:
-            query = query.filter(SupplierRotation.equipment_type_id == eq_type_id)
-        
-        next_rotation = query.order_by(
-            SupplierRotation.rotation_position.asc()
-        ).first()
-        
+            base_query = base_query.filter(SupplierRotation.equipment_type_id == eq_type_id)
+
+        # Step 1: Try same area first
+        next_rotation = None
+        if area_id:
+            next_rotation = (
+                base_query.filter(SupplierRotation.area_id == area_id)
+                .order_by(SupplierRotation.rotation_position.asc())
+                .first()
+            )
+
+        # Step 2: Fallback — any area with matching equipment type
         if not next_rotation:
-            print(f"[Rotation] No more suppliers available for area={area_id}, eq_type={eq_type_id}")
+            print(f"[Rotation] No supplier in area={area_id}, trying all areas...")
+            next_rotation = (
+                base_query
+                .order_by(SupplierRotation.rotation_position.asc())
+                .first()
+            )
+        
+        # Step 3: No suppliers at all → REJECTED
+        if not next_rotation:
+            print(f"[Rotation] No suppliers available at all for eq_type={eq_type_id}")
             work_order.status = "REJECTED"
             _send_notification_to_manager(db, work_order, "rejected")
             db.commit()
