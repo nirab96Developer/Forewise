@@ -105,48 +105,68 @@ def process_expired_portals() -> dict:
 
 
 def _find_next_supplier(db, work_order, area_id, exclude_id=None):
-    """Find next supplier in rotation, excluding the current one."""
+    """Find next supplier in rotation who has equipment with license plate.
+    Hierarchy: area → region → None.
+    """
     from app.models.supplier_rotation import SupplierRotation
     from app.models.supplier import Supplier
-
-    query = (
-        db.query(SupplierRotation)
-        .join(Supplier, Supplier.id == SupplierRotation.supplier_id)
-        .filter(
-            SupplierRotation.is_active == True,
-            SupplierRotation.is_available != False,
-            Supplier.is_active == True,
-        )
-    )
-
-    if exclude_id:
-        query = query.filter(SupplierRotation.supplier_id != exclude_id)
+    from app.models.equipment import Equipment
 
     eq_type_id = getattr(work_order, 'equipment_type_id', None)
     if not eq_type_id and work_order.equipment_id:
-        from app.models.equipment import Equipment
         eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
         if eq:
-            eq_type_id = getattr(eq, 'type_id', None) or getattr(eq, 'equipment_type_id', None)
-    if eq_type_id:
-        query = query.filter(
-            SupplierRotation.equipment_type_id == eq_type_id
-        )
+            eq_type_id = getattr(eq, 'type_id', None)
 
-    # Prefer same area first
+    def search(filter_area_id=None, filter_region_id=None):
+        query = (
+            db.query(SupplierRotation)
+            .join(Supplier, Supplier.id == SupplierRotation.supplier_id)
+            .filter(
+                SupplierRotation.is_active == True,
+                SupplierRotation.is_available != False,
+                Supplier.is_active == True,
+            )
+        )
+        if exclude_id:
+            query = query.filter(SupplierRotation.supplier_id != exclude_id)
+        if eq_type_id:
+            query = query.filter(SupplierRotation.equipment_type_id == eq_type_id)
+        if filter_area_id:
+            query = query.filter(SupplierRotation.area_id == filter_area_id)
+        elif filter_region_id:
+            query = query.filter(SupplierRotation.region_id == filter_region_id)
+
+        for rot in query.order_by(SupplierRotation.rotation_position.asc()).all():
+            eq_check = db.query(Equipment.id).filter(
+                Equipment.supplier_id == rot.supplier_id,
+                Equipment.is_active == True,
+                Equipment.license_plate != None,
+                Equipment.license_plate != '',
+            )
+            if eq_type_id:
+                eq_check = eq_check.filter(Equipment.type_id == eq_type_id)
+            if eq_check.first():
+                return rot.supplier_id
+        return None
+
+    # Step 1: Same area
     if area_id:
-        area_results = (
-            query.filter(SupplierRotation.area_id == area_id)
-            .order_by(SupplierRotation.rotation_position.asc())
-            .all()
-        )
-        if area_results:
-            return area_results[0].supplier_id
+        result = search(filter_area_id=area_id)
+        if result:
+            return result
 
-    # Fallback: any area with matching equipment
-    results = query.order_by(SupplierRotation.rotation_position.asc()).all()
-    if results:
-        return results[0].supplier_id
+    # Step 2: Same region
+    region_id = None
+    if work_order.project_id:
+        from app.models.project import Project
+        project = db.query(Project).filter(Project.id == work_order.project_id).first()
+        if project:
+            region_id = project.region_id
+    if region_id:
+        result = search(filter_region_id=region_id)
+        if result:
+            return result
 
     return None
 

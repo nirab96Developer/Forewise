@@ -612,60 +612,109 @@ def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: st
 
 
 def _move_to_next_supplier(db: Session, work_order: WorkOrder):
-    """Move to next supplier in fair rotation"""
+    """Move to next supplier in fair rotation.
+    Hierarchy: area → region → REJECTED.
+    Only selects suppliers who have equipment with a license plate.
+    """
     try:
         import secrets
         
-        # Get project area
-        if not work_order.project or not work_order.project.area_id:
-            print(f"[Rotation] Cannot move to next supplier - no area_id")
+        if not work_order.project:
+            print(f"[Rotation] No project on WO {work_order.id}")
             return
         
-        # Find next available supplier in the area
         from app.models.supplier_rotation import SupplierRotation
+        from app.models.equipment import Equipment
         
         area_id = work_order.project.area_id
+        region_id = work_order.project.region_id
         
-        # Get equipment type ID (from equipment or work order)
+        # Get equipment type ID
         eq_type_id = getattr(work_order, 'equipment_type_id', None)
         if not eq_type_id and work_order.equipment_id:
-            from app.models.equipment import Equipment
             eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
             if eq:
                 eq_type_id = getattr(eq, 'type_id', None)
         
-        # Build base query — exclude current supplier
-        base_query = db.query(SupplierRotation).filter(
-            SupplierRotation.is_active == True,
-            SupplierRotation.is_available != False,
-            SupplierRotation.supplier_id != work_order.supplier_id,
-        )
-        if eq_type_id:
-            base_query = base_query.filter(SupplierRotation.equipment_type_id == eq_type_id)
-
-        # Step 1: Try same area first
-        next_rotation = None
-        if area_id:
-            next_rotation = (
-                base_query.filter(SupplierRotation.area_id == area_id)
-                .order_by(SupplierRotation.rotation_position.asc())
-                .first()
+        def find_supplier_with_equipment(filter_area_id=None, filter_region_id=None):
+            """Find next supplier in rotation who actually has equipment with license plate."""
+            query = db.query(SupplierRotation).join(
+                Supplier, Supplier.id == SupplierRotation.supplier_id
+            ).filter(
+                SupplierRotation.is_active == True,
+                SupplierRotation.is_available != False,
+                SupplierRotation.supplier_id != work_order.supplier_id,
+                Supplier.is_active == True,
             )
-
-        # Step 2: Fallback — any area with matching equipment type
-        if not next_rotation:
-            print(f"[Rotation] No supplier in area={area_id}, trying all areas...")
-            next_rotation = (
-                base_query
-                .order_by(SupplierRotation.rotation_position.asc())
-                .first()
-            )
+            if eq_type_id:
+                query = query.filter(SupplierRotation.equipment_type_id == eq_type_id)
+            if filter_area_id:
+                query = query.filter(SupplierRotation.area_id == filter_area_id)
+            elif filter_region_id:
+                query = query.filter(SupplierRotation.region_id == filter_region_id)
+            
+            candidates = query.order_by(SupplierRotation.rotation_position.asc()).all()
+            
+            for rotation in candidates:
+                # Check supplier has equipment with license plate for this type
+                eq_check = db.query(Equipment).filter(
+                    Equipment.supplier_id == rotation.supplier_id,
+                    Equipment.is_active == True,
+                    Equipment.license_plate != None,
+                    Equipment.license_plate != '',
+                )
+                if eq_type_id:
+                    eq_check = eq_check.filter(Equipment.type_id == eq_type_id)
+                
+                if eq_check.first():
+                    return rotation
+            
+            return None
         
-        # Step 3: No suppliers at all → REJECTED
+        next_rotation = None
+        
+        # Step 1: Try same AREA
+        if area_id:
+            next_rotation = find_supplier_with_equipment(filter_area_id=area_id)
+            if next_rotation:
+                print(f"[Rotation] Found supplier {next_rotation.supplier_id} in same area={area_id}")
+        
+        # Step 2: Try same REGION (מרחב)
+        if not next_rotation and region_id:
+            print(f"[Rotation] No supplier in area={area_id}, trying region={region_id}...")
+            next_rotation = find_supplier_with_equipment(filter_region_id=region_id)
+            if next_rotation:
+                print(f"[Rotation] Found supplier {next_rotation.supplier_id} in region={region_id}")
+        
+        # Step 3: No suppliers at all → REJECTED + notify coordinator
         if not next_rotation:
-            print(f"[Rotation] No suppliers available at all for eq_type={eq_type_id}")
+            eq_type_name = work_order.equipment_type or f"type_id={eq_type_id}"
+            print(f"[Rotation] No suppliers with equipment for {eq_type_name}")
             work_order.status = "REJECTED"
-            _send_notification_to_manager(db, work_order, "rejected")
+            
+            # Notify coordinators: no suppliers with equipment available
+            try:
+                from app.services.notification_service import notify
+                from sqlalchemy import text
+                coordinators = db.execute(text("""
+                    SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code IN ('ORDER_COORDINATOR', 'ADMIN') AND u.is_active = true
+                """)).fetchall()
+                wo_num = work_order.order_number or work_order.id
+                for row in coordinators:
+                    notify(
+                        db, row[0],
+                        title=f"אין ספקים זמינים — הזמנה #{wo_num}",
+                        message=f"לא נמצא ספק עם כלי ומספר רישוי מסוג {eq_type_name} באזור או במרחב. ההזמנה עברה ל-REJECTED.",
+                        notification_type="supplier_response",
+                        entity_type="work_order",
+                        entity_id=work_order.id,
+                        priority="high",
+                        action_url=f"/order-coordination",
+                    )
+            except Exception as ne:
+                print(f"[Rotation] Notification error: {ne}")
+            
             db.commit()
             return
         
