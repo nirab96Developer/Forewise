@@ -129,7 +129,7 @@ def send_via_smtp(to: str, subject: str, body: str) -> dict:
     return {"message": "Email sent via SMTP", "recipient": to}
 
 
-def send_email(to=None, subject="", body="", email_to=None, **kwargs):
+def send_email(to=None, subject="", body="", email_to=None, html_body=None, **kwargs):
     """
     Send email - tries multiple methods:
     1. Brevo API (if BREVO_API_KEY configured)
@@ -143,7 +143,7 @@ def send_email(to=None, subject="", body="", email_to=None, **kwargs):
     brevo_key = get_brevo_api_key()
     if brevo_key:
         try:
-            return send_via_brevo(recipient, subject, body)
+            return send_via_brevo(recipient, subject, body or "", html_body=html_body)
         except Exception as e:
             logger.warning(f"Brevo failed for {recipient}: {e}")
     else:
