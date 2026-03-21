@@ -301,6 +301,39 @@ class WorklogService:
         # Audit log
         _audit_worklog(db, current_user_id, worklog.id, 'APPROVE')
 
+        # Release budget + check completion
+        try:
+            if worklog.work_order_id:
+                from app.services.budget_service import release_budget_freeze
+                from sqlalchemy import text as sa_text
+                
+                wo = db.query(WorkOrder).filter(WorkOrder.id == worklog.work_order_id).first()
+                if wo:
+                    actual_cost = float(worklog.work_hours or worklog.total_hours or 0) * float(worklog.hourly_rate_snapshot or 0)
+                    actual_cost += float(worklog.overnight_nights or 0) * float(worklog.overnight_rate or 250)
+                    
+                    # Release frozen budget
+                    try:
+                        release_budget_freeze(worklog.work_order_id, actual_cost, db)
+                    except Exception:
+                        pass
+                    
+                    # Check if hours are depleted → auto-complete
+                    used = db.execute(sa_text(
+                        "SELECT COALESCE(SUM(work_hours),0) FROM worklogs WHERE work_order_id=:wid AND UPPER(status)!='REJECTED' AND is_active=true"
+                    ), {"wid": wo.id}).scalar() or 0
+                    estimated = float(wo.estimated_hours or 0)
+                    
+                    if estimated > 0 and float(used) >= estimated:
+                        wo.status = 'COMPLETED'
+                        wo.updated_at = datetime.utcnow()
+                        db.commit()
+                        import logging
+                        logging.getLogger(__name__).info(f"WO {wo.id} auto-completed: {used}/{estimated} hours used")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Budget release/completion check failed: {e}")
+
         # Send approval emails (stage 2)
         try:
             _send_worklog_approved_emails(db, worklog)

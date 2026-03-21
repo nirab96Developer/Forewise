@@ -405,7 +405,9 @@ class WorkOrderService:
     def force_supplier(
         self, db: Session, work_order_id: int, supplier_id: int, reason: str
     ) -> Optional[WorkOrder]:
-        """Force work order to specific supplier."""
+        """Force work order to specific supplier — with equipment availability check."""
+        from fastapi import HTTPException
+        
         work_order = self.get_work_order(db, work_order_id)
         if not work_order:
             return None
@@ -415,10 +417,59 @@ class WorkOrderService:
         if not supplier:
             raise ValueError("Supplier not found")
 
+        # Check supplier has available equipment with license plate for this type
+        eq_type_id = getattr(work_order, 'equipment_type_id', None)
+        if not eq_type_id:
+            eq_type_name = work_order.equipment_type or ''
+            if eq_type_name:
+                from sqlalchemy import text as sa_text
+                et_row = db.execute(sa_text(
+                    "SELECT id FROM equipment_types WHERE LOWER(name) = LOWER(:n) LIMIT 1"
+                ), {"n": eq_type_name}).first()
+                if et_row:
+                    eq_type_id = et_row[0]
+
+        eq_check = db.query(Equipment).filter(
+            Equipment.supplier_id == supplier_id,
+            Equipment.is_active == True,
+            Equipment.license_plate != None,
+            Equipment.license_plate != '',
+        )
+        if eq_type_id:
+            eq_check = eq_check.filter(Equipment.type_id == eq_type_id)
+        
+        if not eq_check.first():
+            raise HTTPException(
+                status_code=400,
+                detail="לספק זה אין כלי פנוי עם מספר רישוי מהסוג המבוקש. בחר ספק אחר."
+            )
+
+        # Reason is required for forced selection
+        if not reason or len(reason.strip()) < 10:
+            raise HTTPException(
+                status_code=400,
+                detail="חובה לציין סיבת אילוץ (מינימום 10 תווים)"
+            )
+
+        # Log constraint
+        try:
+            from app.models.supplier_constraint_log import SupplierConstraintLog
+            log_entry = SupplierConstraintLog(
+                work_order_id=work_order_id,
+                supplier_id=supplier_id,
+                constraint_reason_text=reason,
+                created_at=datetime.utcnow(),
+            )
+            db.add(log_entry)
+        except Exception:
+            pass  # constraint log table may not exist
+
         # Update work order
         work_order.supplier_id = supplier_id
         work_order.is_forced = True
         work_order.force_reason = reason
+        work_order.is_forced_selection = True
+        work_order.constraint_notes = reason
         work_order.updated_at = datetime.utcnow()
 
         # Generate new portal token
