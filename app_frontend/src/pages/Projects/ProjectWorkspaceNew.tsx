@@ -1291,20 +1291,32 @@ const WorklogsTab: React.FC<{
 
                 {/* Actions */}
                 <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       onClick={() => navigate(`/projects/${projectCode}/workspace/work-logs/new?work_order_id=${order.id}&equipment_id=${(order as any).equipment_id || ''}&project_id=${projectId}`)}
                       className="flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition-colors"
                     >
                       <Clock className="w-4 h-4" />
-                      דיווח על הכלי
+                      דיווח
                     </button>
                     <button
                       onClick={() => navigate(`/work-orders/${order.id}`)}
                       className="flex items-center justify-center gap-1.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Eye className="w-4 h-4" />
-                      צפה בפרטים
+                      פרטים
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`האם להסיר כלי מהפרויקט?\nהזמנה #${(order as any).order_number || order.id}\nיתרה תקציבית תשוחרר.`)) return;
+                        try {
+                          await api.post(`/work-orders/${order.id}/remove-equipment`);
+                          window.location.reload();
+                        } catch { /* error handled by interceptor */ }
+                      }}
+                      className="flex items-center justify-center gap-1.5 py-2.5 bg-white border border-red-200 hover:bg-red-50 text-red-600 rounded-xl text-xs font-medium transition-colors"
+                    >
+                      הסר כלי
                     </button>
                   </div>
                 </div>

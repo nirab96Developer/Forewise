@@ -244,6 +244,26 @@ const WorklogDetail: React.FC = () => {
           </div>
         </div>
 
+        {/* Progress bar — 3 stages */}
+        {worklog.status && !['rejected', 'draft'].includes(worklog.status?.toLowerCase()) && (
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
+            <div className="flex items-center justify-between">
+              {['ממתין לאישור', 'מאושר', 'חשבונית'].map((label, i) => {
+                const idx = { pending: 0, submitted: 0, approved: 1, invoiced: 2 }[worklog.status?.toLowerCase()] ?? 0;
+                return (
+                  <div key={i} className="flex flex-col items-center flex-1">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      i <= idx ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
+                    }`}>{i < idx ? '✓' : i + 1}</div>
+                    <span className={`text-xs mt-1 ${i <= idx ? 'text-green-700 font-semibold' : 'text-gray-400'}`}>{label}</span>
+                    {i < 2 && <div className={`w-full h-0.5 mt-[-20px] ${i < idx ? 'bg-green-400' : 'bg-gray-200'}`} />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info */}
           <div className="lg:col-span-2 space-y-6">

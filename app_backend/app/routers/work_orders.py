@@ -696,3 +696,64 @@ def resend_to_supplier(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to resend to supplier: {str(e)}"
         )
+
+
+@router.post("/{work_order_id}/remove-equipment", response_model=WorkOrderResponse)
+def remove_equipment_from_project(
+    work_order_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Remove equipment from project — release budget, free equipment."""
+    require_permission(current_user, "work_orders.update")
+    
+    try:
+        from app.services.budget_service import release_budget_freeze
+        from sqlalchemy import text as sa_text
+        
+        work_order = work_order_service.get_work_order(db, work_order_id)
+        if not work_order:
+            raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+        
+        # Release remaining frozen budget
+        released = 0
+        if getattr(work_order, 'remaining_frozen', 0) and work_order.remaining_frozen > 0:
+            released = float(work_order.remaining_frozen)
+            try:
+                release_budget_freeze(work_order_id, 0, db)
+            except Exception:
+                pass
+        
+        # Update status
+        work_order.status = 'STOPPED'
+        work_order.updated_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(work_order)
+        
+        # Notify
+        try:
+            from app.services.notification_service import notify
+            from sqlalchemy import text
+            coordinators = db.execute(text("""
+                SELECT u.id FROM users u JOIN roles r ON u.role_id=r.id
+                WHERE r.code IN ('ORDER_COORDINATOR','ADMIN','ACCOUNTANT') AND u.is_active=true
+            """)).fetchall()
+            wo_num = work_order.order_number or work_order.id
+            for row in coordinators:
+                notify(db, row[0],
+                    title=f"כלי הוסר מפרויקט — הזמנה #{wo_num}",
+                    message=f"יתרה תקציבית ₪{released:,.0f} שוחררה",
+                    notification_type="work_order",
+                    entity_type="work_order",
+                    entity_id=work_order.id,
+                    priority="medium",
+                )
+        except Exception:
+            pass
+        
+        return work_order
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"שגיאה בהסרת כלי: {str(e)}")
