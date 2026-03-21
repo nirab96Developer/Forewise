@@ -166,6 +166,24 @@ class WorkOrderService:
         db.add(db_work_order)
         db.commit()
         db.refresh(db_work_order)
+        
+        # Freeze budget after successful creation
+        try:
+            from app.services.budget_service import freeze_budget_for_work_order
+            if project_id and (wo_dict.get('estimated_hours') or wo_dict.get('guard_days')):
+                estimated_hours = float(wo_dict.get('estimated_hours') or 0)
+                guard_days = int(wo_dict.get('guard_days') or 0)
+                rate = float(wo_dict.get('hourly_rate') or 0)
+                if rate and estimated_hours:
+                    freeze_amount = estimated_hours * rate + guard_days * 250
+                    freeze_budget_for_work_order(project_id, db_work_order.id, freeze_amount, db)
+        except ValueError as ve:
+            import logging
+            logging.getLogger(__name__).warning(f"Budget freeze skipped: {ve}")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Budget freeze failed: {e}")
+        
         return db_work_order
 
     def update_work_order(
