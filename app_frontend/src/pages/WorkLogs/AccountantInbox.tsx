@@ -350,6 +350,20 @@ const AccountantInbox: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <MonthlyInvoiceButton />
+              <button
+                onClick={() => {
+                  const csvRows = ['מספר דיווח,תאריך,פרויקט,ספק,שעות,עלות,סטטוס'];
+                  filtered.forEach(w => csvRows.push(`${w.report_number},${w.report_date},${w.project_name || ''},${w.supplier_name || ''},${w.total_hours},${w.cost_with_vat || ''},${w.status || ''}`));
+                  const blob = new Blob(['\ufeff' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = `worklogs-export-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+                }}
+                className="flex items-center gap-1 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl"
+                title="ייצוא Excel"
+              >
+                <FileText className="w-4 h-4" />
+                📊 Excel
+              </button>
               <button onClick={loadWorklogs} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500" title="רענן">
                 <RefreshCw className="w-5 h-5" />
               </button>

@@ -407,6 +407,22 @@ const ActivityLogNew: React.FC = () => {
                 <p className="text-sm text-gray-500">כל העדכונים והפעילויות במקום אחד</p>
               </div>
             </div>
+
+            {/* Export buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const rows = ['תאריך,שעה,פעולה,פרויקט,סטטוס'];
+                  activities.forEach((e: ActivityEvent) => rows.push(`${e.date},${e.time},${e.title},${e.projectName},${e.status}`));
+                  const blob = new Blob(['\ufeff' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = `activity-log-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl"
+              >
+                📊 Excel
+              </button>
+            </div>
             
             {/* View Toggle */}
             <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
