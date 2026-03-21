@@ -1,6 +1,6 @@
 // Forewise Service Worker v1.1.0
-const CACHE_NAME = 'forewise-v1.3.0';
-const APP_VERSION = 'forewise-v1.3.0';
+const CACHE_NAME = 'forewise-v2.0.0';
+const APP_VERSION = 'forewise-v2.0.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
