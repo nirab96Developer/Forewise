@@ -246,35 +246,44 @@ def get_available_equipment(
 
     supplier_id = work_order.supplier_id
 
-    # Query supplier_equipment filtered by category + supplier + available
-    query = db.query(SupplierEquipment, EquipmentModel).join(
-        EquipmentModel, EquipmentModel.id == SupplierEquipment.equipment_model_id, isouter=True
-    ).filter(
-        SupplierEquipment.supplier_id == supplier_id,
-        SupplierEquipment.status == 'available',
-        SupplierEquipment.is_active == True,
-    )
+    # Also check Equipment table for this supplier's equipment with license plates
+    from sqlalchemy import text as sa_text
+    
+    eq_rows = db.execute(sa_text("""
+        SELECT e.id, e.name, e.license_plate, e.equipment_type, e.type_id,
+               e.status, e.is_active,
+               wo.project_id as current_project_id,
+               p.name as current_project_name
+        FROM equipment e
+        LEFT JOIN work_orders wo ON wo.equipment_id = e.id 
+            AND wo.status IN ('ACTIVE','IN_PROGRESS','APPROVED_AND_SENT')
+            AND wo.is_active = true
+        LEFT JOIN projects p ON p.id = wo.project_id
+        WHERE e.supplier_id = :sid
+            AND e.is_active = true
+            AND e.license_plate IS NOT NULL AND e.license_plate != ''
+            AND (:tid IS NULL OR e.type_id = :tid)
+        ORDER BY (wo.project_id IS NULL) DESC, e.license_plate
+    """), {"sid": supplier_id, "tid": required_category_id}).fetchall()
 
-    if required_category_id:
-        query = query.filter(EquipmentModel.category_id == required_category_id)
-
-    rows = query.all()
+    equipment_list = []
+    for row in eq_rows:
+        is_busy = row[7] is not None
+        equipment_list.append({
+            "id": row[0],
+            "name": row[1],
+            "license_plate": row[2],
+            "equipment_type": row[3],
+            "type_id": row[4],
+            "is_available": not is_busy,
+            "is_blocked": is_busy,
+            "blocked_by_project": row[8] if is_busy else None,
+        })
 
     return {
         "required_category_id": required_category_id,
         "supplier_id": supplier_id,
-        "equipment": [
-            {
-                "id": se.id,
-                "equipment_model_id": se.equipment_model_id,
-                "model_name": em.name if em else None,
-                "category_id": em.category_id if em else None,
-                "license_plate": se.license_plate,
-                "status": se.status,
-                "hourly_rate": float(se.hourly_rate) if se.hourly_rate else None,
-            }
-            for se, em in rows
-        ]
+        "equipment": equipment_list,
     }
 
 
