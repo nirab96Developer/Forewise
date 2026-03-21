@@ -173,10 +173,23 @@ class WorkOrderService:
             if project_id and (wo_dict.get('estimated_hours') or wo_dict.get('guard_days')):
                 estimated_hours = float(wo_dict.get('estimated_hours') or 0)
                 guard_days = int(wo_dict.get('guard_days') or 0)
+                
+                # Get rate from equipment type or work order
                 rate = float(wo_dict.get('hourly_rate') or 0)
-                if rate and estimated_hours:
+                if not rate and wo_dict.get('requested_equipment_model_id'):
+                    rate_row = db.execute(sa_text("""
+                        SELECT et.default_hourly_rate FROM equipment_categories ec
+                        JOIN equipment_models em ON em.category_id = ec.id
+                        JOIN equipment_types et ON et.name = ec.name
+                        WHERE em.id = :mid LIMIT 1
+                    """), {"mid": wo_dict['requested_equipment_model_id']}).fetchone()
+                    if rate_row and rate_row[0]:
+                        rate = float(rate_row[0])
+                
+                if estimated_hours > 0:
                     freeze_amount = estimated_hours * rate + guard_days * 250
-                    freeze_budget_for_work_order(project_id, db_work_order.id, freeze_amount, db)
+                    if freeze_amount > 0:
+                        freeze_budget_for_work_order(project_id, db_work_order.id, freeze_amount, db)
         except ValueError as ve:
             import logging
             logging.getLogger(__name__).warning(f"Budget freeze skipped: {ve}")

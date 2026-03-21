@@ -2,6 +2,7 @@
 Worklog Service - optimized with eager loading
 """
 
+from datetime import datetime
 from typing import Optional, List, Tuple
 from decimal import Decimal
 from sqlalchemy.orm import Session, joinedload
