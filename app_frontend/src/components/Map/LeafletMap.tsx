@@ -88,11 +88,19 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     if (!containerRef.current) return;
     if (mapRef.current) return;
 
+    const ISRAEL_BOUNDS = L.latLngBounds(
+      L.latLng(29.4, 34.2),
+      L.latLng(33.4, 35.9)
+    );
+
     const map = L.map(containerRef.current, {
       center: center as L.LatLngExpression,
       zoom,
       zoomControl: true,
       attributionControl: false,
+      maxBounds: ISRAEL_BOUNDS,
+      maxBoundsViscosity: 1.0,
+      minZoom: 7,
     });
 
     const tile = L.tileLayer(TILES[activeType], { maxZoom: 19 });

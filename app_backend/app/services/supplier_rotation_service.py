@@ -43,8 +43,20 @@ class SupplierRotationService:
 
         results = query.order_by(SupplierRotation.rotation_position.asc()).all()
 
+        # Filter: only suppliers with equipment that has license plate
+        from app.models.equipment import Equipment
         queue = []
         for supplier, rotation in results:
+            eq_check = db.query(Equipment.id).filter(
+                Equipment.supplier_id == supplier.id,
+                Equipment.is_active == True,
+                Equipment.license_plate != None,
+                Equipment.license_plate != '',
+            )
+            if equipment_type_id:
+                eq_check = eq_check.filter(Equipment.type_id == equipment_type_id)
+            if not eq_check.first():
+                continue  # skip suppliers without equipment/license plate
             days_since_last = 999
             if rotation.last_assignment_date:
                 days_since_last = (date.today() - rotation.last_assignment_date).days
