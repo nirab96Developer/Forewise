@@ -384,3 +384,39 @@ def get_all_map_layers(
         ],
     }
 
+
+@router.get("/projects/{project_id}/navigation-point")
+def get_navigation_point(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
+):
+    """Get GPS point for Waze/Google Maps navigation."""
+    from sqlalchemy import text
+    
+    # Try project geo data
+    row = db.execute(text("""
+        SELECT 
+            COALESCE(l.center_lat, l.latitude) as lat,
+            COALESCE(l.center_lng, l.longitude) as lng
+        FROM projects p
+        LEFT JOIN locations l ON l.id = p.location_id
+        WHERE p.id = :pid
+    """), {"pid": project_id}).first()
+    
+    if row and row[0] and row[1]:
+        return {"lat": float(row[0]), "lng": float(row[1])}
+    
+    # Try forest polygon centroid
+    row2 = db.execute(text("""
+        SELECT ST_Y(ST_Centroid(f.geom)) as lat, ST_X(ST_Centroid(f.geom)) as lng
+        FROM projects p
+        JOIN forests f ON f.id = p.forest_id
+        WHERE p.id = :pid AND f.geom IS NOT NULL
+    """), {"pid": project_id}).first()
+    
+    if row2 and row2[0]:
+        return {"lat": float(row2[0]), "lng": float(row2[1])}
+    
+    raise HTTPException(status_code=404, detail="אין נתוני מיקום לפרויקט זה")
+
