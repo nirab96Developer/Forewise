@@ -111,8 +111,7 @@ class WorklogService:
         
         # Remove fields that don't exist on the Worklog model
         for key in ['activity_type', 'activity', 'segments', 'includes_guard',
-                     'billable_hours', 'non_standard_notes',
-                     'supplier_id']:
+                     'billable_hours', 'non_standard_notes']:
             worklog_dict.pop(key, None)
         
         worklog = Worklog(**worklog_dict)
@@ -497,9 +496,10 @@ def _notify_low_hours(db, worklog, hours_meta: dict):
         if worklog.project_id:
             rows = db.execute(text("""
                 SELECT DISTINCT u.id FROM users u
+                JOIN roles r ON u.role_id = r.id
                 JOIN project_assignments pa ON pa.user_id = u.id
                 WHERE pa.project_id = :pid AND u.is_active = true
-                  AND u.role IN ('AREA_MANAGER','REGION_MANAGER')
+                  AND r.code IN ('AREA_MANAGER','REGION_MANAGER')
             """), {"pid": worklog.project_id}).fetchall()
             for r in rows:
                 recipients.add(r[0])

@@ -420,6 +420,7 @@ class WorkOrderService:
     ) -> Optional[WorkOrder]:
         """Force work order to specific supplier — with equipment availability check."""
         from fastapi import HTTPException
+        from app.models.equipment import Equipment
         
         work_order = self.get_work_order(db, work_order_id)
         if not work_order:
@@ -991,7 +992,25 @@ class WorkOrderService:
 
     def move_to_next_supplier(self, db, wo_id, current_user=None, current_user_id=None):
         """Move to next supplier in rotation."""
-        return self.handle_supplier_response(db, wo_id, accepted=False)
+        wo = self.get_work_order(db, wo_id)
+        if not wo:
+            return None
+        
+        next_sid = self._select_supplier_by_rotation(db, wo)
+        if next_sid:
+            wo.supplier_id = next_sid
+            wo.portal_token = secrets.token_urlsafe(32)
+            wo.token_expires_at = datetime.utcnow() + timedelta(hours=3)
+            wo.portal_expiry = wo.token_expires_at
+            wo.status = "DISTRIBUTING"
+            wo.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(wo)
+        else:
+            wo.status = "REJECTED"
+            wo.updated_at = datetime.utcnow()
+            db.commit()
+        return wo
 
     def resend_to_supplier(self, db, wo_id, current_user=None, current_user_id=None):
         """Resend work order to supplier."""

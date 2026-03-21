@@ -729,11 +729,14 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
         
         # Update rotation stats for rejected supplier
         old_supplier_id = work_order.supplier_id
-        old_rotation = db.query(SupplierRotation).filter(
+        old_rot_query = db.query(SupplierRotation).filter(
             SupplierRotation.supplier_id == old_supplier_id,
-            SupplierRotation.area_id == area_id if area_id else True,
-            SupplierRotation.equipment_type_id == eq_type_id if eq_type_id else True,
-        ).first()
+        )
+        if area_id:
+            old_rot_query = old_rot_query.filter(SupplierRotation.area_id == area_id)
+        if eq_type_id:
+            old_rot_query = old_rot_query.filter(SupplierRotation.equipment_type_id == eq_type_id)
+        old_rotation = old_rot_query.first()
         if old_rotation:
             old_rotation.rejection_count = (old_rotation.rejection_count or 0) + 1
 
