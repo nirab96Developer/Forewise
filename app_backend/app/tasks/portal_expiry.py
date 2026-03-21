@@ -61,7 +61,18 @@ def process_expired_portals() -> dict:
                     continue
 
                 # Fair rotation — find next supplier
+                # Track ALL previously tried suppliers to prevent loop
                 current_supplier_id = wo.supplier_id
+                tried_suppliers = set()
+                tried_suppliers.add(current_supplier_id)
+                
+                # Check rejection_notes for previously tried suppliers
+                rejection_notes = getattr(wo, 'rejection_notes', '') or ''
+                if 'tried:' in rejection_notes:
+                    for sid in rejection_notes.split('tried:')[1].split(','):
+                        try: tried_suppliers.add(int(sid.strip()))
+                        except: pass
+                
                 area_id = None
                 if wo.project_id:
                     project = db.query(Project).filter(Project.id == wo.project_id).first()
@@ -69,18 +80,23 @@ def process_expired_portals() -> dict:
                         area_id = project.area_id
 
                 next_supplier_id = _find_next_supplier(
-                    db, wo, area_id, exclude_id=current_supplier_id
+                    db, wo, area_id, exclude_ids=tried_suppliers
                 )
 
                 if next_supplier_id:
+                    # Save tried suppliers list to prevent future loops
+                    tried_suppliers.add(next_supplier_id)
+                    wo.rejection_notes = f"tried:{','.join(str(s) for s in tried_suppliers)}"
+                    
                     _send_to_next_supplier(db, wo, next_supplier_id)
                     stats["rotated"] += 1
                     logger.info(
-                        f"[PORTAL_EXPIRY] WO {wo.id}: rotated from supplier {current_supplier_id} → {next_supplier_id}"
+                        f"[PORTAL_EXPIRY] WO {wo.id}: rotated from supplier {current_supplier_id} → {next_supplier_id} (tried: {tried_suppliers})"
                     )
                 else:
                     wo.status = "EXPIRED"
                     wo.updated_at = now
+                    wo.rejection_notes = f"tried:{','.join(str(s) for s in tried_suppliers)} — אין ספקים נוספים"
                     wo.portal_token = None
                     _notify_coordinator(
                         db, wo,
@@ -104,13 +120,18 @@ def process_expired_portals() -> dict:
     return stats
 
 
-def _find_next_supplier(db, work_order, area_id, exclude_id=None):
+def _find_next_supplier(db, work_order, area_id, exclude_id=None, exclude_ids=None):
     """Find next supplier in rotation who has equipment with license plate.
     Hierarchy: area → region → None.
+    Excludes all previously tried suppliers.
     """
     from app.models.supplier_rotation import SupplierRotation
     from app.models.supplier import Supplier
     from app.models.equipment import Equipment
+
+    all_excluded = set(exclude_ids or set())
+    if exclude_id:
+        all_excluded.add(exclude_id)
 
     eq_type_id = getattr(work_order, 'equipment_type_id', None)
     if not eq_type_id and work_order.equipment_id:
@@ -128,8 +149,8 @@ def _find_next_supplier(db, work_order, area_id, exclude_id=None):
                 Supplier.is_active == True,
             )
         )
-        if exclude_id:
-            query = query.filter(SupplierRotation.supplier_id != exclude_id)
+        if all_excluded:
+            query = query.filter(SupplierRotation.supplier_id.notin_(all_excluded))
         if eq_type_id:
             query = query.filter(SupplierRotation.equipment_type_id == eq_type_id)
         if filter_area_id:
