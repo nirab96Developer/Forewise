@@ -507,11 +507,28 @@ def approve_worklog(
         updated = worklog_service.approve(db, worklog_id, current_user.id)
         notify_worklog_approved(db, updated)
 
-        # Send PDF in background
+        # Capture data BEFORE session closes (background task runs after response)
+        pdf_context = {
+            "worklog_id": updated.id,
+            "report_number": updated.report_number,
+            "report_date": updated.report_date,
+            "project_id": updated.project_id,
+            "work_order_id": updated.work_order_id,
+            "equipment_type": getattr(updated, 'equipment_type', ''),
+            "total_hours": float(updated.total_hours) if updated.total_hours else 0,
+            "paid_hours": float(updated.paid_hours or updated.net_hours or updated.total_hours or 0) if hasattr(updated, 'paid_hours') else 0,
+            "start_time": updated.start_time,
+            "end_time": updated.end_time,
+            "notes": updated.notes or '',
+            "approved_at": updated.approved_at,
+            "is_standard": getattr(updated, 'is_standard', True),
+            "user_name": current_user.full_name or current_user.username or '',
+        }
+
         if background_tasks:
             background_tasks.add_task(
-                send_approval_pdf,
-                db, updated, current_user
+                send_approval_pdf_safe,
+                pdf_context
             )
         
         return updated
@@ -524,53 +541,65 @@ def approve_worklog(
         )
 
 
-def send_approval_pdf(db: Session, worklog, current_user):
+def send_approval_pdf_safe(ctx: dict):
     """
-    Background task to send approval PDF to all relevant parties
+    Background task — uses its own DB session to avoid DetachedInstanceError.
+    Receives pre-captured context dict instead of ORM objects.
     """
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        _send_approval_pdf_impl(db, ctx)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Error sending approval PDF: {e}")
+    finally:
+        db.close()
+
+
+def _send_approval_pdf_impl(db: Session, ctx: dict):
+    """Internal: generate and send approval PDF."""
     try:
         from app.services.pdf_service import generate_worklog_pdf
         from app.core.email import send_email_with_pdf
         from app.models.project import Project
         from app.models.supplier import Supplier
         from app.models.work_order import WorkOrder
-        
-        # Build worklog data for PDF
+
         worklog_data = {
-            'id': worklog.id,
-            'report_number': worklog.report_number,
-            'work_date': worklog.report_date.strftime('%d/%m/%Y') if worklog.report_date else '',
+            'id': ctx['worklog_id'],
+            'report_number': ctx['report_number'],
+            'work_date': ctx['report_date'].strftime('%d/%m/%Y') if ctx.get('report_date') else '',
             'project_name': '',
             'region_name': '',
             'area_name': '',
             'supplier_name': '',
             'supplier_phone': '',
             'equipment_code': '',
-            'equipment_type': worklog.equipment_type or '',
-            'total_hours': float(worklog.total_hours) if worklog.total_hours else 0,
-            'billable_hours': float(worklog.paid_hours or worklog.net_hours or worklog.total_hours or 0),
+            'equipment_type': ctx.get('equipment_type', ''),
+            'total_hours': ctx.get('total_hours', 0),
+            'billable_hours': ctx.get('paid_hours', 0),
             'idle_hours': 0,
-            'start_time': worklog.start_time.strftime('%H:%M') if worklog.start_time else '',
-            'end_time': worklog.end_time.strftime('%H:%M') if worklog.end_time else '',
-            'notes': worklog.notes or '',
-            'user_name': current_user.full_name or current_user.username if current_user else '',
-            'approved_at': worklog.approved_at.strftime('%d/%m/%Y %H:%M') if worklog.approved_at else '',
-            'is_standard': worklog.is_standard,
-            'work_order_id': worklog.work_order_id,
+            'start_time': ctx['start_time'].strftime('%H:%M') if ctx.get('start_time') else '',
+            'end_time': ctx['end_time'].strftime('%H:%M') if ctx.get('end_time') else '',
+            'notes': ctx.get('notes', ''),
+            'user_name': ctx.get('user_name', ''),
+            'approved_at': ctx['approved_at'].strftime('%d/%m/%Y %H:%M') if ctx.get('approved_at') else '',
+            'is_standard': ctx.get('is_standard', True),
+            'work_order_id': ctx.get('work_order_id'),
         }
-        
-        # Load related data
-        if worklog.project_id:
-            project = db.query(Project).filter(Project.id == worklog.project_id).first()
+
+        if ctx.get('project_id'):
+            project = db.query(Project).filter(Project.id == ctx['project_id']).first()
             if project:
                 worklog_data['project_name'] = project.name
                 if project.region:
                     worklog_data['region_name'] = project.region.name
                 if project.area:
                     worklog_data['area_name'] = project.area.name
-        
-        if worklog.work_order_id:
-            work_order = db.query(WorkOrder).filter(WorkOrder.id == worklog.work_order_id).first()
+
+        if ctx.get('work_order_id'):
+            work_order = db.query(WorkOrder).filter(WorkOrder.id == ctx['work_order_id']).first()
             if work_order and work_order.supplier_id:
                 supplier = db.query(Supplier).filter(Supplier.id == work_order.supplier_id).first()
                 if supplier:
