@@ -206,7 +206,7 @@ const ActivityLogNew: React.FC = () => {
           
           const formattedActivities: ActivityEvent[] = response.activities.map((item: ActivityLog) => ({
             id: item.id?.toString() || Math.random().toString(),
-            title: getActivityTitle(item.action),
+            title: (item as any).display_name_he || getActivityTitle(item.action),
             description: getActivityDescription(item),
             type: mapActivityType(item.activity_type),
             status: item.details?.status || 'completed',
