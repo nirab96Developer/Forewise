@@ -697,13 +697,6 @@ const OrderCoordination: React.FC = () => {
                             </button>
                           )}
 
-                          {order.status === 'APPROVED_AND_SENT' && (
-                            <div className="col-span-2 flex items-center gap-2 px-4 py-2.5 bg-green-50 border border-green-200 text-green-700 rounded-xl text-sm font-medium">
-                              <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                              הזמנה אושרה ונשלחה לביצוע
-                            </div>
-                          )}
-
                           {/* Admin-only cancel button */}
                           {isAdmin && order.status !== 'APPROVED_AND_SENT' && (
                             <button
