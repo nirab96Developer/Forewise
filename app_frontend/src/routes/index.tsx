@@ -3,7 +3,7 @@
 // Permission codes: DOMAIN.ACTION (e.g., PROJECTS.VIEW, WORKLOGS.CREATE)
 
 import React, { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams } from "react-router-dom";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import { PageSuspenseLoader } from "../components/common/UnifiedLoader";
 import { PERMISSIONS } from "../utils/permissions";
@@ -41,7 +41,6 @@ const WorkOrderDetail = lazy(() => import("../pages/WorkOrders/WorkOrderDetail")
 const OrderCoordination = lazy(() => import("../pages/WorkOrders/OrderCoordination"));
 
 // Work Logs (global /work-logs redirects to projects - but kept for project context)
-const WorkLogs = lazy(() => import("../pages/WorkLogs/WorkLogs"));
 const WorklogCreateNew = lazy(() => import("../pages/WorkLogs/WorklogCreateNew"));
 const WorklogDetail = lazy(() => import("../pages/WorkLogs/WorklogDetail"));
 const WorklogApproval = lazy(() => import("../pages/WorkLogs/WorklogApproval"));
@@ -69,6 +68,8 @@ const PricingReports = lazy(() => import("../pages/Reports/PricingReports"));
 const Notifications = lazy(() => import("../pages/Notifications/Notifications"));
 const SupportTicket = lazy(() => import("../pages/Support/Support"));
 const ActivityLog = lazy(() => import("../pages/ActivityLog/ActivityLogNew"));
+const AccountantActivityLog = lazy(() => import("../pages/ActivityLog/AccountantActivityLog"));
+const WorkManagerActivityLog = lazy(() => import("../pages/ActivityLog/WorkManagerActivityLog"));
 const MyJournal = lazy(() => import("../pages/Journal/MyJournal"));
 
 // Settings (EquipmentTypes, PricingOverrides, SettingsPlaceholder removed - redirects to catalog)
@@ -118,6 +119,11 @@ const Guarded: React.FC<GuardedProps> = ({ children, permission }) => (
   </ProtectedRoute>
 );
 
+const ProjectEditRedirect: React.FC = () => {
+  const { code } = useParams<{ code: string }>();
+  return <Navigate to={`/settings/organization/projects/${code}/edit`} replace />;
+};
+
 // ========================================
 // Main Routes Component
 // ========================================
@@ -161,7 +167,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/projects/:code/tasks/new" element={<Guarded permission={PERMISSIONS.PROJECTS_VIEW}><ProjectWorkspace /></Guarded>} />
         <Route path="/projects/:code/equipment/balances" element={<Guarded permission={PERMISSIONS.EQUIPMENT_VIEW}><EquipmentBalances /></Guarded>} />
         {/* Project Work Logs - in project context (under workspace) */}
-        <Route path="/projects/:code/workspace/work-logs" element={<Guarded permission={PERMISSIONS.WORKLOGS_VIEW}><WorkLogs /></Guarded>} />
+        <Route path="/projects/:code/workspace/work-logs" element={<Navigate to=".." replace />} />
         <Route path="/projects/:code/workspace/work-logs/new" element={<Guarded permission={PERMISSIONS.WORKLOGS_CREATE}><WorklogCreateNew /></Guarded>} />
         <Route path="/projects/:code/workspace/work-logs/approvals" element={<Guarded permission={PERMISSIONS.WORKLOGS_APPROVE}><WorklogApproval /></Guarded>} />
         <Route path="/projects/:code/workspace/work-logs/:id" element={<Guarded permission={PERMISSIONS.WORKLOGS_VIEW}><WorklogDetail /></Guarded>} />
@@ -178,7 +184,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
 
         {/* Project create/edit - redirect to settings (organization) */}
         <Route path="/projects/new" element={<Navigate to="/settings/organization/projects/new" replace />} />
-        <Route path="/projects/:code/edit" element={<Navigate to="/settings/organization/projects/:code/edit" replace />} />
+        <Route path="/projects/:code/edit" element={<ProjectEditRedirect />} />
 
         {/* Legacy project routes */}
         <Route path="/projects/:projectCode/workspace" element={<Navigate to="/projects" replace />} />
@@ -253,6 +259,8 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/notifications" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><Notifications /></Guarded>} />
         <Route path="/support" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><SupportTicket /></Guarded>} />
         <Route path="/activity-log" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><ActivityLog /></Guarded>} />
+        <Route path="/accountant/activity-log" element={<Guarded permission={PERMISSIONS.INVOICES_VIEW}><AccountantActivityLog /></Guarded>} />
+        <Route path="/work-manager/activity-log" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><WorkManagerActivityLog /></Guarded>} />
         <Route path="/my-journal" element={<Guarded permission={PERMISSIONS.DASHBOARD_VIEW}><MyJournal /></Guarded>} />
 
         {/* ============================================
@@ -307,7 +315,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/admin/roles" element={<Navigate to="/settings/admin/roles" replace />} />
         <Route path="/admin/users" element={<Navigate to="/settings/admin/users" replace />} />
         <Route path="/admin/users/new" element={<Navigate to="/settings/admin/users/new" replace />} />
-        <Route path="/admin/users/:id/edit" element={<Navigate to="/settings/admin/users/:id/edit" replace />} />
+        <Route path="/admin/users/:id/edit" element={<Navigate to="/settings/admin/users" replace />} />
         <Route path="/admin/activity-log" element={<Navigate to="/settings/admin/activity-log" replace />} />
         <Route path="/admin-panel" element={<Navigate to="/settings/admin" replace />} />
         <Route path="/users/new" element={<Navigate to="/settings/admin/users/new" replace />} />
