@@ -34,9 +34,30 @@ def list_roles(
     
     roles, total = role_service.list_with_filters(db, filters)
     total_pages = (total + filters.page_size - 1) // filters.page_size
-    
+
+    from sqlalchemy import text as sa_text
+    user_counts: dict = {}
+    try:
+        rows = db.execute(sa_text(
+            "SELECT role_id, COUNT(*) FROM user_roles GROUP BY role_id"
+        )).fetchall()
+        user_counts = {r[0]: r[1] for r in rows}
+    except Exception:
+        try:
+            rows = db.execute(sa_text(
+                "SELECT role_id, COUNT(*) FROM users WHERE role_id IS NOT NULL AND is_active = true GROUP BY role_id"
+            )).fetchall()
+            user_counts = {r[0]: r[1] for r in rows}
+        except Exception:
+            pass
+
+    items = []
+    for role in roles:
+        role.__dict__['user_count'] = user_counts.get(role.id, 0)
+        items.append(role)
+
     return RoleListResponse(
-        items=roles,
+        items=items,
         total=total,
         page=filters.page,
         page_size=filters.page_size,
