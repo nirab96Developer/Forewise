@@ -89,8 +89,8 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     if (mapRef.current) return;
 
     const ISRAEL_BOUNDS = L.latLngBounds(
-      L.latLng(29.4, 34.2),
-      L.latLng(33.4, 35.9)
+      L.latLng(29.0, 33.8),
+      L.latLng(33.8, 36.4)
     );
 
     const map = L.map(containerRef.current, {
@@ -101,11 +101,18 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       maxBounds: ISRAEL_BOUNDS,
       maxBoundsViscosity: 1.0,
       minZoom: 7,
+      bounceAtZoomLimits: false,
+      worldCopyJump: false,
+      tap: false,
     });
 
     const tile = L.tileLayer(TILES[activeType], { maxZoom: 19 });
     tile.addTo(map);
     tileRef.current = tile;
+
+    map.on('drag', () => {
+      map.panInsideBounds(ISRAEL_BOUNDS, { animate: false });
+    });
 
     const layerGroup = L.layerGroup().addTo(map);
     layerGroupRef.current = layerGroup;
