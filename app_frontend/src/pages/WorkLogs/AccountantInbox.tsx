@@ -464,7 +464,7 @@ const AccountantInbox: React.FC = () => {
                       <tr key={w.id} className="border-b border-kkl-border hover:bg-gray-50 transition-colors">
                         {/* Number */}
                         <td className="px-4 py-3">
-                          <span className="text-sm font-mono text-gray-500">#{w.report_number}</span>
+                          <span className="text-sm font-mono text-gray-500">#{(w as any).report_number_formatted || `WL-${new Date().getFullYear()}-${String(w.report_number).padStart(4, '0')}`}</span>
                         </td>
                         {/* Date */}
                         <td className="px-4 py-3">

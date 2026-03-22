@@ -117,7 +117,7 @@ const WorklogApproval: React.FC = () => {
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
                                         <h3 className="text-lg font-semibold">{worklog.project_name || "פרויקט לא ידוע"}</h3>
-                                        <p className="text-sm text-gray-500">דיווח #{worklog.report_number || worklog.id}</p>
+                                        <p className="text-sm text-gray-500">דיווח #{(worklog as any).report_number_formatted || `WL-${new Date().getFullYear()}-${String(worklog.report_number).padStart(4, '0')}`}</p>
                                     </div>
                                     <span className={`px-3 py-1 rounded-full text-sm ${worklog.status === 'approved' ? 'bg-green-100 text-green-800' :
                                             worklog.status === 'rejected' ? 'bg-red-100 text-red-800' :
