@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowRight, Calendar, Wrench, Edit, CheckCircle, XCircle,
-  Clock, User, ClipboardList, FileText
+  Clock, User, ClipboardList
 } from 'lucide-react';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
@@ -288,15 +288,6 @@ const WorkOrderDetail: React.FC = () => {
                 השלם עבודה
               </button>
             )}
-
-            {/* PDF */}
-            <button
-              onClick={() => window.open(`/api/v1/work-orders/${workOrder.id}/pdf`, '_blank')}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm"
-            >
-              <FileText className="w-4 h-4" />
-              הדפסה / PDF
-            </button>
 
             {/* עריכה */}
             <button

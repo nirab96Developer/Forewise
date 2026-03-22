@@ -139,21 +139,21 @@ const WorkLogs: React.FC = () => {
               )}
               <div className="flex gap-2">
                 <Link
-                  to={projectCode ? `/projects/${projectCode}/workspace/work-logs/new` : "/projects"}
+                  to={projectCode ? `/work-logs/standard?project_code=${projectCode}` : "/work-logs/standard"}
                   className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-3 rounded-lg flex items-center shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
                 >
                   <Plus className="w-4 h-4 ml-1" />
                   דיווח תקן
                 </Link>
                 <Link
-                  to={projectCode ? `/projects/${projectCode}/workspace/work-logs/new` : "/projects"}
+                  to={projectCode ? `/work-logs/manual?project_code=${projectCode}` : "/work-logs/manual"}
                   className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg flex items-center shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
                 >
                   <Plus className="w-4 h-4 ml-1" />
                   דיווח ידני
                 </Link>
                 <Link
-                  to={projectCode ? `/projects/${projectCode}/workspace/work-logs/new` : "/projects"}
+                  to={projectCode ? `/work-logs/storage?project_code=${projectCode}` : "/work-logs/storage"}
                   className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-4 py-3 rounded-lg flex items-center shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
                 >
                   <Plus className="w-4 h-4 ml-1" />
@@ -254,7 +254,7 @@ const WorkLogs: React.FC = () => {
 
               <div className="flex gap-3">
                 <Link
-                  to={projectCode ? `/projects/${projectCode}/workspace/work-logs/${workLog.id}` : "/projects"}
+                  to={`/work-logs/${workLog.id}`}
                   className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg text-sm flex items-center justify-center font-medium shadow-md hover:shadow-lg transition-all duration-300"
                 >
                   <Eye className="w-4 h-4 ml-1" />

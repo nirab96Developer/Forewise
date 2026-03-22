@@ -21,29 +21,6 @@ Sentry.init({
   enabled: !!(import.meta.env.VITE_SENTRY_DSN) && import.meta.env.MODE === "production",
 });
 
-window.addEventListener('vite:preloadError', () => {
-  window.location.reload();
-});
-
-const handleChunkError = (error: Error) => {
-  if (!error?.message) return;
-  if (
-    error.message.includes('Failed to fetch dynamically') ||
-    error.message.includes('Loading chunk') ||
-    error.message.includes('Loading CSS chunk')
-  ) {
-    window.location.reload();
-  }
-};
-
-window.addEventListener('error', (e) => {
-  if (e.error) handleChunkError(e.error);
-});
-
-window.addEventListener('unhandledrejection', (e) => {
-  if (e.reason instanceof Error) handleChunkError(e.reason);
-});
-
 ReactDOM.createRoot(document.getElementById("root")!).render(   
   <React.StrictMode>     
     <BrowserRouter>

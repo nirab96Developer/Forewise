@@ -5,7 +5,7 @@ Handles HTTP requests with state machine support
 
 from datetime import datetime
 from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -18,7 +18,6 @@ from app.services.notification_service import (
     notify_work_order_created,
     notify_work_order_approved,
     notify_work_order_rejected,
-    notify_work_order_completed,
 )
 from app.schemas.work_order import (
     WorkOrderCreate,
@@ -486,10 +485,7 @@ def close_work_order(
         from decimal import Decimal
         actual_hours_decimal = Decimal(str(actual_hours)) if actual_hours else None
         work_order = work_order_service.close(db, work_order_id, actual_hours_decimal, version, current_user_id=current_user.id)
-        try:
-            notify_work_order_completed(db, work_order)
-        except Exception:
-            pass
+        # Activity log is handled in service
         return work_order
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -762,46 +758,3 @@ def remove_equipment_from_project(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"שגיאה בהסרת כלי: {str(e)}")
-
-
-@router.get("/{work_order_id}/pdf")
-def get_work_order_pdf(
-    work_order_id: int,
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    db: Session = Depends(get_db),
-):
-    """Generate and return PDF for a work order"""
-    work_order = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
-    if not work_order:
-        raise HTTPException(status_code=404, detail="הזמנת עבודה לא נמצאה")
-
-    project = db.query(Project).filter(Project.id == work_order.project_id).first() if work_order.project_id else None
-
-    from app.services.pdf_service import generate_work_order_pdf
-    pdf_bytes = generate_work_order_pdf({
-        "id": work_order.id,
-        "order_number": work_order.order_number,
-        "title": work_order.title or "",
-        "description": work_order.description or "",
-        "status": work_order.status or "",
-        "priority": work_order.priority or "",
-        "project_name": project.name if project else "",
-        "project_code": project.code if project else "",
-        "supplier_name": "",
-        "equipment_type": work_order.equipment_type or "",
-        "work_start_date": str(work_order.work_start_date or ""),
-        "work_end_date": str(work_order.work_end_date or ""),
-        "estimated_hours": float(work_order.estimated_hours or 0),
-        "actual_hours": float(work_order.actual_hours or 0),
-        "hourly_rate": float(work_order.hourly_rate or 0),
-        "total_amount": float(work_order.total_amount or 0),
-        "frozen_amount": float(work_order.frozen_amount or 0),
-        "created_at": str(work_order.created_at or ""),
-    })
-
-    wo_num = work_order.order_number or work_order.id
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="work-order-{wo_num}.pdf"'},
-    )

@@ -155,10 +155,6 @@ class WorkOrderResponse(WorkOrderBase):
     area_name: Optional[str] = None
     region_name: Optional[str] = None
 
-    # Budget / frozen
-    frozen_amount: Optional[Decimal] = Field(None, ge=0)
-    charged_amount: Optional[Decimal] = Field(None, ge=0)
-
     # Computed hours tracking (enriched by endpoint)
     used_hours: Optional[float] = None
     remaining_hours: Optional[float] = None

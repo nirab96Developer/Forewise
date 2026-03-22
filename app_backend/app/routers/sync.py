@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
-from sqlalchemy import func as sa_func
 from app.models.worklog import Worklog
 from app.models.work_order import WorkOrder
 from app.models.equipment import Equipment
@@ -141,15 +140,12 @@ async def create_worklog(
             if field not in operation.data:
                 raise ValueError(f"Missing required field: {field}")
         
-        max_num = db.query(sa_func.max(Worklog.report_number)).scalar() or 0
-        next_report_number = max_num + 1
-
+        # Create worklog
         worklog = Worklog(
             work_order_id=operation.data["work_order_id"],
             report_date=operation.data["work_date"],
             work_hours=operation.data["hours_worked"],
             created_by=current_user.id,
-            report_number=next_report_number,
         )
         
         db.add(worklog)
