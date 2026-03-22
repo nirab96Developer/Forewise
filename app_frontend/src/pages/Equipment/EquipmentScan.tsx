@@ -61,6 +61,11 @@ const EquipmentScan: React.FC = () => {
     if (cameraActive || !scannerRef.current) return;
 
     try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const testStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        testStream.getTracks().forEach(t => t.stop());
+      }
+
       const { Html5Qrcode } = await import('html5-qrcode');
       const scanner = new Html5Qrcode('qr-reader');
       html5QrCodeRef.current = scanner;
@@ -69,8 +74,9 @@ const EquipmentScan: React.FC = () => {
         { facingMode: 'environment' },
         {
           fps: 10,
-          qrbox: { width: 250, height: 250 },
+          qrbox: { width: 220, height: 220 },
           aspectRatio: 1.0,
+          disableFlip: false,
         },
         (decodedText: string) => {
           handleQRResult(decodedText);
@@ -81,7 +87,15 @@ const EquipmentScan: React.FC = () => {
       setError(null);
     } catch (err: any) {
       console.error('Camera error:', err);
-      setError('לא ניתן לפתוח את המצלמה. אנא אפשר גישה למצלמה או השתמש בהזנה ידנית.');
+      const isPermission = err?.name === 'NotAllowedError' || err?.message?.includes('Permission');
+      const isSecure = window.location.protocol !== 'https:' && window.location.hostname !== 'localhost';
+      if (isSecure) {
+        setError('המצלמה דורשת חיבור מאובטח (HTTPS). אנא גש לאתר דרך https://forewise.co');
+      } else if (isPermission) {
+        setError('גישה למצלמה נדחתה. אנא אפשר גישה למצלמה בהגדרות הדפדפן ונסה שוב.');
+      } else {
+        setError('לא ניתן לפתוח את המצלמה. אנא אפשר גישה למצלמה או השתמש בהזנה ידנית.');
+      }
       setMode('manual');
     }
   };
