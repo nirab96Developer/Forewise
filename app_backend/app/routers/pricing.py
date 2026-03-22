@@ -266,7 +266,7 @@ async def get_pricing_report_by_project(
             w.hourly_rate_snapshot,
             w.status,
             s.name          AS supplier_name,
-            e.license_plate AS equipment_license_plate,
+            COALESCE(e.code, e.license_plate) AS equipment_license_plate,
             COALESCE(e.equipment_type, et.name) AS equipment_type
         FROM worklogs w
         LEFT JOIN suppliers s ON s.id = w.supplier_id
