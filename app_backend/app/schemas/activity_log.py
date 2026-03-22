@@ -87,11 +87,25 @@ class ActivityLogUpdate(BaseModel):
 
 
 ACTION_LABELS_HE = {
+    # --- Authentication ---
     "login": "כניסה למערכת",
     "logout": "יציאה מהמערכת",
     "login_failed": "כניסה נכשלה",
     "password_change": "שינוי סיסמה",
     "password_reset": "איפוס סיסמה",
+    "user_login": "כניסה למערכת",
+    "user_logout": "יציאה מהמערכת",
+    "2fa_verified": "אימות דו-שלבי בוצע",
+    "2fa_setup": "אימות דו-שלבי הוגדר",
+    "2fa_disabled": "אימות דו-שלבי בוטל",
+    "password_changed": "סיסמה שונתה",
+    "account_locked": "חשבון ננעל",
+    "account_unlocked": "חשבון שוחרר",
+    "user.login": "כניסה למערכת",
+    "user.logout": "יציאה מהמערכת",
+    "user.otp_verified": "אימות OTP בוצע בהצלחה",
+
+    # --- CRUD ---
     "create": "יצירה",
     "update": "עדכון",
     "delete": "מחיקה",
@@ -100,21 +114,86 @@ ACTION_LABELS_HE = {
     "submit": "הגשה",
     "cancel": "ביטול",
     "assign": "הקצאה",
+
+    # --- Work Orders (underscore) ---
     "work_order_created": "הזמנת עבודה נוצרה",
     "work_order_approved": "הזמנת עבודה אושרה",
     "work_order_rejected": "הזמנת עבודה נדחתה",
     "work_order_sent": "הזמנה נשלחה לספק",
     "work_order_completed": "הזמנה הושלמה",
+
+    # --- Work Orders (dot-notation — from activity_logger) ---
+    "work_order.created": "הזמנת עבודה נוצרה",
+    "work_order.sent_to_coordinator": "הזמנה נשלחה למתאם ספקים",
+    "work_order.approved": "הזמנת עבודה אושרה",
+    "work_order.rejected": "הזמנת עבודה נדחתה",
+    "work_order.started": "הזמנת עבודה החלה",
+    "work_order.completed": "הזמנה הושלמה",
+    "work_order.closed": "הזמנת עבודה נסגרה",
+    "work_order.cancelled": "הזמנת עבודה בוטלה",
+    "work_order.sent_to_supplier": "הזמנה נשלחה לספק",
+    "work_order.resent_to_supplier": "הזמנה נשלחה מחדש לספק",
+    "work_order.supplier_changed": "ספק הוחלף בהזמנה",
+
+    # --- Supplier Coordination (dot-notation) ---
+    "supplier.landing_page_sent": "דף נחיתה נשלח לספק",
+    "supplier.timer_started": "טיימר ספק הופעל",
+    "supplier.timer_expired": "זמן תגובת ספק פג",
+    "supplier.confirmed": "ספק אישר הזמנה",
+    "supplier.declined": "ספק דחה הזמנה",
+    "supplier.constraint_rejected": "ספק נדחה באילוץ",
+
+    # --- Equipment (dot-notation) ---
+    "equipment.scanned": "ציוד נסרק",
+    "equipment.mismatch_detected": "אי-התאמה בציוד",
+    "equipment.released": "ציוד שוחרר",
+    "equipment.transfer_approved": "העברת ציוד אושרה",
+    "equipment.type_change_pending": "שינוי סוג ציוד — ממתין אישור",
+    "equipment.type_change_approved": "שינוי סוג ציוד אושר",
+
+    # --- Worklogs (underscore) ---
     "worklog_created": "דיווח שעות חדש",
     "worklog_approved": "דיווח שעות אושר",
     "worklog_rejected": "דיווח שעות נדחה",
+
+    # --- Worklogs (dot-notation) ---
+    "worklog.created": "דיווח שעות נוצר",
+    "worklog.submitted": "דיווח שעות הוגש",
+    "worklog.approved": "דיווח שעות אושר",
+    "worklog.rejected": "דיווח שעות נדחה",
+    "worklog.assigned_to_invoice": "דיווח שויך לחשבונית",
+
+    # --- Invoices (underscore) ---
     "invoice_created": "חשבונית נוצרה",
     "invoice_approved": "חשבונית אושרה",
+
+    # --- Invoices (dot-notation) ---
+    "invoice.created": "חשבונית נוצרה",
+    "invoice.approved": "חשבונית אושרה",
+    "invoice.sent_to_supplier": "חשבונית נשלחה לספק",
+    "invoice.paid": "חשבונית שולמה",
+
+    # --- Support Tickets (dot-notation) ---
+    "support_ticket.created": "פנייה חדשה נפתחה",
+    "support_ticket.replied": "תגובה נוספה לפנייה",
+    "support_ticket.status_changed": "סטטוס פנייה שונה",
+
+    # --- Project Assignments ---
+    "project_assignment_created": "שיוך לפרויקט נוצר",
+    "project_assignment_updated": "שיוך לפרויקט עודכן",
+    "project_assignment_removed": "שיוך לפרויקט הוסר",
+    "project_assignment_completed": "שיוך לפרויקט הושלם",
+    "project_bulk_assignment": "שיוך מרובה לפרויקט",
+    "assignments_transferred": "שיוכים הועברו",
+
+    # --- Other ---
     "project_created": "פרויקט חדש נוצר",
     "supplier_added": "ספק חדש נוסף",
     "equipment_assigned": "ציוד הוקצה",
     "budget_updated": "תקציב עודכן",
     "user_created": "משתמש חדש נוסף",
+    "balance_release": "יתרה שוחררה",
+    "note": "הערה נוספה",
 }
 
 ENTITY_LABELS_HE = {
@@ -157,8 +236,16 @@ class ActivityLogResponse(ActivityLogBase):
         super().__init__(**data)
         action_key = (data.get('action') or '').lower()
         activity_key = (data.get('activity_type') or '').lower()
-        self.display_name_he = ACTION_LABELS_HE.get(action_key) or ACTION_LABELS_HE.get(activity_key) or data.get('action', '')
-        self.entity_name_he = ENTITY_LABELS_HE.get((data.get('entity_type') or '').lower(), data.get('entity_type', ''))
+        self.display_name_he = (
+            ACTION_LABELS_HE.get(action_key)
+            or ACTION_LABELS_HE.get(action_key.replace('.', '_'))
+            or ACTION_LABELS_HE.get(activity_key)
+            or data.get('action', '')
+        )
+        self.entity_name_he = ENTITY_LABELS_HE.get(
+            (data.get('entity_type') or '').lower(),
+            data.get('entity_type', '')
+        )
 
 
 class ActivityLogFilter(BaseModel):
