@@ -31,9 +31,6 @@ def list_roles(
 ):
     """רשימת תפקידים"""
     require_permission(current_user, "roles.list")
-    
-    roles, total = role_service.list_with_filters(db, filters)
-    total_pages = (total + filters.page_size - 1) // filters.page_size
 
     from sqlalchemy import text as sa_text
     user_counts: dict = {}
@@ -47,6 +44,9 @@ def list_roles(
             break
         except Exception:
             db.rollback()
+
+    roles, total = role_service.list_with_filters(db, filters)
+    total_pages = (total + filters.page_size - 1) // filters.page_size
 
     items = []
     for role in roles:
