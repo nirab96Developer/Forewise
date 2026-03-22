@@ -115,6 +115,16 @@ class WorkOrderCreate(BaseModel):
     requires_guard: Optional[bool] = False
     guard_days: Optional[int] = 0
 
+    # Planning / billing (DB model)
+    days: Optional[int] = Field(None, ge=0, description="מספר ימי עבודה")
+    has_overnight: Optional[bool] = False
+    overnight_nights: Optional[int] = Field(0, ge=0)
+    allocation_method: Optional[str] = Field(
+        None, max_length=20, description="FAIR_ROTATION | MANUAL"
+    )
+    total_amount: Optional[Decimal] = Field(None, ge=0)
+    frozen_amount: Optional[Decimal] = Field(None, ge=0)
+
 
 class WorkOrderUpdate(BaseModel):
     """Update work order schema - all fields optional."""
@@ -154,6 +164,15 @@ class WorkOrderResponse(WorkOrderBase):
     location_name: Optional[str] = None
     area_name: Optional[str] = None
     region_name: Optional[str] = None
+
+    # Planning / billing
+    days: Optional[int] = None
+    has_overnight: Optional[bool] = False
+    overnight_nights: Optional[int] = 0
+    allocation_method: Optional[str] = None
+    frozen_amount: Optional[Decimal] = None
+    remaining_frozen: Optional[Decimal] = None
+    charged_amount: Optional[Decimal] = None
 
     # Computed hours tracking (enriched by endpoint)
     used_hours: Optional[float] = None
