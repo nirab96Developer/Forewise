@@ -81,6 +81,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   const mapRef = useRef<L.Map | null>(null);
   const tileRef = useRef<L.TileLayer | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
+  const hasFittedRef = useRef(false);
   const [activeType, setActiveType] = useState(mapType);
 
   // Create map once
@@ -137,9 +138,14 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     tileRef.current.setUrl(TILES[activeType]);
   }, [activeType]);
 
+  const prevMaskRef = useRef(maskPolygon);
   // Render content (points, polygons, mask)
   useEffect(() => {
     if (!mapRef.current || !layerGroupRef.current) return;
+    if (maskPolygon !== prevMaskRef.current) {
+      hasFittedRef.current = false;
+      prevMaskRef.current = maskPolygon;
+    }
     const map = mapRef.current;
     const group = layerGroupRef.current;
     group.clearLayers();
@@ -206,12 +212,14 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       points.forEach(p => { if (p.lat && p.lng) allBounds.extend([p.lat, p.lng]); });
     }
 
-    // Fit bounds
-    if (fitBounds && allBounds.isValid()) {
+    // Fit bounds — only on first load or when mask/polygon selection changes
+    const shouldFit = !hasFittedRef.current || maskPolygon;
+    if (fitBounds && allBounds.isValid() && shouldFit) {
       setTimeout(() => {
         map.fitBounds(allBounds, { padding: [40, 40], maxZoom: 15 });
         map.invalidateSize();
       }, 200);
+      hasFittedRef.current = true;
     }
   }, [points, polygons, maskPolygon]);
 
