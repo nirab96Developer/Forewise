@@ -38,6 +38,15 @@ class SupplierResponse(SupplierBase):
     rating: Optional[float] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+    region_name: Optional[str] = None
+    area_name: Optional[str] = None
+    equipment_count: int = 0
+    total_assignments: int = 0
+    total_skips: int = 0
+    active_area_ids: List[int] = []
+    active_region_ids: List[int] = []
+
     model_config = ConfigDict(from_attributes=True)
 
 
