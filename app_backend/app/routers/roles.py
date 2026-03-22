@@ -37,19 +37,16 @@ def list_roles(
 
     from sqlalchemy import text as sa_text
     user_counts: dict = {}
-    try:
-        rows = db.execute(sa_text(
-            "SELECT role_id, COUNT(*) FROM user_roles GROUP BY role_id"
-        )).fetchall()
-        user_counts = {r[0]: r[1] for r in rows}
-    except Exception:
+    for query in [
+        "SELECT role_id, COUNT(*) FROM user_roles GROUP BY role_id",
+        "SELECT role_id, COUNT(*) FROM users WHERE role_id IS NOT NULL AND is_active = true GROUP BY role_id",
+    ]:
         try:
-            rows = db.execute(sa_text(
-                "SELECT role_id, COUNT(*) FROM users WHERE role_id IS NOT NULL AND is_active = true GROUP BY role_id"
-            )).fetchall()
+            rows = db.execute(sa_text(query)).fetchall()
             user_counts = {r[0]: r[1] for r in rows}
+            break
         except Exception:
-            pass
+            db.rollback()
 
     items = []
     for role in roles:
