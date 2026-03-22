@@ -134,18 +134,22 @@ async def create_worklog(
 ) -> SyncResult:
     """Create a new worklog"""
     try:
-        # Validate required fields
         required_fields = ["work_order_id", "work_date", "hours_worked"]
         for field in required_fields:
             if field not in operation.data:
                 raise ValueError(f"Missing required field: {field}")
-        
-        # Create worklog
+
+        from sqlalchemy import func as sa_func
+        max_num = db.query(sa_func.max(Worklog.report_number)).scalar() or 0
+        report_number = max_num + 1
+
         worklog = Worklog(
             work_order_id=operation.data["work_order_id"],
-            report_date=operation.data["work_date"],
-            work_hours=operation.data["hours_worked"],
-            created_by=current_user.id,
+            report_date=operation.data.get("work_date"),
+            work_hours=operation.data.get("hours_worked"),
+            user_id=current_user.id,
+            report_number=report_number,
+            report_type=operation.data.get("report_type", "standard"),
         )
         
         db.add(worklog)
@@ -186,7 +190,6 @@ async def update_worklog(
                 setattr(worklog, field, value)
         
         worklog.updated_at = datetime.utcnow()
-        worklog.updated_by = current_user.id
         
         db.commit()
         
@@ -227,7 +230,7 @@ async def create_work_order(
             work_end_date=operation.data.get("work_end_date"),
             estimated_hours=operation.data.get("estimated_hours"),
             hourly_rate=operation.data.get("hourly_rate"),
-            created_by=current_user.id,
+            created_by_id=current_user.id,
             created_at=datetime.utcnow()
         )
         
@@ -269,7 +272,6 @@ async def update_work_order(
                 setattr(work_order, field, value)
         
         work_order.updated_at = datetime.utcnow()
-        work_order.updated_by = current_user.id
         
         db.commit()
         
@@ -307,7 +309,6 @@ async def update_equipment(
                 setattr(equipment, field, value)
         
         equipment.updated_at = datetime.utcnow()
-        equipment.updated_by = current_user.id
         
         db.commit()
         
