@@ -89,6 +89,12 @@ class WorklogResponse(WorklogBase):
     cost_with_vat: Optional[Decimal] = None
     vat_rate: Decimal = Decimal('0.17')
     
+    # Overnight
+    is_overnight: Optional[bool] = False
+    overnight_nights: Optional[int] = 0
+    overnight_rate: Optional[Decimal] = None
+    overnight_total: Optional[Decimal] = None
+    
     # Approval
     approved_by_user_id: Optional[int] = None
     approved_at: Optional[datetime] = None
