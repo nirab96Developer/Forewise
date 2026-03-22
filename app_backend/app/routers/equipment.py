@@ -352,19 +352,19 @@ def scan_equipment(
         WorkOrder.is_active == True,
     ).first()
     
-    # Save scan to equipment_scans table
     now = datetime.utcnow()
     db.execute(sa_text("""
-        INSERT INTO equipment_scans (equipment_id, work_order_id, project_id, scanned_by_id, scan_type, scan_date, location_name, created_at, updated_at)
-        VALUES (:eq_id, :wo_id, :proj_id, :user_id, :scan_type, :scan_date, :location, :now, :now)
+        INSERT INTO equipment_scans
+            (equipment_id, work_order_id, scanned_by, scan_type, scan_value, scan_timestamp, status, is_active, created_at, updated_at)
+        VALUES
+            (:eq_id, :wo_id, :user_id, :scan_type, :scan_value, :ts, 'completed', true, :now, :now)
     """), {
         "eq_id": equipment_id,
         "wo_id": active_wo.id if active_wo else None,
-        "proj_id": active_wo.project_id if active_wo else None,
         "user_id": current_user.id,
         "scan_type": scan_type,
-        "scan_date": now.date(),
-        "location": location,
+        "scan_value": str(equipment_id),
+        "ts": now,
         "now": now,
     })
     
