@@ -5,7 +5,7 @@ Worklog schemas
 from datetime import datetime, date, time
 from decimal import Decimal
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 class WorklogBase(BaseModel):
@@ -97,8 +97,23 @@ class WorklogResponse(WorklogBase):
     created_at: datetime
     updated_at: datetime
     is_active: Optional[bool] = None
+
+    # Overnight
+    overnight_nights: Optional[int] = 0
+    is_overnight: Optional[bool] = False
+
+    # Computed
+    report_number_formatted: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode='after')
+    def format_report(self):
+        if self.report_number and not self.report_number_formatted:
+            from datetime import datetime as dt
+            year = self.created_at.year if self.created_at else dt.now().year
+            self.report_number_formatted = f"WL-{year}-{str(self.report_number).zfill(4)}"
+        return self
 
 
 class WorklogBrief(BaseModel):
@@ -129,6 +144,7 @@ class WorklogSearch(BaseModel):
     work_order_id: Optional[int] = None
     user_id: Optional[int] = None
     project_id: Optional[int] = None
+    supplier_id: Optional[int] = Field(None, description="ספק (לפי worklogs.supplier_id)")
     area_id: Optional[int] = None
     equipment_id: Optional[int] = None
     status: Optional[str] = None
