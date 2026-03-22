@@ -49,6 +49,18 @@ def list_users(
     )
 
 
+@router.get("/me", response_model=UserResponse)
+def get_current_user_profile(
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """פרופיל המשתמש הנוכחי"""
+    user = user_service.get_by_id(db, current_user.id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(
     user_id: int,

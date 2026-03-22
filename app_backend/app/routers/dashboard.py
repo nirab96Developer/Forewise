@@ -64,13 +64,14 @@ async def get_dashboard_summary(
     budget_query = db.query(Budget)
     
     # Apply role-based filtering
-    if user.role.code == "WORK_MANAGER":
+    user_role_code = user.role.code if user.role else ""
+    if user_role_code == "WORK_MANAGER":
         # מנהל עבודה רואה רק פרויקטים שהוקצו לו
         project_query = project_query.filter(Project.manager_id == user.id)
-    elif user.role.code == "REGION_MANAGER" and user.region_id:
+    elif user_role_code == "REGION_MANAGER" and user.region_id:
         project_query = project_query.filter(Project.region_id == user.region_id)
         budget_query = budget_query.filter(Budget.region_id == user.region_id)
-    elif user.role.code == "AREA_MANAGER" and user.area_id:
+    elif user_role_code == "AREA_MANAGER" and user.area_id:
         project_query = project_query.filter(Project.area_id == user.area_id)
         budget_query = budget_query.filter(Budget.area_id == user.area_id)
     
@@ -142,10 +143,11 @@ async def get_dashboard_summary(
     alerts_count = 0
     try:
         # Count projects with budget overruns
-        overbudget = db.query(Project).join(Project.budget).filter(
+        overbudget = db.query(Budget).filter(
             and_(
                 Budget.spent_amount > Budget.total_amount,
-                Budget.total_amount > 0
+                Budget.total_amount > 0,
+                Budget.is_active == True
             )
         ).count()
         alerts_count = overbudget
@@ -323,6 +325,18 @@ async def get_dashboard_projects(
         for b in db.query(Budget).filter(Budget.id.in_(budget_ids)).all():
             budgets[b.id] = b
 
+    # Also load budgets by project_id for projects without budget_id FK
+    project_ids = [p.id for p in projects]
+    budgets_by_project = {}
+    if project_ids:
+        for b in db.query(Budget).filter(Budget.project_id.in_(project_ids), Budget.is_active == True).all():
+            budgets_by_project[b.project_id] = b
+
+    def _get_budget(p):
+        if p.budget_id and p.budget_id in budgets:
+            return budgets[p.budget_id]
+        return budgets_by_project.get(p.id)
+
     return [
         {
             "id": p.id,
@@ -334,8 +348,9 @@ async def get_dashboard_projects(
             "manager_name": p.manager.full_name if p.manager else None,
             "region_name": p.region.name if p.region else None,
             "area_name": p.area.name if p.area else None,
-            "allocated_budget": float(budgets[p.budget_id].total_amount or 0) if p.budget_id and p.budget_id in budgets else 0.0,
-            "spent_budget": float(budgets[p.budget_id].spent_amount or 0) if p.budget_id and p.budget_id in budgets else 0.0,
+            "allocated_budget": float((_get_budget(p).total_amount or 0)) if _get_budget(p) else 0.0,
+            "spent_budget": float((_get_budget(p).spent_amount or 0)) if _get_budget(p) else 0.0,
+            "budget_status": "active" if (_get_budget(p) and float(_get_budget(p).total_amount or 0) > 0) else "inactive",
             "start_date": p.created_at.isoformat() if p.created_at else None,
             "end_date": None,
             "updated_at": p.updated_at.isoformat() if p.updated_at else None,
@@ -357,10 +372,11 @@ async def get_dashboard_alerts(
     
     # Check for budget overruns (via Budget relationship)
     try:
-        overbudget_query = db.query(Project).join(Project.budget).filter(
+        overbudget_query = db.query(Budget).filter(
             and_(
                 Budget.spent_amount > Budget.total_amount,
-                Budget.total_amount > 0
+                Budget.total_amount > 0,
+                Budget.is_active == True
             )
         )
         
@@ -817,8 +833,10 @@ async def get_region_areas_breakdown(
             Project.area_id == area.id, Project.is_active == True
         ).scalar() or 0
 
-        wo_count = db.query(func.count(WorkOrder.id)).filter(
-            WorkOrder.area_id == area.id,
+        wo_count = db.query(func.count(WorkOrder.id)).join(
+            Project, WorkOrder.project_id == Project.id
+        ).filter(
+            Project.area_id == area.id,
             WorkOrder.status.in_(["PENDING", "IN_PROGRESS", "PENDING_SUPPLIER"]),
             WorkOrder.is_active == True,
         ).scalar() or 0

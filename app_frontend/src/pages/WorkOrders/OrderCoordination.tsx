@@ -21,7 +21,7 @@ interface CoordinationOrder extends Omit<WorkOrder, 'status'> {
   suggested_supplier_name?: string;
   portal_sent_at?: string;
   portal_token?: string;
-  order_number?: string | number;
+  order_number?: number;
   is_forced_selection?: boolean;
   requested_equipment_model_id?: number;
   work_days?: number;
@@ -337,8 +337,7 @@ const OrderCoordination: React.FC = () => {
               </svg>
           </div>
         </div>
-          <p className="mt-4 text-gray-500 text-sm animate-pulse">טוען...</p>
-          <p className="text-gray-600">טוען תיאומים...</p>
+          <p className="mt-4 text-gray-500 text-sm animate-pulse">טוען תיאומים...</p>
         </div>
       </div>
     );

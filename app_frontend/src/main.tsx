@@ -21,6 +21,49 @@ Sentry.init({
   enabled: !!(import.meta.env.VITE_SENTRY_DSN) && import.meta.env.MODE === "production",
 });
 
+window.addEventListener('vite:preloadError', () => {
+  const reloadKey = "forewise_chunk_reload";
+  const lastReload = sessionStorage.getItem(reloadKey);
+  const now = Date.now();
+  if (!lastReload || now - parseInt(lastReload) > 10000) {
+    sessionStorage.setItem(reloadKey, String(now));
+    window.location.reload();
+  }
+});
+
+window.addEventListener("error", (e) => {
+  if (
+    e.message?.includes("Failed to fetch dynamically imported module") ||
+    e.message?.includes("Importing a module script failed") ||
+    e.message?.includes("error loading dynamically imported module")
+  ) {
+    const reloadKey = "forewise_chunk_reload";
+    const lastReload = sessionStorage.getItem(reloadKey);
+    const now = Date.now();
+    if (!lastReload || now - parseInt(lastReload) > 10000) {
+      sessionStorage.setItem(reloadKey, String(now));
+      window.location.reload();
+    }
+  }
+});
+
+window.addEventListener("unhandledrejection", (e) => {
+  const msg = e.reason?.message || String(e.reason || "");
+  if (
+    msg.includes("Failed to fetch dynamically imported module") ||
+    msg.includes("Importing a module script failed") ||
+    msg.includes("error loading dynamically imported module")
+  ) {
+    const reloadKey = "forewise_chunk_reload";
+    const lastReload = sessionStorage.getItem(reloadKey);
+    const now = Date.now();
+    if (!lastReload || now - parseInt(lastReload) > 10000) {
+      sessionStorage.setItem(reloadKey, String(now));
+      window.location.reload();
+    }
+  }
+});
+
 ReactDOM.createRoot(document.getElementById("root")!).render(   
   <React.StrictMode>     
     <BrowserRouter>

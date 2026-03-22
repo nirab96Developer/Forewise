@@ -201,4 +201,89 @@ class SupplierRotationService:
         return rotation
 
 
+    def select_supplier_with_checks(
+        self,
+        db: Session,
+        area_id: Optional[int] = None,
+        region_id: Optional[int] = None,
+        equipment_model_id: Optional[int] = None,
+        exclude_ids: Optional[List[int]] = None,
+    ) -> Dict[str, Any]:
+        """
+        5-check supplier selection with area → region → coordinator fallback.
+
+        Checks per supplier:
+        1. Active in area/region (active_area_ids / active_region_ids contains id)
+        2. Supplier is active (is_active = True)
+        3. Has equipment of requested type (supplier_equipment matching model)
+        4. Equipment has a license plate
+        5. Equipment status = 'available'
+
+        Selects the supplier with fewest total_assignments.
+        Returns { supplier_id, fallback_level, notify_coordinator }.
+        """
+        from app.models.supplier_equipment import SupplierEquipment
+
+        def _find_in_scope(scope_filter) -> Optional[Supplier]:
+            query = db.query(Supplier).filter(
+                Supplier.is_active == True,
+                scope_filter,
+            )
+            if exclude_ids:
+                query = query.filter(Supplier.id.notin_(exclude_ids))
+
+            valid = []
+            for supplier in query.all():
+                eq_query = db.query(SupplierEquipment).filter(
+                    SupplierEquipment.supplier_id == supplier.id,
+                    SupplierEquipment.is_active == True,
+                    SupplierEquipment.license_plate != None,
+                    SupplierEquipment.license_plate != '',
+                    SupplierEquipment.status == 'available',
+                )
+                if equipment_model_id:
+                    eq_query = eq_query.filter(
+                        SupplierEquipment.equipment_model_id == equipment_model_id
+                    )
+                if eq_query.first():
+                    valid.append(supplier)
+
+            if not valid:
+                return None
+
+            valid.sort(key=lambda s: s.total_assignments or 0)
+            return valid[0]
+
+        # Fallback 1: Try area_id
+        if area_id:
+            supplier = _find_in_scope(Supplier.active_area_ids.contains([area_id]))
+            if supplier:
+                supplier.total_assignments = (supplier.total_assignments or 0) + 1
+                db.flush()
+                return {
+                    "supplier_id": supplier.id,
+                    "fallback_level": "area",
+                    "notify_coordinator": False,
+                }
+
+        # Fallback 2: Try region_id
+        if region_id:
+            supplier = _find_in_scope(Supplier.active_region_ids.contains([region_id]))
+            if supplier:
+                supplier.total_assignments = (supplier.total_assignments or 0) + 1
+                db.flush()
+                return {
+                    "supplier_id": supplier.id,
+                    "fallback_level": "region",
+                    "notify_coordinator": False,
+                }
+
+        # Fallback 3: no supplier found → notify coordinator
+        return {
+            "supplier_id": None,
+            "fallback_level": "none",
+            "notify_coordinator": True,
+        }
+
+
 supplier_rotation_service = SupplierRotationService()

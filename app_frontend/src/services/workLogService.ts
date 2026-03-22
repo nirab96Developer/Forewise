@@ -141,6 +141,10 @@ export interface WorkLogCreate {
   equipment_scanned?: boolean;
   scan_time?: string;
   segments?: Omit<WorkLogSegment, 'id' | 'worklog_id' | 'created_at'>[];
+  includes_guard?: boolean;
+  is_overnight?: boolean;
+  overnight_nights?: number;
+  overnight_rate?: number;
   // Legacy fields for backwards compatibility
   work_date?: string;  // Alias for report_date
   description?: string;  // Alias for activity_description

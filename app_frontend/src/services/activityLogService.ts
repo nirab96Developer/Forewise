@@ -29,6 +29,8 @@ export interface ActivityLogFilters {
   search?: string;
   page?: number;
   per_page?: number;  // לפי החוזה - per_page במקום limit
+  /** operational | financial | management | system — backend filters by category */
+  category?: string;
 }
 
 export interface ActivityLogResponse {
@@ -45,7 +47,10 @@ class ActivityLogService {
    */
   async getActivityLogs(filters: ActivityLogFilters = {}): Promise<ActivityLogResponse> {
     try {
-      const response = await api.get('/activity-logs/', { params: filters });
+      const { per_page, ...rest } = filters;
+      const params: Record<string, unknown> = { ...rest };
+      if (per_page != null) params.limit = per_page;
+      const response = await api.get('/activity-logs/', { params });
       // אם ה-API מחזיר List ישירות
       if (Array.isArray(response.data)) {
         return {

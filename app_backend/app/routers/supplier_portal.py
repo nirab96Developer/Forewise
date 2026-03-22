@@ -246,39 +246,63 @@ def get_available_equipment(
 
     supplier_id = work_order.supplier_id
 
-    # Also check Equipment table for this supplier's equipment with license plates
+    # Equipment rows for this supplier; blocking = another active WO holds this equipment_id
     from sqlalchemy import text as sa_text
-    
-    eq_rows = db.execute(sa_text("""
+
+    eq_rows = db.execute(
+        sa_text(
+            """
         SELECT e.id, e.name, e.license_plate, e.equipment_type, e.type_id,
                e.status, e.is_active,
-               wo.project_id as current_project_id,
-               p.name as current_project_name
+               blk.project_name AS blocked_project_name
         FROM equipment e
-        LEFT JOIN work_orders wo ON wo.equipment_id = e.id 
-            AND wo.status IN ('ACTIVE','IN_PROGRESS','APPROVED_AND_SENT')
-            AND wo.is_active = true
-        LEFT JOIN projects p ON p.id = wo.project_id
+        LEFT JOIN (
+            SELECT wo.equipment_id, p.name AS project_name
+            FROM work_orders wo
+            INNER JOIN projects p ON p.id = wo.project_id
+            INNER JOIN (
+                SELECT equipment_id, MIN(id) AS mid
+                FROM work_orders
+                WHERE id != :wo_id
+                  AND equipment_id IS NOT NULL
+                  AND deleted_at IS NULL
+                  AND is_active = true
+                  AND UPPER(COALESCE(status,'')) NOT IN (
+                    'COMPLETED','CANCELLED','REJECTED','STOPPED','EXPIRED'
+                  )
+                GROUP BY equipment_id
+            ) pick ON pick.mid = wo.id AND wo.equipment_id = pick.equipment_id
+        ) blk ON blk.equipment_id = e.id
         WHERE e.supplier_id = :sid
             AND e.is_active = true
             AND e.license_plate IS NOT NULL AND e.license_plate != ''
-            AND (:tid IS NULL OR e.type_id = :tid)
-        ORDER BY (wo.project_id IS NULL) DESC, e.license_plate
-    """), {"sid": supplier_id, "tid": required_category_id}).fetchall()
+            AND (:cid IS NULL OR e.category_id = :cid)
+        ORDER BY e.license_plate
+        """
+        ),
+        {
+            "sid": supplier_id,
+            "cid": required_category_id,
+            "wo_id": work_order.id,
+        },
+    ).fetchall()
 
     equipment_list = []
     for row in eq_rows:
-        is_busy = row[7] is not None
-        equipment_list.append({
-            "id": row[0],
-            "name": row[1],
-            "license_plate": row[2],
-            "equipment_type": row[3],
-            "type_id": row[4],
-            "is_available": not is_busy,
-            "is_blocked": is_busy,
-            "blocked_by_project": row[8] if is_busy else None,
-        })
+        blocked_name = row[7]
+        is_blocked = blocked_name is not None
+        equipment_list.append(
+            {
+                "id": row[0],
+                "name": row[1],
+                "license_plate": row[2],
+                "equipment_type": row[3],
+                "type_id": row[4],
+                "is_available": not is_blocked,
+                "is_blocked": is_blocked,
+                "blocked_by": blocked_name if is_blocked else None,
+            }
+        )
 
     return {
         "required_category_id": required_category_id,
@@ -314,47 +338,25 @@ def accept_work_order(
             detail=error_message
         )
 
-    # ── Tool-match enforcement (Fix 2) ────────────────────────────────────
+    # ── Tool-match enforcement ────────────────────────────────────
     if request.equipment_id:
-        chosen = db.query(SupplierEquipment).filter(
-            SupplierEquipment.id == request.equipment_id
-        ).first()
-
-        if not chosen:
-            raise HTTPException(status_code=400, detail="הכלי שנבחר אינו קיים במערכת")
-
-        # supplier must match
-        if chosen.supplier_id != work_order.supplier_id:
-            raise HTTPException(
-                status_code=400,
-                detail="הכלי שנבחר אינו שייך לספק הנוכחי"
-            )
-
-        # category must match requested model's category
-        if work_order.requested_equipment_model_id:
-            req_model = db.query(EquipmentModel).filter(
-                EquipmentModel.id == work_order.requested_equipment_model_id
-            ).first()
-            if req_model and chosen.equipment_model_id:
-                chosen_model = db.query(EquipmentModel).filter(
-                    EquipmentModel.id == chosen.equipment_model_id
-                ).first()
-                if chosen_model and chosen_model.category_id != req_model.category_id:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=(
-                            f"הכלי שנבחר ({chosen_model.name}) אינו מהסוג שהוזמן. "
-                            f"נדרש: {req_model.name} (קטגוריה {req_model.category_id})"
-                        )
-                    )
-
-        # must be available
-        if chosen.status != 'available':
-            raise HTTPException(
-                status_code=400,
-                detail="הכלי שנבחר אינו פנוי כרגע — משויך להזמנה אחרת"
-            )
-    # ──────────────────────────────────────────────────────────────────────
+        chosen_eq = db.query(Equipment).filter(Equipment.id == request.equipment_id).first()
+        if chosen_eq:
+            if not request.license_plate and chosen_eq.license_plate:
+                request.license_plate = chosen_eq.license_plate
+            if chosen_eq.supplier_id and chosen_eq.supplier_id != work_order.supplier_id:
+                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו שייך לספק הנוכחי")
+            if chosen_eq.status and chosen_eq.status not in ('available', 'active'):
+                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו פנוי כרגע")
+        else:
+            chosen_se = db.query(SupplierEquipment).filter(SupplierEquipment.id == request.equipment_id).first()
+            if not chosen_se:
+                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו קיים במערכת")
+            if chosen_se.supplier_id != work_order.supplier_id:
+                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו שייך לספק הנוכחי")
+            if chosen_se.status and chosen_se.status != 'available':
+                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו פנוי כרגע")
+    # ──────────────────────────────────────────────────────────────
     
     try:
         # Update work order status
@@ -362,24 +364,22 @@ def accept_work_order(
         work_order.supplier_response_at = datetime.utcnow()
         work_order.response_received_at = datetime.utcnow()
         
-        # Update supplier_equipment record
+        # Link equipment to work order
         if request.equipment_id:
-            se = db.query(SupplierEquipment).filter(
-                SupplierEquipment.id == request.equipment_id
-            ).first()
-            if not se:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"הציוד שנבחר (id={request.equipment_id}) אינו קיים במערכת"
-                )
-            se.status = 'busy'
-
-            # If supplier_equipment has a license_plate and we got a new one — update it
-            if request.license_plate and request.license_plate != se.license_plate:
-                se.license_plate = request.license_plate
-
-            # Link work_order.equipment_id → equipment.id via license_plate
-            effective_plate = se.license_plate or request.license_plate
+            # Direct Equipment link (available-equipment returns Equipment.id)
+            direct_eq = db.query(Equipment).filter(Equipment.id == request.equipment_id).first()
+            if direct_eq:
+                work_order.equipment_id = direct_eq.id
+                effective_plate = direct_eq.license_plate or request.license_plate
+            else:
+                # Fallback: SupplierEquipment lookup
+                se = db.query(SupplierEquipment).filter(SupplierEquipment.id == request.equipment_id).first()
+                if not se:
+                    raise HTTPException(status_code=400, detail=f"הציוד שנבחר אינו קיים במערכת")
+                se.status = 'busy'
+                if request.license_plate and request.license_plate != se.license_plate:
+                    se.license_plate = request.license_plate
+                effective_plate = se.license_plate or request.license_plate
             if effective_plate:
                 matched_equipment = db.query(Equipment).filter(
                     Equipment.license_plate == effective_plate

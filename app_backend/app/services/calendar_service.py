@@ -74,8 +74,8 @@ class CalendarService:
             .filter(
                 and_(
                     WorkOrder.created_by_id == user_id,
-                    WorkOrder.start_date <= end_date,
-                    WorkOrder.end_date >= start_date,
+                    WorkOrder.work_start_date <= end_date,
+                    WorkOrder.work_end_date >= start_date,
                 )
             )
             .all()
@@ -87,8 +87,8 @@ class CalendarService:
                     "type": "work_order",
                     "id": f"work_order_{order.id}",
                     "title": f"הזמנת עבודה: {order.order_number}",
-                    "start": order.start_date.isoformat(),
-                    "end": order.end_date.isoformat(),
+                    "start": order.work_start_date.isoformat(),
+                    "end": order.work_end_date.isoformat(),
                     "all_day": True,
                     "color": "#FF9800",
                     "details": {"order_id": order.id, "status": order.status},
@@ -274,8 +274,8 @@ class CalendarService:
             .filter(
                 and_(
                     WorkOrder.project_id == project_id,
-                    WorkOrder.start_date <= end_date,
-                    WorkOrder.end_date >= start_date,
+                    WorkOrder.work_start_date <= end_date,
+                    WorkOrder.work_end_date >= start_date,
                 )
             )
             .all()
@@ -287,8 +287,8 @@ class CalendarService:
                     "type": "work_order",
                     "id": f"work_order_{order.id}",
                     "title": f"הזמנה: {order.order_number}",
-                    "start": order.start_date.isoformat(),
-                    "end": order.end_date.isoformat(),
+                    "start": order.work_start_date.isoformat(),
+                    "end": order.work_end_date.isoformat(),
                     "all_day": True,
                     "color": "#FF9800",
                     "details": {

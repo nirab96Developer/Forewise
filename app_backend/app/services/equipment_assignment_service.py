@@ -3,12 +3,11 @@
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.equipment import Equipment
 from app.models.equipment_assignment import EquipmentAssignment
-from app.models.project import Project
 from app.schemas.equipment_assignment import AssignmentCreate, AssignmentUpdate
 
 
@@ -24,7 +23,6 @@ class EquipmentAssignmentService:
             .options(
                 joinedload(EquipmentAssignment.equipment),
                 joinedload(EquipmentAssignment.project),
-                joinedload(EquipmentAssignment.assigned_by),
             )
             .filter(
                 and_(
@@ -61,8 +59,8 @@ class EquipmentAssignmentService:
             # Only active/future assignments
             query = query.filter(
                 or_(
-                    EquipmentAssignment.actual_end_date == None,
-                    EquipmentAssignment.actual_end_date >= date.today(),
+                    EquipmentAssignment.end_date == None,
+                    EquipmentAssignment.end_date >= date.today(),
                 )
             )
 
@@ -103,12 +101,11 @@ class EquipmentAssignmentService:
         db_assignment = EquipmentAssignment(
             equipment_id=assignment.equipment_id,
             project_id=assignment.project_id,
-            work_order_id=assignment.work_order_id,
-            assigned_by_id=assigned_by_id,
+            assigned_by=assigned_by_id,
             start_date=assignment.start_date,
             end_date=assignment.end_date,
             notes=assignment.notes,
-            hourly_rate=assignment.hourly_rate or equipment.hourly_rate,
+            hourly_rate=getattr(assignment, "hourly_rate", None) or equipment.hourly_rate,
             status="scheduled",
             created_at=datetime.utcnow(),
         )
@@ -117,7 +114,7 @@ class EquipmentAssignmentService:
 
         # Update equipment status
         equipment.status = "assigned"
-        equipment.current_project_id = assignment.project_id
+        equipment.assigned_project_id = assignment.project_id
 
         db.commit()
         db.refresh(db_assignment)
@@ -169,7 +166,8 @@ class EquipmentAssignmentService:
             raise ValueError("Assignment already started or completed")
 
         db_assignment.status = "active"
-        db_assignment.actual_start_date = actual_start or date.today()
+        start = actual_start or date.today()
+        db_assignment.start_date = datetime.combine(start, datetime.min.time())
         db_assignment.updated_at = datetime.utcnow()
 
         # Update equipment status
@@ -202,14 +200,15 @@ class EquipmentAssignmentService:
             raise ValueError("Assignment already completed")
 
         db_assignment.status = "completed"
-        db_assignment.actual_end_date = actual_end or date.today()
+        if actual_end:
+            db_assignment.end_date = datetime.combine(
+                actual_end, datetime.min.time()
+            )
+        else:
+            db_assignment.end_date = datetime.utcnow()
         db_assignment.actual_hours = actual_hours
-        db_assignment.completion_notes = completion_notes
+        db_assignment.notes = completion_notes
         db_assignment.updated_at = datetime.utcnow()
-
-        # Calculate actual cost if hours provided
-        if actual_hours and db_assignment.hourly_rate:
-            db_assignment.actual_cost = actual_hours * db_assignment.hourly_rate
 
         # Update equipment status
         equipment = (
@@ -233,7 +232,7 @@ class EquipmentAssignmentService:
 
             if not other_active:
                 equipment.status = "available"
-                equipment.current_project_id = None
+                equipment.assigned_project_id = None
 
         db.commit()
         db.refresh(db_assignment)
@@ -249,8 +248,10 @@ class EquipmentAssignmentService:
             raise ValueError("Cannot cancel completed assignment")
 
         db_assignment.status = "cancelled"
-        db_assignment.cancellation_reason = reason
-        db_assignment.cancelled_at = datetime.utcnow()
+        cancel_note = f"[Cancelled: {reason}]"
+        db_assignment.notes = (
+            f"{db_assignment.notes}\n{cancel_note}" if db_assignment.notes else cancel_note
+        )
         db_assignment.updated_at = datetime.utcnow()
 
         # Update equipment status if it was the active assignment
@@ -259,9 +260,9 @@ class EquipmentAssignmentService:
             .filter(Equipment.id == db_assignment.equipment_id)
             .first()
         )
-        if equipment and equipment.current_project_id == db_assignment.project_id:
+        if equipment and equipment.assigned_project_id == db_assignment.project_id:
             equipment.status = "available"
-            equipment.current_project_id = None
+            equipment.assigned_project_id = None
 
         db.commit()
         return True
@@ -301,20 +302,18 @@ class EquipmentAssignmentService:
                 {
                     "assignment_id": assignment.id,
                     "project_id": assignment.project_id,
-                    "start_date": assignment.start_date.isoformat(),
-                    "end_date": assignment.end_date.isoformat(),
+                    "start_date": assignment.start_date.isoformat()
+                    if assignment.start_date
+                    else None,
+                    "end_date": assignment.end_date.isoformat()
+                    if assignment.end_date
+                    else None,
                     "status": assignment.status,
-                    "actual_start": assignment.actual_start_date.isoformat()
-                    if assignment.actual_start_date
-                    else None,
-                    "actual_end": assignment.actual_end_date.isoformat()
-                    if assignment.actual_end_date
-                    else None,
                 }
             )
 
-        # Sort by start date
-        schedule.sort(key=lambda x: x["start_date"])
+        # Sort by start date (nulls last)
+        schedule.sort(key=lambda x: x["start_date"] or "")
 
         return schedule
 
@@ -348,9 +347,13 @@ class EquipmentAssignmentService:
                     "equipment_id": equipment.id,
                     "equipment_code": equipment.code,
                     "equipment_name": equipment.name,
-                    "category": equipment.category.name if equipment.category else None,
-                    "start_date": assignment.start_date.isoformat(),
-                    "end_date": assignment.end_date.isoformat(),
+                    "category": equipment.category_id,
+                    "start_date": assignment.start_date.isoformat()
+                    if assignment.start_date
+                    else None,
+                    "end_date": assignment.end_date.isoformat()
+                    if assignment.end_date
+                    else None,
                     "status": assignment.status,
                     "hourly_rate": float(assignment.hourly_rate)
                     if assignment.hourly_rate
@@ -376,7 +379,14 @@ class EquipmentAssignmentService:
             current = start_date
 
             for assignment in assignments:
+                if not assignment["start_date"]:
+                    continue
                 assign_start = date.fromisoformat(assignment["start_date"])
+                assign_end = (
+                    date.fromisoformat(assignment["end_date"])
+                    if assignment["end_date"]
+                    else end_date
+                )
 
                 # If there's a gap before this assignment
                 if current < assign_start:
@@ -388,7 +398,6 @@ class EquipmentAssignmentService:
                     )
 
                 # Move current to after this assignment
-                assign_end = date.fromisoformat(assignment["end_date"])
                 current = assign_end + timedelta(days=1)
 
             # If there's time after all assignments

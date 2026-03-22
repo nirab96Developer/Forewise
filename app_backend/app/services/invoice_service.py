@@ -482,6 +482,15 @@ def generate_monthly_invoice(
 
     db.commit()
     db.refresh(invoice)
+
+    # Stage 3 emails — notify supplier + work managers
+    try:
+        from app.services.worklog_service import send_worklog_invoiced_emails
+        send_worklog_invoiced_emails(db, worklogs, invoice)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning("Stage 3 invoice email failed")
+
     return invoice
 
 

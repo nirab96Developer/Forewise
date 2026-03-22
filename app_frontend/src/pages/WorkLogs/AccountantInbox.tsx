@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, CheckCircle, XCircle, Clock, Loader2, Search,
   Calendar, Building2, FileText, ReceiptText,
-  AlertCircle, RefreshCw
+  AlertCircle, RefreshCw, FileDown
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -16,6 +16,7 @@ interface WorklogRow {
   report_date: string;
   work_order_id: number | null;
   project_id: number | null;
+  supplier_id?: number | null;
   project_name?: string;
   project_code?: string;
   supplier_name?: string;
@@ -38,7 +39,24 @@ const STATUS_LABEL: Record<string, { label: string; color: string; icon: React.R
   rejected:    { label: 'נדחה',           color: 'bg-red-100 text-red-800 border-red-300',        icon: <XCircle className="w-3.5 h-3.5" /> },
   pending:     { label: 'ממתין לאישור', color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: <Clock className="w-3.5 h-3.5" /> },
 };
-const getStatus = (s: string | null) => STATUS_LABEL[s || 'submitted'] || STATUS_LABEL.submitted;
+/** Normalize DB status (uppercase) to lowercase keys for STATUS_LABEL */
+const normStatus = (s: string | null | undefined) => (s || '').toLowerCase();
+const getStatus = (s: string | null) => STATUS_LABEL[normStatus(s) || 'submitted'] || STATUS_LABEL.submitted;
+
+function openExportPdf(title: string, headers: string[], rows: string[][]) {
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const thead = `<tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr>`;
+  const tbody = rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"/><title>${esc(title)}</title>
+<style>body{font-family:system-ui,sans-serif;padding:16px} table{border-collapse:collapse;width:100%;font-size:12px} th,td{border:1px solid #ccc;padding:6px;text-align:right}</style></head><body>
+<h1 style="font-size:18px">${esc(title)}</h1><table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`);
+  w.document.close();
+}
 
 // ─── Monthly Invoice Button ───────────────────────────────────────────────────
 const MonthlyInvoiceButton: React.FC = () => {
@@ -158,8 +176,15 @@ const AccountantInbox: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('submitted');
+  /** Default: מאושרים — מוכנים לחשבונית */
+  const [filterStatus, setFilterStatus] = useState<string>('approved');
   const [search, setSearch] = useState('');
+  const [filterProjectId, setFilterProjectId] = useState<string>('');
+  const [filterSupplierId, setFilterSupplierId] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [projectOptions, setProjectOptions] = useState<{ id: number; name: string }[]>([]);
+  const [supplierOptions, setSupplierOptions] = useState<{ id: number; name: string }[]>([]);
   const [rejectModal, setRejectModal] = useState<{ id: number; open: boolean } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
@@ -171,34 +196,56 @@ const AccountantInbox: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      const params: Record<string, string> = { limit: '100' };
-      if (filterStatus) params.status = filterStatus;
-      const res = await api.get('/worklogs', { params });
+      const params: Record<string, string | number> = { page_size: 200 };
+      if (filterStatus) params.status = filterStatus.toUpperCase();
+      if (filterProjectId) params.project_id = Number(filterProjectId);
+      if (filterSupplierId) params.supplier_id = Number(filterSupplierId);
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+
+      const [res, pRes, sRes] = await Promise.all([
+        api.get('/worklogs', { params }),
+        api.get('/projects', { params: { limit: 200 } }).catch(() => ({ data: { items: [] } })),
+        api.get('/suppliers', { params: { limit: 200 } }).catch(() => ({ data: { items: [] } })),
+      ]);
       const items: WorklogRow[] = res.data?.items || res.data || [];
 
-      // Enrich with project names if missing
-      const projectIds = [...new Set(items.map(w => w.project_id).filter(Boolean))];
+      const pItems = pRes.data?.items || pRes.data || [];
+      const sItems = sRes.data?.items || sRes.data || [];
+      setProjectOptions(pItems.map((p: any) => ({ id: p.id, name: p.name || `פרויקט ${p.id}` })));
+      setSupplierOptions(sItems.map((s: any) => ({ id: s.id, name: s.name || `ספק ${s.id}` })));
+
       const projectMap: Record<number, { name: string; code: string }> = {};
-      if (projectIds.length > 0) {
+      pItems.forEach((p: any) => { projectMap[p.id] = { name: p.name, code: p.code }; });
+      const supplierNameById: Record<number, string> = {};
+      sItems.forEach((s: any) => { supplierNameById[s.id] = s.name || `ספק ${s.id}`; });
+
+      const woIds = [...new Set(items.filter(w => !w.supplier_id && w.work_order_id).map(w => w.work_order_id!))];
+      const woSupplierMap: Record<number, number> = {};
+      for (const wid of woIds) {
         try {
-          const pRes = await api.get('/projects', { params: { limit: 200 } });
-          const pItems = pRes.data?.items || pRes.data || [];
-          pItems.forEach((p: any) => { projectMap[p.id] = { name: p.name, code: p.code }; });
+          const wo = await api.get(`/work-orders/${wid}`);
+          if (wo.data?.supplier_id) woSupplierMap[wid] = wo.data.supplier_id;
         } catch { /* ignore */ }
       }
 
-      setWorklogs(items.map(w => ({
-        ...w,
-        project_name: projectMap[w.project_id!]?.name || `פרויקט ${w.project_id}`,
-        project_code: projectMap[w.project_id!]?.code || '',
-      })));
+      setWorklogs(items.map((w) => {
+        const supplier_id = w.supplier_id ?? (w.work_order_id ? woSupplierMap[w.work_order_id] : null) ?? null;
+        return {
+          ...w,
+          supplier_id,
+          project_name: projectMap[w.project_id!]?.name || `פרויקט ${w.project_id}`,
+          project_code: projectMap[w.project_id!]?.code || '',
+          supplier_name: w.supplier_name || (supplier_id ? supplierNameById[supplier_id] : '') || '',
+        };
+      }));
     } catch (e: any) {
       setError('שגיאה בטעינת הנתונים');
       showToast('שגיאה בטעינת הנתונים', 'error');
     } finally {
       setLoading(false);
     }
-  }, [filterStatus]);
+  }, [filterStatus, filterProjectId, filterSupplierId, dateFrom, dateTo]);
 
   useEffect(() => { loadWorklogs(); }, [loadWorklogs]);
 
@@ -288,11 +335,15 @@ const AccountantInbox: React.FC = () => {
       w.project_name?.toLowerCase().includes(s) ||
       w.project_code?.toLowerCase().includes(s) ||
       String(w.report_number).includes(s) ||
-      (w.report_date || '').includes(s)
+      (w.report_date || '').includes(s) ||
+      (w.supplier_name || '').toLowerCase().includes(s)
     );
   });
 
-  const pendingCount = worklogs.filter(w => !w.status || w.status === 'submitted' || w.status === 'pending').length;
+  const pendingCount = worklogs.filter(w => {
+    const st = normStatus(w.status);
+    return !st || st === 'submitted' || st === 'pending';
+  }).length;
 
   return (
     <div className="min-h-screen bg-kkl-bg" dir="rtl">
@@ -351,18 +402,42 @@ const AccountantInbox: React.FC = () => {
             <div className="flex items-center gap-2">
               <MonthlyInvoiceButton />
               <button
+                type="button"
                 onClick={() => {
-                  const csvRows = ['מספר דיווח,תאריך,פרויקט,ספק,שעות,עלות,סטטוס'];
-                  filtered.forEach(w => csvRows.push(`${w.report_number},${w.report_date},${w.project_name || ''},${w.supplier_name || ''},${w.total_hours},${w.cost_with_vat || ''},${w.status || ''}`));
+                  const csvRows = ['מספר דיווח,תאריך,פרויקט,ספק,שעות,עלות לפני מע״מ,עלות כולל מע״מ,סטטוס'];
+                  filtered.forEach(w => csvRows.push(`${w.report_number},${w.report_date},${w.project_name || ''},${w.supplier_name || ''},${w.total_hours},${w.cost_before_vat || ''},${w.cost_with_vat || ''},${w.status || ''}`));
                   const blob = new Blob(['\ufeff' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a'); a.href = url; a.download = `worklogs-export-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+                  URL.revokeObjectURL(url);
                 }}
                 className="flex items-center gap-1 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl"
-                title="ייצוא Excel"
+                title="ייצוא Excel (CSV)"
               >
                 <FileText className="w-4 h-4" />
                 📊 Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const headers = ['מספר', 'תאריך', 'פרויקט', 'ספק', 'שעות', 'לפני מע״מ', 'כולל מע״מ', 'סטטוס'];
+                  const rows = filtered.map(w => [
+                    String(w.report_number),
+                    w.report_date ? new Date(w.report_date).toLocaleDateString('he-IL') : '',
+                    w.project_name || '',
+                    w.supplier_name || '',
+                    String(w.total_hours ?? ''),
+                    w.cost_before_vat ? `₪${parseFloat(String(w.cost_before_vat)).toLocaleString('he-IL')}` : '',
+                    w.cost_with_vat ? `₪${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')}` : '',
+                    getStatus(w.status).label,
+                  ]);
+                  openExportPdf('תיבת נכנסים — דיווחי שעות', headers, rows);
+                }}
+                className="flex items-center gap-1 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl"
+                title="ייצוא PDF"
+              >
+                <FileDown className="w-4 h-4" />
+                PDF
               </button>
               <button onClick={loadWorklogs} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500" title="רענן">
                 <RefreshCw className="w-5 h-5" />
@@ -372,36 +447,85 @@ const AccountantInbox: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-4 mb-6 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="חיפוש לפי פרויקט, תאריך, מספר..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pr-9 pl-4 py-2 border border-kkl-border rounded-lg text-sm"
-            />
+        <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-4 mb-6 space-y-3">
+          <div className="flex flex-col lg:flex-row gap-3">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="חיפוש לפי פרויקט, ספק, תאריך, מספר..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full pr-9 pl-4 py-2 border border-kkl-border rounded-lg text-sm"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'submitted', label: 'ממתינים' },
+                { value: 'approved', label: 'מאושרים (לחשבונית)' },
+                { value: 'rejected', label: 'נדחו' },
+                { value: '', label: 'הכל' },
+              ].map(f => (
+                <button
+                  key={f.value || 'all'}
+                  type="button"
+                  onClick={() => setFilterStatus(f.value)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    filterStatus === f.value
+                      ? 'bg-kkl-green text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {[
-              { value: 'submitted', label: 'ממתינים' },
-              { value: 'approved', label: 'מאושרים' },
-              { value: 'rejected', label: 'נדחו' },
-              { value: '', label: 'הכל' },
-            ].map(f => (
-              <button
-                key={f.value}
-                onClick={() => setFilterStatus(f.value)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filterStatus === f.value
-                    ? 'bg-kkl-green text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">פרויקט</label>
+              <select
+                value={filterProjectId}
+                onChange={e => setFilterProjectId(e.target.value)}
+                className="w-full border border-kkl-border rounded-lg px-3 py-2 text-sm bg-white"
               >
-                {f.label}
-              </button>
-            ))}
+                <option value="">כל הפרויקטים</option>
+                {projectOptions.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1 min-w-[140px]">
+              <label className="block text-xs font-medium text-gray-600 mb-1">ספק</label>
+              <select
+                value={filterSupplierId}
+                onChange={e => setFilterSupplierId(e.target.value)}
+                className="w-full border border-kkl-border rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="">כל הספקים</option>
+                {supplierOptions.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">מתאריך</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="w-full border border-kkl-border rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">עד תאריך</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="w-full border border-kkl-border rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
           </div>
         </div>
 
@@ -448,9 +572,11 @@ const AccountantInbox: React.FC = () => {
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">מספר</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">תאריך</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">פרויקט</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">ספק</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">סוג</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500">שעות</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500">סכום לפני מע"מ</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500">לפני מע״מ</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500">כולל מע״מ</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500">סטטוס</th>
                     <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500">פעולות</th>
                   </tr>
@@ -458,8 +584,10 @@ const AccountantInbox: React.FC = () => {
                 <tbody>
                   {filtered.map(w => {
                     const st = getStatus(w.status);
-                    const isPending = !w.status || w.status === 'submitted' || w.status === 'pending';
-                    const isApproved = w.status === 'approved';
+                    const ns = normStatus(w.status);
+                    const isPending = !ns || ns === 'submitted' || ns === 'pending';
+                    const isApproved = ns === 'approved';
+                    const isInvoiced = ns === 'invoiced';
                     return (
                       <tr key={w.id} className="border-b border-kkl-border hover:bg-gray-50 transition-colors">
                         {/* Number */}
@@ -483,6 +611,10 @@ const AccountantInbox: React.FC = () => {
                             </div>
                           </div>
                         </td>
+                        {/* Supplier */}
+                        <td className="px-4 py-3 text-sm text-kkl-text max-w-[140px]">
+                          <span className="line-clamp-2">{w.supplier_name || '—'}</span>
+                        </td>
                         {/* Type */}
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
@@ -499,11 +631,19 @@ const AccountantInbox: React.FC = () => {
                             {parseFloat(w.total_hours || '0').toFixed(1)}h
                           </span>
                         </td>
-                        {/* Cost */}
+                        {/* Cost before VAT */}
                         <td className="px-4 py-3 text-center">
                           <span className="text-sm font-bold text-kkl-text">
                             {w.cost_before_vat
-                              ? `₪${parseFloat(w.cost_before_vat).toLocaleString('he-IL')}`
+                              ? `₪${parseFloat(String(w.cost_before_vat)).toLocaleString('he-IL')}`
+                              : '—'}
+                          </span>
+                        </td>
+                        {/* Cost with VAT */}
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm font-semibold text-gray-700">
+                            {w.cost_with_vat
+                              ? `₪${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')}`
                               : '—'}
                           </span>
                         </td>
@@ -554,7 +694,10 @@ const AccountantInbox: React.FC = () => {
                                 לחשבונית
                               </button>
                             )}
-                            {!isPending && !isApproved && (
+                            {isInvoiced && (
+                              <span className="text-xs text-blue-600 font-medium">חויב</span>
+                            )}
+                            {!isPending && !isApproved && !isInvoiced && (
                               <span className="text-xs text-gray-400">—</span>
                             )}
                           </div>

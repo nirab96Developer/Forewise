@@ -35,7 +35,12 @@ class MilestoneService:
             raise NotFoundException(f"Project {obj_in.project_id} not found")
 
         # Create milestone
-        milestone = Milestone(**obj_in.dict(), created_by_id=created_by_id)
+        data = obj_in.dict(exclude_unset=True)
+        data.pop('created_by_id', None)
+        data.pop('planned_date', None)
+        data.pop('actual_date', None)
+        data.pop('completion_notes', None)
+        milestone = Milestone(**data)
         db.add(milestone)
         db.commit()
         db.refresh(milestone)
@@ -62,9 +67,8 @@ class MilestoneService:
             raise NotFoundException(f"Milestone {milestone_id} not found")
 
         milestone.status = status
-        milestone.completion_percentage = completion_percentage or 0
-        milestone.status_notes = notes
-        milestone.updated_by_id = updated_by_id
+        milestone.progress_percentage = completion_percentage or 0
+        milestone.notes = notes
 
         if status == MilestoneStatus.COMPLETED:
             milestone.completed_date = date.today()
@@ -109,10 +113,9 @@ class MilestoneService:
             timeline_item = {
                 "id": milestone.id,
                 "name": milestone.name,
-                "type": milestone.milestone_type,
                 "due_date": milestone.due_date.isoformat(),
                 "status": milestone.status,
-                "completion_percentage": milestone.completion_percentage,
+                "completion_percentage": milestone.progress_percentage,
                 "days_until_due": days_until,
                 "is_overdue": days_until < 0
                 and milestone.status != MilestoneStatus.COMPLETED,
@@ -150,8 +153,8 @@ class MilestoneService:
         end_date = date.today() + timedelta(days=days_ahead)
 
         query = (
-            db.query(Milestone)
-            .join(Project)
+            db.query(Milestone, Project.name)
+            .join(Project, Project.id == Milestone.project_id)
             .filter(
                 Milestone.due_date <= end_date,
                 Milestone.due_date >= date.today(),
@@ -161,22 +164,22 @@ class MilestoneService:
             )
         )
 
-        milestones = query.order_by(Milestone.due_date).all()
+        rows = query.order_by(Milestone.due_date).all()
 
         results = []
-        for milestone in milestones:
+        for milestone, project_name in rows:
             days_until = (milestone.due_date - date.today()).days
 
             results.append(
                 {
                     "id": milestone.id,
                     "project_id": milestone.project_id,
-                    "project_name": milestone.project.name,
+                    "project_name": project_name,
                     "milestone_name": milestone.name,
                     "due_date": milestone.due_date.isoformat(),
                     "days_until": days_until,
                     "status": milestone.status,
-                    "completion_percentage": milestone.completion_percentage,
+                    "completion_percentage": milestone.progress_percentage,
                     "is_critical": days_until <= 7,
                 }
             )

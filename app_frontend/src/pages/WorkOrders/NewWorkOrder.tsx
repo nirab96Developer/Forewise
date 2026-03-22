@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { 
   ArrowRight, Calendar, Clock, Truck, Users, FileText, 
-  AlertCircle, CheckCircle, Info, Shield, Moon
+  AlertCircle, CheckCircle, Info, Shield, Moon, CircleDollarSign
 } from 'lucide-react';
 import workOrderService, { WorkOrderCreate } from '../../services/workOrderService';
 import projectService from '../../services/projectService';
@@ -67,12 +67,13 @@ const NewWorkOrder: React.FC = () => {
     quantity: '',
     work_days: '',
     start_date: new Date().toISOString().split('T')[0],
+    hourly_rate: '' as string | number,
     allocation_method: 'fair_rotation' as 'fair_rotation' | 'supplier_selection',
     supplier_id: '',
     constraint_reason_id: '',
     constraint_explanation: '',
     notes: '',
-    requires_guard: false,  // האם כלי עם שמירה
+    has_overnight: false,
     guard_days: 0,          // מספר ימי שמירה
   });
   
@@ -91,9 +92,22 @@ const NewWorkOrder: React.FC = () => {
 
   // Billable hours = 9h/day net (shift is 10.5h total, but 1.5h break is excluded from billing)
   const BILLABLE_HOURS_PER_DAY = 9;
+  const DEFAULT_HOURLY_RATE = 150;
+  const OVERNIGHT_NIGHT_RATE = 250;
   const workDaysNumber = formData.work_days === '' ? null : Number(formData.work_days);
   const quantityNumber = formData.quantity === '' ? null : Number(formData.quantity);
   const totalHours = workDaysNumber && workDaysNumber > 0 ? workDaysNumber * BILLABLE_HOURS_PER_DAY : 0;
+  const rateForEstimate =
+    formData.hourly_rate === '' || formData.hourly_rate === null || Number.isNaN(Number(formData.hourly_rate))
+      ? DEFAULT_HOURLY_RATE
+      : Number(formData.hourly_rate);
+  const overnightNightsComputed =
+    formData.has_overnight && workDaysNumber && workDaysNumber > 0
+      ? Math.max(0, workDaysNumber - 1)
+      : 0;
+  const hoursCostEstimate = totalHours * rateForEstimate;
+  const overnightCostEstimate = overnightNightsComputed * OVERNIGHT_NIGHT_RATE;
+  const totalAmountEstimate = hoursCostEstimate + overnightCostEstimate;
   
   // Calculate end date
   const endDate = formData.start_date && workDaysNumber && workDaysNumber > 0 ? (() => {
@@ -207,12 +221,29 @@ const NewWorkOrder: React.FC = () => {
         [name]: value,
         constraint_explanation: reason?.requires_additional_text ? prev.constraint_explanation : ''
       }));
+    } else if (name === 'has_overnight') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({
+        ...prev,
+        has_overnight: checked,
+        guard_days: checked ? Math.max(0, Number(prev.work_days || 0) - 1) : 0
+      }));
+    } else if (name === 'work_days') {
+      const daysNum = value === '' ? NaN : parseInt(value, 10);
+      setFormData(prev => ({
+        ...prev,
+        work_days: value === '' ? '' : value,
+        guard_days:
+          prev.has_overnight && !Number.isNaN(daysNum) && daysNum > 0
+            ? Math.max(0, daysNum - 1)
+            : prev.guard_days
+      }));
     } else {
       setFormData(prev => ({
         ...prev,
         [name]: isCheckbox 
           ? (e.target as HTMLInputElement).checked
-          : (name === 'quantity' || name === 'work_days' || name === 'supplier_id' || name === 'constraint_reason_id')
+          : (name === 'quantity' || name === 'supplier_id' || name === 'constraint_reason_id')
             ? (value ? parseInt(value) : '')
             : value
       }));
@@ -293,12 +324,19 @@ const NewWorkOrder: React.FC = () => {
       work_end_date: endDate,
       priority: 'medium',
       estimated_hours: totalHours,
+      hourly_rate: rateForEstimate,
+      days: workDaysNumber ?? undefined,
+      has_overnight: formData.has_overnight,
+      overnight_nights: overnightNightsComputed,
+      allocation_method: formData.allocation_method === 'fair_rotation' ? 'FAIR_ROTATION' : 'MANUAL',
+      total_amount: totalAmountEstimate,
+      frozen_amount: totalAmountEstimate,
       is_forced_selection: formData.allocation_method === 'supplier_selection',
       constraint_reason_id: formData.allocation_method === 'supplier_selection' && formData.constraint_reason_id
         ? parseInt(formData.constraint_reason_id.toString())
         : undefined,
       constraint_notes: formData.constraint_explanation?.trim() || undefined,
-      requires_guard: formData.requires_guard,
+      requires_guard: formData.has_overnight,
       guard_days: formData.guard_days,
     };
 
@@ -470,7 +508,7 @@ const NewWorkOrder: React.FC = () => {
               {/* Work Days */}
               <div className="col-span-12 sm:col-span-4">
                 <label className="block text-sm font-medium text-kkl-text mb-2">
-                  מספר ימי עבודה
+                  מספר ימים
                 </label>
                 <input
                   type="number"
@@ -501,12 +539,95 @@ const NewWorkOrder: React.FC = () => {
                     </p>
                   )}
                   {/* Guard cost inline */}
-                  {formData.requires_guard && formData.guard_days > 0 && overnightGuardRate > 0 && (
+                  {formData.has_overnight && formData.guard_days > 0 && overnightGuardRate > 0 && (
                     <p className="text-xs text-indigo-600 mt-1 font-medium">
                       🌙 שמירה: {formData.guard_days} לילות × ₪{overnightGuardRate} = ₪{(formData.guard_days * overnightGuardRate).toLocaleString('he-IL')}
                     </p>
                   )}
                 </div>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4 pt-5 border-t border-kkl-border">
+              <div className="grid grid-cols-12 gap-4">
+                <div className="col-span-12 sm:col-span-6">
+                  <label className="block text-sm font-medium text-kkl-text mb-2">
+                    תעריף שעתי (₪ לשעה)
+                  </label>
+                  <input
+                    type="number"
+                    name="hourly_rate"
+                    min="0"
+                    step="1"
+                    value={formData.hourly_rate}
+                    onChange={handleChange}
+                    placeholder={`ברירת מחדל ${DEFAULT_HOURLY_RATE}`}
+                    className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">ריק = ₪{DEFAULT_HOURLY_RATE} לשעה לתחזית</p>
+                </div>
+
+                <div className="col-span-12 sm:col-span-6">
+                  <label className="block text-sm font-medium text-kkl-text mb-2">
+                    שיטת הקצאה
+                  </label>
+                  <select
+                    value={formData.allocation_method === 'fair_rotation' ? 'FAIR_ROTATION' : 'MANUAL'}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        allocation_method: v === 'FAIR_ROTATION' ? 'fair_rotation' : 'supplier_selection'
+                      }));
+                    }}
+                    className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                  >
+                    <option value="FAIR_ROTATION">סבב הוגן</option>
+                    <option value="MANUAL">בחירה ידנית</option>
+                  </select>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="has_overnight"
+                  checked={formData.has_overnight}
+                  onChange={handleChange}
+                  className="w-5 h-5 rounded border-kkl-border text-kkl-green focus:ring-kkl-green"
+                />
+                <div className="flex items-center gap-2">
+                  <Moon className="w-4 h-4 text-indigo-500" />
+                  <span className="text-sm text-kkl-text">לינת שטח</span>
+                </div>
+              </label>
+
+              {formData.has_overnight && (
+                <p className="text-sm text-gray-600">
+                  לילות לינה: <span className="font-semibold text-kkl-text">{overnightNightsComputed}</span>
+                  <span className="text-gray-500 text-xs mr-2"> (אוטומטי לפי מספר הימים)</span>
+                </p>
+              )}
+
+              <div className="p-4 bg-kkl-green-light/50 border border-kkl-green/25 rounded-lg">
+                <div className="flex items-center gap-2 text-sm font-semibold text-kkl-text mb-3">
+                  <CircleDollarSign className="w-5 h-5 text-kkl-green" />
+                  תחזית עלות
+                </div>
+                <ul className="space-y-2 text-sm text-kkl-text">
+                  <li className="flex justify-between gap-2">
+                    <span>עלות שעות ({totalHours} ש׳ × ₪{rateForEstimate.toLocaleString('he-IL')})</span>
+                    <span className="font-medium tabular-nums">₪{hoursCostEstimate.toLocaleString('he-IL')}</span>
+                  </li>
+                  <li className="flex justify-between gap-2">
+                    <span>עלות לינה ({overnightNightsComputed} לילות × ₪{OVERNIGHT_NIGHT_RATE.toLocaleString('he-IL')})</span>
+                    <span className="font-medium tabular-nums">₪{overnightCostEstimate.toLocaleString('he-IL')}</span>
+                  </li>
+                  <li className="flex justify-between gap-2 pt-2 border-t border-kkl-green/20 font-semibold">
+                    <span>סה״כ משוער</span>
+                    <span className="text-kkl-green tabular-nums">₪{totalAmountEstimate.toLocaleString('he-IL')}</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -561,17 +682,9 @@ const NewWorkOrder: React.FC = () => {
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  name="requires_guard"
-                  checked={formData.requires_guard}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setFormData(prev => ({
-                      ...prev,
-                      requires_guard: checked,
-                      // Default guard days = work_days - 1 (לילות שמירה)
-                      guard_days: checked ? Math.max(0, Number(prev.work_days || 0) - 1) : 0
-                    }));
-                  }}
+                  name="has_overnight"
+                  checked={formData.has_overnight}
+                  onChange={handleChange}
                   className="w-5 h-5 rounded border-kkl-border text-kkl-green focus:ring-kkl-green"
                 />
                 <div className="flex items-center gap-2">
@@ -581,8 +694,8 @@ const NewWorkOrder: React.FC = () => {
               </label>
             </div>
 
-            {/* Guard Days Input - Only shown when requires_guard is checked */}
-            {formData.requires_guard && (
+            {/* Guard Days Input - Only shown when לינת שטח is checked */}
+            {formData.has_overnight && (
               <div className="mt-3 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
                 <div className="flex items-start gap-3">
                   <Shield className="w-5 h-5 text-indigo-600 mt-0.5" />

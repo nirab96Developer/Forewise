@@ -4,8 +4,11 @@ Handles HTTP requests with state machine support
 """
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -14,6 +17,9 @@ from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.models.work_order import WorkOrder
 from app.models.project import Project
+from app.models.budget import Budget
+from app.models.equipment import Equipment
+from app.models.location import Location
 from app.services.notification_service import (
     notify_work_order_created,
     notify_work_order_approved,
@@ -39,6 +45,13 @@ router = APIRouter(prefix="/work-orders", tags=["Work Orders"])
 
 # Service instance
 work_order_service = WorkOrderService()
+
+
+class RemoveEquipmentResponse(BaseModel):
+    """תוצאת הסרת כלי — שחרור תקציב מוקפא + סטטוס STOPPED"""
+
+    released_amount: float = Field(..., description="סכום ששוחרר מהתקציב המחויב")
+    work_order: WorkOrderResponse
 
 
 def _enrich_hours(work_order, db: Session) -> dict:
@@ -357,6 +370,18 @@ def approve_work_order(
             eq = db.execute(sa_text("SELECT equipment_type, license_plate FROM equipment WHERE id=:eid"),
                            {"eid": work_order.equipment_id}).first() if work_order.equipment_id else None
             
+            lat = None
+            lng = None
+            if project and project.location_id:
+                loc = (
+                    db.query(Location)
+                    .filter(Location.id == project.location_id)
+                    .first()
+                )
+                if loc and loc.latitude is not None and loc.longitude is not None:
+                    lat = float(loc.latitude)
+                    lng = float(loc.longitude)
+
             common = dict(
                 order_number=work_order.order_number or work_order.id,
                 project_name=project.name if project else '',
@@ -370,6 +395,8 @@ def approve_work_order(
                 area_name=getattr(project, 'area', None) and project.area.name if project else '',
                 region_name=getattr(project, 'region', None) and project.region.name if project else '',
                 worker_name=current_user.full_name or current_user.username or '',
+                lat=lat,
+                lng=lng,
             )
             
             recipients = db.execute(sa_text("""
@@ -699,50 +726,106 @@ def resend_to_supplier(
         )
 
 
-@router.post("/{work_order_id}/remove-equipment", response_model=WorkOrderResponse)
+@router.post("/{work_order_id}/remove-equipment", response_model=RemoveEquipmentResponse)
 def remove_equipment_from_project(
     work_order_id: int,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Remove equipment from project — release budget, free equipment."""
+    """Remove equipment from project — release remaining frozen budget, free equipment, STOPPED."""
     require_permission(current_user, "work_orders.update")
-    
+
     try:
-        from app.services.budget_service import release_budget_freeze
-        from sqlalchemy import text as sa_text
-        
         work_order = work_order_service.get_work_order(db, work_order_id)
         if not work_order:
             raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
-        
-        # Release remaining frozen budget
-        released = 0
-        if getattr(work_order, 'remaining_frozen', 0) and work_order.remaining_frozen > 0:
-            released = float(work_order.remaining_frozen)
-            try:
-                release_budget_freeze(work_order_id, 0, db)
-            except Exception:
-                pass
-        
-        # Update status
-        work_order.status = 'STOPPED'
+
+        budget = None
+        if work_order.project_id:
+            budget = (
+                db.query(Budget)
+                .filter(
+                    Budget.project_id == work_order.project_id,
+                    Budget.is_active.is_(True),
+                    Budget.deleted_at.is_(None),
+                )
+                .first()
+            )
+
+        remaining = float(work_order.remaining_frozen or 0)
+        released = 0.0
+        if remaining > 0:
+            released = remaining
+            if budget is not None:
+                committed = float(budget.committed_amount or 0)
+                new_committed = max(0.0, committed - remaining)
+                budget.committed_amount = new_committed
+                total = float(budget.total_amount or 0)
+                spent = float(budget.spent_amount or 0)
+                budget.remaining_amount = max(total - new_committed - spent, 0.0)
+            work_order.remaining_frozen = Decimal(0)
+            work_order.frozen_amount = Decimal(0)
+
+        if work_order.equipment_id:
+            eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
+            if eq:
+                eq.assigned_project_id = None
+            work_order.equipment_id = None
+
+        work_order.status = "STOPPED"
         work_order.updated_at = datetime.utcnow()
-        
+
+        admin_name = (
+            getattr(current_user, "full_name", None)
+            or getattr(current_user, "username", None)
+            or f"User {current_user.id}"
+        )
+        try:
+            from sqlalchemy import text as sql_text
+
+            db.execute(
+                sql_text(
+                    """
+                    INSERT INTO activity_logs (action, activity_type, entity_type, entity_id, user_id, description)
+                    VALUES ('WORK_ORDER_EQUIPMENT_REMOVED', 'update', 'work_order', :eid, :uid, :description)
+                    """
+                ),
+                {
+                    "eid": work_order_id,
+                    "uid": current_user.id,
+                    "description": (
+                        f"הוסר כלי מהזמנה {work_order.order_number or work_order_id}; "
+                        f"שוחררו ₪{released:,.0f} מהתקציב — {admin_name}"
+                    ),
+                },
+            )
+        except Exception as log_err:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                f"Activity log failed for remove-equipment {work_order_id}: {log_err}"
+            )
+
         db.commit()
         db.refresh(work_order)
-        
-        # Notify
+
         try:
             from app.services.notification_service import notify
             from sqlalchemy import text
-            coordinators = db.execute(text("""
+
+            coordinators = db.execute(
+                text(
+                    """
                 SELECT u.id FROM users u JOIN roles r ON u.role_id=r.id
                 WHERE r.code IN ('ORDER_COORDINATOR','ADMIN','ACCOUNTANT') AND u.is_active=true
-            """)).fetchall()
+            """
+                )
+            ).fetchall()
             wo_num = work_order.order_number or work_order.id
             for row in coordinators:
-                notify(db, row[0],
+                notify(
+                    db,
+                    row[0],
                     title=f"כלי הוסר מפרויקט — הזמנה #{wo_num}",
                     message=f"יתרה תקציבית ₪{released:,.0f} שוחררה",
                     notification_type="work_order",
@@ -752,9 +835,245 @@ def remove_equipment_from_project(
                 )
         except Exception:
             pass
-        
-        return work_order
+
+        return RemoveEquipmentResponse(
+            released_amount=released,
+            work_order=WorkOrderResponse.model_validate(_to_response(work_order, db)),
+        )
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"שגיאה בהסרת כלי: {str(e)}")
+
+
+# ============================================
+# QR SCAN ENDPOINTS (Task 7)
+# ============================================
+
+class ScanEquipmentRequest(BaseModel):
+    license_plate: str = Field(..., description="מספר רישוי שנסרק")
+
+class ConfirmEquipmentRequest(BaseModel):
+    equipment_id: int = Field(..., description="מזהה כלי לאישור")
+
+
+@router.post("/{work_order_id}/scan-equipment")
+def scan_equipment(
+    work_order_id: int,
+    body: ScanEquipmentRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """
+    Scan equipment QR/license plate and match against work order.
+    3 scenarios: match, different plate (same type), wrong type.
+    """
+    require_permission(current_user, "work_orders.read")
+
+    license_plate = body.license_plate.strip()
+    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+
+    expected_plate = None
+    if wo.equipment_id:
+        eq = db.query(Equipment).filter(Equipment.id == wo.equipment_id).first()
+        if eq:
+            expected_plate = eq.license_plate
+
+    # Scenario 1: Match
+    if license_plate and license_plate == expected_plate:
+        return {"status": "ok", "message": "כלי תואם — אומת בהצלחה"}
+
+    scanned = db.query(Equipment).filter(Equipment.license_plate == license_plate).first()
+
+    # Scenario 2: Same type, different plate
+    if scanned and wo.equipment_type and scanned.equipment_type == wo.equipment_type:
+        return {
+            "status": "different_plate",
+            "message": f"כלי מסוג {scanned.equipment_type} עם רישוי {license_plate}",
+            "question": "האם זה הכלי שברשותך?",
+            "equipment_id": scanned.id,
+        }
+
+    # Scenario 3: Wrong type
+    return {
+        "status": "wrong_type",
+        "message": "סוג ציוד לא תואם",
+        "ordered": wo.equipment_type or "לא ידוע",
+        "scanned": scanned.equipment_type if scanned else "לא ידוע",
+    }
+
+
+@router.post("/{work_order_id}/confirm-equipment")
+def confirm_equipment(
+    work_order_id: int,
+    body: ConfirmEquipmentRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """
+    Confirm equipment assignment after scenario 2 (different plate, same type).
+    Updates the work order's equipment_id.
+    """
+    require_permission(current_user, "work_orders.update")
+
+    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+
+    eq = db.query(Equipment).filter(Equipment.id == body.equipment_id).first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="ציוד לא נמצא")
+
+    wo.equipment_id = eq.id
+    wo.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(wo)
+
+    return {
+        "status": "ok",
+        "message": f"כלי {eq.license_plate} שויך להזמנה בהצלחה",
+        "work_order": _to_response(wo, db),
+    }
+
+
+# ============================================
+# PDF ENDPOINT (Task 17)
+# ============================================
+
+def _build_work_order_html(wo, db: Session) -> str:
+    """Build printable HTML for work order PDF."""
+    from app.templates.email_worklog import LOGO_SVG
+
+    project_name = ""
+    if wo.project_id:
+        from sqlalchemy import text as sa_text
+        row = db.execute(sa_text("SELECT name FROM projects WHERE id=:pid"), {"pid": wo.project_id}).first()
+        if row:
+            project_name = row[0] or ""
+
+    supplier_name = ""
+    if wo.supplier_id:
+        from sqlalchemy import text as sa_text
+        row = db.execute(sa_text("SELECT name FROM suppliers WHERE id=:sid"), {"sid": wo.supplier_id}).first()
+        if row:
+            supplier_name = row[0] or ""
+
+    eq_info = ""
+    if wo.equipment_id:
+        from sqlalchemy import text as sa_text
+        row = db.execute(sa_text("SELECT name, license_plate, equipment_type FROM equipment WHERE id=:eid"),
+                         {"eid": wo.equipment_id}).first()
+        if row:
+            eq_info = f"{row[2] or row[0] or ''}"
+            if row[1]:
+                eq_info += f" | {row[1]}"
+
+    status_labels = {
+        'PENDING': ('ממתין לאישור', '#854d0e', '#fef9c3'),
+        'DISTRIBUTING': ('בהפצה לספקים', '#854d0e', '#fef9c3'),
+        'APPROVED': ('מאושר', '#166534', '#dcfce7'),
+        'APPROVED_AND_SENT': ('אושר ונשלח', '#166534', '#dcfce7'),
+        'ACTIVE': ('פעיל', '#166534', '#dcfce7'),
+        'IN_PROGRESS': ('בביצוע', '#1e40af', '#dbeafe'),
+        'COMPLETED': ('הושלם', '#374151', '#e5e7eb'),
+        'REJECTED': ('נדחה', '#991b1b', '#fee2e2'),
+        'CANCELLED': ('בוטל', '#991b1b', '#fee2e2'),
+        'STOPPED': ('הופסק', '#991b1b', '#fee2e2'),
+    }
+    sl = status_labels.get(wo.status or '', ('לא ידוע', '#374151', '#e5e7eb'))
+    status_badge = f'<span style="background:{sl[2]};color:{sl[1]};padding:4px 14px;border-radius:20px;font-weight:700;font-size:14px;">{sl[0]}</span>'
+
+    def fmt_date(d):
+        if not d:
+            return "—"
+        return str(d)
+
+    def fmt_currency(v):
+        if not v:
+            return "—"
+        return f"₪{float(v):,.0f}"
+
+    hours_data = _enrich_hours(wo, db)
+    used_hours = hours_data.get("used_hours", 0)
+    remaining_hours = hours_data.get("remaining_hours", 0)
+
+    rows = [
+        ("מספר הזמנה", wo.order_number or wo.id),
+        ("כותרת", wo.title or "—"),
+        ("סטטוס", status_badge),
+        ("פרויקט", project_name or "—"),
+        ("ספק", supplier_name or "—"),
+        ("ציוד", eq_info or wo.equipment_type or "—"),
+        ("תאריך התחלה", fmt_date(wo.work_start_date)),
+        ("תאריך סיום", fmt_date(wo.work_end_date)),
+        ("שעות מוערכות", float(wo.estimated_hours) if wo.estimated_hours else "—"),
+        ("שעות שנוצלו", round(used_hours, 1)),
+        ("שעות נותרות", round(remaining_hours, 1)),
+        ("תעריף שעתי", fmt_currency(wo.hourly_rate)),
+        ("סכום מוקפא", fmt_currency(wo.frozen_amount)),
+        ("יתרת הקפאה", fmt_currency(wo.remaining_frozen)),
+        ("עדיפות", wo.priority or "—"),
+        ("תיאור", wo.description or "—"),
+    ]
+
+    table_rows = ""
+    for i, (label, value) in enumerate(rows):
+        bg = "background:#f8fbf9;" if i % 2 == 0 else ""
+        table_rows += f'<tr style="{bg}"><td style="padding:10px 16px;font-size:13px;color:#6b7c72;width:35%;border-bottom:1px solid #eee;">{label}</td><td style="padding:10px 16px;font-size:14px;color:#111;border-bottom:1px solid #eee;">{value}</td></tr>'
+
+    return f"""<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>הזמנת עבודה #{wo.order_number or wo.id}</title>
+<style>
+  @media print {{
+    .no-print {{ display: none !important; }}
+    body {{ margin: 0; }}
+  }}
+  body {{ font-family: Heebo, Arial, sans-serif; background: #fff; color: #111; margin: 0; padding: 20px; }}
+  .container {{ max-width: 700px; margin: 0 auto; }}
+</style>
+</head>
+<body>
+<div class="container">
+  <div style="text-align:center;margin-bottom:24px;">
+    {LOGO_SVG}
+    <div style="font-size:13px;font-weight:900;color:#1a6b3c;letter-spacing:0.25em;margin-top:8px;">FOREWISE</div>
+  </div>
+  <h1 style="text-align:center;font-size:22px;color:#1a2e21;margin-bottom:4px;">הזמנת עבודה #{wo.order_number or wo.id}</h1>
+  <div style="text-align:center;margin-bottom:24px;">{status_badge}</div>
+  <table style="width:100%;border-collapse:collapse;border:1px solid #dde8e2;border-radius:10px;overflow:hidden;">
+    {table_rows}
+  </table>
+  <div class="no-print" style="text-align:center;margin-top:32px;">
+    <button onclick="window.print()" style="background:#1a6b3c;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:16px;cursor:pointer;font-family:inherit;">🖨️ הדפס / שמור כ-PDF</button>
+  </div>
+  <div style="text-align:center;margin-top:24px;font-size:11px;color:#aab8b2;">
+    Forewise — מערכת ניהול יערות &bull; הופק בתאריך {datetime.utcnow().strftime('%d/%m/%Y %H:%M')}
+  </div>
+</div>
+</body>
+</html>"""
+
+
+@router.get("/{work_order_id}/pdf")
+def get_work_order_pdf(
+    work_order_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """
+    Get work order as printable HTML page (use browser Print → Save as PDF).
+    """
+    require_permission(current_user, "work_orders.read")
+
+    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+
+    from fastapi.responses import HTMLResponse
+    html = _build_work_order_html(wo, db)
+    return HTMLResponse(content=html)

@@ -344,7 +344,9 @@ const ICON_MAP: Record<string, { icon: React.ElementType; bg: string; color: str
 };
 
 const timeAgo = (dateStr: string): string => {
+  if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
+  if (isNaN(diff)) return '';
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'עכשיו';
   if (mins < 60) return `${mins} דק׳`;

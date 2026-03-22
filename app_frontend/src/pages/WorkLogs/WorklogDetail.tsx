@@ -171,10 +171,24 @@ const WorklogDetail: React.FC = () => {
   };
 
   const formatCurrency = (value: string | number | undefined) => {
-    if (!value) return "-";
+    if (value === undefined || value === null || value === "") return "-";
     const num = typeof value === "string" ? parseFloat(value) : value;
+    if (Number.isNaN(num)) return "-";
     return new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS" }).format(num);
   };
+
+  /** PENDING/submitted/draft → 0, APPROVED → 1, INVOICED → 2 */
+  const getWorklogProgressStage = (status: string): number => {
+    const s = status.toLowerCase();
+    if (s === "invoiced") return 2;
+    if (s === "approved") return 1;
+    return 0;
+  };
+
+  const progressStage = worklog ? getWorklogProgressStage(worklog.status) : 0;
+  const showCostBreakdown = worklog
+    ? ["approved", "invoiced"].includes(worklog.status.toLowerCase())
+    : false;
 
   if (loading) return <UnifiedLoader size="full" />;
 
@@ -244,22 +258,30 @@ const WorklogDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Progress bar — 3 stages */}
-        {worklog.status && !['rejected', 'draft'].includes(worklog.status?.toLowerCase()) && (
-          <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-            <div className="flex items-center justify-between">
-              {['ממתין לאישור', 'מאושר', 'חשבונית'].map((label, i) => {
-                const idx = { pending: 0, submitted: 0, approved: 1, invoiced: 2 }[worklog.status?.toLowerCase()] ?? 0;
-                return (
-                  <div key={i} className="flex flex-col items-center flex-1">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      i <= idx ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
-                    }`}>{i < idx ? '✓' : i + 1}</div>
-                    <span className={`text-xs mt-1 ${i <= idx ? 'text-green-700 font-semibold' : 'text-gray-400'}`}>{label}</span>
-                    {i < 2 && <div className={`w-full h-0.5 mt-[-20px] ${i < idx ? 'bg-green-400' : 'bg-gray-200'}`} />}
-                  </div>
-                );
-              })}
+        {/* Progress — ממתין → מאושר → חשבונית (PENDING=0, APPROVED=1, INVOICED=2) */}
+        {worklog.status && !["rejected", "draft"].includes(worklog.status?.toLowerCase()) && (
+          <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
+            <div className="relative h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
+              <div
+                className="absolute inset-y-0 right-0 bg-green-500 transition-all duration-500 ease-out rounded-full"
+                style={{ width: `${(progressStage / 2) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs sm:text-sm gap-2">
+              {(["ממתין", "מאושר", "חשבונית"] as const).map((label, i) => (
+                <span
+                  key={label}
+                  className={
+                    i === progressStage
+                      ? "font-bold text-green-700"
+                      : i < progressStage
+                        ? "text-green-600"
+                        : "text-gray-400"
+                  }
+                >
+                  {label}
+                </span>
+              ))}
             </div>
           </div>
         )}
@@ -411,36 +433,50 @@ const WorklogDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* Pricing */}
-            {worklog.hourly_rate_snapshot && (
+            {/* פירוט עלות — מאושר / חשבונית */}
+            {showCostBreakdown && (
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-green-600" />
-                  תמחור
+                  פירוט עלות
                 </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-sm text-gray-500">תעריף שעתי</div>
-                    <div className="text-lg font-semibold text-gray-900">
-                      {formatCurrency(worklog.hourly_rate_snapshot)}
+                {(() => {
+                  const hours =
+                    parseFloat(String(worklog.paid_hours ?? worklog.total_hours ?? worklog.work_hours ?? 0)) || 0;
+                  const rate = parseFloat(String(worklog.hourly_rate_snapshot ?? 0)) || 0;
+                  const laborCost = hours * rate;
+                  const overnightCost = parseFloat(String(worklog.overnight_total ?? 0)) || 0;
+                  const beforeVat = parseFloat(String(worklog.cost_before_vat ?? 0)) || 0;
+                  const withVat = parseFloat(String(worklog.cost_with_vat ?? 0)) || 0;
+                  const vatAmount = Math.max(0, withVat - beforeVat);
+                  return (
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between border-b border-gray-100 pb-2">
+                        <span className="text-gray-600">שעות × תעריף ({hours.toFixed(2)} × {formatCurrency(rate)})</span>
+                        <span className="font-medium text-gray-900">{formatCurrency(laborCost)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-gray-100 pb-2">
+                        <span className="text-gray-600">לינת שטח / לילה</span>
+                        <span className="font-medium text-gray-900">{formatCurrency(overnightCost)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-gray-100 pb-2">
+                        <span className="text-gray-600">סה״כ לפני מע״מ</span>
+                        <span className="font-semibold text-gray-900">{formatCurrency(beforeVat)}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-gray-100 pb-2">
+                        <span className="text-gray-600">מע״מ</span>
+                        <span className="font-medium text-gray-900">{formatCurrency(vatAmount)}</span>
+                      </div>
+                      <div className="flex justify-between pt-1 bg-green-50 rounded-lg px-3 py-2">
+                        <span className="text-green-800 font-semibold">סה״כ כולל מע״מ</span>
+                        <span className="text-lg font-bold text-green-700">{formatCurrency(withVat)}</span>
+                      </div>
+                      {worklog.rate_source_name && (
+                        <p className="text-xs text-gray-400">מקור תעריף: {worklog.rate_source_name}</p>
+                      )}
                     </div>
-                    {worklog.rate_source_name && (
-                      <div className="text-xs text-gray-400 mt-1">{worklog.rate_source_name}</div>
-                    )}
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-sm text-gray-500">עלות לפני מע"מ</div>
-                    <div className="text-lg font-semibold text-gray-900">
-                      {formatCurrency(worklog.cost_before_vat)}
-                    </div>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-3">
-                    <div className="text-sm text-green-600">עלות כולל מע"מ</div>
-                    <div className="text-lg font-bold text-green-700">
-                      {formatCurrency(worklog.cost_with_vat)}
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
               </div>
             )}
 

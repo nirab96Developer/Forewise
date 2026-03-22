@@ -5,11 +5,10 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import and_, func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models.daily_work_report import DailyWorkReport
 from app.models.project import Project
-from app.models.user import User
 from app.models.work_order import WorkOrder
 from app.models.worklog import Worklog
 from app.schemas.daily_work_report import DailyReportCreate, DailyReportUpdate
@@ -24,10 +23,6 @@ class DailyReportService:
         """Get daily report by ID."""
         return (
             db.query(DailyWorkReport)
-            .options(
-                joinedload(DailyWorkReport.project),
-                joinedload(DailyWorkReport.submitted_by),
-            )
             .filter(
                 and_(DailyWorkReport.id == report_id, DailyWorkReport.is_active == True)
             )
@@ -70,7 +65,7 @@ class DailyReportService:
         if end_date:
             query = query.filter(DailyWorkReport.report_date <= end_date)
         if submitted_by:
-            query = query.filter(DailyWorkReport.submitted_by_id == submitted_by)
+            query = query.filter(DailyWorkReport.submitted_by == submitted_by)
 
         return (
             query.order_by(DailyWorkReport.report_date.desc())
@@ -107,7 +102,7 @@ class DailyReportService:
         # Create report
         db_report = DailyWorkReport(
             **report.dict(),
-            submitted_by_id=submitted_by_id,
+            submitted_by=submitted_by_id,
             created_at=datetime.utcnow(),
         )
 
@@ -177,23 +172,18 @@ class DailyReportService:
             "\n".join(activities) if activities else "אין פירוט פעילויות"
         )
 
-        # Get equipment used
-        equipment_ids = set()
-        for worklog in worklogs:
-            if worklog.work_order and worklog.work_order.equipment_id:
-                equipment_ids.add(worklog.work_order.equipment_id)
-
         # Create report
         db_report = DailyWorkReport(
             project_id=project_id,
             report_date=report_date,
             workers_count=workers_count,
-            total_hours=float(total_hours),
+            total_work_hours=float(total_hours),
             activities_summary=activities_summary,
-            equipment_count=len(equipment_ids),
             safety_incidents=0,  # Default
             weather_conditions="תקין",  # Default
-            submitted_by_id=submitted_by_id,
+            status="draft",
+            is_active=True,
+            submitted_by=submitted_by_id,
             created_at=datetime.utcnow(),
         )
 
@@ -223,7 +213,9 @@ class DailyReportService:
                 "daily_data": [],
             }
 
-        total_hours = sum(r.total_hours for r in reports)
+        total_hours = sum(
+            (r.total_work_hours or 0) for r in reports
+        )
         unique_workers = set()
         safety_incidents = sum(r.safety_incidents for r in reports)
 
@@ -232,7 +224,7 @@ class DailyReportService:
             daily_data.append(
                 {
                     "date": report.report_date.isoformat(),
-                    "hours": report.total_hours,
+                    "hours": report.total_work_hours,
                     "workers": report.workers_count,
                     "safety_incidents": report.safety_incidents,
                     "weather": report.weather_conditions,
@@ -353,7 +345,7 @@ class DailyReportService:
         if not report.activities_summary or len(report.activities_summary) < 10:
             errors.append("Activities summary is too short")
 
-        if report.total_hours <= 0:
+        if (report.total_work_hours or 0) <= 0:
             errors.append("Total hours must be greater than 0")
 
         if report.workers_count <= 0:
@@ -364,9 +356,9 @@ class DailyReportService:
             db, report.project_id, report.report_date
         )
 
-        if abs(actual_hours - report.total_hours) > 0.5:
+        if abs(actual_hours - (report.total_work_hours or 0)) > 0.5:
             warnings.append(
-                f"Reported hours ({report.total_hours}) don't match worklogs ({actual_hours})"
+                f"Reported hours ({report.total_work_hours}) don't match worklogs ({actual_hours})"
             )
 
         return {"valid": len(errors) == 0, "errors": errors, "warnings": warnings}

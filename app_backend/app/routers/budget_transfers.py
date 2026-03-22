@@ -24,7 +24,7 @@ router = APIRouter(prefix="/budget-transfers", tags=["budget-transfers"])
 
 
 class TransferRequest(BaseModel):
-    from_budget_id: Optional[int] = None
+    from_budget_id: int
     to_budget_id: int
     amount: float
     reason: str

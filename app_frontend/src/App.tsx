@@ -18,6 +18,37 @@ import { FullScreenLoader } from "./components/common/UnifiedLoader";
 import { debugLogger } from "./utils/debug";
 import { useIsMobile } from "./hooks/useIsMobile";
 import PWAInstallBanner from "./components/PWAInstallBanner";
+import api from "./services/api";
+import { getSyncQueue, markSynced } from "./services/offlineStorage";
+import { useToast } from "./components/common/Toast";
+
+/** When connectivity returns, flush pending `fw_sync_queue` items. */
+const OfflineSyncOnReconnect: React.FC = () => {
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    const onOnline = async () => {
+      const pending = getSyncQueue().filter((i) => i.status === "pending");
+      let synced = 0;
+      for (const item of pending) {
+        try {
+          await api.post(item.endpoint, item.payload);
+          markSynced(item.id);
+          synced++;
+        } catch {
+          /* leave in queue for next online event */
+        }
+      }
+      if (synced > 0) {
+        showToast(`✅ ${synced} פעולות סונכרנו`, "success");
+      }
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [showToast]);
+
+  return null;
+};
 
 const App: React.FC = () => {
   const [globalLoading, setGlobalLoading] = useState(false);
@@ -103,6 +134,7 @@ const App: React.FC = () => {
 
   return (
     <ToastProvider>
+      <OfflineSyncOnReconnect />
       <OfflineBanner />
       <div className={`font-sans min-h-screen text-right transition-all duration-300 ${
         isMobile 

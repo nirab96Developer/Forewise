@@ -1,6 +1,6 @@
 """Supplier model."""
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, Numeric, String, text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, Numeric, String, text, ARRAY
 from sqlalchemy.orm import relationship
 from app.models.base import Base
 
@@ -25,6 +25,10 @@ class Supplier(Base):
     area_id = Column(Integer, ForeignKey("areas.id"), index=True)
     is_active = Column(Boolean, default=True)
     total_jobs = Column(Integer, default=0)
+    active_area_ids = Column(ARRAY(Integer), default=[])
+    active_region_ids = Column(ARRAY(Integer), default=[])
+    total_assignments = Column(Integer, default=0)
+    total_skips = Column(Integer, default=0)
     priority_score = Column(Integer, default=0)
     average_response_time = Column(Float)
     last_selected = Column(DateTime)

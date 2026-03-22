@@ -7,7 +7,7 @@ import {
   Calendar as CalendarIcon, Clock, ChevronRight, ChevronLeft,
   Truck, Plus, X, PenLine, TreePine, Briefcase, Hammer,
   User, Send, List, Grid3X3,
-  Bell, Activity, Settings, BookOpen, Loader2
+  Bell, Activity, Settings, BookOpen, Loader2, FileDown, ScanLine
 } from "lucide-react";
 import api from '../../services/api';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
@@ -15,6 +15,7 @@ import UnifiedLoader from '../../components/common/UnifiedLoader';
 // Services
 import workOrderService, { CalendarEvent as WorkOrderEvent } from '../../services/workOrderService';
 import activityLogService, { ActivityLog } from '../../services/activityLogService';
+import projectAssignmentService from '../../services/projectAssignmentService';
 
 // Types
 interface ActivityEvent {
@@ -111,6 +112,21 @@ const mapActivityType = (activityType: string): ActivityEvent['type'] => {
   };
   return typeMap[activityType] || 'system';
 };
+
+function openExportPdf(title: string, headers: string[], rows: string[][]) {
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const thead = `<tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr>`;
+  const tbody = rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"/><title>${esc(title)}</title>
+<style>body{font-family:system-ui,sans-serif;padding:16px} table{border-collapse:collapse;width:100%;font-size:12px} th,td{border:1px solid #ccc;padding:6px;text-align:right}</style></head><body>
+<h1 style="font-size:18px">${esc(title)}</h1><table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`);
+  w.document.close();
+}
 
 // חגים ישראליים
 const ISRAELI_HOLIDAYS = [
@@ -222,6 +238,14 @@ const MyJournal: React.FC = () => {
         const endDate = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
         const userId = getCurrentUserId();
 
+        let myProjectIds: number[] = [];
+        try {
+          const assigned = await projectAssignmentService.getMyAssignments(true);
+          myProjectIds = assigned.map((p) => p.project_id);
+        } catch {
+          myProjectIds = [];
+        }
+
         // טעינת הזמנות עבודה
         try {
           const workOrdersData = await workOrderService.getWorkOrdersForCalendar(startDate, endDate);
@@ -245,8 +269,17 @@ const MyJournal: React.FC = () => {
             per_page: 100,
             ...(userId ? { user_id: userId } : {}),
           });
-          
-          const formattedActivities: ActivityEvent[] = response.activities.map((item: ActivityLog) => ({
+
+          const inMyProjects = (item: ActivityLog) => {
+            if (!myProjectIds.length) return true;
+            const pid = item.details?.project_id;
+            if (pid === undefined || pid === null || pid === '') return true;
+            return myProjectIds.includes(Number(pid));
+          };
+
+          const formattedActivities: ActivityEvent[] = response.activities
+            .filter(inMyProjects)
+            .map((item: ActivityLog) => ({
             id: item.id?.toString() || Math.random().toString(),
             title: getActivityTitle(item.action),
             description: getActivityDescription(item),
@@ -365,7 +398,10 @@ const MyJournal: React.FC = () => {
     localStorage.setItem('personalNotes', JSON.stringify(updatedNotes));
   };
   
-  const getActivityIcon = (type: string) => {
+  const getActivityIcon = (type: string, action?: string) => {
+    if (action === 'equipment.scanned' || action === 'equipment.mismatch_detected') {
+      return <ScanLine className="w-4 h-4" />;
+    }
     switch (type) {
       case 'equipment_approval':
       case 'equipment_request':
@@ -430,33 +466,64 @@ const MyJournal: React.FC = () => {
       <div className="sticky top-0 z-20 bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Title Row — שינוי 3: כותרת "היומן שלי" */}
-          <div className="py-4 flex items-center justify-between">
+          <div className="py-4 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white">
                 <BookOpen className="w-5 h-5" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">היומן שלי</h1>
-                <p className="text-sm text-gray-500">כל הפעילות האישית שלך במקום אחד</p>
+                <p className="text-sm text-gray-500">פעילות בפרויקטים שלך + הערות אישיות</p>
               </div>
             </div>
-            
-            {/* View Toggle */}
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+
+            <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={() => setViewMode('calendar')}
-                className={`p-2 rounded-md transition-colors ${viewMode === 'calendar' ? 'bg-white shadow-sm text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
-                title="תצוגת לוח שנה"
+                type="button"
+                onClick={() => {
+                  const rows = ['תאריך,שעה,פעולה,פרויקט,סטטוס'];
+                  activities.forEach((e: ActivityEvent) => rows.push(`${e.date},${e.time},${e.title},${e.projectName},${e.status}`));
+                  const blob = new Blob(['\ufeff' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = `my-journal-${new Date().toISOString().split('T')[0]}.csv`; a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl"
               >
-                <Grid3X3 className="w-5 h-5" />
+                📊 Excel
               </button>
               <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
-                title="תצוגת רשימה"
+                type="button"
+                onClick={() => {
+                  const headers = ['תאריך', 'שעה', 'פעולה', 'פרויקט', 'סטטוס'];
+                  const rows = activities.map((e: ActivityEvent) => [
+                    e.date, e.time, e.title, e.projectName || '', e.status,
+                  ]);
+                  openExportPdf('היומן שלי — פעילות', headers, rows);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl"
               >
-                <List className="w-5 h-5" />
+                <FileDown className="w-4 h-4" />
+                PDF
               </button>
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('calendar')}
+                  className={`p-2 rounded-md transition-colors ${viewMode === 'calendar' ? 'bg-white shadow-sm text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  title="תצוגת לוח שנה"
+                >
+                  <Grid3X3 className="w-5 h-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-green-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  title="תצוגת רשימה"
+                >
+                  <List className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
           
@@ -548,7 +615,7 @@ const MyJournal: React.FC = () => {
                       activity.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
                       'bg-blue-100 text-blue-600'
                     }`}>
-                      {getActivityIcon(activity.type)}
+                      {getActivityIcon(activity.type, activity.action)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
@@ -787,7 +854,7 @@ const MyJournal: React.FC = () => {
                             activity.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
                             'bg-kkl-green-light text-kkl-green'
                           }`}>
-                            {getActivityIcon(activity.type)}
+                            {getActivityIcon(activity.type, activity.action)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">

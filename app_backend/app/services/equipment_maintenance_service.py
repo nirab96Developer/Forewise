@@ -1,11 +1,11 @@
 # app/services/equipment_maintenance_service.py
 """Equipment maintenance management service."""
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
 
 from app.models.equipment import Equipment
 from app.models.equipment_maintenance import EquipmentMaintenance
@@ -22,10 +22,6 @@ class EquipmentMaintenanceService:
         """Get maintenance record by ID."""
         return (
             db.query(EquipmentMaintenance)
-            .options(
-                joinedload(EquipmentMaintenance.equipment),
-                joinedload(EquipmentMaintenance.performed_by_user),
-            )
             .filter(
                 and_(
                     EquipmentMaintenance.id == maintenance_id,
@@ -94,17 +90,20 @@ class EquipmentMaintenanceService:
             raise ValueError("Maintenance already scheduled for this date")
 
         # Create maintenance record
+        description_text = maintenance.description or maintenance.title
+        maintenance_type_val = (
+            maintenance.maintenance_type.value
+            if hasattr(maintenance.maintenance_type, "value")
+            else str(maintenance.maintenance_type)
+        )
         db_maintenance = EquipmentMaintenance(
             equipment_id=maintenance.equipment_id,
-            maintenance_type=maintenance.maintenance_type,
+            maintenance_type=maintenance_type_val,
             scheduled_date=maintenance.scheduled_date,
-            description=maintenance.description,
-            estimated_duration_hours=maintenance.estimated_duration_hours,
-            estimated_cost=maintenance.estimated_cost,
-            priority=maintenance.priority or "medium",
+            description=description_text,
+            scheduled_by=created_by_id,
             status="scheduled",
-            created_by_id=created_by_id,
-            created_at=datetime.utcnow(),
+            is_active=True,
         )
 
         db.add(db_maintenance)
@@ -153,8 +152,11 @@ class EquipmentMaintenanceService:
             raise ValueError("Maintenance not in scheduled status")
 
         db_maintenance.status = "in_progress"
-        db_maintenance.actual_start_time = actual_start or datetime.utcnow()
-        db_maintenance.performed_by_id = performed_by_id
+        start = actual_start or datetime.utcnow()
+        db_maintenance.performed_date = (
+            start.date() if isinstance(start, datetime) else date.today()
+        )
+        db_maintenance.performed_by = performed_by_id
         db_maintenance.updated_at = datetime.utcnow()
 
         # Update equipment status
@@ -188,17 +190,14 @@ class EquipmentMaintenanceService:
             raise ValueError("Maintenance not in progress")
 
         db_maintenance.status = "completed"
-        db_maintenance.actual_end_time = datetime.utcnow()
-        db_maintenance.actual_cost = actual_cost
-        db_maintenance.parts_used = parts_used or {}
-        db_maintenance.completion_notes = completion_notes
         db_maintenance.completed_at = datetime.utcnow()
-
-        # Calculate actual duration
-        if db_maintenance.actual_start_time:
-            duration = db_maintenance.actual_end_time - db_maintenance.actual_start_time
-            db_maintenance.actual_duration_hours = duration.total_seconds() / 3600
-
+        if actual_cost is not None:
+            db_maintenance.total_cost = actual_cost
+        if parts_used:
+            db_maintenance.parts_replaced = str(parts_used)
+        if completion_notes:
+            db_maintenance.notes = completion_notes
+        db_maintenance.performed_date = date.today()
         db_maintenance.updated_at = datetime.utcnow()
 
         # Update equipment
@@ -209,13 +208,8 @@ class EquipmentMaintenanceService:
         )
         if equipment:
             equipment.status = "available"
-            equipment.last_maintenance_date = date.today()
-            equipment.next_maintenance_date = next_maintenance_date
-
-            # Update total maintenance cost
-            equipment.total_maintenance_cost = (
-                equipment.total_maintenance_cost or 0
-            ) + actual_cost
+            equipment.last_maintenance = date.today()
+            equipment.next_maintenance = next_maintenance_date
 
         db.commit()
         db.refresh(db_maintenance)
@@ -240,13 +234,19 @@ class EquipmentMaintenanceService:
         if db_maintenance.status not in ["scheduled", "in_progress"]:
             raise ValueError("Cannot cancel maintenance in current status")
 
+        previous_status = db_maintenance.status
         db_maintenance.status = "cancelled"
-        db_maintenance.cancellation_reason = reason
-        db_maintenance.cancelled_at = datetime.utcnow()
         db_maintenance.updated_at = datetime.utcnow()
+        if reason:
+            note = f"Cancelled: {reason}"
+            db_maintenance.notes = (
+                f"{db_maintenance.notes}\n{note}"
+                if db_maintenance.notes
+                else note
+            )
 
         # Update equipment status if was in maintenance
-        if db_maintenance.status == "in_progress":
+        if previous_status == "in_progress":
             equipment = (
                 db.query(Equipment)
                 .filter(Equipment.id == db_maintenance.equipment_id)
@@ -280,32 +280,30 @@ class EquipmentMaintenanceService:
 
         maintenances = query.all()
 
+        eq_ids = {m.equipment_id for m in maintenances}
+        code_by_id: Dict[int, Optional[str]] = {}
+        if eq_ids:
+            rows = (
+                db.query(Equipment.id, Equipment.code)
+                .filter(Equipment.id.in_(eq_ids))
+                .all()
+            )
+            code_by_id = {r.id: r.code for r in rows}
+
         schedule = []
         for maintenance in maintenances:
             schedule.append(
                 {
                     "maintenance_id": maintenance.id,
                     "equipment_id": maintenance.equipment_id,
-                    "equipment_code": maintenance.equipment.code
-                    if maintenance.equipment
-                    else None,
+                    "equipment_code": code_by_id.get(maintenance.equipment_id),
                     "maintenance_type": maintenance.maintenance_type,
                     "scheduled_date": maintenance.scheduled_date.isoformat(),
-                    "priority": maintenance.priority,
                     "status": maintenance.status,
-                    "estimated_duration_hours": float(
-                        maintenance.estimated_duration_hours
-                    )
-                    if maintenance.estimated_duration_hours
-                    else None,
                 }
             )
 
-        # Sort by date and priority
-        priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-        schedule.sort(
-            key=lambda x: (x["scheduled_date"], priority_order.get(x["priority"], 999))
-        )
+        schedule.sort(key=lambda x: x["scheduled_date"])
 
         return schedule
 
@@ -331,8 +329,8 @@ class EquipmentMaintenanceService:
             db.query(Equipment)
             .filter(
                 and_(
-                    Equipment.next_maintenance_date != None,
-                    Equipment.next_maintenance_date < today,
+                    Equipment.next_maintenance != None,
+                    Equipment.next_maintenance < today,
                     Equipment.is_active == True,
                 )
             )
@@ -340,6 +338,16 @@ class EquipmentMaintenanceService:
         )
 
         results = []
+
+        overdue_eq_ids = {m.equipment_id for m in overdue}
+        overdue_codes: Dict[int, Optional[str]] = {}
+        if overdue_eq_ids:
+            rows = (
+                db.query(Equipment.id, Equipment.code)
+                .filter(Equipment.id.in_(overdue_eq_ids))
+                .all()
+            )
+            overdue_codes = {r.id: r.code for r in rows}
 
         # Add scheduled overdue
         for maintenance in overdue:
@@ -349,25 +357,23 @@ class EquipmentMaintenanceService:
                     "type": "scheduled",
                     "maintenance_id": maintenance.id,
                     "equipment_id": maintenance.equipment_id,
-                    "equipment_code": maintenance.equipment.code
-                    if maintenance.equipment
-                    else None,
+                    "equipment_code": overdue_codes.get(maintenance.equipment_id),
                     "maintenance_type": maintenance.maintenance_type,
                     "scheduled_date": maintenance.scheduled_date.isoformat(),
                     "days_overdue": days_overdue,
-                    "priority": maintenance.priority,
                 }
             )
 
         # Add equipment overdue
         for equipment in equipment_overdue:
-            days_overdue = (today - equipment.next_maintenance_date).days
+            days_overdue = (today - equipment.next_maintenance).days
+            nm = equipment.next_maintenance
             results.append(
                 {
                     "type": "routine",
                     "equipment_id": equipment.id,
                     "equipment_code": equipment.code,
-                    "next_maintenance_date": equipment.next_maintenance_date.isoformat(),
+                    "next_maintenance_date": nm.isoformat() if nm else None,
                     "days_overdue": days_overdue,
                     "priority": "high" if days_overdue > 30 else "medium",
                 }
@@ -397,11 +403,11 @@ class EquipmentMaintenanceService:
 
         maintenances = query.all()
 
-        # Calculate totals
-        total_cost = sum(m.actual_cost for m in maintenances if m.actual_cost)
-        total_estimated = sum(
-            m.estimated_cost for m in maintenances if m.estimated_cost
+        # Calculate totals (model stores actual spend as total_cost)
+        total_cost = sum(
+            (m.total_cost or Decimal("0")) for m in maintenances
         )
+        total_estimated = Decimal("0")
 
         # Group by type
         by_type = {}
@@ -415,11 +421,10 @@ class EquipmentMaintenanceService:
                 }
 
             by_type[mtype]["count"] += 1
-            by_type[mtype]["actual_cost"] += maintenance.actual_cost or 0
-            by_type[mtype]["estimated_cost"] += maintenance.estimated_cost or 0
+            by_type[mtype]["actual_cost"] += maintenance.total_cost or 0
 
-        # Calculate variance
-        cost_variance = total_cost - total_estimated if total_estimated else 0
+        # Calculate variance (no estimated columns on model)
+        cost_variance = total_cost - total_estimated
         variance_percent = (
             (cost_variance / total_estimated * 100) if total_estimated else 0
         )
@@ -473,9 +478,8 @@ class EquipmentMaintenanceService:
             maintenance_type=maintenance_type,
             scheduled_date=next_date,
             description=f"Routine {maintenance_type} maintenance",
-            priority="medium",
             status="scheduled",
-            created_at=datetime.utcnow(),
+            is_active=True,
         )
         db.add(next_maintenance)
         db.commit()

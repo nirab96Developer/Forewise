@@ -1,19 +1,18 @@
 # app/services/equipment_scan_service.py
 """Equipment scanning and tracking service."""
 import base64
+import json
 from datetime import date, datetime, timedelta
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
 import qrcode
-from sqlalchemy import and_, func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
 
 from app.models.equipment import Equipment
 from app.models.equipment_scan import EquipmentScan
 from app.models.work_order import WorkOrder
-from app.models.worklog import Worklog
-from app.schemas.equipment_scan import ScanCreate, ScanUpdate
 
 
 class EquipmentScanService:
@@ -23,11 +22,6 @@ class EquipmentScanService:
         """Get equipment scan by ID."""
         return (
             db.query(EquipmentScan)
-            .options(
-                joinedload(EquipmentScan.equipment),
-                joinedload(EquipmentScan.scanned_by),
-                joinedload(EquipmentScan.work_order),
-            )
             .filter(and_(EquipmentScan.id == scan_id, EquipmentScan.is_active == True))
             .first()
         )
@@ -49,16 +43,16 @@ class EquipmentScanService:
         if equipment_id:
             query = query.filter(EquipmentScan.equipment_id == equipment_id)
         if scanned_by:
-            query = query.filter(EquipmentScan.scanned_by_id == scanned_by)
+            query = query.filter(EquipmentScan.scanned_by == scanned_by)
         if scan_type:
             query = query.filter(EquipmentScan.scan_type == scan_type)
         if start_date:
-            query = query.filter(EquipmentScan.scan_time >= start_date)
+            query = query.filter(EquipmentScan.scan_timestamp >= start_date)
         if end_date:
-            query = query.filter(EquipmentScan.scan_time <= end_date)
+            query = query.filter(EquipmentScan.scan_timestamp <= end_date)
 
         return (
-            query.order_by(EquipmentScan.scan_time.desc())
+            query.order_by(EquipmentScan.scan_timestamp.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -108,29 +102,19 @@ class EquipmentScanService:
         db_scan = EquipmentScan(
             equipment_id=equipment.id,
             scan_type=scan_type,
-            scan_data=scan_data,
-            scanned_by_id=scanned_by_id,
+            scan_value=scan_data,
+            scanned_by=scanned_by_id,
             work_order_id=work_order_id,
-            scan_time=datetime.utcnow(),
-            location={"lat": location_lat, "lng": location_lng}
-            if location_lat and location_lng
-            else None,
-            device_info=self._get_device_info(),
+            scan_timestamp=datetime.utcnow(),
+            latitude=location_lat,
+            longitude=location_lng,
+            device_info=json.dumps(self._get_device_info()),
             notes=notes,
-            is_verified=True,  # Can be set to False if verification needed
+            status="completed",
+            is_active=True,
         )
 
         db.add(db_scan)
-
-        # Update equipment last seen
-        equipment.last_seen_at = datetime.utcnow()
-        equipment.last_seen_by_id = scanned_by_id
-        if location_lat and location_lng:
-            equipment.last_location = {
-                "lat": location_lat,
-                "lng": location_lng,
-                "timestamp": datetime.utcnow().isoformat(),
-            }
 
         db.commit()
         db.refresh(db_scan)
@@ -149,10 +133,12 @@ class EquipmentScanService:
         if not db_scan:
             return None
 
-        db_scan.is_verified = is_valid
-        db_scan.verified_by_id = verified_by_id
-        db_scan.verified_at = datetime.utcnow()
-        db_scan.verification_notes = verification_notes
+        db_scan.status = "verified" if is_valid else "rejected"
+        if verification_notes:
+            prefix = f"[Verification by {verified_by_id}] "
+            db_scan.notes = (
+                (db_scan.notes + "\n" if db_scan.notes else "") + prefix + verification_notes
+            )
         db_scan.updated_at = datetime.utcnow()
 
         db.commit()
@@ -178,9 +164,9 @@ class EquipmentScanService:
             .filter(
                 and_(
                     EquipmentScan.work_order_id == work_order_id,
-                    EquipmentScan.scanned_by_id == user_id,
-                    EquipmentScan.scan_time >= start_time,
-                    EquipmentScan.scan_time <= end_time,
+                    EquipmentScan.scanned_by == user_id,
+                    EquipmentScan.scan_timestamp >= start_time,
+                    EquipmentScan.scan_timestamp <= end_time,
                     EquipmentScan.is_active == True,
                 )
             )
@@ -193,8 +179,8 @@ class EquipmentScanService:
         return {
             "valid": True,
             "scan_count": len(scans),
-            "first_scan": scans[0].scan_time.isoformat(),
-            "last_scan": scans[-1].scan_time.isoformat() if len(scans) > 1 else None,
+            "first_scan": scans[0].scan_timestamp.isoformat(),
+            "last_scan": scans[-1].scan_timestamp.isoformat() if len(scans) > 1 else None,
             "equipment_ids": list(set(s.equipment_id for s in scans)),
         }
 
@@ -228,7 +214,6 @@ class EquipmentScanService:
 
         # Update equipment with QR code
         equipment.qr_code = qr_data
-        equipment.qr_generated_at = datetime.utcnow()
         db.commit()
 
         return f"data:image/png;base64,{img_str}"
@@ -244,11 +229,11 @@ class EquipmentScanService:
             .filter(
                 and_(
                     EquipmentScan.equipment_id == equipment_id,
-                    EquipmentScan.scan_time >= cutoff,
+                    EquipmentScan.scan_timestamp >= cutoff,
                     EquipmentScan.is_active == True,
                 )
             )
-            .order_by(EquipmentScan.scan_time.desc())
+            .order_by(EquipmentScan.scan_timestamp.desc())
             .all()
         )
 
@@ -257,12 +242,17 @@ class EquipmentScanService:
             history.append(
                 {
                     "scan_id": scan.id,
-                    "scan_time": scan.scan_time.isoformat(),
+                    "scan_timestamp": scan.scan_timestamp.isoformat(),
                     "scan_type": scan.scan_type,
-                    "scanned_by_id": scan.scanned_by_id,
+                    "scanned_by": scan.scanned_by,
                     "work_order_id": scan.work_order_id,
-                    "location": scan.location,
-                    "is_verified": scan.is_verified,
+                    "location": {
+                        "lat": scan.latitude,
+                        "lng": scan.longitude,
+                    }
+                    if scan.latitude is not None or scan.longitude is not None
+                    else None,
+                    "status": scan.status,
                 }
             )
 
@@ -276,10 +266,13 @@ class EquipmentScanService:
         equipment_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Get scan statistics."""
+        start_dt = datetime.combine(start_date, datetime.min.time())
+        end_dt = datetime.combine(end_date, datetime.max.time())
+
         query = db.query(EquipmentScan).filter(
             and_(
-                EquipmentScan.scan_time >= start_date,
-                EquipmentScan.scan_time <= end_date,
+                EquipmentScan.scan_timestamp >= start_dt,
+                EquipmentScan.scan_timestamp <= end_dt,
                 EquipmentScan.is_active == True,
             )
         )
@@ -303,17 +296,19 @@ class EquipmentScanService:
             scan_types[scan.scan_type] += 1
 
             # Count by day
-            day = scan.scan_time.date().isoformat()
+            day = scan.scan_timestamp.date().isoformat()
             if day not in daily_counts:
                 daily_counts[day] = 0
             daily_counts[day] += 1
 
             # Track unique items
             unique_equipment.add(scan.equipment_id)
-            unique_users.add(scan.scanned_by_id)
+            unique_users.add(scan.scanned_by)
 
-        # Verification rate
-        verified = len([s for s in scans if s.is_verified])
+        # Verification rate (completed or explicitly verified scans)
+        verified = len(
+            [s for s in scans if s.status in ("verified", "completed")]
+        )
         verification_rate = (verified / total_scans * 100) if total_scans else 0
 
         return {

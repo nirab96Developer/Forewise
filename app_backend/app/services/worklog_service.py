@@ -37,6 +37,29 @@ class WorklogService:
         """Format report number for display: WL-2026-0047"""
         from datetime import datetime
         return f"WL-{datetime.now().year}-{str(report_number).zfill(4)}"
+
+    def _resolve_hourly_rate(self, db: Session, worklog_dict: dict) -> float:
+        """Resolve hourly rate from work order or equipment type."""
+        wo_id = worklog_dict.get('work_order_id')
+        if wo_id:
+            wo = db.query(WorkOrder).filter_by(id=wo_id).first()
+            if wo and wo.hourly_rate:
+                return float(wo.hourly_rate)
+            if wo and wo.equipment_type:
+                from app.models.equipment_type import EquipmentType
+                et = db.query(EquipmentType).filter(
+                    EquipmentType.name.ilike(wo.equipment_type),
+                    EquipmentType.is_active == True
+                ).first()
+                if et:
+                    return float(et.default_hourly_rate)
+        eq_type_id = worklog_dict.get('equipment_type_id')
+        if eq_type_id:
+            from app.models.equipment_type import EquipmentType
+            et = db.query(EquipmentType).filter_by(id=eq_type_id).first()
+            if et:
+                return float(et.default_hourly_rate)
+        return 0
     
     def create(self, db: Session, data: WorklogCreate, current_user_id: int) -> Worklog:
         """Create worklog with FK validation"""
@@ -108,11 +131,52 @@ class WorklogService:
         # Persist equipment_scanned if sent
         if 'equipment_scanned' in worklog_dict:
             pass  # model has this column, keep it
+
+        includes_guard = bool(worklog_dict.pop('includes_guard', False))
+        # Client may send these; we normalize from includes_guard below
+        worklog_dict.pop('is_overnight', None)
+        worklog_dict.pop('overnight_nights', None)
+        worklog_dict.pop('overnight_rate', None)
         
         # Remove fields that don't exist on the Worklog model
-        for key in ['activity_type', 'activity', 'segments', 'includes_guard',
+        for key in ['activity_type', 'activity', 'segments',
                      'billable_hours', 'non_standard_notes']:
             worklog_dict.pop(key, None)
+        
+        # Set initial status
+        if not worklog_dict.get('status'):
+            worklog_dict['status'] = 'PENDING'
+
+        # לינת שטח — from unified form checkbox (includes_guard)
+        overnight_total = 0.0
+        if includes_guard:
+            worklog_dict['is_overnight'] = True
+            worklog_dict['overnight_nights'] = 1
+            worklog_dict['overnight_rate'] = Decimal('250')
+            overnight_total = 250.0
+        
+        # Calculate hourly_rate_snapshot and costs
+        rate = None
+        if not worklog_dict.get('hourly_rate_snapshot'):
+            rate = self._resolve_hourly_rate(db, worklog_dict)
+            if rate:
+                worklog_dict['hourly_rate_snapshot'] = rate
+        else:
+            rate = float(worklog_dict['hourly_rate_snapshot'])
+
+        hours = float(worklog_dict.get('work_hours') or worklog_dict.get('total_hours') or 0)
+        if rate:
+            rate_f = float(rate)
+            worklog_dict['cost_before_vat'] = round(hours * rate_f + overnight_total, 2)
+            worklog_dict['vat_rate'] = 17.0
+            worklog_dict['cost_with_vat'] = round(worklog_dict['cost_before_vat'] * 1.17, 2)
+        elif overnight_total:
+            worklog_dict['cost_before_vat'] = round(overnight_total, 2)
+            worklog_dict['vat_rate'] = 17.0
+            worklog_dict['cost_with_vat'] = round(worklog_dict['cost_before_vat'] * 1.17, 2)
+
+        if includes_guard:
+            worklog_dict['overnight_total'] = Decimal(str(overnight_total))
         
         worklog = Worklog(**worklog_dict)
         db.add(worklog)
@@ -182,6 +246,9 @@ class WorklogService:
         if search.project_id:
             query = query.filter(Worklog.project_id == search.project_id)
             count_query = count_query.filter(Worklog.project_id == search.project_id)
+        if search.supplier_id:
+            query = query.filter(Worklog.supplier_id == search.supplier_id)
+            count_query = count_query.filter(Worklog.supplier_id == search.supplier_id)
         if search.area_id is not None:
             area_project_ids = select(Project.id).where(Project.area_id == search.area_id)
             query = query.filter(Worklog.project_id.in_(area_project_ids))
@@ -301,35 +368,46 @@ class WorklogService:
         # Audit log
         _audit_worklog(db, current_user_id, worklog.id, 'APPROVE')
 
-        # Release budget + check completion
+        # Release budget incrementally + check auto-completion
         try:
             if worklog.work_order_id:
-                from app.services.budget_service import release_budget_freeze
-                from sqlalchemy import text as sa_text
-                
+                from app.models.budget import Budget
+
                 wo = db.query(WorkOrder).filter(WorkOrder.id == worklog.work_order_id).first()
-                if wo:
-                    actual_cost = float(worklog.work_hours or worklog.total_hours or 0) * float(worklog.hourly_rate_snapshot or 0)
-                    actual_cost += float(worklog.overnight_nights or 0) * float(worklog.overnight_rate or 250)
-                    
-                    # Release frozen budget
-                    try:
-                        release_budget_freeze(worklog.work_order_id, actual_cost, db)
-                    except Exception:
-                        pass
-                    
-                    # Check if hours are depleted → auto-complete
-                    used = db.execute(sa_text(
-                        "SELECT COALESCE(SUM(work_hours),0) FROM worklogs WHERE work_order_id=:wid AND UPPER(status)!='REJECTED' AND is_active=true"
-                    ), {"wid": wo.id}).scalar() or 0
-                    estimated = float(wo.estimated_hours or 0)
-                    
-                    if estimated > 0 and float(used) >= estimated:
+                if wo and wo.project_id:
+                    cost = float(worklog.work_hours or 0) * float(worklog.hourly_rate_snapshot or 0)
+                    cost += float(worklog.overnight_nights or 0) * 250
+
+                    budget = (
+                        db.query(Budget)
+                        .filter(
+                            Budget.project_id == wo.project_id,
+                            Budget.is_active == True,
+                            Budget.deleted_at.is_(None),
+                        )
+                        .first()
+                    )
+                    if budget and cost > 0:
+                        release = min(cost, float(wo.remaining_frozen or 0))
+                        budget.committed_amount = max(Decimal(0), (budget.committed_amount or Decimal(0)) - Decimal(str(release)))
+                        budget.spent_amount = (budget.spent_amount or Decimal(0)) + Decimal(str(cost))
+                        budget.remaining_amount = (budget.total_amount or Decimal(0)) - (budget.committed_amount or Decimal(0)) - (budget.spent_amount or Decimal(0))
+                        wo.remaining_frozen = max(Decimal(0), (wo.remaining_frozen or Decimal(0)) - Decimal(str(release)))
+                        db.flush()
+
+                    # Auto-complete when all frozen budget is consumed
+                    if wo and (wo.remaining_frozen or 0) <= 0 and float(wo.frozen_amount or 0) > 0:
                         wo.status = 'COMPLETED'
                         wo.updated_at = datetime.utcnow()
+                        if wo.equipment_id:
+                            eq = db.query(Equipment).filter(Equipment.id == wo.equipment_id).first()
+                            if eq:
+                                eq.assigned_project_id = None
                         db.commit()
                         import logging
-                        logging.getLogger(__name__).info(f"WO {wo.id} auto-completed: {used}/{estimated} hours used")
+                        logging.getLogger(__name__).info(
+                            f"WO {wo.id} auto-completed: frozen budget fully consumed"
+                        )
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Budget release/completion check failed: {e}")
@@ -681,6 +759,42 @@ def save_worklog_with_segments(
     return totals
 
 
+def _send_worklog_created_email(db, worklog, current_user_id: int):
+    """Send Stage 1 email: accountant gets 'דיווח WL-XXXX ממתין לאישורך'."""
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        from app.core.email import send_email
+        from sqlalchemy import text
+
+        report_number = WorklogService.format_report_number(worklog.report_number or worklog.id)
+        project_name = ""
+        if worklog.project_id:
+            row = db.execute(text("SELECT name FROM projects WHERE id=:pid"), {"pid": worklog.project_id}).first()
+            if row:
+                project_name = row[0] or ""
+
+        acct_rows = db.execute(text("""
+            SELECT u.email FROM users u JOIN roles r ON u.role_id=r.id
+            WHERE r.code='ACCOUNTANT' AND u.is_active=true AND u.email IS NOT NULL
+        """)).fetchall()
+
+        for row in acct_rows:
+            send_email(
+                to=row[0],
+                subject=f"דיווח {report_number} ממתין לאישורך",
+                body=(
+                    f"שלום,\n\n"
+                    f"דיווח שעות {report_number} ממתין לאישורך.\n"
+                    f"פרויקט: {project_name}\n"
+                    f"שעות: {float(worklog.work_hours or 0)}\n\n"
+                    "Forewise"
+                ),
+            )
+    except Exception as e:
+        log.warning(f"Worklog Stage 1 email failed: {e}")
+
+
 def _send_worklog_approved_emails(db, worklog):
     """Send Stage 2 approval emails to supplier and work manager."""
     from app.core.email import send_email
@@ -735,3 +849,67 @@ def _send_worklog_approved_emails(db, worklog):
             recipient_role=role,
         )
         send_email(to=email, subject=tmpl["subject"], body="", html_body=tmpl["html"])
+
+
+def send_worklog_invoiced_emails(db, worklogs, invoice):
+    """Stage 3: Send emails when worklogs are marked INVOICED.
+    Recipients: supplier + work_manager of each worklog.
+    """
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        from app.core.email import send_email
+        from sqlalchemy import text
+
+        if not worklogs:
+            return
+
+        invoice_number = getattr(invoice, 'invoice_number', None) or getattr(invoice, 'id', '')
+        invoice_date = str(getattr(invoice, 'invoice_date', '') or getattr(invoice, 'created_at', '') or '')
+        total_amount = float(getattr(invoice, 'total_amount', 0) or 0)
+
+        project_name = ""
+        supplier_name = ""
+        supplier_email = ""
+        worker_emails = set()
+
+        first_wl = worklogs[0]
+        if first_wl.project_id:
+            row = db.execute(text("SELECT name FROM projects WHERE id=:pid"), {"pid": first_wl.project_id}).first()
+            if row:
+                project_name = row[0] or ""
+
+        if first_wl.work_order_id:
+            row = db.execute(text(
+                "SELECT s.name, s.email FROM work_orders wo JOIN suppliers s ON wo.supplier_id=s.id WHERE wo.id=:wid"
+            ), {"wid": first_wl.work_order_id}).first()
+            if row:
+                supplier_name, supplier_email = row[0] or "", row[1] or ""
+
+        for wl in worklogs:
+            if wl.user_id:
+                row = db.execute(text("SELECT email FROM users WHERE id=:uid AND email IS NOT NULL"),
+                                 {"uid": wl.user_id}).first()
+                if row and row[0]:
+                    worker_emails.add(row[0])
+
+        body = (
+            f"שלום,\n\n"
+            f"חשבונית {invoice_number} הופקה.\n"
+            f"פרויקט: {project_name}\n"
+            f"ספק: {supplier_name}\n"
+            f"סה\"כ: ₪{total_amount:,.0f}\n"
+            f"תאריך: {invoice_date}\n\n"
+            "Forewise"
+        )
+
+        subject = f"חשבונית {invoice_number} הופקה — {project_name}"
+
+        if supplier_email:
+            send_email(to=supplier_email, subject=subject, body=body)
+
+        for email in worker_emails:
+            send_email(to=email, subject=subject, body=body)
+
+    except Exception as e:
+        log.warning(f"Worklog Stage 3 (invoiced) email failed: {e}")

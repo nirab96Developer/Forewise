@@ -48,6 +48,37 @@ def get_budget_summary(
 
     budgets = db.query(Budget).filter(Budget.is_active == True).all()
 
+    # Pre-load all lookups in single queries to avoid N+1
+    all_project_ids = {b.project_id for b in budgets if b.project_id}
+    all_area_ids = {b.area_id for b in budgets if b.area_id}
+
+    projects_map = {}
+    if all_project_ids:
+        for p in db.query(Project).filter(Project.id.in_(all_project_ids)).all():
+            projects_map[p.id] = p
+            if p.area_id:
+                all_area_ids.add(p.area_id)
+
+    areas_map = {}
+    all_region_ids = {b.region_id for b in budgets if b.region_id}
+    if all_area_ids:
+        for a in db.query(Area).filter(Area.id.in_(all_area_ids)).all():
+            areas_map[a.id] = a
+            if a.region_id:
+                all_region_ids.add(a.region_id)
+
+    regions_map = {}
+    if all_region_ids:
+        for r in db.query(Region).filter(Region.id.in_(all_region_ids)).all():
+            regions_map[r.id] = r
+
+    locations_map = {}
+    if Location:
+        loc_ids = {p.location_id for p in projects_map.values() if p.location_id}
+        if loc_ids:
+            for loc in db.query(Location).filter(Location.id.in_(loc_ids)).all():
+                locations_map[loc.id] = loc
+
     # Aggregate by region
     region_map: dict = {}
     area_map: dict = {}
@@ -61,7 +92,6 @@ def get_budget_summary(
         utilized = committed + spent
         pct = round(utilized / total * 100, 1) if total > 0 else 0
 
-        # Resolve region / area / project names
         region_id = b.region_id
         area_id = b.area_id
         project_id = b.project_id
@@ -72,24 +102,24 @@ def get_budget_summary(
         forest_name = None
 
         if project_id:
-            proj = db.query(Project).filter(Project.id == project_id).first()
+            proj = projects_map.get(project_id)
             if proj:
                 project_name = proj.name
                 project_code = proj.code
                 area_id = area_id or proj.area_id
-                if Location and proj.location_id:
-                    loc = db.query(Location).filter(Location.id == proj.location_id).first()
+                if proj.location_id:
+                    loc = locations_map.get(proj.location_id)
                     if loc:
                         forest_name = loc.name
 
         if area_id:
-            area = db.query(Area).filter(Area.id == area_id).first()
+            area = areas_map.get(area_id)
             if area:
                 area_name = area.name
                 region_id = region_id or area.region_id
 
         if region_id:
-            reg = db.query(Region).filter(Region.id == region_id).first()
+            reg = regions_map.get(region_id)
             if reg:
                 region_name = reg.name
 

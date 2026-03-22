@@ -38,6 +38,7 @@ async def get_activity_logs(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     user_id: Optional[int] = None,
+    project_id: Optional[int] = Query(None, description="Filter by project ID"),
     action: Optional[str] = None,
     scope: Optional[str] = Query(None, description="Scope: my, area, region, system"),
     category: Optional[str] = Query(None, description="Filter by category: operational, financial, management, system"),
@@ -69,6 +70,8 @@ async def get_activity_logs(
         query = query.filter(ActivityLog.created_at <= end_datetime)
     if action:
         query = query.filter(ActivityLog.action.ilike(f"%{action}%"))
+    if project_id:
+        query = query.filter(ActivityLog.entity_type == 'project', ActivityLog.entity_id == project_id)
     
     # Category filter
     if category:

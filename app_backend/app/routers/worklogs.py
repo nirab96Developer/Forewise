@@ -553,7 +553,7 @@ def send_approval_pdf(db: Session, worklog, current_user):
             'start_time': worklog.start_time.strftime('%H:%M') if worklog.start_time else '',
             'end_time': worklog.end_time.strftime('%H:%M') if worklog.end_time else '',
             'notes': worklog.notes or '',
-            'user_name': f"{current_user.first_name} {current_user.last_name}" if current_user else '',
+            'user_name': current_user.full_name or current_user.username if current_user else '',
             'approved_at': worklog.approved_at.strftime('%d/%m/%Y %H:%M') if worklog.approved_at else '',
             'is_standard': worklog.is_standard,
             'work_order_id': worklog.work_order_id,

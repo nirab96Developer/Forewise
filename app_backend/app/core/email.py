@@ -3,8 +3,10 @@
 import smtplib
 import requests
 import os
+import re
 import base64
 import logging
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
@@ -15,14 +17,25 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Load .env file (override=True to ensure values are set even if env was clean)
 env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(env_path, override=True)
 
 from app.core.config import settings
 
-# Cache the API key at module load time (after load_dotenv)
 _BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+
+def _html_to_text(html: str) -> str:
+    """Strip HTML tags to produce plain text fallback."""
+    text = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL)
+    text = re.sub(r'<br\s*/?>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'</(?:p|div|tr|li|h[1-6])>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'&nbsp;', ' ', text)
+    text = re.sub(r'&amp;', '&', text)
+    text = re.sub(r'&lt;', '<', text)
+    text = re.sub(r'&gt;', '>', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
 
 def get_brevo_api_key():
     """Get Brevo API key from environment"""
@@ -81,14 +94,19 @@ def send_via_brevo(
         "api-key": api_key,
         "Content-Type": "application/json"
     }
+    text_content = body
+    if (not text_content or not text_content.strip()) and html_body:
+        text_content = _html_to_text(html_body)
+    if not text_content or not text_content.strip():
+        text_content = subject or "Forewise notification"
+
     data = {
         "sender": {"name": settings.EMAIL_FROM_NAME, "email": settings.EMAIL_FROM},
         "to": [{"email": to}],
         "subject": subject,
-        "textContent": body
+        "textContent": text_content
     }
 
-    # Add HTML body if provided
     if html_body:
         data["htmlContent"] = html_body
 
@@ -112,21 +130,29 @@ def send_via_brevo(
 
 
 def send_via_smtp(to: str, subject: str, body: str) -> dict:
-    """Send email via SMTP"""
+    """Send email via SMTP with retry."""
     msg = MIMEMultipart()
     msg['From'] = f"{settings.EMAIL_FROM_NAME} <{settings.EMAIL_FROM}>"
     msg['To'] = to
     msg['Subject'] = str(Header(subject, 'utf-8'))
     msg.attach(MIMEText(body, 'plain', 'utf-8'))
 
-    server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10)
-    server.starttls()
-    server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-    server.sendmail(settings.EMAIL_FROM, to, msg.as_string())
-    server.quit()
-
-    logger.info(f"[OK] Email sent via SMTP to {to}: {subject}")
-    return {"message": "Email sent via SMTP", "recipient": to}
+    last_err = None
+    for attempt in range(3):
+        try:
+            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=30)
+            server.starttls()
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.sendmail(settings.EMAIL_FROM, to, msg.as_string())
+            server.quit()
+            logger.info(f"[OK] Email sent via SMTP to {to}: {subject}")
+            return {"message": "Email sent via SMTP", "recipient": to}
+        except (smtplib.SMTPException, TimeoutError, OSError) as e:
+            last_err = e
+            logger.warning(f"SMTP attempt {attempt+1}/3 failed for {to}: {e}")
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+    raise Exception(f"SMTP failed after 3 attempts: {last_err}")
 
 
 def send_email(to=None, subject="", body="", email_to=None, html_body=None, **kwargs):
@@ -138,12 +164,12 @@ def send_email(to=None, subject="", body="", email_to=None, html_body=None, **kw
     4. Console fallback
     """
     recipient = to or email_to or "unknown"
+    body_text = body or ""
 
-    # Try Brevo first (if configured)
     brevo_key = get_brevo_api_key()
     if brevo_key:
         try:
-            return send_via_brevo(recipient, subject, body or "", html_body=html_body)
+            return send_via_brevo(recipient, subject, body_text, html_body=html_body)
         except Exception as e:
             logger.warning(f"Brevo failed for {recipient}: {e}")
     else:

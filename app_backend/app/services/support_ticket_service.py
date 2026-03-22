@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import and_, func, or_
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
+from app.models.role import Role
 from app.models.support_ticket import SupportTicket
 from app.models.support_ticket_comment import SupportTicketComment
 from app.models.user import User
@@ -17,14 +18,9 @@ class SupportTicketService:
     """Service for support ticket operations."""
 
     def get_ticket(self, db: Session, ticket_id: int) -> Optional[SupportTicket]:
-        """Get support ticket by ID with relationships."""
+        """Get support ticket by ID."""
         return (
             db.query(SupportTicket)
-            .options(
-                joinedload(SupportTicket.created_by),
-                joinedload(SupportTicket.assigned_to),
-                joinedload(SupportTicket.comments),
-            )
             .filter(
                 and_(SupportTicket.id == ticket_id, SupportTicket.is_active == True)
             )
@@ -88,13 +84,6 @@ class SupportTicketService:
         # Generate ticket number
         ticket_number = self._generate_ticket_number(db)
 
-        # Set SLA based on priority
-        sla_hours = {"critical": 2, "high": 4, "medium": 8, "low": 24}
-
-        sla_deadline = datetime.utcnow() + timedelta(
-            hours=sla_hours.get(ticket.priority, 24)
-        )
-
         db_ticket = SupportTicket(
             ticket_number=ticket_number,
             title=ticket.title,
@@ -103,7 +92,6 @@ class SupportTicketService:
             priority=ticket.priority,
             status="open",
             created_by_id=created_by_id,
-            sla_deadline=sla_deadline,
             created_at=datetime.utcnow(),
         )
 
@@ -159,7 +147,6 @@ class SupportTicketService:
             # Set resolution time if resolved
             if ticket.status in ["resolved", "closed"]:
                 db_ticket.resolved_at = datetime.utcnow()
-                db_ticket.resolved_by_id = updated_by_id
 
         # Send notification if assigned
         if ticket.assigned_to_id and ticket.assigned_to_id != old_assigned:
@@ -187,15 +174,14 @@ class SupportTicketService:
             ticket_id=ticket_id,
             user_id=user_id,
             comment_text=comment_text,
-            is_internal=is_internal,
-            is_system=is_system,
+            is_internal=is_internal or is_system,
             created_at=datetime.utcnow(),
         )
 
         db.add(comment)
 
         # Update ticket activity
-        ticket.last_activity_at = datetime.utcnow()
+        ticket.updated_at = datetime.utcnow()
 
         # Send notification to ticket creator if not internal
         if not is_internal and not is_system and user_id != ticket.created_by_id:
@@ -247,9 +233,8 @@ class SupportTicketService:
             return None
 
         ticket.status = "resolved"
-        ticket.resolution = resolution
+        ticket.resolution_notes = resolution
         ticket.resolved_at = datetime.utcnow()
-        ticket.resolved_by_id = resolved_by_id
         ticket.updated_at = datetime.utcnow()
 
         # Add resolution comment
@@ -355,13 +340,15 @@ class SupportTicketService:
             )
             avg_resolution_hours = total_hours / len(resolved_tickets)
 
-        # SLA compliance
+        # SLA compliance (resolved after due date)
         sla_breached = (
             db.query(func.count(SupportTicket.id))
             .filter(
                 and_(
                     SupportTicket.created_at >= cutoff_date,
-                    SupportTicket.resolved_at > SupportTicket.sla_deadline,
+                    SupportTicket.due_date != None,
+                    SupportTicket.resolved_at != None,
+                    SupportTicket.resolved_at > SupportTicket.due_date,
                 )
             )
             .scalar()

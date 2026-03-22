@@ -81,11 +81,8 @@ def register(
             email=email,
             password_hash=get_password_hash(password),
             full_name=full_name,
-            first_name=full_name.split()[0] if full_name else "",
-            last_name=" ".join(full_name.split()[1:]) if len(full_name.split()) > 1 else "",
-            status="ACTIVE",  # String, not Enum!
+            status="ACTIVE",
             is_active=True,
-            is_verified=True,
             role_id=admin_role.id
         )
         
@@ -193,7 +190,7 @@ def verify_2fa(
         activity_log_service.log_activity(
             db=db,
             user_id=user_id,
-            activity_type=ActivityType.TWO_FA_ENABLED,
+            activity_type=ActivityType.LOGIN,
             action="2fa_verified",
             entity_type="user",
             entity_id=user_id,

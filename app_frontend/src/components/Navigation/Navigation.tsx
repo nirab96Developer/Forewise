@@ -97,12 +97,29 @@ const Navigation: React.FC = () => {
     return location.pathname.startsWith(path);
   };
 
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+
   if (!isLoaded) return null;
 
   return (
     <>
+      {/* Offline indicator */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-red-600 text-white text-center py-1 text-sm font-medium" dir="rtl">
+          🔴 ללא קליטה — המערכת פועלת במצב אופליין
+        </div>
+      )}
       {/* Header */}
       <header className={`text-white h-16 shadow-lg z-50 fixed top-0 left-0 right-0 transition-all duration-300 ${
+        !isOnline ? 'mt-7' : ''
+      } ${
         isMobile 
           ? 'bg-gradient-to-r from-green-600 via-kkl-green to-green-700' 
           : 'bg-kkl-green'

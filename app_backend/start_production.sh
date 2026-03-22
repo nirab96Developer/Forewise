@@ -38,7 +38,7 @@ fi
 
 # Check database connection
 echo "🔍 Checking database connection..."
-py -c "
+python -c "
 from app.core.database import check_connection
 if check_connection():
     print('✅ Database connection successful')

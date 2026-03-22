@@ -5,11 +5,11 @@ CORE entity with self-referential hierarchy
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional, List
 
-from sqlalchemy import Date, ForeignKey, Integer, Numeric, Unicode
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, Unicode
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -107,6 +107,51 @@ class Budget(BaseModel):
         comment="סכום מחויב"
     )
 
+    used_amount: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(18, 2), nullable=True,
+        comment="סכום שנוצל"
+    )
+
+    remaining_amount: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(18, 2), nullable=True,
+        comment="יתרה"
+    )
+
+    remaining: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(18, 2), nullable=True,
+        comment="יתרת תקציב"
+    )
+
+    currency: Mapped[Optional[str]] = mapped_column(
+        Unicode(10), nullable=True, default='ILS',
+        comment="מטבע"
+    )
+
+    year: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True,
+        comment="שנה"
+    )
+
+    approved_by: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True,
+        comment="אושר על ידי"
+    )
+
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True,
+        comment="תאריך אישור"
+    )
+
+    updated_by: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True,
+        comment="עודכן על ידי"
+    )
+
+    department_id: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True,
+        comment="מחלקה"
+    )
+
     # Time Period
     fiscal_year: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True,
@@ -164,7 +209,7 @@ class Budget(BaseModel):
         return f"{self.code}: {self.name}" if self.code else self.name
 
     @property
-    def remaining_amount(self) -> Decimal:
+    def calculated_remaining(self) -> Decimal:
         """Calculate remaining budget"""
         return self.total_amount - (self.spent_amount or 0) - (self.committed_amount or 0)
 

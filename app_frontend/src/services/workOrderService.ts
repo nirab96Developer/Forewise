@@ -3,6 +3,7 @@ import api from './api';
 
 export interface WorkOrder {
   id: number;
+  order_number?: number;
   title: string;
   description?: string;
   project_id: number;
@@ -16,6 +17,8 @@ export interface WorkOrder {
   priority: 'low' | 'medium' | 'high';
   estimated_hours?: number;
   hourly_rate?: number;
+  total_amount?: number;
+  frozen_amount?: number;
   created_at: string;
   updated_at?: string;
   created_by?: number;
@@ -46,6 +49,12 @@ export interface WorkOrderCreate {
   constraint_notes?: string;
   requires_guard?: boolean;
   guard_days?: number;
+  days?: number;
+  has_overnight?: boolean;
+  overnight_nights?: number;
+  allocation_method?: string;
+  total_amount?: number;
+  frozen_amount?: number;
 }
 
 export interface WorkOrderUpdate {

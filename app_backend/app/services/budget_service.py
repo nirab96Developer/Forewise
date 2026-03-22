@@ -193,6 +193,7 @@ def freeze_budget_for_work_order(
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if wo:
         wo.frozen_amount = amount
+        wo.remaining_frozen = amount
 
     db.commit()
 

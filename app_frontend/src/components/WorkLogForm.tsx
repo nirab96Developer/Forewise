@@ -2,7 +2,7 @@
 // רכיב טופס לדיווח עבודה
 
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, FileText, Save, X, Wrench } from 'lucide-react';
+import { Calendar, Clock, FileText, Save, X, Wrench, Moon } from 'lucide-react';
 import workLogService, { WorkLogCreate } from '../services/workLogService';
 import projectService from '../services/projectService';
 import { getActivityTypes, ActivityType } from '../services/activityTypeService';
@@ -25,7 +25,8 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
     end_time: '17:00:00',
     work_type: '',
     description: '',
-    is_standard: false
+    is_standard: false,
+    includes_guard: false,
   });
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -76,7 +77,14 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
         return;
       }
 
-      await workLogService.createWorkLog(formData);
+      const overnight = !!formData.includes_guard;
+      await workLogService.createWorkLog({
+        ...formData,
+        includes_guard: overnight,
+        is_overnight: overnight,
+        overnight_nights: overnight ? 1 : 0,
+        overnight_rate: overnight ? 250 : 0,
+      });
 
       if (onSuccess) {
         onSuccess();
@@ -217,6 +225,21 @@ const WorkLogForm: React.FC<WorkLogFormProps> = ({
         />
         <label htmlFor="is_standard" className="mr-2 text-sm text-gray-700">
           דיווח תקן (10.5 שעות)
+        </label>
+      </div>
+
+      <div className="flex items-start gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+        <input
+          type="checkbox"
+          id="includes_guard"
+          name="includes_guard"
+          checked={!!formData.includes_guard}
+          onChange={(e) => setFormData(prev => ({ ...prev, includes_guard: e.target.checked }))}
+          className="h-4 w-4 mt-0.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+        />
+        <label htmlFor="includes_guard" className="text-sm text-gray-800 flex items-start gap-2">
+          <Moon className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+          <span>לינת שטח (לילה אחד, תעריף לינה ₪250 בדיווח)</span>
         </label>
       </div>
 

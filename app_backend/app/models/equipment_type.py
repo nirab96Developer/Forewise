@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Optional
 from decimal import Decimal
+from datetime import datetime
 
 from sqlalchemy import Integer, Unicode, Numeric, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
@@ -77,12 +78,12 @@ class EquipmentType(Base):
     )
 
     # Timestamps
-    created_at: Mapped[Optional[Decimal]] = mapped_column(
+    created_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime, nullable=False, server_default=func.now(),
         comment="תאריך יצירה"
     )
     
-    updated_at: Mapped[Optional[Decimal]] = mapped_column(
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime, nullable=True, server_default=func.now(),
         comment="תאריך עדכון"
     )

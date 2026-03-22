@@ -250,6 +250,7 @@ const WorklogFormUnified: React.FC = () => {
     setLoading(true);
     setError(null);
     
+    const overnight = formData.includes_guard;
     const payload = {
       project_id: formData.project_id,
       work_order_id: formData.work_order_id,
@@ -265,6 +266,10 @@ const WorklogFormUnified: React.FC = () => {
       description: formData.description,
       notes: formData.notes,
       equipment_scanned: !!equipmentIdParam,
+      includes_guard: overnight,
+      is_overnight: overnight,
+      overnight_nights: overnight ? 1 : 0,
+      overnight_rate: overnight ? 250 : 0,
       segments: isNonStandard ? segments.map(s => ({
         type: s.type,
         start_time: s.start_time,
@@ -619,7 +624,7 @@ const WorklogFormUnified: React.FC = () => {
             />
           </div>
 
-          {/* Guard Checkbox */}
+          {/* לינת שטח — תקן ולא תקן */}
           <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
@@ -631,8 +636,8 @@ const WorklogFormUnified: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Moon className="w-5 h-5 text-indigo-600" />
                 <div>
-                  <span className="text-sm font-medium text-indigo-900">בוצעה שמירת כלים</span>
-                  <p className="text-xs text-indigo-600">סמן אם הייתה לינת שטח/שמירה בתאריך זה</p>
+                  <span className="text-sm font-medium text-indigo-900">לינת שטח</span>
+                  <p className="text-xs text-indigo-600">מסומן: לילה אחד × תעריף לינה (₪250) כפי שנשלח לשרת</p>
                 </div>
               </div>
             </label>

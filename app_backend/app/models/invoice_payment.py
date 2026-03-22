@@ -5,7 +5,7 @@ TRANSACTIONS category (is_active, created_at, updated_at - NO deleted_at/version
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
@@ -93,13 +93,13 @@ class InvoicePayment(Base):
     )
 
     # Audit - TRANSACTIONS category but DB has all columns
-    created_at: Mapped[DateTime] = mapped_column(
-        DateTime, nullable=False, server_default=text('SYSUTCDATETIME()'),
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text('NOW()'),
         comment="נוצר ב"
     )
     
-    updated_at: Mapped[DateTime] = mapped_column(
-        DateTime, nullable=False, server_default=text('SYSUTCDATETIME()'),
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text('NOW()'),
         comment="עודכן ב"
     )
     
@@ -109,7 +109,7 @@ class InvoicePayment(Base):
     )
     
     # DB actually has these even though category is TRANSACTIONS
-    deleted_at: Mapped[Optional[DateTime]] = mapped_column(
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime, nullable=True,
         comment="נמחק ב"
     )

@@ -278,6 +278,7 @@ const ProjectWorkspaceNew: React.FC = () => {
             <OrdersTab
               projectCode={project.code}
               projectId={project.id}
+              projectName={project.name}
               orders={(isWorkManager || isAdminUser)
                 ? workOrders.filter(o =>
                     Number((o as any).created_by)    === Number(currentUserId) ||
@@ -808,10 +809,11 @@ const ScanEquipmentModal: React.FC<{
 const OrdersTab: React.FC<{
   projectCode: string;
   projectId: number;
+  projectName?: string;
   orders: WorkOrder[];
   isWorkManager?: boolean;
   onSwitchToWorklogs?: () => void;
-}> = ({ projectCode: _projectCode, projectId, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs }) => {
+}> = ({ projectCode: _projectCode, projectId, projectName, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs }) => {
   const navigate = useNavigate();
 
   // localScans: orderId → equipment number (persists within the session until reload)
@@ -931,7 +933,36 @@ const OrdersTab: React.FC<{
                       <h4 className="text-xs font-semibold text-gray-500 mb-2">פעולות</h4>
                       <div className="space-y-2">
                         <button
-                          onClick={() => navigate(`/work-orders/${order.id}`)}
+                          onClick={() => {
+                            const wo = order as any;
+                            const statusMap: Record<string, string> = {
+                              'PENDING': 'ממתין', 'APPROVED': 'מאושר', 'APPROVED_AND_SENT': 'אושר ונשלח',
+                              'IN_PROGRESS': 'בביצוע', 'COMPLETED': 'הושלם', 'REJECTED': 'נדחה',
+                              'CANCELLED': 'בוטל', 'DISTRIBUTING': 'בהפצה', 'PENDING_SUPPLIER': 'ממתין לספק',
+                            };
+                            const statusHe = statusMap[(wo.status || '').toUpperCase()] || wo.status || '—';
+                            const startDate = wo.work_start_date ? new Date(wo.work_start_date).toLocaleDateString('he-IL') : '—';
+                            const endDate = wo.work_end_date ? new Date(wo.work_end_date).toLocaleDateString('he-IL') : '—';
+                            const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>הזמנה #${wo.order_number || wo.id}</title><style>@media print{body{margin:0}}body{font-family:Arial,sans-serif;padding:30px;max-width:700px;margin:0 auto;color:#333}h1{color:#2d5016;border-bottom:3px solid #2d5016;padding-bottom:10px}table{width:100%;border-collapse:collapse;margin:20px 0}td{padding:10px 14px;border-bottom:1px solid #e0e0e0}td:first-child{font-weight:bold;color:#555;width:35%}td:last-child{color:#111}.badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600}.status-approved{background:#dcfce7;color:#166534}.status-pending{background:#fef9c3;color:#854d0e}.status-rejected{background:#fee2e2;color:#991b1b}.footer{margin-top:40px;text-align:center;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:15px}@media print{.no-print{display:none}}</style></head><body>` +
+                            `<div class="no-print" style="text-align:center;margin-bottom:20px"><button onclick="window.print()" style="background:#2d5016;color:white;border:none;padding:10px 30px;border-radius:8px;font-size:14px;cursor:pointer">🖨️ הדפסה / שמירה כ-PDF</button></div>` +
+                            `<h1>הזמנת עבודה #${wo.order_number || wo.id}</h1>` +
+                            `<table><tr><td>סטטוס</td><td><span class="badge ${statusHe === 'מאושר' || statusHe === 'אושר ונשלח' ? 'status-approved' : statusHe === 'נדחה' || statusHe === 'בוטל' ? 'status-rejected' : 'status-pending'}">${statusHe}</span></td></tr>` +
+                            `<tr><td>פרויקט</td><td>${projectName || '—'}</td></tr>` +
+                            `<tr><td>סוג ציוד</td><td>${wo.equipment_type || '—'}</td></tr>` +
+                            `<tr><td>ספק</td><td>${wo.supplier_name || 'ממתין לשיבוץ'}</td></tr>` +
+                            `<tr><td>תאריך התחלה</td><td>${startDate}</td></tr>` +
+                            `<tr><td>תאריך סיום</td><td>${endDate}</td></tr>` +
+                            `<tr><td>שעות משוערות</td><td>${wo.estimated_hours || '—'}</td></tr>` +
+                            `<tr><td>תעריף לשעה</td><td>${wo.hourly_rate ? '₪' + wo.hourly_rate : '—'}</td></tr>` +
+                            `<tr><td>עלות כוללת</td><td>${wo.total_amount ? '₪' + Number(wo.total_amount).toLocaleString() : '—'}</td></tr>` +
+                            `<tr><td>תיאור</td><td>${wo.description || '—'}</td></tr>` +
+                            `</table>` +
+                            `<div class="footer">Forewise — מערכת ניהול יערות | ${new Date().toLocaleDateString('he-IL')}</div>` +
+                            `</body></html>`;
+                            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+                            const url = URL.createObjectURL(blob);
+                            window.open(url, '_blank');
+                          }}
                           className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition-colors"
                         >
                           <Eye className="w-4 h-4" />

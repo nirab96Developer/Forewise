@@ -104,7 +104,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       bounceAtZoomLimits: false,
       worldCopyJump: false,
       tap: false,
-    });
+    } as L.MapOptions & { tap: boolean });
 
     const tile = L.tileLayer(TILES[activeType], { maxZoom: 19 });
     tile.addTo(map);

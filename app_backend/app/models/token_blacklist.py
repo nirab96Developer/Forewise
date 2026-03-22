@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from datetime import datetime
 
-from sqlalchemy import Integer, String, DateTime, ForeignKey
+from sqlalchemy import Integer, String, DateTime, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -41,7 +41,7 @@ class TokenBlacklist(BaseModel):
     ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
 
     # Dates - DB: datetime, NO / datetime, YES
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default="getdate()", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("NOW()"), nullable=False)
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Relationships

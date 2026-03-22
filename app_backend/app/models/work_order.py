@@ -181,8 +181,30 @@ class WorkOrder(BaseModel):
         comment="סכום שחויב בפועל"
     )
     
-    # Note: remaining_frozen_amount is a COMPUTED COLUMN in DB - do not include!
-    # remaining_frozen_amount = frozen_amount - charged_amount (computed by DB)
+    remaining_frozen: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(15, 2), nullable=True, default=0,
+        comment="יתרת סכום מוקפא"
+    )
+
+    days: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True,
+        comment="מספר ימי עבודה"
+    )
+    
+    overnight_nights: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0,
+        comment="מספר לינות"
+    )
+    
+    has_overnight: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False,
+        comment="האם כולל לינת שטח"
+    )
+    
+    allocation_method: Mapped[Optional[str]] = mapped_column(
+        Unicode(20), nullable=True, default='FAIR_ROTATION',
+        comment="שיטת הקצאה: FAIR_ROTATION / MANUAL"
+    )
 
     # Supplier Constraints/Rejection
     constraint_reason_id: Mapped[Optional[int]] = mapped_column(
