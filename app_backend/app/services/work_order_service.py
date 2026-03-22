@@ -128,27 +128,40 @@ class WorkOrderService:
                     .first()
                 )
                 if budget is not None:
-                    # Estimate cost using equipment hourly rate from the category
-                    rate_row = db.execute(sa_text(
-                        """SELECT et.default_hourly_rate
-                           FROM equipment_categories ec
-                           JOIN equipment_models em ON em.category_id = ec.id
-                           JOIN equipment_types et ON et.name = ec.name
-                           WHERE em.id = :mid LIMIT 1"""
-                    ), {"mid": wo_dict.get("requested_equipment_model_id")}).fetchone()
+                    hourly_rate = float(wo_dict.get('hourly_rate') or 0)
+                    if not hourly_rate and wo_dict.get('requested_equipment_model_id'):
+                        rate_row = db.execute(sa_text(
+                            """SELECT et.default_hourly_rate
+                               FROM equipment_categories ec
+                               JOIN equipment_models em ON em.category_id = ec.id
+                               JOIN equipment_types et ON et.name = ec.name
+                               WHERE em.id = :mid LIMIT 1"""
+                        ), {"mid": wo_dict.get("requested_equipment_model_id")}).fetchone()
+                        if rate_row and rate_row[0]:
+                            hourly_rate = float(rate_row[0])
 
-                    if rate_row and rate_row[0]:
-                        estimated_cost = _Decimal(str(estimated_hours)) * _Decimal(str(rate_row[0]))
-                        remaining = budget.remaining_amount
-                        if estimated_cost > remaining:
+                    overnight_nights = int(wo_dict.get('overnight_nights') or wo_dict.get('guard_days') or 0)
+                    estimated_cost = float(estimated_hours) * hourly_rate + overnight_nights * 250
+
+                    if estimated_cost > 0:
+                        total = float(budget.total_amount or 0)
+                        committed = float(budget.committed_amount or 0)
+                        spent = float(budget.spent_amount or 0)
+                        available = total - committed - spent
+
+                        if estimated_cost > available:
                             raise HTTPException(
-                                status_code=422,
-                                detail=f"תקציב הפרויקט אינו מספיק. עלות משוערת: ₪{float(estimated_cost):,.0f}, יתרה: ₪{float(remaining):,.0f}"
+                                status_code=400,
+                                detail=(
+                                    f"אין תקציב מספיק. "
+                                    f"עלות משוערת: ₪{estimated_cost:,.0f}, "
+                                    f"יתרה זמינה: ₪{available:,.0f}"
+                                )
                             )
             except HTTPException:
                 raise
             except Exception:
-                pass  # budget check is advisory — do not block on unexpected errors
+                pass
 
         # Auto-generate order_number
         max_on = db.execute(sa_text("SELECT COALESCE(MAX(order_number), 0) FROM work_orders")).scalar()
@@ -166,7 +179,30 @@ class WorkOrderService:
         db.add(db_work_order)
         db.commit()
         db.refresh(db_work_order)
-        
+
+        # Email to work manager after creation (Task 14)
+        try:
+            from app.core.email import send_email
+            from app.models.user import User
+            creator = db.query(User).filter(User.id == created_by_id).first()
+            if creator and creator.email:
+                order_label = db_work_order.order_number or db_work_order.id
+                send_email(
+                    to=creator.email,
+                    subject=f"הזמנתך #{order_label} נשלחה למתאם לאישור",
+                    body=(
+                        f"שלום {creator.full_name or creator.username or ''},\n\n"
+                        f"הזמנת עבודה #{order_label} נוצרה בהצלחה ונשלחה למתאם ההזמנות לאישור.\n"
+                        f"סוג ציוד: {wo_dict.get('equipment_type', '')}\n"
+                        f"שעות מוערכות: {wo_dict.get('estimated_hours', '')}\n\n"
+                        f"תקבל/י עדכון כשההזמנה תאושר.\n\n"
+                        "Forewise"
+                    ),
+                )
+        except Exception as _e:
+            import logging
+            logging.getLogger(__name__).warning(f"Email after WO creation failed: {_e}")
+
         # Freeze budget after successful creation
         try:
             from app.services.budget_service import freeze_budget_for_work_order
@@ -318,66 +354,39 @@ class WorkOrderService:
         }
 
     def _select_supplier_by_rotation(self, db: Session, work_order) -> Optional[int]:
-        """Select supplier using Fair Rotation algorithm."""
-        from app.models.supplier_rotation import SupplierRotation
-        from app.models.supplier import Supplier
+        """Select supplier using 5-check rotation algorithm.
 
-        # Get project's area for geographic filtering
+        Delegates to SupplierRotationService.select_supplier_with_checks
+        which applies: active-in-area, is_active, has-equipment-of-type,
+        has-license-plate, equipment-available — with area→region→coordinator
+        fallback and fewest-assignments selection.
+        """
+        from app.services.supplier_rotation_service import supplier_rotation_service
+
         area_id = None
+        region_id = None
         if work_order.project_id:
-            from app.models.project import Project
             project = db.query(Project).filter(Project.id == work_order.project_id).first()
             if project:
                 area_id = project.area_id
+                region_id = project.region_id
 
-        # Find eligible suppliers with matching equipment
-        query = (
-            db.query(SupplierRotation)
-            .join(Supplier, Supplier.id == SupplierRotation.supplier_id)
-            .filter(
-                SupplierRotation.is_active == True,
-                SupplierRotation.is_available != False,
-                Supplier.is_active == True,
-            )
+        equipment_model_id = getattr(work_order, 'requested_equipment_model_id', None)
+
+        result = supplier_rotation_service.select_supplier_with_checks(
+            db=db,
+            area_id=area_id,
+            region_id=region_id,
+            equipment_model_id=equipment_model_id,
         )
 
-        # Filter by equipment type if work order has one
-        eq_type_id = getattr(work_order, 'equipment_type_id', None)
-        if not eq_type_id and work_order.equipment_id:
-            from app.models.equipment import Equipment
-            eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
-            if eq:
-                eq_type_id = getattr(eq, 'type_id', None) or getattr(eq, 'equipment_type_id', None)
-        if eq_type_id:
-            query = query.filter(
-                SupplierRotation.equipment_type_id == eq_type_id
+        if result.get("notify_coordinator"):
+            import logging
+            logging.getLogger(__name__).warning(
+                f"No supplier found for WO {work_order.id} — coordinator notification required"
             )
 
-        # Prefer same area
-        if area_id:
-            area_query = query.filter(SupplierRotation.area_id == area_id)
-            rotations = area_query.order_by(SupplierRotation.rotation_position.asc()).all()
-            if not rotations:
-                rotations = query.order_by(SupplierRotation.rotation_position.asc()).all()
-        else:
-            rotations = query.order_by(SupplierRotation.rotation_position.asc()).all()
-
-        if not rotations:
-            # Fallback: any active supplier
-            fallback = db.query(Supplier).filter(Supplier.is_active == True).first()
-            return fallback.id if fallback else None
-
-        # Pick the one with lowest rotation_position (next in line)
-        selected = rotations[0]
-
-        # Update rotation position
-        selected.total_assignments = (selected.total_assignments or 0) + 1
-        selected.last_assignment_date = datetime.utcnow().date()
-        if selected.rotation_position is not None:
-            selected.rotation_position += 1
-
-        db.flush()
-        return selected.supplier_id
+        return result.get("supplier_id")
 
     def handle_supplier_response(
         self, db: Session, portal_token: str, response: str, reason: Optional[str] = None
@@ -405,7 +414,7 @@ class WorkOrderService:
         else:
             raise ValueError("Response must be 'accept' or 'reject'")
 
-        work_order.responded_at = datetime.utcnow()
+        work_order.response_received_at = datetime.utcnow()
         work_order.updated_at = datetime.utcnow()
         
         if reason:
@@ -416,12 +425,19 @@ class WorkOrderService:
         return work_order
 
     def force_supplier(
-        self, db: Session, work_order_id: int, supplier_id: int, reason: str
+        self,
+        db: Session,
+        work_order_id: int,
+        supplier_id: int,
+        reason: str,
+        created_by_id: Optional[int] = None,
     ) -> Optional[WorkOrder]:
-        """Force work order to specific supplier — with equipment availability check."""
+        """Force work order to specific supplier — with SupplierEquipment availability check."""
         from fastapi import HTTPException
-        from app.models.equipment import Equipment
-        
+
+        from app.models.supplier_equipment import SupplierEquipment
+        from app.models.equipment_model import EquipmentModel
+
         work_order = self.get_work_order(db, work_order_id)
         if not work_order:
             return None
@@ -431,66 +447,106 @@ class WorkOrderService:
         if not supplier:
             raise ValueError("Supplier not found")
 
-        # Check supplier has available equipment with license plate for this type
-        eq_type_id = getattr(work_order, 'equipment_type_id', None)
-        if not eq_type_id:
-            eq_type_name = work_order.equipment_type or ''
-            if eq_type_name:
-                from sqlalchemy import text as sa_text
-                et_row = db.execute(sa_text(
-                    "SELECT id FROM equipment_types WHERE LOWER(name) = LOWER(:n) LIMIT 1"
-                ), {"n": eq_type_name}).first()
-                if et_row:
-                    eq_type_id = et_row[0]
+        required_category_id = None
+        if work_order.requested_equipment_model_id:
+            model = (
+                db.query(EquipmentModel)
+                .filter(EquipmentModel.id == work_order.requested_equipment_model_id)
+                .first()
+            )
+            if model:
+                required_category_id = model.category_id
 
-        eq_check = db.query(Equipment).filter(
-            Equipment.supplier_id == supplier_id,
-            Equipment.is_active == True,
-            Equipment.license_plate != None,
-            Equipment.license_plate != '',
+        # Available equipment of the right type (supplier_equipment inventory)
+        se_q = db.query(SupplierEquipment).filter(
+            SupplierEquipment.supplier_id == supplier_id,
+            SupplierEquipment.is_active == True,
+            or_(
+                SupplierEquipment.status == "available",
+                SupplierEquipment.status.is_(None),
+            ),
         )
-        if eq_type_id:
-            eq_check = eq_check.filter(Equipment.type_id == eq_type_id)
-        
-        if not eq_check.first():
+        if required_category_id is not None or work_order.requested_equipment_model_id:
+            type_clause = []
+            if required_category_id is not None:
+                type_clause.append(
+                    SupplierEquipment.equipment_category_id == required_category_id
+                )
+            if work_order.requested_equipment_model_id:
+                type_clause.append(
+                    SupplierEquipment.equipment_model_id
+                    == work_order.requested_equipment_model_id
+                )
+            if type_clause:
+                if len(type_clause) == 1:
+                    se_q = se_q.filter(type_clause[0])
+                else:
+                    se_q = se_q.filter(or_(*type_clause))
+        # Must have at least one unit available when quantity is tracked
+        se_q = se_q.filter(
+            or_(
+                SupplierEquipment.quantity_available.is_(None),
+                SupplierEquipment.quantity_available > 0,
+            )
+        )
+
+        if not se_q.first():
             raise HTTPException(
                 status_code=400,
-                detail="לספק זה אין כלי פנוי עם מספר רישוי מהסוג המבוקש. בחר ספק אחר."
+                detail="לספק זה אין כלי פנוי מסוג זה",
             )
 
         # Reason is required for forced selection
         if not reason or len(reason.strip()) < 10:
             raise HTTPException(
                 status_code=400,
-                detail="חובה לציין סיבת אילוץ (מינימום 10 תווים)"
+                detail="חובה לציין סיבת אילוץ (מינימום 10 תווים)",
             )
 
-        # Log constraint
-        try:
+        log_uid = created_by_id if created_by_id is not None else work_order.created_by_id
+        if log_uid:
             from app.models.supplier_constraint_log import SupplierConstraintLog
-            log_entry = SupplierConstraintLog(
-                work_order_id=work_order_id,
-                supplier_id=supplier_id,
-                constraint_reason_text=reason,
-                created_at=datetime.utcnow(),
+
+            db.add(
+                SupplierConstraintLog(
+                    work_order_id=work_order_id,
+                    supplier_id=supplier_id,
+                    constraint_reason_text=reason.strip(),
+                    created_by=log_uid,
+                    created_at=datetime.utcnow(),
+                )
             )
-            db.add(log_entry)
-        except Exception:
-            pass  # constraint log table may not exist
+        else:
+            try:
+                from sqlalchemy import text as sql_text
+
+                db.execute(
+                    sql_text(
+                        """
+                        INSERT INTO activity_logs (action, activity_type, entity_type, entity_id, description)
+                        VALUES ('SUPPLIER_FORCED', 'update', 'work_order', :wid, :desc)
+                        """
+                    ),
+                    {
+                        "wid": work_order_id,
+                        "desc": f"אילוץ ספק {supplier_id}: {reason.strip()[:450]}",
+                    },
+                )
+            except Exception:
+                pass
 
         # Update work order
         work_order.supplier_id = supplier_id
-        work_order.is_forced = True
-        work_order.force_reason = reason
+        work_order.constraint_notes = reason.strip()
         work_order.is_forced_selection = True
-        work_order.constraint_notes = reason
         work_order.updated_at = datetime.utcnow()
+
+        supplier.total_assignments = (supplier.total_assignments or 0) + 1
 
         # Generate new portal token
         work_order.portal_token = secrets.token_urlsafe(32)
         work_order.token_expires_at = datetime.utcnow() + timedelta(hours=3)
         work_order.status = "sent_to_supplier"
-        work_order.sent_at = datetime.utcnow()
 
         db.commit()
         db.refresh(work_order)
@@ -580,9 +636,9 @@ class WorkOrderService:
             "title": work_order.title,
             "description": work_order.description,
             "equipment_type": work_order.equipment_type,
-            "equipment_count": work_order.equipment_count,
-            "start_date": work_order.start_date,
-            "end_date": work_order.end_date,
+            "equipment_count": getattr(work_order, "equipment_count", 0),
+            "start_date": work_order.work_start_date,
+            "end_date": work_order.work_end_date,
             "hourly_rate": work_order.hourly_rate,
             "estimated_hours": work_order.estimated_hours,
             "location": work_order.project.location_name if work_order.project else None,
@@ -591,8 +647,8 @@ class WorkOrderService:
             "contact_email": work_order.supplier.email if work_order.supplier else None,
             "portal_token": work_order.portal_token,
             "expires_at": work_order.token_expires_at,
-            "is_forced": work_order.is_forced,
-            "force_reason": work_order.force_reason,
+            "is_forced": work_order.is_forced_selection,
+            "force_reason": work_order.constraint_notes,
         }
 
     def get_work_order_statistics(self, db: Session, project_id: Optional[int] = None) -> dict:
@@ -979,15 +1035,106 @@ class WorkOrderService:
         return wo
 
     def close(self, db, wo_id, actual_hours=None, version=None, current_user=None, current_user_id=None):
-        """Close/complete a work order → completed."""
+        """Close/complete a work order → completed + email + notification."""
         from app.models.work_order import WorkOrder
-        import datetime
+        import datetime as _dt
+        import logging
+
+        log = logging.getLogger(__name__)
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
-        if wo:
-            wo.status = 'completed'
-            wo.updated_at = datetime.datetime.now()
+        if not wo:
+            return wo
+
+        wo.status = 'completed'
+        wo.updated_at = _dt.datetime.now()
+        if actual_hours is not None:
+            wo.actual_hours = actual_hours
+        db.commit()
+        db.refresh(wo)
+
+        uid = current_user_id or (current_user.id if current_user else None)
+        order_label = wo.order_number or str(wo_id)
+
+        # Activity log
+        try:
+            from sqlalchemy import text
+            db.execute(text("""
+                INSERT INTO activity_logs (action, description, user_id, entity_type, entity_id)
+                VALUES ('work_order.closed', :desc, :uid, 'work_order', :wid)
+            """), {"desc": f"הזמנה מספר {order_label} הושלמה", "uid": uid, "wid": wo_id})
             db.commit()
-            db.refresh(wo)
+        except Exception as e:
+            log.warning(f"Activity log for close WO {wo_id}: {e}")
+
+        # Collect notification recipients
+        recipients = []
+        try:
+            from app.models.user import User
+            if wo.created_by_id:
+                u = db.query(User).filter(User.id == wo.created_by_id).first()
+                if u:
+                    recipients.append(u)
+            if wo.project and wo.project.manager_id and wo.project.manager_id != wo.created_by_id:
+                u = db.query(User).filter(User.id == wo.project.manager_id).first()
+                if u:
+                    recipients.append(u)
+        except Exception as e:
+            log.warning(f"Failed to resolve recipients for WO {wo_id}: {e}")
+
+        # Resolve supplier name
+        supplier_name = ""
+        try:
+            if wo.supplier_id:
+                from app.models.supplier import Supplier as _Sup
+                s = db.query(_Sup).filter(_Sup.id == wo.supplier_id).first()
+                if s:
+                    supplier_name = s.name or ""
+        except Exception:
+            pass
+
+        # Send emails
+        for user in recipients:
+            try:
+                if not user.email:
+                    continue
+                from app.core.email import send_email
+                send_email(
+                    to=user.email,
+                    subject=f"✅ הזמנה #{order_label} הושלמה",
+                    body=(
+                        f"שלום {user.full_name or user.username or ''},\n\n"
+                        f"הזמנת עבודה מספר {order_label} הושלמה בהצלחה.\n"
+                        f"{'ספק: ' + supplier_name + chr(10) if supplier_name else ''}\n"
+                        "Forewise"
+                    ),
+                )
+            except Exception as e:
+                log.warning(f"Email for close WO {wo_id} to {user.email}: {e}")
+
+        # In-app notifications
+        try:
+            from app.services.notification_service import notification_service
+            from app.schemas.notification import NotificationCreate
+            import json as _json
+            for user in recipients:
+                if user.id == uid:
+                    continue
+                notif = NotificationCreate(
+                    user_id=user.id,
+                    title=f"הזמנה {order_label} הושלמה ✅",
+                    message=f"הזמנת עבודה {order_label} הושלמה.",
+                    notification_type="work_order_completed",
+                    priority="medium",
+                    channel="in_app",
+                    entity_type="work_order",
+                    entity_id=wo_id,
+                    data=_json.dumps({"work_order_id": wo_id}),
+                    action_url=f"/work-orders/{wo_id}",
+                )
+                notification_service.create_notification(db, notif)
+        except Exception as e:
+            log.warning(f"Notification for close WO {wo_id}: {e}")
+
         return wo
 
     def move_to_next_supplier(self, db, wo_id, current_user=None, current_user_id=None):
