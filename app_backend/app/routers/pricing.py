@@ -445,17 +445,30 @@ async def get_pricing_report_by_equipment_type(
     - סה״כ עלות
     - מספר דיווחים
     """
+    from app.models.equipment import Equipment
+    from app.models.equipment_category import EquipmentCategory
+    from sqlalchemy import case as sa_case, text as sa_text
+
+    et_id_expr = func.coalesce(
+        Worklog.equipment_type_id,
+        db.query(EquipmentType.id)
+        .join(EquipmentCategory, EquipmentCategory.name == EquipmentType.name)
+        .join(Equipment, Equipment.category_id == EquipmentCategory.id)
+        .filter(Equipment.id == Worklog.equipment_id)
+        .correlate(Worklog)
+        .limit(1)
+        .scalar_subquery()
+    )
+
     query = db.query(
         EquipmentType.id,
         EquipmentType.name,
-        func.sum(Worklog.total_hours).label("total_hours"),
-        func.sum(Worklog.cost_before_vat).label("total_cost"),
-        func.sum(Worklog.cost_with_vat).label("total_cost_with_vat"),
+        func.sum(func.coalesce(Worklog.total_hours, Worklog.work_hours, 0)).label("total_hours"),
+        func.sum(func.coalesce(Worklog.cost_before_vat, 0)).label("total_cost"),
+        func.sum(func.coalesce(Worklog.cost_with_vat, 0)).label("total_cost_with_vat"),
         func.count(Worklog.id).label("worklog_count")
     ).join(
-        Worklog, Worklog.equipment_type_id == EquipmentType.id
-    ).filter(
-        Worklog.cost_before_vat.isnot(None)
+        Worklog, et_id_expr == EquipmentType.id
     )
     
     # Apply filters
