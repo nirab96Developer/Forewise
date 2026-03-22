@@ -280,7 +280,7 @@ const PricingReports: React.FC = () => {
   const isExpandable = reportType === "by-project";
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-6 pb-8 px-4 " dir="rtl">
+    <div className="min-h-screen bg-gray-50 pt-4 sm:pt-6 pb-8 px-2 sm:px-4" dir="rtl">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -307,8 +307,8 @@ const PricingReports: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <div className="flex flex-wrap items-end gap-4 overflow-x-auto">
+        <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 mb-6">
+          <div className="flex flex-wrap items-end gap-3 sm:gap-4 overflow-x-auto">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">מתאריך</label>
               <input
@@ -348,7 +348,7 @@ const PricingReports: React.FC = () => {
               סנן
             </button>
             {data && data.items.length > 0 && (
-              <div className="flex items-center gap-2 mr-auto">
+              <div className="flex flex-wrap items-center gap-2 mr-auto w-full sm:w-auto mt-2 sm:mt-0">
                 <button
                   onClick={exportCSV}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
@@ -469,7 +469,7 @@ const PricingReports: React.FC = () => {
             {/* Table */}
             {data.items.length > 0 ? (
               <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto -mx-0">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>

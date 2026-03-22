@@ -209,3 +209,14 @@
   background-size: 200% 200%;
   animation: gradientShift 3s ease infinite;
 }
+
+/* ═══ Mobile responsive utilities ═══ */
+@media (max-width: 768px) {
+  .overflow-x-auto table {
+    min-width: 600px;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
