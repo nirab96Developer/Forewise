@@ -186,7 +186,7 @@ const BudgetDetail: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {spent.items.map((wl: any) => (
-                      <tr key={wl.worklog_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/work-logs/${wl.worklog_id}`)}>
+                      <tr key={wl.worklog_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => budget.project_code ? navigate(`/projects/${budget.project_code}/workspace/work-logs/${wl.worklog_id}`) : navigate('/projects')}>
                         <td className="px-4 py-3 text-sm text-gray-700">{wl.report_date}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{wl.hours}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{fmt(wl.hourly_rate)}₪</td>
