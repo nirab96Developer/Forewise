@@ -18,6 +18,7 @@ from app.services.notification_service import (
     notify_work_order_created,
     notify_work_order_approved,
     notify_work_order_rejected,
+    notify_work_order_completed,
 )
 from app.schemas.work_order import (
     WorkOrderCreate,
@@ -485,7 +486,10 @@ def close_work_order(
         from decimal import Decimal
         actual_hours_decimal = Decimal(str(actual_hours)) if actual_hours else None
         work_order = work_order_service.close(db, work_order_id, actual_hours_decimal, version, current_user_id=current_user.id)
-        # Activity log is handled in service
+        try:
+            notify_work_order_completed(db, work_order)
+        except Exception:
+            pass
         return work_order
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

@@ -228,6 +228,54 @@ def notify_work_order_rejected(db: Session, work_order, reason: str = ""):
         log.warning(f"notify_work_order_rejected failed: {e}")
 
 
+def notify_work_order_completed(db: Session, work_order):
+    """
+    הזמנה הושלמה → התראה ליוצר + מייל לבעלי תפקיד
+    """
+    try:
+        creator_id = getattr(work_order, 'created_by_id', None)
+        wo_num = getattr(work_order, 'order_number', work_order.id)
+        if creator_id:
+            notify(
+                db, creator_id,
+                title="הזמנת עבודה הושלמה",
+                message=f"הזמנה #{wo_num} הושלמה בהצלחה",
+                notification_type="work_order",
+                entity_type="work_order",
+                entity_id=work_order.id,
+                action_url=f"/work-orders/{work_order.id}",
+            )
+
+        from app.core.email import send_email
+        from app.models.user import User
+        from app.models.role import Role
+        stakeholders = (
+            db.query(User.email)
+            .join(Role, User.role_id == Role.id)
+            .filter(
+                Role.code.in_(['ORDER_COORDINATOR', 'ADMIN', 'ACCOUNTANT']),
+                User.is_active == True,
+                User.email.isnot(None),
+            )
+            .all()
+        )
+        for (email,) in stakeholders:
+            try:
+                send_email(
+                    to_email=email,
+                    subject=f"✅ הזמנה #{wo_num} הושלמה — Forewise",
+                    html_body=f"""<div dir="rtl" style="font-family:Heebo,sans-serif;">
+                        <h2 style="color:#2e7d32;">הזמנה #{wo_num} הושלמה</h2>
+                        <p>הזמנת העבודה הושלמה בהצלחה.</p>
+                        <p><a href="https://forewise.co/work-orders/{work_order.id}">צפייה בפרטים</a></p>
+                    </div>""",
+                )
+            except Exception:
+                pass
+    except Exception as e:
+        log.warning(f"notify_work_order_completed failed: {e}")
+
+
 def notify_worklog_created(db: Session, worklog):
     """
     דיווח שעות נוצר → התראה ל-AREA_MANAGER של האזור לאישור.
