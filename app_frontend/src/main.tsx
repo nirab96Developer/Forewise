@@ -99,7 +99,7 @@ if ("serviceWorker" in navigator) {
           if (newWorker) {
             newWorker.addEventListener("statechange", () => {
               if (newWorker.state === "activated") {
-                showUpdateBanner();
+                window.location.reload();
               }
             });
           }
@@ -109,34 +109,12 @@ if ("serviceWorker" in navigator) {
       });
     });
 
-    // Listen for update messages from SW
+    // SW update messages handled silently (no banner)
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type === "APP_UPDATED") {
-        showUpdateBanner(event.data.version);
+        // Auto-reload silently on update
+        window.location.reload();
       }
     });
   }
-}
-
-function showUpdateBanner(_version?: string) {
-  if (document.getElementById("forewise-update-banner")) return;
-  const banner = document.createElement("div");
-  banner.id = "forewise-update-banner";
-  banner.dir = "rtl";
-  banner.style.cssText =
-    "position:fixed;bottom:16px;right:16px;z-index:9999;" +
-    "background:#fff;color:#333;padding:10px 14px;border-radius:12px;" +
-    "box-shadow:0 4px 20px rgba(0,0,0,0.12);border:1px solid #e0e0e0;" +
-    "display:flex;align-items:center;gap:10px;" +
-    "font-family:Heebo,sans-serif;font-size:13px;" +
-    "animation:slideUp .3s ease;max-width:280px";
-  banner.innerHTML =
-    `<div style="width:8px;height:8px;background:#2e7d32;border-radius:50%;flex-shrink:0;animation:pulse 2s infinite"></div>` +
-    `<span style="flex:1;color:#555">עדכון זמין</span>` +
-    `<button onclick="window.location.reload()" style="background:#2e7d32;color:#fff;border:none;` +
-    `padding:5px 12px;border-radius:8px;font-weight:600;cursor:pointer;font-family:inherit;font-size:12px">` +
-    `רענן</button>` +
-    `<button onclick="this.parentElement.remove()" style="background:none;border:none;color:#bbb;` +
-    `cursor:pointer;font-size:16px;padding:0 2px;line-height:1">✕</button>`;
-  document.body.appendChild(banner);
 }
