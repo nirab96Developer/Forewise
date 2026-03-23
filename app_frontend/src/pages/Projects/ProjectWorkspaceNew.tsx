@@ -288,6 +288,7 @@ const ProjectWorkspaceNew: React.FC = () => {
                 : workOrders}
               isWorkManager={isWorkManager || isAdminUser}
               onSwitchToWorklogs={() => setActiveTab('worklogs')}
+              onAfterScan={() => setActiveTab('worklogs')}
             />
           )}
 
@@ -813,7 +814,8 @@ const OrdersTab: React.FC<{
   orders: WorkOrder[];
   isWorkManager?: boolean;
   onSwitchToWorklogs?: () => void;
-}> = ({ projectCode: _projectCode, projectId, projectName, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs }) => {
+  onAfterScan?: () => void;
+}> = ({ projectCode: _projectCode, projectId, projectName, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs, onAfterScan }) => {
   const navigate = useNavigate();
 
   // localScans: orderId → equipment number (persists within the session until reload)
@@ -825,9 +827,9 @@ const OrdersTab: React.FC<{
   const handleScanned = (orderId: number, equipmentNum: string) => {
     setLocalScans(prev  => ({ ...prev,  [orderId]: equipmentNum }));
     setJustScanned(prev => ({ ...prev,  [orderId]: true }));
-    // After scan — switch to "כלים בפרויקט" tab and show success toast
+    // After scan — notify parent to switch tab and show toast
     setTimeout(() => {
-      setActiveTab('worklogs');
+      onAfterScan?.();
       (window as any).showToast?.('✅ כלי נסרק בהצלחה — עבר לכלים בשטח', 'success');
     }, 600);
   };
