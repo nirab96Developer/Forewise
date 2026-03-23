@@ -548,10 +548,14 @@ def log_worklog_created(
     user_id: int,
     work_order_id: Optional[int] = None,
     project_id: Optional[int] = None,
-    is_standard: bool = True
+    is_standard: bool = True,
+    total_hours: float = 0,
+    work_order_title: str = ""
 ):
     """Log: דיווח שעות נוצר"""
     report_type = "תקן" if is_standard else "לא תקן"
+    hours_str = f"{total_hours:.1f} שע׳ — " if total_hours else ""
+    title_str = f"{work_order_title} — " if work_order_title else ""
     _log(
         db=db,
         activity_type="worklog",
@@ -563,7 +567,7 @@ def log_worklog_created(
             "work_order_id": work_order_id,
             "project_id": project_id,
             "is_standard": is_standard,
-            "description_he": f"דיווח שעות נוצר ({report_type})"
+            "description_he": f"דיווח שעות נוצר — {hours_str}{title_str}({report_type})"
         }
     )
 

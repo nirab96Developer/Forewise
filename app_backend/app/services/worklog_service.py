@@ -205,13 +205,18 @@ class WorklogService:
                 logging.getLogger(__name__).warning(f"Segment save failed for WL {worklog.id}: {seg_err}")
 
         # Log activity
+        wo_title = ""
+        if work_order:
+            wo_title = getattr(work_order, 'title', '') or getattr(work_order, 'equipment_type', '') or ''
         activity_logger.log_worklog_created(
             db=db,
             worklog_id=worklog.id,
             user_id=current_user_id,
             work_order_id=data.work_order_id,
             project_id=project_id,
-            is_standard=worklog.report_type == 'standard'
+            is_standard=worklog.report_type == 'standard',
+            total_hours=float(worklog.work_hours or worklog.total_hours or 0),
+            work_order_title=wo_title
         )
         
         return worklog

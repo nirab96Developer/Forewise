@@ -40,6 +40,11 @@ class ActivityLogService:
         details_json = json.dumps(details_data, ensure_ascii=False) if details_data else None
         custom_metadata_json = json.dumps(metadata, ensure_ascii=False) if metadata else None
         
+        # Extract human-readable description from details
+        description_text = None
+        if details_data and isinstance(details_data, dict):
+            description_text = details_data.get('description_he') or details_data.get('description')
+
         log = ActivityLog(
             user_id=user_id,
             activity_type=activity_type,
@@ -47,6 +52,7 @@ class ActivityLogService:
             entity_type=entity_type,
             entity_id=entity_id,
             details=details_json,
+            description=description_text,
             custom_metadata=custom_metadata_json,
             ip_address=ip_address,
             user_agent=user_agent,
