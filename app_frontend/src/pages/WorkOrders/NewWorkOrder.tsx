@@ -250,18 +250,7 @@ const NewWorkOrder: React.FC = () => {
     }
   };
 
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    const categoryId = value ? Number(value) : null;
-    setSelectedCategoryId(categoryId);
-    setTouched(prev => ({ ...prev, tool_type: true }));
-    
-    const category = equipmentCategories.find(cat => cat.id === categoryId);
-    setFormData(prev => ({
-      ...prev,
-      tool_type: category ? category.name : ''
-    }));
-  };
+  // handleCategoryChange removed — tool type is now free text input
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -558,24 +547,25 @@ const NewWorkOrder: React.FC = () => {
             </SectionTitle>
 
             <div className="grid grid-cols-12 gap-4">
-              {/* Tool Type */}
+              {/* Tool Type — free text input */}
               <div className="col-span-12 sm:col-span-6">
                 <label className="block text-sm font-medium text-kkl-text mb-2">
                   סוג כלי *
                 </label>
-                <select
-                  value={selectedCategoryId?.toString() || ''}
-                  onChange={handleCategoryChange}
+                <input
+                  type="text"
+                  value={formData.tool_type}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData(prev => ({ ...prev, tool_type: val }));
+                    // Try to match a category by name for FK purposes
+                    const match = equipmentCategories.find(c => c.name === val);
+                    setSelectedCategoryId(match ? match.id : null);
+                  }}
                   required
-                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
-                >
-                  <option value="">בחר סוג כלי...</option>
-                  {equipmentCategories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="לדוגמה: יעה אופני זעיר, טרקטור חקלאי..."
+                  className="w-full pr-4 pl-4 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                />
               </div>
 
               {/* Quantity */}
