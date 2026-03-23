@@ -56,25 +56,32 @@ jobs:
             npm run build
             cd ..
 
-            # Restart backend using start_production.sh (gunicorn)
+            # Restart backend — gunicorn --daemon (survives SSH session end)
             echo ">> Restarting backend..."
-            cd app_backend
             pkill -f gunicorn 2>/dev/null || true
             pkill -f uvicorn  2>/dev/null || true
             sleep 3
-            nohup bash start_production.sh > /tmp/forewise_start.log 2>&1 &
+
+            cd app_backend
+            /root/forewise/app_backend/venv/bin/gunicorn \
+              -c /root/forewise/app_backend/gunicorn.conf.py \
+              wsgi:application \
+              --daemon \
+              --pid /tmp/gunicorn.pid \
+              --log-file /root/forewise/app_backend/logs/gunicorn.log \
+              --access-logfile /root/forewise/app_backend/logs/gunicorn.log
+            cd ..
 
             # Wait for backend
             echo ">> Waiting for backend..."
             for i in 1 2 3 4 5 6; do
               sleep 5
-              if curl -s http://localhost:8000/health | grep -q '"ok"'; then
-                echo "✅ Backend is up!"
+              if curl -s http://localhost:8000/api/v1/health | grep -q '"ok"'; then
+                echo "✅ Backend is up! PID: $(cat /tmp/gunicorn.pid 2>/dev/null)"
                 break
               fi
               echo "   Attempt $i — waiting..."
             done
-            cd ..
 
             # Reload nginx
             systemctl reload nginx
