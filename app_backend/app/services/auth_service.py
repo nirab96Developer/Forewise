@@ -103,8 +103,9 @@ class AuthService:
 
         remember_me = getattr(login_data, "remember_me", False)
 
-        # 2FA flow
-        if getattr(user, "two_factor_enabled", False):
+        # 2FA flow — also require OTP on first login (must_change_password)
+        is_first_login = bool(getattr(user, "must_change_password", False)) and not getattr(user, "last_login", None)
+        if getattr(user, "two_factor_enabled", False) or is_first_login:
             otp_code = self._generate_otp_token(db, user.id)
 
             # Send OTP via email (best-effort)
@@ -146,6 +147,7 @@ class AuthService:
 
             return {
                 "requires_2fa": True,
+                "is_first_login": is_first_login,
                 "user_id": user.id,
                 "user": None,
                 "access_token": "",
