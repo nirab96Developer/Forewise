@@ -586,6 +586,11 @@ const OrderCoordination: React.FC = () => {
                             <div>
                               <span className="text-gray-500">סוג ציוד: </span>
                               <span className="font-medium">{equipmentType}</span>
+                              {(order as any).equipment_license_plate && (
+                                <span className="mr-2 text-green-700 font-mono font-bold text-sm">
+                                  | לוחית: {(order as any).equipment_license_plate}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="flex gap-2">

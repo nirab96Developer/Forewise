@@ -79,10 +79,21 @@ def _enrich_hours(work_order, db: Session) -> dict:
 
 
 def _to_response(work_order, db: Session) -> dict:
-    """Serialize WorkOrder ORM object + inject computed hours."""
+    """Serialize WorkOrder ORM object + inject computed hours + equipment license plate."""
     from pydantic import TypeAdapter
     d = WorkOrderResponse.model_validate(work_order).model_dump()
     d.update(_enrich_hours(work_order, db))
+    # Inject equipment license_plate if not already set
+    if not d.get('equipment_license_plate') and work_order.equipment_id:
+        try:
+            row = db.execute(
+                sa_text("SELECT license_plate FROM equipment WHERE id=:eid"),
+                {"eid": work_order.equipment_id}
+            ).first()
+            if row:
+                d['equipment_license_plate'] = row[0]
+        except Exception:
+            pass
     return d
 
 

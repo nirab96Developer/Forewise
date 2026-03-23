@@ -161,6 +161,7 @@ class WorkOrderResponse(WorkOrderBase):
     project_name: Optional[str] = None
     supplier_name: Optional[str] = None
     equipment_name: Optional[str] = None
+    equipment_license_plate: Optional[str] = None
     location_name: Optional[str] = None
     area_name: Optional[str] = None
     region_name: Optional[str] = None
