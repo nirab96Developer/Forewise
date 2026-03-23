@@ -42,6 +42,12 @@ jobs:
             echo "✅ All tests passed!"
             cd ..
 
+            # Update SW cache version (force cache bust on every deploy)
+            echo ">> Updating SW version..."
+            VERSION=$(date +%Y%m%d%H%M)
+            sed -i "s/forewise-v[0-9.]*/forewise-v$VERSION/g" app_frontend/public/sw.js
+            echo "   SW version: forewise-v$VERSION"
+
             # Build frontend (clean)
             echo ">> Building frontend..."
             cd app_frontend
@@ -50,12 +56,13 @@ jobs:
             npm run build
             cd ..
 
-            # Restart backend
+            # Restart backend using start_production.sh (gunicorn)
             echo ">> Restarting backend..."
             cd app_backend
-            fuser -k 8000/tcp 2>/dev/null || true
+            pkill -f gunicorn 2>/dev/null || true
+            pkill -f uvicorn  2>/dev/null || true
             sleep 3
-            nohup .venv/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
+            nohup bash start_production.sh > /tmp/forewise_start.log 2>&1 &
 
             # Wait for backend
             echo ">> Waiting for backend..."
@@ -67,6 +74,7 @@ jobs:
               fi
               echo "   Attempt $i — waiting..."
             done
+            cd ..
 
             # Reload nginx
             systemctl reload nginx
