@@ -46,83 +46,73 @@ except ImportError:
 
 # Custom API metadata בעברית
 API_METADATA = {
-    "title": "Forewise API",
+    "title": "🌲 Forewise API",
     "description": """
-## Forewise — Field Operations Management
+## מערכת לניהול פרויקטים ויערות
 
-### Capabilities:
-* **Projects** — create, update and track projects
-* **Equipment** — allocation, maintenance and QR scans
-* **Suppliers** — fair rotation, work orders and performance tracking
-* **Work Logs** — field reporting, hours and automatic calculation
-* **Invoices** — automatic invoice generation
-* **Budgets** — budget management and allocation
-* **Reports** — management reports and analytics
+### אימות
+כל הendpoints (חוץ מ-/auth ו-/supplier-portal) דורשים JWT Bearer token.
+לחץ **Authorize** ↗ והכנס: `Bearer {token}`
 
-### Security:
-- JWT-based authentication
-- Advanced permissions (RBAC)
-- Full audit trail
+### קבוצות Endpoints
+| קבוצה | תיאור |
+|-------|-------|
+| 🔐 auth | כניסה, OTP, ניהול סיסמאות |
+| 👤 users | ניהול משתמשים |
+| 🎭 roles | תפקידים והרשאות |
+| 📁 projects | פרויקטים |
+| 📋 work_orders | הזמנות עבודה |
+| ⏱️ worklogs | דיווחי שעות |
+| 🚛 suppliers | ספקים |
+| 🔄 supplier_rotations | סבב הוגן |
+| 🌐 supplier_portal | פורטל ספקים (ציבורי) |
+| 🚜 equipment | ציוד |
+| 💰 budgets | תקציבים |
+| 🧾 invoices | חשבוניות |
+| 📊 pricing | דוחות תמחור |
+| 🏔️ regions / areas | מרחבים ואזורים |
+| 📈 dashboard | לוח בקרה |
+| 🔔 notifications | התראות |
+| 📝 activity_logs | יומן פעילות |
 
-### Status:
-- **Environment:** {environment}
-- **Version:** 1.0.0
-- **Database:** PostgreSQL
+**Environment:** {environment} | **Version:** 2.0.0 | **DB:** PostgreSQL
     """.format(environment=settings.ENVIRONMENT),
-    "version": "1.1.0",
-    "terms_of_service": "/terms",
+    "version": "2.0.0",
     "contact": {
-        "name": "צוות פיתוח",
-        "email": "dev@forewise.io"
+        "name": "Forewise Dev",
+        "email": "dev@forewise.co"
     },
-    "license": {
-        "name": "Private License",
-        "url": "#"
-    }
 }
 
 # Tags בעברית לקטגוריות
 tags_metadata = [
-    {
-        "name": "🏠 מערכת",
-        "description": "נתיבי מערכת ובדיקות תקינות"
-    },
-    {
-        "name": "אימות",
-        "description": "התחברות, הרשמה וניהול סיסמאות"
-    },
-    {
-        "name": "👤 משתמשים",
-        "description": "ניהול משתמשים ופרופילים"
-    },
-    {
-        "name": "📋 פרויקטים",
-        "description": "ניהול פרויקטים ומשימות"
-    },
-    {
-        "name": "🚜 ציוד",
-        "description": "ניהול ציוד ותחזוקה"
-    },
-    {
-        "name": "👷 ספקים",
-        "description": "ניהול ספקים והזמנות"
-    },
-    {
-        "name": "⏰ דיווחים",
-        "description": "דיווחי שעות ועבודה"
-    },
-    {
-        "name": "💰 כספים",
-        "description": "חשבוניות ותקציבים"
-    },
-    {
-        "name": "🔧 ניהול",
-        "description": "ניהול מערכת והגדרות"
-    },
-    {
-        "name": "🐛 Debug",
-        "description": "כלי דיבוג ובדיקה (רק במצב פיתוח)"
-    }
+    {"name": "auth",                   "description": "🔐 כניסה, OTP, ניהול סיסמאות"},
+    {"name": "users",                  "description": "👤 ניהול משתמשים"},
+    {"name": "roles",                  "description": "🎭 תפקידים והרשאות"},
+    {"name": "permissions",            "description": "🔒 הרשאות"},
+    {"name": "projects",               "description": "📁 פרויקטים"},
+    {"name": "project_assignments",    "description": "📌 הקצאות לפרויקטים"},
+    {"name": "work_orders",            "description": "📋 הזמנות עבודה"},
+    {"name": "worklogs",               "description": "⏱️ דיווחי שעות"},
+    {"name": "suppliers",              "description": "🚛 ספקים"},
+    {"name": "supplier_rotations",     "description": "🔄 סבב הוגן"},
+    {"name": "supplier_portal",        "description": "🌐 פורטל ספקים (ציבורי)"},
+    {"name": "equipment",              "description": "🚜 ציוד"},
+    {"name": "equipment_types",        "description": "📂 סוגי ציוד"},
+    {"name": "equipment_categories",   "description": "🗂️ קטגוריות ציוד"},
+    {"name": "budgets",                "description": "💰 תקציבים"},
+    {"name": "invoices",               "description": "🧾 חשבוניות"},
+    {"name": "pricing",                "description": "📊 דוחות תמחור"},
+    {"name": "regions",                "description": "🏔️ מרחבים"},
+    {"name": "areas",                  "description": "🗺️ אזורים"},
+    {"name": "locations",              "description": "📍 מיקומים"},
+    {"name": "dashboard",              "description": "📈 לוח בקרה"},
+    {"name": "notifications",          "description": "🔔 התראות"},
+    {"name": "activity_logs",          "description": "📝 יומן פעילות"},
+    {"name": "geo",                    "description": "🌍 נתוני GIS ומפות"},
+    {"name": "settings",               "description": "⚙️ הגדרות מערכת"},
+    {"name": "sync",                   "description": "🔁 סנכרון offline"},
+    {"name": "WebSocket",              "description": "🔌 WebSocket — התראות real-time"},
 ]
 
 # Import routers
@@ -189,8 +179,15 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json",
     debug=settings.DEBUG,
-    openapi_tags=tags_metadata
-    # Note: keeping redirect_slashes=True (default) for compatibility
+    openapi_tags=tags_metadata,
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": -1,
+        "docExpansion": "none",
+        "filter": True,
+        "tagsSorter": "alpha",
+        "operationsSorter": "alpha",
+        "persistAuthorization": True,
+    }
 )
 
 # Configure CORS
