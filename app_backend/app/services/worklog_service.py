@@ -351,7 +351,10 @@ class WorklogService:
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
         
+        from datetime import datetime as _dt
         worklog.status = 'APPROVED'
+        worklog.approved_by_user_id = current_user_id
+        worklog.approved_at = _dt.utcnow()
         db.commit()
         db.refresh(worklog)
         
