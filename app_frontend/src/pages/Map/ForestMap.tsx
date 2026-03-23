@@ -24,11 +24,19 @@ const ForestMap = () => {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [myProjectIds, setMyProjectIds] = useState(new Set());
-  const [layerVis, setLayerVis] = useState<Record<string, boolean>>({ regions: true, areas: true, projects: true, myProjects: false });
-
   let userData: any = {};
   try { userData = JSON.parse(localStorage.getItem('user') || '{}'); } catch { /* corrupted storage */ }
   const userAreaId = userData.area_id;
+  const userRole = userData.role || userData.role_code || '';
+  const isWorkManager = userRole === 'WORK_MANAGER' || userRole === 'FIELD_WORKER';
+
+  // WORK_MANAGER sees only their projects — hide region/area layers
+  const [layerVis, setLayerVis] = useState<Record<string, boolean>>({
+    regions: !isWorkManager,
+    areas: !isWorkManager,
+    projects: true,
+    myProjects: isWorkManager,
+  });
 
   useEffect(() => {
     (async () => {
@@ -137,7 +145,14 @@ const ForestMap = () => {
         <div className="p-4 border-b">
           <h3 className="text-xs font-bold text-gray-500 mb-2">שכבות</h3>
           <div className="space-y-1.5">
-            {[{key:'regions',label:'מרחבים',icon:'🗺️'},{key:'areas',label:'אזורים',icon:'📍'},{key:'projects',label:'פרויקטים',icon:'🌲'},{key:'myProjects',label:'שלי',icon:'⭐'}].map(l => (
+            {[
+              {key:'regions',label:'מרחבים',icon:'🗺️'},
+              {key:'areas',label:'אזורים',icon:'📍'},
+              {key:'projects',label:'פרויקטים',icon:'🌲'},
+              {key:'myProjects',label:'שלי',icon:'⭐'},
+            ]
+              .filter(l => isWorkManager ? !['regions','areas'].includes(l.key) : true)
+              .map(l => (
               <button key={l.key} onClick={() => toggleLayer(l.key)}
                 className={`w-full flex items-center gap-3 px-4.5 py-2.5 rounded-lg text-sm touch-manipulation ${layerVis[l.key] ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-gray-50 text-gray-400 border border-gray-200'}`}>
                 <span>{l.icon}</span><span className="flex-1 text-right font-medium">{l.label}</span>
@@ -147,21 +162,23 @@ const ForestMap = () => {
           </div>
         </div>
 
-        <div className="p-4 border-b">
-          <h3 className="text-xs font-bold text-gray-500 mb-2">מרחבים</h3>
-          <button onClick={() => { setSelectedRegion(null); setSidebarOpen(false); }}
-            className={`w-full flex items-center gap-3 px-4.5 py-2.5 rounded-lg text-sm mb-1 touch-manipulation ${!selectedRegion ? 'bg-gray-100 font-bold' : 'hover:bg-gray-50'}`}>
-            <Home className="w-4 h-4 text-gray-500" /><span>כל הארץ</span>
-          </button>
-          {Object.entries(REGION_COLORS).map(([id, cfg]) => (
-            <button key={id} onClick={() => { setSelectedRegion(Number(id)); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4.5 py-2.5 rounded-lg text-sm mb-0.5 touch-manipulation ${selectedRegion === Number(id) ? 'bg-green-100 font-bold text-green-800' : 'hover:bg-gray-50'}`}>
-              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.fill }} />
-              <span>{cfg.name}</span>
-              <span className="mr-auto text-xs text-gray-400">{layerData?.projects?.filter((p: any) => p.region_id === Number(id)).length || 0}</span>
+        {!isWorkManager && (
+          <div className="p-4 border-b">
+            <h3 className="text-xs font-bold text-gray-500 mb-2">מרחבים</h3>
+            <button onClick={() => { setSelectedRegion(null); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4.5 py-2.5 rounded-lg text-sm mb-1 touch-manipulation ${!selectedRegion ? 'bg-gray-100 font-bold' : 'hover:bg-gray-50'}`}>
+              <Home className="w-4 h-4 text-gray-500" /><span>כל הארץ</span>
             </button>
-          ))}
-        </div>
+            {Object.entries(REGION_COLORS).map(([id, cfg]) => (
+              <button key={id} onClick={() => { setSelectedRegion(Number(id)); setSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4.5 py-2.5 rounded-lg text-sm mb-0.5 touch-manipulation ${selectedRegion === Number(id) ? 'bg-green-100 font-bold text-green-800' : 'hover:bg-gray-50'}`}>
+                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.fill }} />
+                <span>{cfg.name}</span>
+                <span className="mr-auto text-xs text-gray-400">{layerData?.projects?.filter((p: any) => p.region_id === Number(id)).length || 0}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {selectedProject && (
           <div className="p-3 bg-green-50 border-b">

@@ -31,6 +31,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
   const username = location.state?.username || localStorage.getItem('otp_username') || '';
   const userIdFromState = location.state?.userId || parseInt(localStorage.getItem('otp_user_id') || '0');
   const otpToken = location.state?.otpToken || localStorage.getItem('otp_token');
+  const isFirstLogin = location.state?.isFirstLogin || false;
 
   // קבלת userId מה-state
   useEffect(() => {
@@ -299,6 +300,11 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
             <Fingerprint className="w-10 h-10 text-green-600" />
           </div>
           <h1 className="text-3xl font-bold text-green-900 mb-3">אימות דו-שלבי</h1>
+          {isFirstLogin && (
+            <div className="mb-3 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm font-medium">
+              🎉 כניסה ראשונה — אמת את זהותך ואז תועבר לשינוי סיסמה
+            </div>
+          )}
           <p className="text-gray-600 text-lg">
             שלחנו קוד אימות לכתובת המייל שלך
           </p>

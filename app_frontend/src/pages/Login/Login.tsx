@@ -134,7 +134,8 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
             state: { 
               username: actualUsername,
               userId: data.user_id,
-              otpToken: data.otp_token
+              otpToken: data.otp_token,
+              isFirstLogin: data.is_first_login || false,
             }
           });
           return;
