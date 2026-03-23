@@ -135,6 +135,10 @@ interface WorkManagerSummary {
   active_work_orders: number;
   equipment_in_use: number;
   pending_worklogs: number;
+  pending_scan: number;
+  pending_worklogs_fill: number;
+  submitted_worklogs: number;
+  area_manager?: { name: string; email: string; phone: string } | null;
 }
 
 interface ActivityLogEntry {
@@ -507,11 +511,50 @@ const GenericDashboard: React.FC<{title?: string}> = ({ title }) => {
                       </div>
                     </div>
 
-                    {/* Pending worklogs badge */}
-                    {wmSummary.pending_worklogs > 0 && (
-                      <div className="flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 mt-2">
-                        <span className="text-sm text-yellow-800">דיווחים ממתינים לאישור</span>
-                        <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">{wmSummary.pending_worklogs}</span>
+                    {/* Action counters */}
+                    <div className="space-y-2 mt-2">
+                      {(wmSummary.pending_scan ?? 0) > 0 && (
+                        <button
+                          onClick={() => navigate('/projects?filter=pending_scan')}
+                          className="w-full flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 hover:bg-orange-100 transition-colors text-right"
+                        >
+                          <span className="text-sm text-orange-800">ממתינות לסריקת כלי</span>
+                          <span className="bg-orange-400 text-white text-xs font-bold px-2 py-0.5 rounded-full">{wmSummary.pending_scan}</span>
+                        </button>
+                      )}
+                      {(wmSummary.pending_worklogs_fill ?? 0) > 0 && (
+                        <button
+                          onClick={() => navigate('/projects?filter=pending_worklogs')}
+                          className="w-full flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 hover:bg-blue-100 transition-colors text-right"
+                        >
+                          <span className="text-sm text-blue-800">דיווחים להשלמה</span>
+                          <span className="bg-blue-400 text-white text-xs font-bold px-2 py-0.5 rounded-full">{wmSummary.pending_worklogs_fill}</span>
+                        </button>
+                      )}
+                      {(wmSummary.submitted_worklogs ?? 0) > 0 && (
+                        <button
+                          onClick={() => navigate('/activity-logs')}
+                          className="w-full flex items-center justify-between bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 hover:bg-yellow-100 transition-colors text-right"
+                        >
+                          <span className="text-sm text-yellow-800">דיווחים ממתינים לאישור</span>
+                          <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">{wmSummary.submitted_worklogs}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Area manager card */}
+                    {wmSummary.area_manager && (
+                      <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p className="text-xs text-gray-500 mb-1">👤 מנהל האזור שלי</p>
+                        <p className="font-semibold text-gray-900 text-sm">{wmSummary.area_manager.name}</p>
+                        <div className="flex gap-3 mt-2">
+                          {wmSummary.area_manager.phone && (
+                            <a href={`tel:${wmSummary.area_manager.phone}`} className="text-green-700 text-xs hover:underline">📞 {wmSummary.area_manager.phone}</a>
+                          )}
+                          {wmSummary.area_manager.email && (
+                            <a href={`mailto:${wmSummary.area_manager.email}`} className="text-green-700 text-xs hover:underline">✉️ מייל</a>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
