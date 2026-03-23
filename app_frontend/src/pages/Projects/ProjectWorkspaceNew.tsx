@@ -1104,7 +1104,7 @@ const WorklogsTab: React.FC<{
         {canAddReport && !showForm && (
           <button
             onClick={() => { setShowForm(true); setForm({ ...EMPTY_FORM, work_order_id: approvedOrders[0]?.id?.toString() || '' }); }}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1"
+            className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1"
           >
             <Plus className="w-4 h-4" />
             דיווח חדש
@@ -1129,7 +1129,7 @@ const WorklogsTab: React.FC<{
       {/* ── Inline worklog form ── */}
       {showForm && (
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-          <div className="bg-blue-600 px-4 py-3 flex items-center justify-between">
+          <div className="bg-green-700 px-4 py-3 flex items-center justify-between">
             <span className="font-bold text-white text-sm">דיווח שעות חדש</span>
             <button onClick={() => setShowForm(false)} className="p-1 hover:bg-white/20 rounded-lg">
               <X className="w-4 h-4 text-white" />
@@ -1331,7 +1331,7 @@ const WorklogsTab: React.FC<{
                       דיווח
                     </button>
                     <button
-                      onClick={() => navigate(`/work-orders/${order.id}`)}
+                      onClick={() => window.open(`/api/v1/work-orders/${order.id}/pdf`, '_blank')}
                       className="flex items-center justify-center gap-1.5 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-sm font-medium transition-colors"
                     >
                       <Eye className="w-4 h-4" />
