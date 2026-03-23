@@ -59,6 +59,25 @@ echo "👥 Workers: $WORKERS"
 echo "📚 API Docs: http://0.0.0.0:8000/docs"
 echo "================================================"
 
-# Use Gunicorn for production
-exec gunicorn -c gunicorn.conf.py wsgi:application
+# Use Gunicorn for production — nohup background so it survives SSH disconnects
+LOG_FILE="$(pwd)/logs/gunicorn.log"
+mkdir -p "$(pwd)/logs"
+
+nohup gunicorn -c gunicorn.conf.py wsgi:application \
+  >> "$LOG_FILE" 2>&1 &
+
+GPID=$!
+echo "🌲 Gunicorn started — PID: $GPID"
+echo "📄 Log: $LOG_FILE"
+
+# Wait and verify
+sleep 5
+if kill -0 "$GPID" 2>/dev/null; then
+    echo "✅ Gunicorn is running (PID $GPID)"
+    curl -s --max-time 5 http://localhost:8000/api/v1/health && echo ""
+else
+    echo "❌ Gunicorn failed to start — check $LOG_FILE"
+    tail -20 "$LOG_FILE"
+    exit 1
+fi
 
