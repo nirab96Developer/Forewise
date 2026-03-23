@@ -98,6 +98,9 @@ class ProjectResponse(ProjectBase):
     area_name:    Optional[str] = None
     manager_name: Optional[str] = None
 
+    # Budget summary (populated in list endpoint)
+    allocated_budget: Optional[float] = None
+
     # Nested location (optional, loaded when needed)
     location: Optional[LocationBrief] = None
 

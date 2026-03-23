@@ -496,9 +496,16 @@ const MyJournal: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
+                  const STATUS_HE: Record<string, string> = {
+                    completed: 'הושלם', approved: 'מאושר',
+                    pending: 'ממתין לאישור', rejected: 'נדחה',
+                    submitted: 'נשלח', draft: 'טיוטה',
+                  };
                   const headers = ['תאריך', 'שעה', 'פעולה', 'פרויקט', 'סטטוס'];
                   const rows = activities.map((e: ActivityEvent) => [
-                    e.date, e.time, e.title, e.projectName || '', e.status,
+                    e.date, e.time, e.title,
+                    e.projectName || '',
+                    STATUS_HE[e.status] || e.status,
                   ]);
                   openExportPdf('היומן שלי — פעילות', headers, rows);
                 }}

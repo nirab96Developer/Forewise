@@ -88,12 +88,12 @@ const ProjectsClean: React.FC = () => {
   const getStatusConfig = (project: Project) => {
     const effective = getEffectiveStatus(project);
     const configs: Record<string, { text: string; bg: string; textColor: string }> = {
-      'active':    { text: 'פעיל',     bg: 'bg-green-100',  textColor: 'text-green-800'  },
-      'planning':  { text: 'בתכנון',   bg: 'bg-yellow-100', textColor: 'text-yellow-800' },
-      'completed': { text: 'הושלם',    bg: 'bg-blue-100',   textColor: 'text-blue-800'   },
-      'on_hold':   { text: 'מושהה',    bg: 'bg-orange-100', textColor: 'text-orange-800' },
-      'cancelled': { text: 'בוטל',     bg: 'bg-red-100',    textColor: 'text-red-800'    },
-      'planned':   { text: 'בתכנון',   bg: 'bg-yellow-100', textColor: 'text-yellow-800' },
+      'active':    { text: 'פעיל',   bg: 'bg-green-100', textColor: 'text-green-800'  },
+      'planning':  { text: 'בתכנון', bg: 'bg-blue-100',  textColor: 'text-blue-800'   },
+      'completed': { text: 'הושלם',  bg: 'bg-green-100', textColor: 'text-green-800'  },
+      'on_hold':   { text: 'מושהה',  bg: 'bg-orange-100',textColor: 'text-orange-800' },
+      'cancelled': { text: 'בוטל',   bg: 'bg-red-100',   textColor: 'text-red-800'    },
+      'planned':   { text: 'בתכנון', bg: 'bg-blue-100',  textColor: 'text-blue-800'   },
     };
     return configs[effective] || { text: 'פעיל', bg: 'bg-green-100', textColor: 'text-green-800' };
   };
@@ -268,13 +268,13 @@ const ProjectsClean: React.FC = () => {
               <div
                 key={project.id}
                 className={`bg-white rounded-2xl border-2 flex flex-col hover:shadow-lg transition-shadow duration-200 cursor-pointer group ${
-                  isActive ? 'border-green-100 hover:border-green-300' : isPlanning ? 'border-yellow-100 hover:border-yellow-300' : 'border-gray-100 hover:border-gray-300'
+                  isActive ? 'border-green-100 hover:border-green-300' : isPlanning ? 'border-blue-100 hover:border-blue-300' : 'border-gray-100 hover:border-gray-300'
                 }`}
                 style={{ willChange: 'transform' }}
                 onClick={() => navigate(`/projects/${project.code}/workspace`)}
               >
                 {/* Colored top strip */}
-                <div className={`h-1.5 rounded-t-2xl ${isActive ? 'bg-green-500' : isPlanning ? 'bg-yellow-400' : 'bg-gray-300'}`} />
+                <div className={`h-1.5 rounded-t-2xl ${isActive ? 'bg-green-500' : isPlanning ? 'bg-blue-400' : 'bg-gray-300'}`} />
 
                 {/* Card Body — grows to fill height */}
                 <div className="flex flex-col flex-1 p-5">

@@ -75,6 +75,19 @@ def list_projects(
         total = len(items)
 
     total_pages = (total + search.page_size - 1) // search.page_size if total > 0 else 1
+
+    # Enrich items with budget total so frontend can determine active vs. planning
+    from sqlalchemy import text as sa_text
+    if items:
+        ids = [p.id for p in items]
+        budget_rows = db.execute(sa_text(
+            "SELECT project_id, COALESCE(total_amount,0) FROM budgets "
+            "WHERE project_id = ANY(:ids) AND is_active=true AND deleted_at IS NULL"
+        ), {"ids": ids}).fetchall()
+        budget_map = {r[0]: float(r[1]) for r in budget_rows}
+        for p in items:
+            p.__dict__['allocated_budget'] = budget_map.get(p.id, 0.0)
+
     return ProjectList(items=items, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
 
