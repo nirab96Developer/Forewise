@@ -772,6 +772,13 @@ def remove_equipment_from_project(
                 eq.assigned_project_id = None
             work_order.equipment_id = None
 
+        # Clear all equipment-related fields
+        work_order.equipment_scanned = False
+        if hasattr(work_order, 'license_plate'):
+            work_order.license_plate = None
+        if hasattr(work_order, 'equipment_scan'):
+            work_order.equipment_scan = None
+
         work_order.status = "STOPPED"
         work_order.updated_at = datetime.utcnow()
 
