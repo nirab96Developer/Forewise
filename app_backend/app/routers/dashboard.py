@@ -947,25 +947,25 @@ async def get_work_manager_summary(
           AND w.is_active = true
     """), {"uid": current_user.id}).scalar() or 0
 
-    # Approved work orders where equipment not yet scanned
+    # Approved work orders where equipment not yet assigned (equipment_id IS NULL = not scanned)
     pending_scan = db.execute(text("""
         SELECT COUNT(*)
         FROM work_orders wo
         WHERE wo.created_by_id = :uid
           AND UPPER(wo.status) = 'APPROVED_AND_SENT'
-          AND (wo.equipment_scanned IS NULL OR wo.equipment_scanned = false)
+          AND wo.equipment_id IS NULL
           AND wo.deleted_at IS NULL
           AND wo.is_active = true
     """), {"uid": current_user.id}).scalar() or 0
 
-    # Equipment scanned but worklogs incomplete
+    # Equipment assigned but worklogs incomplete (has equipment but hours not filled)
     pending_worklogs_fill = db.execute(text("""
         SELECT COUNT(*)
         FROM work_orders wo
         WHERE wo.created_by_id = :uid
           AND UPPER(wo.status) = 'APPROVED_AND_SENT'
-          AND wo.equipment_scanned = true
-          AND COALESCE(wo.actual_hours, 0) < COALESCE(wo.estimated_hours, 0)
+          AND wo.equipment_id IS NOT NULL
+          AND COALESCE(wo.actual_hours, 0) < COALESCE(wo.estimated_hours, 1)
           AND wo.deleted_at IS NULL
           AND wo.is_active = true
     """), {"uid": current_user.id}).scalar() or 0
