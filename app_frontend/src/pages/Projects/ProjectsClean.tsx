@@ -167,35 +167,41 @@ const ProjectsClean: React.FC = () => {
             </div>
             
             <div className="flex gap-3 items-center">
-              <button
-                onClick={() => setMyProjectsOnly(!myProjectsOnly)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-medium transition-colors ${
-                  myProjectsOnly 
-                    ? 'bg-green-100 border-green-400 text-green-700' 
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <User className="w-4 h-4" />
-                שלי
-              </button>
-              
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="pr-4 pl-10 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
-              >
-                <option value="all">כל הפרויקטים</option>
-                <option value="active">פעילים</option>
-                <option value="completed">הושלמו</option>
-              </select>
-              
-              <Link
-                to="/projects/new"
-                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                <Plus className="w-5 h-5" />
-                פרויקט חדש
-              </Link>
+              {_userRole !== 'WORK_MANAGER' && _userRole !== 'FIELD_WORKER' && (
+                <button
+                  onClick={() => setMyProjectsOnly(!myProjectsOnly)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-medium transition-colors ${
+                    myProjectsOnly 
+                      ? 'bg-green-100 border-green-400 text-green-700' 
+                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  שלי
+                </button>
+              )}
+
+              {_userRole !== 'WORK_MANAGER' && _userRole !== 'FIELD_WORKER' && (
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="pr-4 pl-10 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                >
+                  <option value="all">כל הפרויקטים</option>
+                  <option value="active">פעילים</option>
+                  <option value="completed">הושלמו</option>
+                </select>
+              )}
+
+              {!['WORK_MANAGER', 'FIELD_WORKER'].includes(_userRole) && (
+                <Link
+                  to="/projects/new"
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  פרויקט חדש
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -338,7 +344,7 @@ const ProjectsClean: React.FC = () => {
         {/* Stats Summary */}
         {filteredProjects.length > 0 && (
           <div className="mt-8 bg-white rounded-lg border border-gray-200 p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className={`grid gap-6 ${['WORK_MANAGER','FIELD_WORKER'].includes(_userRole) ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
               <div className="text-center">
                 <p className="text-2xl font-bold text-gray-900">{filteredProjects.length}</p>
                 <p className="text-sm text-gray-600 mt-1">סה"כ פרויקטים</p>
@@ -349,21 +355,25 @@ const ProjectsClean: React.FC = () => {
                 </p>
                 <p className="text-sm text-gray-600 mt-1">פרויקטים פעילים</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">
-                  {filteredProjects.filter(p => (p.status || '').toLowerCase() === 'completed').length}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">פרויקטים שהושלמו</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-orange-600">
-                  {Math.round(
-                    filteredProjects.reduce((sum, p) => sum + (p.progress_percentage || 0), 0) / 
-                    (filteredProjects.length || 1)
-                  )}%
-                </p>
-                <p className="text-sm text-gray-600 mt-1">התקדמות ממוצעת</p>
-              </div>
+              {!['WORK_MANAGER','FIELD_WORKER'].includes(_userRole) && (
+                <>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">
+                      {filteredProjects.filter(p => (p.status || '').toLowerCase() === 'completed').length}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">פרויקטים שהושלמו</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-orange-600">
+                      {Math.round(
+                        filteredProjects.reduce((sum, p) => sum + (p.progress_percentage || 0), 0) /
+                        (filteredProjects.length || 1)
+                      )}%
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">התקדמות ממוצעת</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
