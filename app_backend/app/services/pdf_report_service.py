@@ -61,6 +61,16 @@ class PDFReportService:
                 "work_manager_name": report_data.get("work_manager_name", ""),
                 "document_id": report_data.get("document_id", f"WR-{datetime.now().strftime('%Y%m%d%H%M%S')}"),
                 "generated_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                # Standard / non-standard
+                "is_standard": report_data.get("is_standard", True),
+                "non_standard_reason": report_data.get("non_standard_reason", ""),
+                # Overnight
+                "is_overnight": report_data.get("is_overnight", False),
+                "overnight_nights": report_data.get("overnight_nights", 1),
+                "overnight_rate": report_data.get("overnight_rate", 250),
+                "overnight_total": report_data.get("overnight_nights", 1) * report_data.get("overnight_rate", 250),
+                # Logo
+                "logo_base64": report_data.get("logo_base64", ""),
             }
             
             html_content = template.render(**data)
