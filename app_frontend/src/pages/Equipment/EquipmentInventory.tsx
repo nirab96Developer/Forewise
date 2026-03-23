@@ -75,9 +75,10 @@ const EquipmentInventory: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Load all equipment in batches (up to 2000)
       const [eqRes, supRes] = await Promise.all([
-        api.get('/equipment', { params: { page_size: 500 } }),
-        api.get('/suppliers', { params: { page_size: 200 } })
+        api.get('/equipment', { params: { page_size: 2000 } }),
+        api.get('/suppliers', { params: { page_size: 500 } })
       ]);
       const eqData = eqRes.data?.items || eqRes.data || [];
       const supData = supRes.data?.items || supRes.data || [];
@@ -317,10 +318,10 @@ const EquipmentInventory: React.FC = () => {
                         {/* Table header */}
                         <div className="hidden md:grid grid-cols-12 gap-2 px-5 py-2 bg-gray-50 text-xs font-medium text-gray-500">
                           <div className="col-span-2">מספר רישוי</div>
-                          <div className="col-span-3">שם / סוג כלי</div>
-                          <div className="col-span-2">סוג ציוד</div>
+                          <div className="col-span-3">סוג ציוד / קטגוריה</div>
+                          <div className="col-span-3">שם / מזהה</div>
                           <div className="col-span-2">תעריף שעתי</div>
-                          <div className="col-span-2">סטטוס</div>
+                          <div className="col-span-1">סטטוס</div>
                           <div className="col-span-1"></div>
                         </div>
 
@@ -336,8 +337,8 @@ const EquipmentInventory: React.FC = () => {
                                   <Truck className="w-4 h-4 text-white" />
                                 </div>
                                 <div>
-                                  <div className="font-bold text-gray-900">{eq.license_plate || eq.code}</div>
-                                  <div className="text-xs text-gray-500">{eq.name || eq.equipment_type}</div>
+                                  <div className="font-bold text-gray-900">{eq.equipment_type || eq.name || '—'}</div>
+                                  <div className="text-xs text-gray-500 font-mono">{eq.license_plate || eq.code}</div>
                                 </div>
                               </div>
                               <div className="text-left">
@@ -352,23 +353,29 @@ const EquipmentInventory: React.FC = () => {
 
                             {/* Desktop layout */}
                             <div className="hidden md:contents">
+                              {/* License plate */}
                               <div className="col-span-2 flex items-center gap-2">
                                 <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0">
                                   <Truck className="w-3.5 h-3.5 text-white" />
                                 </div>
                                 <span className="font-mono font-bold text-gray-900 text-sm">{eq.license_plate || eq.code}</span>
                               </div>
-                              <div className="col-span-3 text-sm text-gray-700 truncate">{eq.name || eq.equipment_type || '—'}</div>
-                              <div className="col-span-2">
-                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${getTypeColor(eq.equipment_type || eq.name || '')}`}>
-                                  {eq.equipment_type || eq.name || '—'}
+                              {/* Equipment TYPE — main column */}
+                              <div className="col-span-3">
+                                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${getTypeColor(eq.equipment_type || '')}`}>
+                                  {eq.equipment_type || '—'}
                                 </span>
                               </div>
-                              <div className="col-span-2 font-bold text-emerald-600 text-sm">
-                                {eq.hourly_rate ? `₪${eq.hourly_rate.toLocaleString()}` : '—'}
-                                {eq.daily_rate ? <span className="text-xs text-gray-400 font-normal mr-1">/ ₪{eq.daily_rate} יומי</span> : ''}
+                              {/* Equipment name / identifier */}
+                              <div className="col-span-3 text-sm text-gray-500 truncate">
+                                {eq.name && eq.name !== eq.equipment_type ? eq.name : (eq.code || '—')}
                               </div>
-                              <div className="col-span-2">
+                              {/* Rate */}
+                              <div className="col-span-2 font-bold text-emerald-600 text-sm">
+                                {eq.hourly_rate ? `₪${eq.hourly_rate.toLocaleString()}/שעה` : '—'}
+                              </div>
+                              {/* Status */}
+                              <div className="col-span-1">
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${eq.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                   {eq.is_active ? 'פעיל' : 'לא פעיל'}
                                 </span>
