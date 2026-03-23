@@ -159,20 +159,6 @@ const settingsCategories: SettingsCategory[] = [
         path: '/settings/work-hours',
       },
       {
-        id: 'fair-rotation',
-        title: 'סבב הוגן',
-        description: 'הגדרות סבב הקצאת ספקים',
-        icon: <RotateCcw className="w-5 h-5" />,
-        path: '/settings/fair-rotation',
-      },
-      {
-        id: 'constraint-reasons',
-        title: 'סיבות אילוץ ספק',
-        description: 'ניהול סיבות לבחירת ספק ידנית',
-        icon: <AlertTriangle className="w-5 h-5" />,
-        path: '/settings/constraint-reasons',
-      },
-      {
         id: 'equipment-catalog',
         title: 'קטלוג כלים',
         description: 'קטגוריות כלים ותעריפי ברירת מחדל',

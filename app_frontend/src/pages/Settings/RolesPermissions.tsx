@@ -75,7 +75,10 @@ const RolesPermissions: React.FC = () => {
       const permissionsData = permissionsRes?.data?.items || permissionsRes?.data || [];
       
       setRoles(Array.isArray(rolesData) ? rolesData : []);
-      setPermissions(Array.isArray(permissionsData) ? permissionsData : []);
+      // Filter out junk test permissions
+      const cleanPerms = (Array.isArray(permissionsData) ? permissionsData : [])
+        .filter((p: any) => !p.code?.startsWith('test.') && p.name !== 'Code Test Permission' && p.name !== 'Test Create Permission' && p.name !== 'Delete Test Permission' && p.name !== 'First Permission' && p.name !== 'Updated Permission Name');
+      setPermissions(cleanPerms);
     } catch (err) {
       console.error('Error loading data:', err);
       setRoles([]);
