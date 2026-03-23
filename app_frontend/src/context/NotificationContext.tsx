@@ -54,12 +54,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await api.get(`/notifications/?user_id=${userId}`);
-      // setNotifications(response.data);
-      
-      // Temporary: empty list until API is ready
-      setNotifications([]);
+      const response = await api.get('/notifications/?limit=20&unread_only=false');
+      const items = response.data?.items || response.data || [];
+      setNotifications(Array.isArray(items) ? items : []);
     } catch (error) {
       console.error('Error loading notifications:', error);
       setNotifications([]);
@@ -70,9 +67,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   const markAsRead = async (id: number) => {
     try {
-      // TODO: Replace with actual API call
-      // await api.post(`/notifications/${id}/read`);
-      
+      await api.patch(`/notifications/${id}/read`);
       setNotifications(prev =>
         prev.map(n =>
           n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
@@ -85,9 +80,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   const markAllAsRead = async () => {
     try {
-      // TODO: Replace with actual API call
-      // await api.post(`/notifications/read-all`);
-      
+      await api.patch('/notifications/read-all');
       setNotifications(prev =>
         prev.map(n => ({
           ...n,
