@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { 
   ArrowRight, Calendar, Clock, Truck, Users, FileText, 
-  AlertCircle, CheckCircle, Info, Shield, Moon, CircleDollarSign
+  AlertCircle, CheckCircle, Info, Shield, Moon
 } from 'lucide-react';
 import workOrderService, { WorkOrderCreate } from '../../services/workOrderService';
 import projectService from '../../services/projectService';
@@ -548,87 +548,22 @@ const NewWorkOrder: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-6 space-y-4 pt-5 border-t border-kkl-border">
-              <div className="grid grid-cols-12 gap-4">
-                <div className="col-span-12 sm:col-span-6">
-                  <label className="block text-sm font-medium text-kkl-text mb-2">
-                    תעריף שעתי (₪ לשעה)
-                  </label>
-                  <input
-                    type="number"
-                    name="hourly_rate"
-                    min="0"
-                    step="1"
-                    value={formData.hourly_rate}
-                    onChange={handleChange}
-                    placeholder={`ברירת מחדל ${DEFAULT_HOURLY_RATE}`}
-                    className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">ריק = ₪{DEFAULT_HOURLY_RATE} לשעה לתחזית</p>
-                </div>
-
-                <div className="col-span-12 sm:col-span-6">
-                  <label className="block text-sm font-medium text-kkl-text mb-2">
-                    שיטת הקצאה
-                  </label>
-                  <select
-                    value={formData.allocation_method === 'fair_rotation' ? 'FAIR_ROTATION' : 'MANUAL'}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setFormData((prev) => ({
-                        ...prev,
-                        allocation_method: v === 'FAIR_ROTATION' ? 'fair_rotation' : 'supplier_selection'
-                      }));
-                    }}
-                    className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
-                  >
-                    <option value="FAIR_ROTATION">סבב הוגן</option>
-                    <option value="MANUAL">בחירה ידנית</option>
-                  </select>
-                </div>
-              </div>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="has_overnight"
-                  checked={formData.has_overnight}
-                  onChange={handleChange}
-                  className="w-5 h-5 rounded border-kkl-border text-kkl-green focus:ring-kkl-green"
-                />
-                <div className="flex items-center gap-2">
-                  <Moon className="w-4 h-4 text-indigo-500" />
-                  <span className="text-sm text-kkl-text">לינת שטח</span>
-                </div>
+            {/* תעריף שעתי — inside work details block */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-kkl-text mb-2">
+                תעריף שעתי (₪ לשעה)
               </label>
-
-              {formData.has_overnight && (
-                <p className="text-sm text-gray-600">
-                  לילות לינה: <span className="font-semibold text-kkl-text">{overnightNightsComputed}</span>
-                  <span className="text-gray-500 text-xs mr-2"> (אוטומטי לפי מספר הימים)</span>
-                </p>
-              )}
-
-              <div className="p-4 bg-kkl-green-light/50 border border-kkl-green/25 rounded-lg">
-                <div className="flex items-center gap-2 text-sm font-semibold text-kkl-text mb-3">
-                  <CircleDollarSign className="w-5 h-5 text-kkl-green" />
-                  תחזית עלות
-                </div>
-                <ul className="space-y-2 text-sm text-kkl-text">
-                  <li className="flex justify-between gap-2">
-                    <span>עלות שעות ({totalHours} ש׳ × ₪{rateForEstimate.toLocaleString('he-IL')})</span>
-                    <span className="font-medium tabular-nums">₪{hoursCostEstimate.toLocaleString('he-IL')}</span>
-                  </li>
-                  <li className="flex justify-between gap-2">
-                    <span>עלות לינה ({overnightNightsComputed} לילות × ₪{OVERNIGHT_NIGHT_RATE.toLocaleString('he-IL')})</span>
-                    <span className="font-medium tabular-nums">₪{overnightCostEstimate.toLocaleString('he-IL')}</span>
-                  </li>
-                  <li className="flex justify-between gap-2 pt-2 border-t border-kkl-green/20 font-semibold">
-                    <span>סה״כ משוער</span>
-                    <span className="text-kkl-green tabular-nums">₪{totalAmountEstimate.toLocaleString('he-IL')}</span>
-                  </li>
-                </ul>
-              </div>
+              <input
+                type="number"
+                name="hourly_rate"
+                min="0"
+                step="1"
+                value={formData.hourly_rate}
+                onChange={handleChange}
+                placeholder={`ברירת מחדל ${DEFAULT_HOURLY_RATE}`}
+                className="w-full sm:w-1/2 pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+              />
+              <p className="text-xs text-gray-500 mt-1">ריק = ₪{DEFAULT_HOURLY_RATE} לשעה</p>
             </div>
           </div>
 
