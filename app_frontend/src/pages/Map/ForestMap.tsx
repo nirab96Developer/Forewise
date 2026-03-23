@@ -123,6 +123,35 @@ const ForestMap = () => {
   const toggleLayer = (key: string) => setLayerVis((prev: any) => ({ ...prev, [key]: !prev[key] }));
   const goBackToMenu = () => navigate('/');
 
+  // Auto-center on user's projects (WORK_MANAGER) or region selection
+  let mapCenter: [number, number] = [31.5, 35.0];
+  let mapZoom = 8;
+
+  const myPoints = mapPoints.filter(p => myProjectIds.has(p.id));
+  const focusPoints = isWorkManager && myPoints.length > 0 ? myPoints : mapPoints;
+
+  if (focusPoints.length > 0) {
+    const lats = focusPoints.map(p => p.lat);
+    const lngs = focusPoints.map(p => p.lng);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    mapCenter = [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
+    // Calculate zoom based on spread
+    const latSpread = maxLat - minLat;
+    const lngSpread = maxLng - minLng;
+    const spread = Math.max(latSpread, lngSpread);
+    mapZoom = spread < 0.05 ? 13 : spread < 0.15 ? 12 : spread < 0.4 ? 11 : spread < 1.0 ? 10 : spread < 2.0 ? 9 : 8;
+  } else if (selectedRegion) {
+    // Center on selected region
+    const regionProjects = (layerData?.projects || []).filter((p: any) => p.region_id === selectedRegion && p.lat && p.lng);
+    if (regionProjects.length > 0) {
+      const lats = regionProjects.map((p: any) => p.lat);
+      const lngs = regionProjects.map((p: any) => p.lng);
+      mapCenter = [(Math.min(...lats) + Math.max(...lats)) / 2, (Math.min(...lngs) + Math.max(...lngs)) / 2];
+      mapZoom = 10;
+    }
+  }
+
   return (
     <div className="h-[calc(100vh-64px)] relative" dir="rtl">
       {/* Mobile overlay backdrop */}
@@ -246,6 +275,9 @@ const ForestMap = () => {
           polygons={mapPolygons}
           maskPolygon={maskPoly}
           mapType="satellite"
+          center={mapCenter}
+          zoom={mapZoom}
+          fitBounds={true}
         />
       </div>
     </div>
