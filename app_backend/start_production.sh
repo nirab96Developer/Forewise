@@ -8,19 +8,19 @@ set -e
 echo "🌲 Forest Management System - Production Startup"
 echo "================================================"
 
-# Check if virtual environment exists
-if [ ! -d "venv" ]; then
-    echo "❌ Virtual environment not found. Please create one first:"
-    echo "   py -m venv venv"
-    echo "   source venv/bin/activate  # Linux/Mac"
-    echo "   venv\\Scripts\\activate     # Windows"
-    echo "   pip install -r requirements.txt"
+# Detect virtual environment (venv or .venv)
+if [ -d "venv/bin" ]; then
+    VENV_DIR="venv"
+elif [ -d ".venv/bin" ]; then
+    VENV_DIR=".venv"
+else
+    echo "❌ Virtual environment not found (checked venv/ and .venv/)"
     exit 1
 fi
 
 # Activate virtual environment
-echo "🔧 Activating virtual environment..."
-source venv/bin/activate 2>/dev/null || venv/Scripts/activate 2>/dev/null || {
+echo "🔧 Activating virtual environment ($VENV_DIR)..."
+source "$VENV_DIR/bin/activate" || {
     echo "❌ Failed to activate virtual environment"
     exit 1
 }
@@ -63,7 +63,7 @@ echo "================================================"
 LOG_FILE="$(pwd)/logs/gunicorn.log"
 mkdir -p "$(pwd)/logs"
 
-nohup gunicorn -c gunicorn.conf.py wsgi:application \
+nohup "$VENV_DIR/bin/gunicorn" -c gunicorn.conf.py wsgi:application \
   >> "$LOG_FILE" 2>&1 &
 
 GPID=$!
