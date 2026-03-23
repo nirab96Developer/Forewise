@@ -21,17 +21,16 @@ keepalive = 2
 max_requests = 1000
 max_requests_jitter = 50
 
-# Logging
+# Logging — stdout/stderr captured by systemd journal
 accesslog = "-"
-errorlog = "-"
-loglevel = os.getenv('LOG_LEVEL', 'info').lower()
+errorlog  = "-"
+loglevel  = os.getenv('LOG_LEVEL', 'info').lower()
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
 
 # Process naming
 proc_name = "forest-management-system"
 
-# Server mechanics
-daemon = False
+# Server mechanics — daemon/pidfile controlled by CLI flags
 pidfile = "/tmp/gunicorn.pid"
 user = None
 group = None
@@ -48,7 +47,7 @@ raw_env = [
     f"LOG_LEVEL={os.getenv('LOG_LEVEL', 'INFO')}",
 ]
 
-# Preload app for better performance
+# Preload app for better performance (works fine with systemd Type=simple)
 preload_app = True
 
 # Worker timeout

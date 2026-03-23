@@ -56,24 +56,12 @@ jobs:
             npm run build
             cd ..
 
-            # Restart backend — gunicorn --daemon (survives SSH session end)
-            echo ">> Restarting backend..."
-            pkill -f gunicorn 2>/dev/null || true
-            pkill -f uvicorn  2>/dev/null || true
-            sleep 2
-
-            cd /root/forewise/app_backend
-            source venv/bin/activate 2>/dev/null || source .venv/bin/activate 2>/dev/null
-
-            nohup gunicorn -c gunicorn.conf.py wsgi:application \
-              --daemon \
-              --pid /tmp/gunicorn.pid \
-              > /root/forewise/app_backend/logs/gunicorn.log 2>&1
-
-            sleep 4
+            # Restart backend via systemd (gunicorn, auto-restart on failure)
+            echo ">> Restarting backend via systemd..."
+            systemctl restart forewise.service
+            sleep 6
+            systemctl is-active forewise.service && echo "✅ forewise.service is active"
             curl -s http://localhost:8000/api/v1/health || echo 'health check failed'
-            echo "✅ Backend started (PID: $(cat /tmp/gunicorn.pid 2>/dev/null))"
-            cd /root/forewise
 
             # Reload nginx
             systemctl reload nginx
