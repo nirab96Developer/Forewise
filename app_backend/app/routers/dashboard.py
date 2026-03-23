@@ -307,9 +307,17 @@ async def get_dashboard_projects(
     )
     
     # Apply role-based filtering
-    if current_user.role.code == "WORK_MANAGER":
-        # מנהל עבודה רואה רק פרויקטים שהוקצו לו
-        query = query.filter(Project.manager_id == current_user.id)
+    if current_user.role.code in ("WORK_MANAGER", "FIELD_WORKER"):
+        from app.models.project_assignment import ProjectAssignment
+        assigned_ids = [
+            pa.project_id for pa in
+            db.query(ProjectAssignment.project_id)
+            .filter(ProjectAssignment.user_id == current_user.id)
+            .all()
+        ]
+        query = query.filter(
+            (Project.id.in_(assigned_ids)) | (Project.manager_id == current_user.id)
+        )
     elif current_user.role.code == "REGION_MANAGER" and current_user.region_id:
         query = query.filter(Project.region_id == current_user.region_id)
     elif current_user.role.code == "AREA_MANAGER" and current_user.area_id:
@@ -337,6 +345,18 @@ async def get_dashboard_projects(
             return budgets[p.budget_id]
         return budgets_by_project.get(p.id)
 
+    from sqlalchemy import text as _text
+    geo_map = {}
+    if project_ids:
+        try:
+            geo_rows = db.execute(_text(
+                "SELECT id, ST_Y(location_geom::geometry) as lat, ST_X(location_geom::geometry) as lng "
+                "FROM projects WHERE id = ANY(:ids) AND location_geom IS NOT NULL"
+            ), {"ids": project_ids}).fetchall()
+            geo_map = {r[0]: (float(r[1]), float(r[2])) for r in geo_rows}
+        except Exception:
+            pass
+
     return [
         {
             "id": p.id,
@@ -354,6 +374,8 @@ async def get_dashboard_projects(
             "start_date": p.created_at.isoformat() if p.created_at else None,
             "end_date": None,
             "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+            "lat": geo_map[p.id][0] if p.id in geo_map else None,
+            "lng": geo_map[p.id][1] if p.id in geo_map else None,
         }
         for p in projects
     ]
