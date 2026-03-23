@@ -34,6 +34,7 @@ const ForestMap = () => {
   const [layerVis, setLayerVis] = useState<Record<string, boolean>>({
     regions: !isWorkManager,
     areas: !isWorkManager,
+    forests: true,
     projects: true,
     myProjects: isWorkManager,
   });
@@ -76,6 +77,21 @@ const ForestMap = () => {
       if (selectedRegion && f.properties.region_id !== selectedRegion) return;
       const color = AREA_COLORS[idx % AREA_COLORS.length];
       mapPolygons.push({ id: f.properties.id, name: f.properties.name, geometry: f.geometry, fillColor: color, strokeColor: color, fillOpacity: f.properties.id === userAreaId ? 0.20 : 0.06, strokeWeight: f.properties.id === userAreaId ? 3 : 1.5 });
+    });
+  }
+
+  // Forest polygons — dark green fill
+  if (layerVis.forests && layerData?.forests?.features) {
+    layerData.forests.features.forEach((f: any) => {
+      mapPolygons.push({
+        id: `forest-${f.properties.id}`,
+        name: `יער (${f.properties.area_km2} km²)`,
+        geometry: f.geometry,
+        fillColor: '#166534',
+        strokeColor: '#14532d',
+        fillOpacity: 0.35,
+        strokeWeight: 1.5,
+      });
     });
   }
 
@@ -146,10 +162,11 @@ const ForestMap = () => {
           <h3 className="text-xs font-bold text-gray-500 mb-2">שכבות</h3>
           <div className="space-y-1.5">
             {[
+              {key:'forests',label:'גבולות יערות',icon:'🟩'},
               {key:'regions',label:'מרחבים',icon:'🗺️'},
               {key:'areas',label:'אזורים',icon:'📍'},
-              {key:'projects',label:'פרויקטים',icon:'🌲'},
-              {key:'myProjects',label:'שלי',icon:'⭐'},
+              {key:'projects',label:'נקודות פרויקטים',icon:'📍'},
+              {key:'myProjects',label:'שלי בלבד',icon:'⭐'},
             ]
               .filter(l => isWorkManager ? !['regions','areas'].includes(l.key) : true)
               .map(l => (

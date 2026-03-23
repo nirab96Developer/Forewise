@@ -344,6 +344,19 @@ def get_all_map_layers(
         WHERE p.location_geom IS NOT NULL AND p.is_active = true
     """)).fetchall()
     
+    # Forest polygons — limit to reasonable size for map rendering
+    forest_polys = db.execute(text("""
+        SELECT id,
+               ST_AsGeoJSON(
+                   ST_Simplify(geom::geometry, 0.0003)
+               )::json as geometry,
+               ST_Area(geom::geography) / 1000000 as area_km2
+        FROM forest_polygons
+        WHERE geom IS NOT NULL
+        ORDER BY area_km2 DESC
+        LIMIT 273
+    """)).fetchall()
+
     return {
         "regions": {
             "type": "FeatureCollection",
@@ -365,6 +378,17 @@ def get_all_map_layers(
                     "geometry": a.geometry,
                 }
                 for a in areas
+            ],
+        },
+        "forests": {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "properties": {"id": fp.id, "area_km2": round(float(fp.area_km2), 2), "layer_type": "forest"},
+                    "geometry": fp.geometry,
+                }
+                for fp in forest_polys
             ],
         },
         "projects": [
