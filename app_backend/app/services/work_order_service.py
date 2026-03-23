@@ -1049,6 +1049,33 @@ class WorkOrderService:
         wo.updated_at = _dt.datetime.now()
         if actual_hours is not None:
             wo.actual_hours = actual_hours
+
+        # Release remaining frozen budget back to available
+        try:
+            if wo.project_id and (wo.frozen_amount or 0) > 0:
+                from app.models.budget import Budget
+                from decimal import Decimal
+                budget = db.query(Budget).filter(
+                    Budget.project_id == wo.project_id,
+                    Budget.is_active == True,
+                    Budget.deleted_at.is_(None),
+                ).first()
+                if budget:
+                    frozen = float(wo.frozen_amount or 0)
+                    budget.committed_amount = max(
+                        Decimal(0),
+                        (budget.committed_amount or Decimal(0)) - Decimal(str(frozen))
+                    )
+                    budget.remaining_amount = (
+                        (budget.total_amount or Decimal(0))
+                        - (budget.committed_amount or Decimal(0))
+                        - (budget.spent_amount or Decimal(0))
+                    )
+                    wo.frozen_amount = 0
+                    wo.remaining_frozen = 0
+        except Exception as _be:
+            log.warning(f"Budget release on close WO {wo_id}: {_be}")
+
         db.commit()
         db.refresh(wo)
 
