@@ -825,6 +825,11 @@ const OrdersTab: React.FC<{
   const handleScanned = (orderId: number, equipmentNum: string) => {
     setLocalScans(prev  => ({ ...prev,  [orderId]: equipmentNum }));
     setJustScanned(prev => ({ ...prev,  [orderId]: true }));
+    // After scan — switch to "כלים בפרויקט" tab and show success toast
+    setTimeout(() => {
+      setActiveTab('worklogs');
+      (window as any).showToast?.('✅ כלי נסרק בהצלחה — עבר לכלים בשטח', 'success');
+    }, 600);
   };
 
   const hasEquipmentScan = (order: WorkOrder) =>
