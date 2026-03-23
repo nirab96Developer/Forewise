@@ -75,20 +75,27 @@ const ProjectsClean: React.FC = () => {
   }, [searchTerm, filterStatus, myProjectsOnly]);
 
   // מיפוי סטטוסים בעברית + צבעים
-  const getStatusConfig = (status: string | undefined) => {
-    const statusLower = (status || '').toLowerCase();
-    
+  // A project is "בתכנון" if it's active but has no budget allocated
+  const getEffectiveStatus = (project: Project): string => {
+    const base = (project.status || 'active').toLowerCase();
+    if (base === 'active') {
+      const budget = (project as any).allocated_budget ?? (project as any).total_budget ?? 0;
+      if (!budget || Number(budget) === 0) return 'planning';
+    }
+    return base;
+  };
+
+  const getStatusConfig = (project: Project) => {
+    const effective = getEffectiveStatus(project);
     const configs: Record<string, { text: string; bg: string; textColor: string }> = {
-      'active': { text: 'פעיל', bg: 'bg-green-100', textColor: 'text-green-800' },
-      'completed': { text: 'הושלם', bg: 'bg-blue-100', textColor: 'text-blue-800' },
-      'pending': { text: 'ממתין', bg: 'bg-yellow-100', textColor: 'text-yellow-800' },
-      'on_hold': { text: 'מושהה', bg: 'bg-orange-100', textColor: 'text-orange-800' },
-      'cancelled': { text: 'בוטל', bg: 'bg-red-100', textColor: 'text-red-800' },
-      'planned': { text: 'מתוכנן', bg: 'bg-purple-100', textColor: 'text-purple-800' },
+      'active':    { text: 'פעיל',     bg: 'bg-green-100',  textColor: 'text-green-800'  },
+      'planning':  { text: 'בתכנון',   bg: 'bg-yellow-100', textColor: 'text-yellow-800' },
+      'completed': { text: 'הושלם',    bg: 'bg-blue-100',   textColor: 'text-blue-800'   },
+      'on_hold':   { text: 'מושהה',    bg: 'bg-orange-100', textColor: 'text-orange-800' },
+      'cancelled': { text: 'בוטל',     bg: 'bg-red-100',    textColor: 'text-red-800'    },
+      'planned':   { text: 'בתכנון',   bg: 'bg-yellow-100', textColor: 'text-yellow-800' },
     };
-    
-    // Default for undefined/unknown status - assume active if no status
-    return configs[statusLower] || { text: 'פעיל', bg: 'bg-green-100', textColor: 'text-green-800' };
+    return configs[effective] || { text: 'פעיל', bg: 'bg-green-100', textColor: 'text-green-800' };
   };
 
   const filteredProjects = projects.filter(project => {
@@ -96,11 +103,11 @@ const ProjectsClean: React.FC = () => {
       project.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.code?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Treat undefined/null status as "active"
-    const projectStatus = (project.status || 'active').toLowerCase();
-    const matchesStatus = filterStatus === 'all' || 
-      (filterStatus === 'active' && projectStatus === 'active') ||
-      (filterStatus === 'completed' && projectStatus === 'completed');
+    const effective = getEffectiveStatus(project);
+    const matchesStatus = filterStatus === 'all' ||
+      (filterStatus === 'active'    && effective === 'active') ||
+      (filterStatus === 'planning'  && effective === 'planning') ||
+      (filterStatus === 'completed' && effective === 'completed');
     
     return matchesSearch && matchesStatus;
   });
@@ -187,9 +194,10 @@ const ProjectsClean: React.FC = () => {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="pr-4 pl-10 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                 >
-                  <option value="all">כל הפרויקטים</option>
-                  <option value="active">פעילים</option>
-                  <option value="completed">הושלמו</option>
+                <option value="all">כל הפרויקטים</option>
+                <option value="active">פעילים (מתוקצבים)</option>
+                <option value="planning">בתכנון (לא מתוקצב)</option>
+                <option value="completed">הושלמו</option>
                 </select>
               )}
 
@@ -252,19 +260,21 @@ const ProjectsClean: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredProjects.map((project) => {
-              const statusConfig = getStatusConfig(project.status);
-              const isActive = (project.status || 'active').toLowerCase() === 'active';
+              const statusConfig = getStatusConfig(project);
+              const effectiveStatus = getEffectiveStatus(project);
+              const isActive = effectiveStatus === 'active';
+              const isPlanning = effectiveStatus === 'planning';
               return (
               <div
                 key={project.id}
                 className={`bg-white rounded-2xl border-2 flex flex-col hover:shadow-lg transition-shadow duration-200 cursor-pointer group ${
-                  isActive ? 'border-green-100 hover:border-green-300' : 'border-gray-100 hover:border-gray-300'
+                  isActive ? 'border-green-100 hover:border-green-300' : isPlanning ? 'border-yellow-100 hover:border-yellow-300' : 'border-gray-100 hover:border-gray-300'
                 }`}
                 style={{ willChange: 'transform' }}
                 onClick={() => navigate(`/projects/${project.code}/workspace`)}
               >
                 {/* Colored top strip */}
-                <div className={`h-1.5 rounded-t-2xl ${isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div className={`h-1.5 rounded-t-2xl ${isActive ? 'bg-green-500' : isPlanning ? 'bg-yellow-400' : 'bg-gray-300'}`} />
 
                 {/* Card Body — grows to fill height */}
                 <div className="flex flex-col flex-1 p-5">
@@ -351,7 +361,7 @@ const ProjectsClean: React.FC = () => {
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-green-600">
-                  {filteredProjects.filter(p => (p.status || 'active').toLowerCase() === 'active').length}
+                  {filteredProjects.filter(p => getEffectiveStatus(p) === 'active').length}
                 </p>
                 <p className="text-sm text-gray-600 mt-1">פרויקטים פעילים</p>
               </div>

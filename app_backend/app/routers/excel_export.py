@@ -194,20 +194,44 @@ def _export_invoices(db: Session) -> openpyxl.Workbook:
 
 # ─── Projects ────────────────────────────────────────────────────────────────
 
-def _export_projects(db: Session) -> openpyxl.Workbook:
-    rows = db.execute(text("""
+def _export_projects(db: Session, user=None) -> openpyxl.Workbook:
+    # Build filter: limit to user's area or assigned projects
+    user_filter = ""
+    params: dict = {}
+    if user and hasattr(user, 'role') and user.role:
+        role_code = user.role.code if hasattr(user.role, 'code') else ''
+        if role_code in ('WORK_MANAGER', 'FIELD_WORKER'):
+            user_filter = """
+                AND p.id IN (
+                    SELECT project_id FROM project_assignments
+                    WHERE user_id = :uid AND status = 'active'
+                )
+            """
+            params['uid'] = user.id
+        elif role_code == 'AREA_MANAGER' and user.area_id:
+            user_filter = "AND p.area_id = :area_id"
+            params['area_id'] = user.area_id
+        elif role_code == 'REGION_MANAGER' and user.region_id:
+            user_filter = "AND p.region_id = :region_id"
+            params['region_id'] = user.region_id
+
+    rows = db.execute(text(f"""
         SELECT
             p.code,
             p.name,
             r.name  AS region_name,
             a.name  AS area_name,
-            p.status,
+            CASE
+                WHEN p.status != 'active' THEN p.status
+                WHEN COALESCE(b.total_amount, 0) = 0 THEN 'בתכנון'
+                ELSE 'פעיל'
+            END AS display_status,
             p.start_date,
             p.end_date,
-            b.total_amount,
-            b.committed_amount,
-            b.spent_amount,
-            (b.total_amount - COALESCE(b.committed_amount,0) - COALESCE(b.spent_amount,0))
+            COALESCE(b.total_amount, 0),
+            COALESCE(b.committed_amount, 0),
+            COALESCE(b.spent_amount, 0),
+            GREATEST(COALESCE(b.total_amount,0) - COALESCE(b.committed_amount,0) - COALESCE(b.spent_amount,0), 0)
                     AS available,
             p.created_at::date
         FROM projects p
@@ -215,9 +239,10 @@ def _export_projects(db: Session) -> openpyxl.Workbook:
         LEFT JOIN areas   a ON a.id = p.area_id
         LEFT JOIN budgets b ON b.project_id = p.id AND b.is_active = true
         WHERE p.deleted_at IS NULL
+        {user_filter}
         ORDER BY p.code
         LIMIT 5000
-    """)).fetchall()
+    """), params).fetchall()
 
     headers = [
         "קוד", "שם פרויקט", "מרחב", "אזור", "סטטוס",
@@ -336,10 +361,10 @@ def export_excel(
     filename = f"forewise_{label_he}_{today}.xlsx"
 
     builders = {
-        "worklogs":  _export_worklogs,
-        "invoices":  _export_invoices,
-        "projects":  _export_projects,
-        "equipment": _export_equipment,
+        "worklogs":  lambda db: _export_worklogs(db),
+        "invoices":  lambda db: _export_invoices(db),
+        "projects":  lambda db: _export_projects(db, user=current_user),
+        "equipment": lambda db: _export_equipment(db),
     }
 
     wb = builders[type](db)
