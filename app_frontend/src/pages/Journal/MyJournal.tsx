@@ -279,6 +279,7 @@ const MyJournal: React.FC = () => {
 
           const formattedActivities: ActivityEvent[] = response.activities
             .filter(inMyProjects)
+            .filter((item: ActivityLog) => !item.action?.toLowerCase().includes('login') && item.action !== 'user_login')
             .map((item: ActivityLog) => ({
             id: item.id?.toString() || Math.random().toString(),
             title: getActivityTitle(item.action),
@@ -822,8 +823,16 @@ const MyJournal: React.FC = () => {
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-kkl-text text-sm truncate group-hover:text-kkl-green transition-colors">{wo.title}</h4>
                             <p className="text-xs text-gray-500 mt-1 line-clamp-1">{wo.data.description}</p>
-                            <span className="inline-block mt-2 text-xs px-2 py-0.5 rounded-full bg-kkl-green-light text-kkl-green">
-                              {workOrderService.getStatusText(wo.data.status)}
+                            <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium ${
+                              wo.data.status === 'APPROVED_AND_SENT' ? 'bg-green-100 text-green-700' :
+                              wo.data.status === 'PENDING' || wo.data.status === 'PENDING_APPROVAL' ? 'bg-yellow-100 text-yellow-700' :
+                              wo.data.status === 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              {wo.data.status === 'APPROVED_AND_SENT' ? '✅ אושר — ניתן לדווח' :
+                               wo.data.status === 'PENDING' ? '🟡 ממתין לתיאום' :
+                               wo.data.status === 'PENDING_APPROVAL' ? '🔵 ממתין לאישור' :
+                               workOrderService.getStatusText(wo.data.status)}
                             </span>
                           </div>
                           <ChevronLeft className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-center" />
