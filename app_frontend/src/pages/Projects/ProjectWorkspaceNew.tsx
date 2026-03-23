@@ -1046,7 +1046,6 @@ const WorklogsTab: React.FC<{
   const set = (field: keyof WorklogFormState, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
-  const canAddReport = !isWorkManager || approvedOrders.length > 0;
 
   const calcHours = () => {
     try {
