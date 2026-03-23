@@ -198,18 +198,18 @@ const GenericDashboard: React.FC<{title?: string}> = ({ title }) => {
           })
           .catch(() => null);
 
-        // My projects for map (with geo data)
-        api.get('/projects', { params: { my_projects: true, limit: 20 } })
+        // My projects for map — uses dashboard/projects which returns lat/lng
+        api.get('/dashboard/projects')
           .then(r => {
             const items: any[] = Array.isArray(r.data) ? r.data : r.data?.items || [];
             const withGeo = items
-              .filter((p: any) => p.latitude || p.center_lat)
+              .filter((p: any) => (p.lat && p.lng) || p.latitude || p.center_lat)
               .map((p: any) => ({
                 id: p.id,
                 code: p.code,
                 name: p.name,
-                lat: p.latitude || p.center_lat,
-                lng: p.longitude || p.center_lng,
+                lat: p.lat ?? p.latitude ?? p.center_lat,
+                lng: p.lng ?? p.longitude ?? p.center_lng,
               }));
             setMapProjects(withGeo);
           })

@@ -154,7 +154,8 @@ class AuthService:
                 "expires_in": 0,
             }
 
-        # Direct login
+        # Direct login — save previous login time before updating
+        previous_login = user.last_login
         user.last_login = datetime.now()
         access_token = create_access_token(
             {"sub": str(user.id), "email": user.email, "role": user.role.code if user.role else ""}
@@ -172,13 +173,17 @@ class AuthService:
         db.add(session)
         db.commit()
 
+        payload = self._build_user_payload(user)
+        # Override last_login with PREVIOUS session (not current login time)
+        payload["last_login"] = previous_login.isoformat() if previous_login else None
+
         return {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
             "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             "requires_2fa": False,
-            "user": self._build_user_payload(user),
+            "user": payload,
         }
 
     def verify_2fa(self, db: Session, user_id: int, code: str, backup_code=None) -> dict:
