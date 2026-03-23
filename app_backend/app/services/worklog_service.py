@@ -138,8 +138,11 @@ class WorklogService:
         worklog_dict.pop('overnight_nights', None)
         worklog_dict.pop('overnight_rate', None)
         
+        # Save segments before removing from worklog_dict
+        segments_data = worklog_dict.pop('segments', None) or []
+
         # Remove fields that don't exist on the Worklog model
-        for key in ['activity_type', 'activity', 'segments',
+        for key in ['activity_type', 'activity',
                      'billable_hours', 'non_standard_notes']:
             worklog_dict.pop(key, None)
         
@@ -182,7 +185,25 @@ class WorklogService:
         db.add(worklog)
         db.commit()
         db.refresh(worklog)
-        
+
+        # Save non-standard time segments
+        if segments_data:
+            try:
+                from app.models.worklog_segment import WorklogSegment
+                for seg in segments_data:
+                    if isinstance(seg, dict):
+                        db.add(WorklogSegment(
+                            worklog_id=worklog.id,
+                            segment_type=seg.get('type', seg.get('segment_type', 'work')),
+                            start_time=seg.get('start_time'),
+                            end_time=seg.get('end_time'),
+                            notes=seg.get('notes', ''),
+                        ))
+                db.commit()
+            except Exception as seg_err:
+                import logging
+                logging.getLogger(__name__).warning(f"Segment save failed for WL {worklog.id}: {seg_err}")
+
         # Log activity
         activity_logger.log_worklog_created(
             db=db,
