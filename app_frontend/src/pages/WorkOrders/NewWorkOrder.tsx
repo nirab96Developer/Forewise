@@ -548,23 +548,7 @@ const NewWorkOrder: React.FC = () => {
               </div>
             </div>
 
-            {/* תעריף שעתי — inside work details block */}
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-kkl-text mb-2">
-                תעריף שעתי (₪ לשעה)
-              </label>
-              <input
-                type="number"
-                name="hourly_rate"
-                min="0"
-                step="1"
-                value={formData.hourly_rate}
-                onChange={handleChange}
-                placeholder={`ברירת מחדל ${DEFAULT_HOURLY_RATE}`}
-                className="w-full sm:w-1/2 pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
-              />
-              <p className="text-xs text-gray-500 mt-1">ריק = ₪{DEFAULT_HOURLY_RATE} לשעה</p>
-            </div>
+            {/* תעריף שעתי מוגדר אוטומטית לפי סוג הכלי */}
           </div>
 
           {/* === בלוק 2: הגדרת כלים === */}
