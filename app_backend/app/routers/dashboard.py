@@ -947,10 +947,65 @@ async def get_work_manager_summary(
           AND w.is_active = true
     """), {"uid": current_user.id}).scalar() or 0
 
+    # Approved work orders where equipment not yet scanned
+    pending_scan = db.execute(text("""
+        SELECT COUNT(*)
+        FROM work_orders wo
+        WHERE wo.created_by_id = :uid
+          AND UPPER(wo.status) = 'APPROVED_AND_SENT'
+          AND (wo.equipment_scanned IS NULL OR wo.equipment_scanned = false)
+          AND wo.deleted_at IS NULL
+          AND wo.is_active = true
+    """), {"uid": current_user.id}).scalar() or 0
+
+    # Equipment scanned but worklogs incomplete
+    pending_worklogs_fill = db.execute(text("""
+        SELECT COUNT(*)
+        FROM work_orders wo
+        WHERE wo.created_by_id = :uid
+          AND UPPER(wo.status) = 'APPROVED_AND_SENT'
+          AND wo.equipment_scanned = true
+          AND COALESCE(wo.actual_hours, 0) < COALESCE(wo.estimated_hours, 0)
+          AND wo.deleted_at IS NULL
+          AND wo.is_active = true
+    """), {"uid": current_user.id}).scalar() or 0
+
+    # Worklogs submitted pending approval
+    submitted_worklogs = db.execute(text("""
+        SELECT COUNT(*)
+        FROM worklogs w
+        WHERE w.user_id = :uid
+          AND UPPER(w.status) = 'PENDING_APPROVAL'
+          AND w.is_active = true
+    """), {"uid": current_user.id}).scalar() or 0
+
+    # Area manager info
+    area_manager = None
+    if current_user.area_id:
+        am_row = db.execute(text("""
+            SELECT u.full_name, u.email, u.phone
+            FROM users u
+            JOIN roles r ON r.id = u.role_id
+            WHERE u.area_id = :area_id
+              AND r.code = 'AREA_MANAGER'
+              AND u.is_active = true
+            LIMIT 1
+        """), {"area_id": current_user.area_id}).first()
+        if am_row:
+            area_manager = {
+                "name": am_row[0],
+                "email": am_row[1],
+                "phone": am_row[2],
+            }
+
     return {
         "hours_this_week": float(hours_this_week),
         "hours_this_month": float(hours_this_month),
         "active_work_orders": int(active_wo),
         "equipment_in_use": int(equipment_in_use),
         "pending_worklogs": int(pending_worklogs),
+        "pending_scan": int(pending_scan),
+        "pending_worklogs_fill": int(pending_worklogs_fill),
+        "submitted_worklogs": int(submitted_worklogs),
+        "area_manager": area_manager,
     }
