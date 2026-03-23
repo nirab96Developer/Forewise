@@ -52,7 +52,7 @@ API_METADATA = {
 
 ### אימות
 כל הendpoints (חוץ מ-/auth ו-/supplier-portal) דורשים JWT Bearer token.
-לחץ **Authorize** ↗ והכנס: `Bearer {token}`
+לחץ **Authorize** ↗ והכנס: `Bearer <token>`
 
 ### קבוצות Endpoints
 | קבוצה | תיאור |
