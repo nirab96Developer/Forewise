@@ -1108,15 +1108,6 @@ const WorklogsTab: React.FC<{
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-bold">דיווחי שעות</h2>
-        {canAddReport && !showForm && (
-          <button
-            onClick={() => { setShowForm(true); setForm({ ...EMPTY_FORM, work_order_id: approvedOrders[0]?.id?.toString() || '' }); }}
-            className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1"
-          >
-            <Plus className="w-4 h-4" />
-            דיווח חדש
-          </button>
-        )}
       </div>
 
       {/* ── Cannot report yet ── */}
