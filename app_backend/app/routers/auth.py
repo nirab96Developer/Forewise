@@ -264,7 +264,8 @@ def change_password(
         success = auth_service.change_password(
             db=db, 
             user_id=current_user.id, 
-            password_data=password_data
+            current_password=password_data.current_password,
+            new_password=password_data.new_password
         )
 
         if success:
