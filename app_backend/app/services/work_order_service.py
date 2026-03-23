@@ -322,17 +322,51 @@ class WorkOrderService:
                 to_email = supplier.email or supplier.contact_email
                 if to_email:
                     from app.core.email import send_email
+                    from datetime import date
+                    expires_str = expires_at.strftime('%d/%m/%Y %H:%M')
+                    wo_title = work_order.equipment_type or work_order.title or f"הזמנה #{work_order.order_number}"
+                    project_name = ""
+                    if work_order.project_id:
+                        try:
+                            from app.models.project import Project
+                            proj = db.query(Project).filter(Project.id == work_order.project_id).first()
+                            if proj:
+                                project_name = proj.name
+                        except Exception:
+                            pass
+                    html_body = f"""
+<div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden;border:1px solid #ddd">
+  <div style="background:#1a3a1a;padding:28px;text-align:center">
+    <h1 style="color:white;font-size:26px;letter-spacing:3px;margin:0">FOREWISE</h1>
+    <p style="color:#a8d5a2;margin:6px 0 0;font-size:13px">מערכת לניהול פרויקטים ויערות</p>
+  </div>
+  <div style="padding:30px;background:#fff">
+    <h2 style="color:#1a3a1a">שלום {supplier.name},</h2>
+    <p style="color:#444">קיבלת <strong>הזמנת עבודה חדשה</strong> ממערכת Forewise.</p>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:20px;margin:20px 0">
+      <p style="margin:6px 0"><strong>סוג ציוד:</strong> {wo_title}</p>
+      {f'<p style="margin:6px 0"><strong>פרויקט:</strong> {project_name}</p>' if project_name else ''}
+      <p style="margin:6px 0"><strong>מספר הזמנה:</strong> #{work_order.order_number}</p>
+    </div>
+    <div style="text-align:center;margin:30px 0">
+      <a href="{portal_url}" style="background:#2d5a27;color:white;padding:15px 35px;text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block">
+        לצפייה ואישור / דחייה ←
+      </a>
+    </div>
+    <p style="color:#888;font-size:12px;text-align:center;border-top:1px solid #eee;padding-top:15px">
+      🕐 הקישור תקף עד {expires_str}<br>
+      אי מענה תוך 3 שעות — ההזמנה תועבר לספק הבא אוטומטית
+    </p>
+  </div>
+  <div style="background:#1a3a1a;padding:15px;text-align:center">
+    <p style="color:#a8d5a2;margin:0;font-size:12px">Forewise — מערכת ניהול יערות | {date.today().strftime('%d/%m/%Y')}</p>
+  </div>
+</div>"""
                     send_email(
                         to=to_email,
-                        subject=f"הזמנת עבודה מספר {work_order.order_number} - דורש תגובה",
-                        body=(
-                            f"שלום {supplier.name},\n\n"
-                            f"קיבלת הזמנת עבודה חדשה מForewise.\n"
-                            f"הזמנה: {work_order.title or work_order.order_number}\n\n"
-                            f"לצפייה ואישור/דחייה:\n{portal_url}\n\n"
-                            f"הקישור תקף עד: {expires_at.strftime('%d/%m/%Y %H:%M')}\n\n"
-                            "Forewise"
-                        ),
+                        subject=f"🌲 הזמנת עבודה #{work_order.order_number} — נדרשת תגובה",
+                        body=f"שלום {supplier.name},\nקיבלת הזמנת עבודה חדשה.\nלצפייה: {portal_url}\nתוקף: {expires_str}",
+                        html_body=html_body,
                     )
                     email_sent = True
                 else:
