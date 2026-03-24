@@ -1,0 +1,1 @@
+-- DB migration applied: category_group added to equipment_types
