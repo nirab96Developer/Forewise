@@ -65,7 +65,7 @@ function useAllData() {
     try {
       const [sR, eR, tR, rR, regR, aR] = await Promise.all([
         api.get('/suppliers',          { params: { page_size: 500 } }),
-        api.get('/equipment',          { params: { limit: 500 } }),
+        api.get('/equipment',          { params: { page_size: 500 } }),
         api.get('/equipment-types',    { params: { page_size: 50 } }),
         api.get('/supplier-rotations', { params: { page_size: 500 } }),
         api.get('/regions').catch(() => ({ data: [] })),
