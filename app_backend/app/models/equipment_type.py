@@ -9,7 +9,7 @@ from typing import Optional
 from decimal import Decimal
 from datetime import datetime
 
-from sqlalchemy import Integer, Unicode, Numeric, Boolean, DateTime
+from sqlalchemy import Integer, String, Unicode, Numeric, Boolean, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -63,6 +63,32 @@ class EquipmentType(Base):
     default_storage_hourly_rate: Mapped[Decimal] = mapped_column(
         Numeric(18, 2), nullable=False,
         comment="תעריף אחסון שעתי"
+    )
+
+    # Extended rates (added to DB via ALTER TABLE)
+    hourly_rate: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(10, 2), nullable=True,
+        comment="תעריף שעתי בפועל"
+    )
+
+    overnight_rate: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(10, 2), nullable=True,
+        comment="תעריף לינת שטח"
+    )
+
+    night_guard: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True, default=False,
+        comment="מתאים לשמירת לילה"
+    )
+
+    category_id: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True,
+        comment="FK לequipment_categories"
+    )
+
+    category_group: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True,
+        comment="קבוצת ציוד: כלים כבדים/קלים/ציוד/שמירה"
     )
 
     # Display

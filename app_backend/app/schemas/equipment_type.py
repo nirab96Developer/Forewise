@@ -18,9 +18,14 @@ class EquipmentTypeBase(BaseModel):
 
 class EquipmentTypeCreate(EquipmentTypeBase):
     """Create equipment type"""
-    default_hourly_rate: Decimal = Field(..., ge=0)
+    default_hourly_rate: Decimal = Field(Decimal('0'), ge=0)
     default_daily_rate: Optional[Decimal] = Field(None, ge=0)
-    default_storage_hourly_rate: Decimal = Field(..., ge=0)
+    default_storage_hourly_rate: Decimal = Field(Decimal('0'), ge=0)
+    hourly_rate: Optional[Decimal] = Field(None, ge=0)
+    overnight_rate: Optional[Decimal] = Field(None, ge=0)
+    night_guard: Optional[bool] = False
+    category_id: Optional[int] = None
+    category_group: Optional[str] = Field(None, max_length=50)
     sort_order: int = Field(0, ge=0)
 
 
@@ -30,9 +35,14 @@ class EquipmentTypeUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
     category: Optional[str] = Field(None, max_length=100)
+    category_id: Optional[int] = None
+    category_group: Optional[str] = Field(None, max_length=50)
     default_hourly_rate: Optional[Decimal] = Field(None, ge=0)
     default_daily_rate: Optional[Decimal] = Field(None, ge=0)
     default_storage_hourly_rate: Optional[Decimal] = Field(None, ge=0)
+    hourly_rate: Optional[Decimal] = Field(None, ge=0)
+    overnight_rate: Optional[Decimal] = Field(None, ge=0)
+    night_guard: Optional[bool] = None
     sort_order: Optional[int] = Field(None, ge=0)
     is_active: Optional[bool] = None
 
@@ -43,11 +53,16 @@ class EquipmentTypeResponse(EquipmentTypeBase):
     default_hourly_rate: Decimal
     default_daily_rate: Optional[Decimal] = None
     default_storage_hourly_rate: Decimal
+    hourly_rate: Optional[Decimal] = None
+    overnight_rate: Optional[Decimal] = None
+    night_guard: Optional[bool] = False
+    category_id: Optional[int] = None
+    category_group: Optional[str] = None
     sort_order: int
     is_active: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 

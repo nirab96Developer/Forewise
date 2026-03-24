@@ -150,6 +150,16 @@ class Equipment(BaseModel):
         comment="תעריף אחסון שעתי"
     )
 
+    overnight_rate: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(10, 2), nullable=True,
+        comment="תעריף לינת שטח לכלי ספציפי"
+    )
+
+    night_guard: Mapped[Optional[bool]] = mapped_column(
+        Boolean, nullable=True, default=False,
+        comment="הכלי מתאים לשמירת לילה"
+    )
+
     # Maintenance
     last_maintenance: Mapped[Optional[date]] = mapped_column(
         Date, nullable=True,

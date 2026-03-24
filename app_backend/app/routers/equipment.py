@@ -124,6 +124,8 @@ def list_equipment(
                 "supplier_name": suppliers.get(eq.supplier_id) if eq.supplier_id else None,
                 "hourly_rate": float(eq.hourly_rate) if eq.hourly_rate else None,
                 "daily_rate": float(eq.daily_rate) if getattr(eq, 'daily_rate', None) else None,
+                "overnight_rate": float(eq.overnight_rate) if getattr(eq, 'overnight_rate', None) else None,
+                "night_guard": bool(getattr(eq, 'night_guard', False)),
                 "status": eq.status,
                 "is_active": eq.is_active,
                 # Operational badges
