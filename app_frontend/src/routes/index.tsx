@@ -53,11 +53,7 @@ const EquipmentRequestsStatus = lazy(() => import("../pages/Equipment/EquipmentR
 const EquipmentBalances = lazy(() => import("../pages/Equipment/EquipmentBalances"));
 const EquipmentInventory = lazy(() => import("../pages/Equipment/EquipmentInventory"));
 
-// Suppliers (standalone page replaced by /settings/suppliers)
-// const Suppliers = lazy(() => import("../pages/Suppliers/Suppliers"));
-const NewSupplier = lazy(() => import("../pages/Suppliers/NewSupplier"));
-const EditSupplier = lazy(() => import("../pages/Suppliers/EditSupplier"));
-const AddSupplierEquipment = lazy(() => import("../pages/Suppliers/AddSupplierEquipment"));
+// Suppliers — redirected to /settings/suppliers (old standalone pages removed)
 
 // Invoices & Reports
 const Invoices = lazy(() => import("../pages/Invoices/Invoices"));
@@ -239,10 +235,10 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
               SUPPLIERS
           ============================================ */}
         <Route path="/suppliers" element={<Navigate to="/settings/suppliers" replace />} />
-        <Route path="/suppliers/new" element={<Guarded permission={PERMISSIONS.SUPPLIERS_CREATE}><NewSupplier /></Guarded>} />
-        <Route path="/suppliers/:id" element={<Guarded permission={PERMISSIONS.SUPPLIERS_VIEW}><EditSupplier /></Guarded>} />
-        <Route path="/suppliers/:id/edit" element={<Guarded permission={PERMISSIONS.SUPPLIERS_UPDATE}><EditSupplier /></Guarded>} />
-        <Route path="/suppliers/:supplierId/add-equipment" element={<Guarded permission={PERMISSIONS.SUPPLIERS_UPDATE}><AddSupplierEquipment /></Guarded>} />
+        <Route path="/suppliers/new" element={<Navigate to="/settings/suppliers" replace />} />
+        <Route path="/suppliers/:id" element={<Navigate to="/settings/suppliers" replace />} />
+        <Route path="/suppliers/:id/edit" element={<Navigate to="/settings/suppliers" replace />} />
+        <Route path="/suppliers/:supplierId/add-equipment" element={<Navigate to="/settings/suppliers?tab=equipment" replace />} />
         <Route path="/suppliers/equipment/:equipmentId/update-rate" element={<Navigate to="/settings/equipment-catalog" replace />} />
 
         {/* ============================================
