@@ -258,7 +258,7 @@ const EquipmentTab: React.FC<{ onAdd: () => void }> = ({ onAdd }) => {
     setLoading(true);
     try {
       const [eRes, sRes] = await Promise.all([
-        api.get('/equipment', { params: { page_size: 2000 } }),
+        api.get('/equipment', { params: { limit: 500, include_supplier: true } }),
         api.get('/suppliers', { params: { page_size: 500 } }),
       ]);
       setEquipment(eRes.data?.items || []);
