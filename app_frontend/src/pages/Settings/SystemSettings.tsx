@@ -4,8 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Settings, Users, Truck, Wrench, MapPin, FileText, 
-  ChevronLeft, Shield, Building2, Layers,
+  Settings, Users, Truck, MapPin, FileText,
+  ChevronLeft, Shield, Building2,
   DollarSign, Receipt, Cog, Clock
 } from 'lucide-react';
 import api from '../../services/api';
