@@ -50,17 +50,17 @@ class EquipmentTypeUpdate(BaseModel):
 class EquipmentTypeResponse(EquipmentTypeBase):
     """Equipment type response"""
     id: int
-    default_hourly_rate: Decimal
+    default_hourly_rate: Optional[Decimal] = Decimal('0')
     default_daily_rate: Optional[Decimal] = None
-    default_storage_hourly_rate: Decimal
+    default_storage_hourly_rate: Optional[Decimal] = Decimal('0')
     hourly_rate: Optional[Decimal] = None
     overnight_rate: Optional[Decimal] = None
     night_guard: Optional[bool] = False
     category_id: Optional[int] = None
     category_group: Optional[str] = None
-    sort_order: int
+    sort_order: Optional[int] = 0
     is_active: bool
-    created_at: datetime
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
