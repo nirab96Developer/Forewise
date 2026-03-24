@@ -1,768 +1,834 @@
-
 // src/pages/Settings/SupplierSettings.tsx
-// הגדרות ספקים - ניהול ספקים, ציוד ותמחור
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+// ניהול ספקים — 4 טאבים מאוחדים
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowRight, Truck, Plus, Search, Edit, Trash2,
-  DollarSign, Wrench, Filter, Eye,
-  AlertCircle, X, Save, RotateCcw
+  ArrowRight, Truck, Wrench, DollarSign, RotateCcw,
+  Search, Plus, Eye, EyeOff, ChevronDown, ChevronRight,
+  MapPin, Phone, Mail, AlertCircle, Moon, Edit2, Check, X,
+  RefreshCw
 } from 'lucide-react';
 import api from '../../services/api';
 
-// Types
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface Supplier {
-  id: number;
-  name: string;
-  contact_name?: string;
-  contact_person?: string;
-  phone?: string;
-  email?: string;
-  is_active: boolean;
-  region_id?: number;
-  area_id?: number;
-  region_name?: string;
-  equipment_count?: number;
-  code?: string;
-  tax_id?: string;
-  address?: string;
+  id: number; code?: string; name: string; tax_id?: string;
+  contact_name?: string; phone?: string; email?: string;
+  address?: string; region_id?: number; area_id?: number;
+  region_name?: string; area_name?: string;
+  is_active: boolean; equipment_count?: number;
+  active_area_ids?: number[];
 }
 
-interface SupplierEquipment {
-  id: number;
-  supplier_id: number;
-  supplier_name?: string;
-  equipment_model_id?: number;
-  equipment_name?: string;
-  base_rate?: number;
-  hourly_rate?: number;
-  night_rate?: number;
-  weekend_rate?: number;
-  license_plate?: string;
-  status?: string;
-  is_active: boolean;
+interface EqItem {
+  id: number; name: string; license_plate: string;
+  equipment_type: string; supplier_id: number; supplier_name?: string;
+  hourly_rate?: number; overnight_rate?: number;
+  night_guard?: boolean; is_active: boolean; status?: string;
 }
 
-type TabType = 'suppliers' | 'equipment' | 'pricing' | 'rotation' | 'constraints';
+interface EqType {
+  id: number; name: string; category_id?: number; category?: string;
+  hourly_rate?: number; overnight_rate?: number; night_guard?: boolean;
+  is_active: boolean; updated_at?: string;
+}
 
-const pathToTab: Record<string, TabType> = {
-  '/settings/suppliers': 'suppliers',
-  '/settings/supplier-equipment': 'equipment',
-  '/settings/pricing': 'pricing',
-  '/settings/fair-rotation': 'rotation',
-  '/settings/constraint-reasons': 'constraints',
-};
+interface Rotation {
+  id: number; supplier_id: number; supplier_name?: string;
+  area_id?: number; area_name?: string; region_name?: string;
+  equipment_category_id?: number; category_name?: string;
+  rotation_position: number; total_assignments: number;
+  rejection_count: number; avg_response_time_hours?: number;
+  is_active: boolean; is_available: boolean;
+  unavailable_until?: string; priority_score?: number;
+}
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Add/Edit Supplier Modal
-// ──────────────────────────────────────────────────────────────────────────────
-const REGIONS = [
-  { id: 1, name: 'צפון' },
-  { id: 2, name: 'מרכז' },
-  { id: 3, name: 'דרום' },
-];
-const AREAS: Record<number, { id: number; name: string }[]> = {
-  1: [{ id: 12, name: 'גליל עליון ורמת הגולן' }, { id: 13, name: 'גליל מערבי וכרמל' }, { id: 14, name: 'גליל תחתון וגלבוע' }, { id: 16, name: 'עמק החולה' }],
-  2: [{ id: 31, name: 'שפלה וחוף' }, { id: 33, name: 'ההר' }, { id: 34, name: 'מנשה ושרון' }, { id: 37, name: 'מנסרה מרכז' }],
-  3: [{ id: 41, name: 'נגב צפוני' }, { id: 42, name: 'נגב מערבי' }, { id: 43, name: 'הר הנגב וערבה' }, { id: 45, name: 'שימור קרקע' }],
-};
+interface Region { id: number; name: string; }
+interface Area { id: number; name: string; region_id: number; }
 
-const SupplierModal: React.FC<{
-  supplier: Supplier | null;
-  onClose: () => void;
-  onSaved: () => void;
-}> = ({ supplier, onClose, onSaved }) => {
-  const isEdit = !!supplier;
-  const [form, setForm] = useState({
-    name: supplier?.name || '',
-    contact_name: supplier?.contact_name || supplier?.contact_person || '',
-    phone: supplier?.phone || '',
-    email: supplier?.email || '',
-    address: supplier?.address || '',
-    tax_id: supplier?.tax_id || '',
-    region_id: supplier?.region_id || '',
-    area_id: supplier?.area_id || '',
-    service_regions: [] as number[],
-  });
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
+type TabType = 'suppliers' | 'equipment' | 'pricing' | 'rotation';
 
-  const selectedRegionAreas = form.region_id ? AREAS[Number(form.region_id)] || [] : [];
-
-  const handleSave = async () => {
-    if (!form.name.trim()) { setErr('שם ספק הוא שדה חובה'); return; }
-    if (!form.tax_id.trim()) { setErr('ח.פ / עוסק מורשה הוא שדה חובה'); return; }
-    if (!form.phone.trim()) { setErr('טלפון הוא שדה חובה'); return; }
-    if (!form.email.trim()) { setErr('אימייל הוא שדה חובה'); return; }
-    if (!form.region_id) { setErr('יש לבחור מרחב'); return; }
-    setSaving(true);
-    setErr('');
-    try {
-      const payload = {
-        ...form,
-        region_id: Number(form.region_id) || null,
-        area_id: Number(form.area_id) || null,
-      };
-      if (isEdit) {
-        await api.put(`/suppliers/${supplier.id}`, payload);
-      } else {
-        const code = 'SUP-' + Date.now().toString().slice(-6);
-        await api.post('/suppliers', { ...payload, code });
-      }
-      onSaved();
-      onClose();
-    } catch (e: any) {
-      const msg = e?.response?.data?.detail || 'שגיאה בשמירה';
-      setErr(typeof msg === 'string' ? msg : JSON.stringify(msg));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const toggleServiceRegion = (id: number) => {
-    setForm(prev => ({
-      ...prev,
-      service_regions: prev.service_regions.includes(id)
-        ? prev.service_regions.filter(r => r !== id)
-        : [...prev.service_regions, id]
-    }));
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl z-10">
-          <h2 className="text-lg font-bold text-gray-900">{isEdit ? 'עריכת ספק' : 'הקמת ספק חדש'}</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="p-5 space-y-5">
-          {err && <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">{err}</div>}
-          
-          {/* Section: פרטי חברה */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <Truck className="w-4 h-4 text-kkl-green" /> פרטי חברה
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-600 mb-1">שם ספק *</label>
-                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="שם מלא של הספק / חברה" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">ח.פ / עוסק מורשה *</label>
-                <input value={form.tax_id} onChange={e => setForm(p => ({ ...p, tax_id: e.target.value }))} placeholder="512345678" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" dir="ltr" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">כתובת</label>
-                <input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} placeholder="רחוב, עיר" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-100" />
-
-          {/* Section: איש קשר */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <User className="w-4 h-4 text-blue-500" /> איש קשר
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">שם איש קשר</label>
-                <input value={form.contact_name} onChange={e => setForm(p => ({ ...p, contact_name: e.target.value }))} placeholder="שם מלא" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">טלפון *</label>
-                <input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} placeholder="050-0000000" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" dir="ltr" />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-600 mb-1">אימייל *</label>
-                <input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="supplier@example.com" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" dir="ltr" type="email" />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-100" />
-
-          {/* Section: מיקום ושירות */}
-          <div>
-            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-purple-500" /> מיקום ואזור שירות
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">מרחב *</label>
-                <select value={form.region_id} onChange={e => setForm(p => ({ ...p, region_id: e.target.value, area_id: '' }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm">
-                  <option value="">בחר מרחב...</option>
-                  {REGIONS.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">אזור</label>
-                <select value={form.area_id} onChange={e => setForm(p => ({ ...p, area_id: e.target.value }))} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm" disabled={!form.region_id}>
-                  <option value="">בחר אזור...</option>
-                  {selectedRegionAreas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="mt-3">
-              <label className="block text-xs font-medium text-gray-600 mb-2">נותן שירות למרחבים</label>
-              <div className="flex gap-2 flex-wrap">
-                {REGIONS.map(r => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => toggleServiceRegion(r.id)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                      form.service_regions.includes(r.id)
-                        ? 'bg-kkl-green text-white border-kkl-green'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-kkl-green'
-                    }`}
-                  >
-                    {r.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-3 p-5 border-t border-gray-200 sticky bottom-0 bg-white rounded-b-2xl">
-          <button onClick={onClose} className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium">ביטול</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 px-4 py-2.5 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
-            {saving ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-            {isEdit ? 'שמור שינויים' : 'הקם ספק'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Equipment Accordion (grouped by supplier)
-// ──────────────────────────────────────────────────────────────────────────────
-import { ChevronDown as ChDown, ChevronUp as ChUp, MapPin, Phone, User } from 'lucide-react';
-
-interface EqItem { id: number; license_plate: string; name: string; equipment_type: string; supplier_id: number; supplier_name: string; hourly_rate: number; is_active: boolean; }
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const TYPE_COLORS: Record<string, string> = {
-  'מחפרון': 'bg-blue-100 text-blue-700', 'טרקטור': 'bg-green-100 text-green-700',
-  'מרסקת': 'bg-orange-100 text-orange-700', 'שופל': 'bg-purple-100 text-purple-700',
-  'מפלסת': 'bg-cyan-100 text-cyan-700', 'מכבש': 'bg-red-100 text-red-700',
-  'יעה': 'bg-amber-100 text-amber-700', 'מחפר': 'bg-indigo-100 text-indigo-700',
-  'משאית': 'bg-teal-100 text-teal-700',
+  'מחפרון': 'bg-blue-100 text-blue-700',
+  'מחפר': 'bg-blue-100 text-blue-700',
+  'יעה': 'bg-green-100 text-green-700',
+  'טרקטור': 'bg-yellow-100 text-yellow-700',
+  'מרסקת': 'bg-orange-100 text-orange-700',
+  'מכבש': 'bg-purple-100 text-purple-700',
+  'שופל': 'bg-red-100 text-red-700',
+  'מפלסת': 'bg-pink-100 text-pink-700',
+  'משאית': 'bg-cyan-100 text-cyan-700',
 };
-const getTypeColor = (n: string) => { for (const [k, c] of Object.entries(TYPE_COLORS)) if (n?.includes(k)) return c; return 'bg-gray-100 text-gray-700'; };
-
-const EquipmentAccordion: React.FC<{ equipment: EqItem[]; suppliers: any[]; navigate: any }> = ({ equipment, suppliers, navigate }) => {
-  const [expanded, setExpanded] = React.useState<Set<number>>(new Set());
-  const toggle = (id: number) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const expandAll = () => setExpanded(new Set(suppliers.map((s: any) => s.id)));
-
-  const bySupplier = equipment.reduce((a, eq) => { const s = eq.supplier_id || 0; if (!a[s]) a[s] = []; a[s].push(eq); return a; }, {} as Record<number, EqItem[]>);
-  const supplierList = suppliers.filter((s: any) => bySupplier[s.id]?.length > 0).sort((a: any, b: any) => (bySupplier[b.id]?.length || 0) - (bySupplier[a.id]?.length || 0));
-
-  if (equipment.length === 0) return <div className="text-center py-12 text-gray-500">לא נמצא ציוד</div>;
-
-  return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-3">
-        <span className="text-sm text-gray-500">{supplierList.length} ספקים · {equipment.length} כלים</span>
-        <button onClick={expandAll} className="text-xs text-kkl-green hover:underline">פתח הכל</button>
-      </div>
-      <div className="space-y-2">
-        {supplierList.map((sup: any) => {
-          const eqList = bySupplier[sup.id] || [];
-          const isOpen = expanded.has(sup.id);
-          const types = [...new Set(eqList.map(e => e.equipment_type || e.name).filter(Boolean))];
-          return (
-            <div key={sup.id} className="border border-gray-200 rounded-xl overflow-hidden">
-              <button onClick={() => toggle(sup.id)} className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors">
-                <div className="w-10 h-10 bg-kkl-green-light rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-base font-bold text-kkl-green">{sup.name?.charAt(0)}</span>
-                </div>
-                <div className="flex-1 text-right min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-bold text-gray-900 truncate">{sup.name}</span>
-                    <span className="bg-kkl-green-light text-kkl-green text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">{eqList.length} כלים</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-                    {sup.region_name && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{sup.region_name}{sup.area_name ? ` · ${sup.area_name}` : ''}</span>}
-                    {(sup.contact_name || sup.contact_person) && <span className="flex items-center gap-1"><User className="w-3 h-3" />{sup.contact_name || sup.contact_person}</span>}
-                    {(sup.phone || sup.contact_phone) && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{sup.phone || sup.contact_phone}</span>}
-                  </div>
-                </div>
-                <div className="hidden md:flex gap-1 flex-shrink-0 flex-wrap max-w-[200px] justify-end">
-                  {types.slice(0, 3).map((t, i) => <span key={i} className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${getTypeColor(t)}`}>{t}</span>)}
-                  {types.length > 3 && <span className="text-[10px] text-gray-400">+{types.length - 3}</span>}
-                </div>
-                <div className="flex-shrink-0">{isOpen ? <ChUp className="w-4 h-4 text-gray-400" /> : <ChDown className="w-4 h-4 text-gray-400" />}</div>
-              </button>
-              {isOpen && (
-                <div className="border-t border-gray-100">
-                  <div className="md:hidden flex gap-1 flex-wrap px-4 pt-2">{types.map((t, i) => <span key={i} className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${getTypeColor(t)}`}>{t}</span>)}</div>
-                  <div className="hidden md:grid grid-cols-12 gap-1 px-4 py-2 bg-gray-50 text-xs font-medium text-gray-500">
-                    <div className="col-span-2">מספר רישוי</div><div className="col-span-3">שם / סוג</div><div className="col-span-2">סוג ציוד</div><div className="col-span-2">תעריף</div><div className="col-span-2">סטטוס</div><div className="col-span-1"></div>
-                  </div>
-                  {eqList.map(eq => (
-                    <div key={eq.id} className="px-4 py-2.5 border-t border-gray-50 hover:bg-gray-50/50 transition-colors">
-                      <div className="md:hidden flex items-center justify-between">
-                        <div className="flex items-center gap-2"><div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center"><Truck className="w-3.5 h-3.5 text-white" /></div><div><div className="font-bold text-gray-900 text-sm">{eq.license_plate}</div><div className="text-xs text-gray-500">{eq.name}</div></div></div>
-                        <div className="text-left"><div className="text-sm font-bold text-kkl-green">{eq.hourly_rate ? `₪${eq.hourly_rate}` : '—'}</div><span className={`text-[10px] px-1.5 py-0.5 rounded-full ${eq.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{eq.is_active ? 'פעיל' : 'לא פעיל'}</span></div>
-                      </div>
-                      <div className="hidden md:grid grid-cols-12 gap-1 items-center">
-                        <div className="col-span-2 flex items-center gap-2"><div className="w-7 h-7 bg-slate-800 rounded-lg flex items-center justify-center flex-shrink-0"><Truck className="w-3 h-3 text-white" /></div><span className="font-mono font-bold text-sm">{eq.license_plate}</span></div>
-                        <div className="col-span-3 text-sm text-gray-700 truncate">{eq.name || '—'}</div>
-                        <div className="col-span-2"><span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${getTypeColor(eq.equipment_type || eq.name)}`}>{eq.equipment_type || eq.name || '—'}</span></div>
-                        <div className="col-span-2 font-bold text-kkl-green text-sm">{eq.hourly_rate ? `₪${eq.hourly_rate}` : '—'}</div>
-                        <div className="col-span-2"><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${eq.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{eq.is_active ? 'פעיל' : 'לא פעיל'}</span></div>
-                        <div className="col-span-1 text-left"><button onClick={() => navigate(`/equipment/${eq.id}`)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-kkl-green"><Eye className="w-3.5 h-3.5" /></button></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+const getTypeColor = (n: string) => {
+  for (const [k, c] of Object.entries(TYPE_COLORS)) if (n?.includes(k)) return c;
+  return 'bg-gray-100 text-gray-600';
 };
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Pricing Tab (equipment types with rates)
-// ──────────────────────────────────────────────────────────────────────────────
-const PricingTab: React.FC = () => {
-  const [types, setTypes] = React.useState<any[]>([]);
-  const [loadingPricing, setLoadingPricing] = React.useState(true);
-  const [editingId, setEditingId] = React.useState<number | null>(null);
-  const [editRate, setEditRate] = React.useState({ hourly_rate: '', overnight_rate: '' });
+// ─── Tab 1: Suppliers ─────────────────────────────────────────────────────────
 
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get('/equipment-types');
-        const data = res.data?.items || res.data || [];
-        setTypes(Array.isArray(data) ? data : []);
-      } catch { setTypes([]); }
-      setLoadingPricing(false);
-    })();
-  }, []);
-
-  const startEdit = (t: any) => {
-    setEditingId(t.id);
-    setEditRate({ hourly_rate: String(t.hourly_rate || ''), overnight_rate: String(t.overnight_rate || '') });
-  };
-
-  const saveRate = async (id: number) => {
-    try {
-      await api.put(`/equipment-types/${id}`, {
-        hourly_rate: parseFloat(editRate.hourly_rate) || 0,
-        overnight_rate: parseFloat(editRate.overnight_rate) || 0,
-      });
-      setTypes(prev => prev.map(t => t.id === id ? { ...t, hourly_rate: parseFloat(editRate.hourly_rate) || 0, overnight_rate: parseFloat(editRate.overnight_rate) || 0 } : t));
-      setEditingId(null);
-      if ((window as any).showToast) (window as any).showToast('תעריף עודכן', 'success');
-    } catch (e: any) {
-      if ((window as any).showToast) (window as any).showToast(e?.response?.data?.detail || 'שגיאה', 'error');
-    }
-  };
-
-  if (loadingPricing) return <div className="flex justify-center py-12"><div className="w-8 h-8 border-3 border-emerald-200 border-t-emerald-500 rounded-full animate-spin" /></div>;
-
-  return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h3 className="font-bold text-gray-900">תעריפי ציוד</h3>
-          <p className="text-xs text-gray-500">{types.length} סוגי ציוד</p>
-        </div>
-      </div>
-      <div className="space-y-2">
-        {types.map(t => (
-          <div key={t.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${getTypeColor(t.name)}`}>
-                <Wrench className="w-5 h-5" />
-              </div>
-              <div className="flex-1">
-                <div className="font-bold text-gray-900">{t.name}</div>
-                <div className="text-xs text-gray-500">{t.code || `TYPE-${t.id}`}</div>
-              </div>
-              {editingId === t.id ? (
-                <div className="flex items-center gap-3">
-                  <div className="text-center">
-                    <div className="text-[10px] text-gray-500 mb-1">שעתי ₪</div>
-                    <input value={editRate.hourly_rate} onChange={e => setEditRate(p => ({ ...p, hourly_rate: e.target.value }))} className="w-20 px-2 py-1.5 border border-emerald-300 rounded-lg text-sm text-center font-bold" dir="ltr" autoFocus />
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[10px] text-gray-500 mb-1">לילה ₪</div>
-                    <input value={editRate.overnight_rate} onChange={e => setEditRate(p => ({ ...p, overnight_rate: e.target.value }))} className="w-20 px-2 py-1.5 border border-emerald-300 rounded-lg text-sm text-center font-bold" dir="ltr" />
-                  </div>
-                  <button onClick={() => saveRate(t.id)} className="p-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark"><Save className="w-4 h-4" /></button>
-                  <button onClick={() => setEditingId(null)} className="p-2 text-gray-400 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <div className="text-[10px] text-gray-500">שעתי</div>
-                    <div className="font-bold text-emerald-600 text-lg">{t.hourly_rate ? `₪${Number(t.hourly_rate).toLocaleString()}` : '—'}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[10px] text-gray-500">לילה</div>
-                    <div className="font-bold text-blue-600">{t.overnight_rate ? `₪${Number(t.overnight_rate).toLocaleString()}` : '—'}</div>
-                  </div>
-                  <button onClick={() => startEdit(t)} className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg"><Edit className="w-4 h-4" /></button>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Main Component
-// ──────────────────────────────────────────────────────────────────────────────
-const SupplierSettings: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const getInitialTab = (): TabType => {
-    const params = new URLSearchParams(location.search);
-    const urlTab = params.get('tab') as TabType | null;
-    if (urlTab && ['suppliers', 'equipment', 'pricing', 'rotation', 'constraints'].includes(urlTab)) return urlTab;
-    return pathToTab[location.pathname] || 'suppliers';
-  };
-
-  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
+const SuppliersTab: React.FC<{ onAdd: () => void }> = ({ onAdd }) => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [supplierEquipment, setSupplierEquipment] = useState<SupplierEquipment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [search, setSearch] = useState('');
+  const [filterRegion, setFilterRegion] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [expanded, setExpanded] = useState<number | null>(null);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const urlTab = params.get('tab') as TabType | null;
-    if (urlTab && ['suppliers', 'equipment', 'pricing', 'rotation', 'constraints'].includes(urlTab)) {
-      setActiveTab(urlTab);
-    } else {
-      const newTab = pathToTab[location.pathname];
-      if (newTab && newTab !== activeTab) setActiveTab(newTab);
-    }
-  }, [location.pathname, location.search]);
-
-  useEffect(() => { loadData(); }, [activeTab]);
-
-  const showToast = (msg: string, type = 'error') => {
-    if ((window as any).showToast) (window as any).showToast(msg, type);
-  };
-
-  const loadData = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      if (activeTab === 'suppliers') {
-        const response = await api.get('/suppliers');
-        const data = response.data?.items || response.data || [];
-        setSuppliers(Array.isArray(data) ? data : []);
-      } else if (activeTab === 'equipment') {
-        const [eqRes, supRes] = await Promise.all([
-          api.get('/equipment', { params: { page_size: 500 } }),
-          api.get('/suppliers', { params: { page_size: 500 } })
-        ]);
-        const eqData = eqRes.data?.items || eqRes.data || [];
-        const supData = supRes.data?.items || supRes.data || [];
-        setSuppliers(Array.isArray(supData) ? supData : []);
-        const data = Array.isArray(eqData) ? eqData : [];
-        setSupplierEquipment(Array.isArray(data) ? data : []);
-      }
-    } catch (error: any) {
-      console.error('Error loading data:', error);
-      showToast('שגיאה בטעינת הנתונים', 'error');
-      setSuppliers([]);
-      setSupplierEquipment([]);
-    } finally {
-      setLoading(false);
-    }
+      const [sRes, rRes] = await Promise.all([
+        api.get('/suppliers', { params: { page_size: 500 } }),
+        api.get('/regions').catch(() => ({ data: [] })),
+      ]);
+      setSuppliers(sRes.data?.items || sRes.data || []);
+      setRegions(rRes.data?.items || rRes.data || []);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (s: Supplier) => {
+    await api.patch(`/suppliers/${s.id}/toggle-active`);
+    setSuppliers(prev => prev.map(x => x.id === s.id ? { ...x, is_active: !x.is_active } : x));
   };
 
-  const toggleSupplierStatus = async (supplier: Supplier) => {
+  const filtered = suppliers.filter(s => {
+    const q = search.toLowerCase();
+    if (q && !s.name.toLowerCase().includes(q) && !s.contact_name?.toLowerCase().includes(q) && !s.phone?.includes(q)) return false;
+    if (filterRegion !== 'all' && String(s.region_id) !== filterRegion) return false;
+    if (filterStatus === 'active' && !s.is_active) return false;
+    if (filterStatus === 'inactive' && s.is_active) return false;
+    return true;
+  });
+
+  return (
+    <div>
+      {/* Filters */}
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש לפי שם, איש קשר, טלפון..."
+            className="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500" />
+        </div>
+        <select value={filterRegion} onChange={e => setFilterRegion(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל המרחבים</option>
+          {regions.map(r => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל הסטטוסים</option>
+          <option value="active">פעילים</option>
+          <option value="inactive">לא פעילים</option>
+        </select>
+        <button onClick={onAdd}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+          <Plus className="w-4 h-4" /> ספק חדש
+        </button>
+      </div>
+
+      <div className="text-xs text-gray-500 mb-2">{filtered.length} ספקים</div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><RefreshCw className="w-6 h-6 animate-spin text-green-600" /></div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {/* Header */}
+          <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 text-xs font-medium text-gray-500 border-b">
+            <div className="col-span-3">שם ספק</div>
+            <div className="col-span-2">ח.פ / כתובת</div>
+            <div className="col-span-2">מרחב / אזור</div>
+            <div className="col-span-2">איש קשר</div>
+            <div className="col-span-1 text-center">כלים</div>
+            <div className="col-span-1 text-center">סטטוס</div>
+            <div className="col-span-1"></div>
+          </div>
+
+          {filtered.map(s => (
+            <div key={s.id} className={`border-t border-gray-50 ${!s.is_active ? 'opacity-60' : ''}`}>
+              <div
+                className="grid grid-cols-12 gap-2 px-4 py-3 hover:bg-gray-50 cursor-pointer items-center"
+                onClick={() => setExpanded(expanded === s.id ? null : s.id)}
+              >
+                <div className="col-span-3 flex items-center gap-2">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-green-700">{s.name[0]}</span>
+                  </div>
+                  <span className="font-medium text-gray-900 text-sm truncate">{s.name}</span>
+                </div>
+                <div className="col-span-2 text-xs text-gray-500">{s.tax_id || '—'}</div>
+                <div className="col-span-2 text-xs text-gray-600">
+                  {s.region_name && <div>{s.region_name}</div>}
+                  {s.area_name && <div className="text-gray-400">{s.area_name}</div>}
+                </div>
+                <div className="col-span-2 text-xs">
+                  {s.contact_name && <div className="text-gray-700">{s.contact_name}</div>}
+                  {s.phone && <div className="text-gray-400">{s.phone}</div>}
+                </div>
+                <div className="col-span-1 text-center">
+                  <span className="text-xs font-bold text-green-700">{s.equipment_count ?? '—'}</span>
+                </div>
+                <div className="col-span-1 flex justify-center">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${s.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {s.is_active ? 'פעיל' : 'לא פעיל'}
+                  </span>
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  {expanded === s.id ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                </div>
+              </div>
+
+              {/* Expanded details */}
+              {expanded === s.id && (
+                <div className="px-4 pb-4 bg-gray-50 border-t border-gray-100">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                    {s.email && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <a href={`mailto:${s.email}`} className="text-blue-600 hover:underline">{s.email}</a>
+                      </div>
+                    )}
+                    {s.phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <a href={`tel:${s.phone}`} className="text-blue-600 hover:underline">{s.phone}</a>
+                      </div>
+                    )}
+                    {s.address && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-600">{s.address}</span>
+                      </div>
+                    )}
+                    {(s.active_area_ids?.length ?? 0) > 0 && (
+                      <div className="text-xs text-gray-500">
+                        אזורי שירות: <span className="font-medium">{s.active_area_ids?.length} אזורים</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => toggle(s)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                        s.is_active
+                          ? 'border-red-200 text-red-600 hover:bg-red-50'
+                          : 'border-green-200 text-green-600 hover:bg-green-50'
+                      }`}
+                    >
+                      {s.is_active ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      {s.is_active ? 'השבת ספק' : 'הפעל ספק'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {filtered.length === 0 && !loading && (
+            <div className="text-center py-12 text-gray-400 text-sm">לא נמצאו ספקים</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Tab 2: Equipment ─────────────────────────────────────────────────────────
+
+const EquipmentTab: React.FC<{ onAdd: () => void }> = ({ onAdd }) => {
+  const [equipment, setEquipment] = useState<EqItem[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const load = useCallback(async () => {
+    setLoading(true);
     try {
-      await api.patch(`/suppliers/${supplier.id}`, { is_active: !supplier.is_active });
-      showToast(supplier.is_active ? 'הספק הושבת' : 'הספק הופעל', 'success');
-      loadData();
-    } catch (error: any) {
-      showToast(error?.response?.data?.detail || 'שגיאה בעדכון סטטוס', 'error');
-    }
+      const [eRes, sRes] = await Promise.all([
+        api.get('/equipment', { params: { page_size: 2000 } }),
+        api.get('/suppliers', { params: { page_size: 500 } }),
+      ]);
+      setEquipment(eRes.data?.items || []);
+      setSuppliers(sRes.data?.items || sRes.data || []);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (eq: EqItem) => {
+    await api.patch(`/equipment/${eq.id}/toggle-active`);
+    setEquipment(prev => prev.map(x => x.id === eq.id ? { ...x, is_active: !x.is_active } : x));
   };
 
-  const deleteSupplier = async (supplier: Supplier) => {
-    if (!window.confirm(`למחוק את הספק "${supplier.name}"?`)) return;
+  const types = [...new Set(equipment.map(e => e.equipment_type).filter(Boolean))].sort();
+
+  const filtered = equipment.filter(e => {
+    if (search && !e.license_plate?.toLowerCase().includes(search.toLowerCase()) &&
+        !e.name?.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterType !== 'all' && e.equipment_type !== filterType) return false;
+    if (filterStatus === 'active' && !e.is_active) return false;
+    if (filterStatus === 'inactive' && e.is_active) return false;
+    if (filterStatus === 'no_rate' && e.hourly_rate) return false;
+    if (filterStatus === 'night' && !e.night_guard) return false;
+    return true;
+  });
+
+  const bySupplier = filtered.reduce((acc, eq) => {
+    const sid = eq.supplier_id || 0;
+    if (!acc[sid]) acc[sid] = [];
+    acc[sid].push(eq);
+    return acc;
+  }, {} as Record<number, EqItem[]>);
+
+  const supplierList = suppliers.filter(s => bySupplier[s.id]);
+
+  const toggleExpand = (id: number) => {
+    setExpanded(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש לפי מספר רישוי..."
+            className="w-full pr-9 pl-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500" />
+        </div>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל סוגי הציוד</option>
+          {types.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל הסטטוסים</option>
+          <option value="active">פעילים</option>
+          <option value="inactive">לא פעילים</option>
+          <option value="no_rate">חסר תעריף</option>
+          <option value="night">שמירת לילה</option>
+        </select>
+        <button onClick={onAdd}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+          <Plus className="w-4 h-4" /> הוסף כלי
+        </button>
+      </div>
+
+      <div className="text-xs text-gray-500 mb-2">{supplierList.length} ספקים · {filtered.length} כלים</div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><RefreshCw className="w-6 h-6 animate-spin text-green-600" /></div>
+      ) : (
+        <div className="space-y-2">
+          {supplierList.map(s => {
+            const eqList = bySupplier[s.id] || [];
+            const isOpen = expanded.has(s.id);
+            return (
+              <div key={s.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <button
+                  onClick={() => toggleExpand(s.id)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center">
+                      <span className="font-bold text-green-700 text-sm">{s.name[0]}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold text-gray-900">{s.name}</div>
+                      <div className="text-xs text-gray-400">{s.area_name || s.region_name}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">{eqList.length} כלים</span>
+                    {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div>
+                    {/* Table header */}
+                    <div className="hidden md:grid grid-cols-12 gap-2 px-5 py-2 bg-gray-50 text-xs font-medium text-gray-500 border-t">
+                      <div className="col-span-2">רישוי</div>
+                      <div className="col-span-3">סוג ציוד</div>
+                      <div className="col-span-2 text-center">תעריף/שעה</div>
+                      <div className="col-span-2 text-center">תעריף לינה</div>
+                      <div className="col-span-1 text-center">☽</div>
+                      <div className="col-span-1 text-center">סטטוס</div>
+                      <div className="col-span-1"></div>
+                    </div>
+                    {eqList.map(eq => (
+                      <div key={eq.id}
+                        className={`grid grid-cols-12 gap-2 px-5 py-2.5 border-t border-gray-50 items-center ${!eq.is_active ? 'opacity-50' : ''}`}
+                      >
+                        <div className="col-span-2 font-mono text-sm font-bold text-gray-800">{eq.license_plate || eq.name}</div>
+                        <div className="col-span-3">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getTypeColor(eq.equipment_type || '')}`}>
+                            {eq.equipment_type || '—'}
+                          </span>
+                        </div>
+                        <div className="col-span-2 text-center text-sm font-semibold text-green-700">
+                          {eq.hourly_rate ? `₪${Number(eq.hourly_rate).toLocaleString()}` : <span className="text-orange-400 text-xs">חסר</span>}
+                        </div>
+                        <div className="col-span-2 text-center text-sm text-gray-600">
+                          {eq.overnight_rate ? `₪${Number(eq.overnight_rate).toLocaleString()}` : '—'}
+                        </div>
+                        <div className="col-span-1 text-center">
+                          {eq.night_guard ? <Moon className="w-4 h-4 text-indigo-500 mx-auto" /> : <span className="text-gray-300 text-xs">—</span>}
+                        </div>
+                        <div className="col-span-1 text-center">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${eq.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                            {eq.is_active ? 'פעיל' : 'כבוי'}
+                          </span>
+                        </div>
+                        <div className="col-span-1 text-left">
+                          <button
+                            onClick={() => toggle(eq)}
+                            className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                            title={eq.is_active ? 'השבת' : 'הפעל'}
+                          >
+                            {eq.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {supplierList.length === 0 && !loading && (
+            <div className="text-center py-12 text-gray-400 text-sm">לא נמצא ציוד</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Tab 3: Pricing (equipment types + rates) ─────────────────────────────────
+
+const PricingTab: React.FC<{ onAdd: () => void }> = ({ onAdd }) => {
+  const [types, setTypes] = useState<EqType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterCat, setFilterCat] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [editing, setEditing] = useState<number | null>(null);
+  const [editRate, setEditRate] = useState('');
+  const [editNight, setEditNight] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
     try {
-      await api.delete(`/suppliers/${supplier.id}`);
-      showToast('הספק נמחק בהצלחה', 'success');
-      loadData();
-    } catch (error: any) {
-      showToast(error?.response?.data?.detail || 'שגיאה במחיקת הספק', 'error');
-    }
+      const res = await api.get('/equipment-types', { params: { page_size: 200 } });
+      setTypes(res.data?.items || res.data || []);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const categories = [...new Set(types.map(t => t.category).filter(Boolean))].sort() as string[];
+
+  const filtered = types.filter(t => {
+    if (filterCat !== 'all' && t.category !== filterCat) return false;
+    if (filterStatus === 'active' && !t.is_active) return false;
+    if (filterStatus === 'inactive' && t.is_active) return false;
+    if (filterStatus === 'no_rate' && t.hourly_rate) return false;
+    return true;
+  });
+
+  const saveRate = async (t: EqType) => {
+    await api.put(`/equipment-types/${t.id}`, {
+      hourly_rate: editRate ? Number(editRate) : t.hourly_rate,
+      overnight_rate: editNight ? Number(editNight) : t.overnight_rate,
+    });
+    setTypes(prev => prev.map(x => x.id === t.id ? {
+      ...x,
+      hourly_rate: editRate ? Number(editRate) : x.hourly_rate,
+      overnight_rate: editNight ? Number(editNight) : x.overnight_rate,
+    } : x));
+    setEditing(null);
   };
 
-  const filteredSuppliers = (suppliers || []).filter(s =>
-    s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.contact_name || s.contact_person || '')?.toLowerCase().includes(searchTerm.toLowerCase())
+  return (
+    <div>
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל הקבוצות</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל הסטטוסים</option>
+          <option value="active">פעיל</option>
+          <option value="inactive">לא פעיל</option>
+          <option value="no_rate">חסר תעריף</option>
+        </select>
+        <button onClick={onAdd}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+          <Plus className="w-4 h-4" /> סוג ציוד חדש
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><RefreshCw className="w-6 h-6 animate-spin text-green-600" /></div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-2.5 bg-gray-50 text-xs font-medium text-gray-500 border-b">
+            <div className="col-span-3">שם סוג ציוד</div>
+            <div className="col-span-2">קבוצה</div>
+            <div className="col-span-2 text-center">תעריף שעתי</div>
+            <div className="col-span-2 text-center">תעריף לינה</div>
+            <div className="col-span-1 text-center">☽</div>
+            <div className="col-span-1 text-center">סטטוס</div>
+            <div className="col-span-1"></div>
+          </div>
+          {filtered.map(t => (
+            <div key={t.id}
+              className={`grid grid-cols-12 gap-2 px-4 py-3 border-t border-gray-50 items-center ${!t.hourly_rate ? 'bg-orange-50/50' : ''}`}
+            >
+              <div className="col-span-3 font-medium text-gray-900 text-sm">{t.name}</div>
+              <div className="col-span-2">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${getTypeColor(t.category || t.name)}`}>
+                  {t.category || '—'}
+                </span>
+              </div>
+              <div className="col-span-2 text-center">
+                {editing === t.id ? (
+                  <input type="number" value={editRate} onChange={e => setEditRate(e.target.value)}
+                    placeholder={String(t.hourly_rate || '')}
+                    className="w-full text-center border border-green-300 rounded px-2 py-1 text-sm" />
+                ) : (
+                  <span className={`font-bold text-sm ${t.hourly_rate ? 'text-green-700' : 'text-orange-400'}`}>
+                    {t.hourly_rate ? `₪${t.hourly_rate}` : 'חסר'}
+                  </span>
+                )}
+              </div>
+              <div className="col-span-2 text-center">
+                {editing === t.id ? (
+                  <input type="number" value={editNight} onChange={e => setEditNight(e.target.value)}
+                    placeholder={String(t.overnight_rate || '')}
+                    className="w-full text-center border border-green-300 rounded px-2 py-1 text-sm" />
+                ) : (
+                  <span className="text-sm text-gray-600">{t.overnight_rate ? `₪${t.overnight_rate}` : '—'}</span>
+                )}
+              </div>
+              <div className="col-span-1 text-center">
+                {t.night_guard ? <Moon className="w-4 h-4 text-indigo-500 mx-auto" /> : <span className="text-gray-200">—</span>}
+              </div>
+              <div className="col-span-1 text-center">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${t.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                  {t.is_active ? 'פעיל' : 'כבוי'}
+                </span>
+              </div>
+              <div className="col-span-1 flex justify-end gap-1">
+                {editing === t.id ? (
+                  <>
+                    <button onClick={() => saveRate(t)} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-4 h-4" /></button>
+                    <button onClick={() => setEditing(null)} className="p-1 text-gray-400 hover:bg-gray-50 rounded"><X className="w-4 h-4" /></button>
+                  </>
+                ) : (
+                  <button onClick={() => { setEditing(t.id); setEditRate(''); setEditNight(''); }}
+                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="text-center py-8 text-gray-400 text-sm">לא נמצאו סוגי ציוד</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Tab 4: Fair Rotation ─────────────────────────────────────────────────────
+
+const RotationTab: React.FC = () => {
+  const [rotations, setRotations] = useState<Rotation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [regions, setRegions] = useState<Region[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [filterRegion, setFilterRegion] = useState('all');
+  const [filterArea, setFilterArea] = useState('all');
+  const [filterType, setFilterType] = useState('all');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [rRes, aRes, rotRes] = await Promise.all([
+        api.get('/regions').catch(() => ({ data: [] })),
+        api.get('/areas').catch(() => ({ data: [] })),
+        api.get('/supplier-rotations', { params: { page_size: 500 } }),
+      ]);
+      setRegions(rRes.data?.items || rRes.data || []);
+      setAreas(aRes.data?.items || aRes.data || []);
+      const rots = rotRes.data?.items || rotRes.data || [];
+      setRotations(Array.isArray(rots) ? rots : []);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const noAreaSuppliers = rotations.filter(r => !r.area_id && r.is_active);
+
+  const filteredAreas = areas.filter(a =>
+    filterRegion === 'all' || regions.find(r => r.id === a.region_id && String(r.id) === filterRegion)
   );
 
-  const filteredEquipment = (supplierEquipment || []).filter(eq =>
-    eq.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eq.equipment_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eq.license_plate?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const types = [...new Set(rotations.map(r => r.category_name).filter(Boolean))].sort() as string[];
 
-  const tabs = [
-    { id: 'suppliers' as TabType, label: 'רשימת ספקים', icon: <Truck className="w-4 h-4" /> },
-    { id: 'equipment' as TabType, label: 'ציוד ספקים', icon: <Wrench className="w-4 h-4" /> },
-    { id: 'pricing' as TabType, label: 'תמחור כלים', icon: <DollarSign className="w-4 h-4" /> },
-    { id: 'rotation' as TabType, label: 'סבב הוגן', icon: <RotateCcw className="w-4 h-4" /> },
-    { id: 'constraints' as TabType, label: 'סיבות אילוץ', icon: <AlertCircle className="w-4 h-4" /> },
+  const filtered = rotations.filter(r => {
+    if (filterArea !== 'all' && String(r.area_id) !== filterArea) return false;
+    if (filterType !== 'all' && r.category_name !== filterType) return false;
+    return r.is_active && r.area_id;
+  });
+
+  const byArea = filtered.reduce((acc, r) => {
+    const k = r.area_id!;
+    if (!acc[k]) acc[k] = [];
+    acc[k].push(r);
+    return acc;
+  }, {} as Record<number, Rotation[]>);
+
+  const getRotStatus = (r: Rotation) => {
+    if (!r.is_available) return { label: 'לא זמין', cls: 'bg-red-100 text-red-700' };
+    if (r.rotation_position === 1) return { label: 'הבא בתור', cls: 'bg-green-100 text-green-700' };
+    return { label: `תור ${r.rotation_position}`, cls: 'bg-blue-100 text-blue-700' };
+  };
+
+  return (
+    <div>
+      {noAreaSuppliers.length > 0 && (
+        <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+          <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-orange-800">
+            <span className="font-semibold">{noAreaSuppliers.length} ספקים ללא אזור שירות</span> — לא ייכנסו לסבב הוגן.
+            יש לשייך אותם לאזורים בטאב "ספקים".
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row gap-3 mb-4">
+        <select value={filterRegion} onChange={e => { setFilterRegion(e.target.value); setFilterArea('all'); }}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל המרחבים</option>
+          {regions.map(r => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
+        </select>
+        <select value={filterArea} onChange={e => setFilterArea(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל האזורים</option>
+          {filteredAreas.map(a => <option key={a.id} value={String(a.id)}>{a.name}</option>)}
+        </select>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
+          <option value="all">כל סוגי הציוד</option>
+          {types.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <button onClick={load} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
+          <RefreshCw className="w-4 h-4" /> רענן
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><RefreshCw className="w-6 h-6 animate-spin text-green-600" /></div>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(byArea).map(([areaId, areaRots]) => {
+            const area = areas.find(a => a.id === Number(areaId));
+            const region = regions.find(r => r.id === area?.region_id);
+            const byCategory = areaRots.reduce((acc, r) => {
+              const k = r.category_name || '?';
+              if (!acc[k]) acc[k] = [];
+              acc[k].push(r);
+              return acc;
+            }, {} as Record<string, Rotation[]>);
+
+            return (
+              <div key={areaId} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 border-b flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-green-600" />
+                  <span className="font-semibold text-gray-900">{area?.name || `אזור ${areaId}`}</span>
+                  <span className="text-xs text-gray-400">/ {region?.name}</span>
+                  <span className="mr-auto text-xs text-gray-500">{areaRots.length} ספקים בסבב</span>
+                </div>
+                {Object.entries(byCategory).map(([cat, catRots]) => (
+                  <div key={cat} className="border-t border-gray-50">
+                    <div className="px-4 py-2 bg-gray-50/50">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getTypeColor(cat)}`}>{cat}</span>
+                    </div>
+                    <div className="hidden md:grid grid-cols-12 gap-2 px-5 py-1.5 text-[10px] font-medium text-gray-400 border-t border-gray-50">
+                      <div className="col-span-1 text-center">תור</div>
+                      <div className="col-span-3">ספק</div>
+                      <div className="col-span-2 text-center">הזמנות</div>
+                      <div className="col-span-2 text-center">דחיות</div>
+                      <div className="col-span-2 text-center">מענה ממוצע</div>
+                      <div className="col-span-2 text-center">סטטוס</div>
+                    </div>
+                    {catRots
+                      .sort((a, b) => (a.rotation_position || 99) - (b.rotation_position || 99))
+                      .map(r => {
+                        const st = getRotStatus(r);
+                        return (
+                          <div key={r.id} className="grid grid-cols-12 gap-2 px-5 py-2.5 border-t border-gray-50 items-center text-sm">
+                            <div className="col-span-1 text-center font-bold text-gray-500">{r.rotation_position || '?'}</div>
+                            <div className="col-span-3 font-medium text-gray-900 truncate">{r.supplier_name || `ספק ${r.supplier_id}`}</div>
+                            <div className="col-span-2 text-center text-gray-600">{r.total_assignments || 0}</div>
+                            <div className="col-span-2 text-center text-gray-600">{r.rejection_count || 0}</div>
+                            <div className="col-span-2 text-center text-gray-500 text-xs">
+                              {r.avg_response_time_hours ? `${r.avg_response_time_hours.toFixed(1)} שעות` : '—'}
+                            </div>
+                            <div className="col-span-2 flex justify-center">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+          {Object.keys(byArea).length === 0 && (
+            <div className="text-center py-12 text-gray-400 text-sm">לא נמצאו נתוני סבב</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+const SupplierSettings: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const getInitialTab = (): TabType => {
+    const t = searchParams.get('tab') as TabType;
+    if (['suppliers', 'equipment', 'pricing', 'rotation'].includes(t)) return t;
+    return 'suppliers';
+  };
+  const [activeTab, setActiveTab] = useState<TabType>(getInitialTab());
+
+  const switchTab = (tab: TabType) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
+
+  // Modal state (passed to child tabs)
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [showEquipmentModal, setShowEquipmentModal] = useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+
+  const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
+    { id: 'suppliers', label: 'ספקים', icon: <Truck className="w-4 h-4" /> },
+    { id: 'equipment', label: 'ציוד ספקים', icon: <Wrench className="w-4 h-4" /> },
+    { id: 'pricing', label: 'סוגי ציוד ותעריפים', icon: <DollarSign className="w-4 h-4" /> },
+    { id: 'rotation', label: 'סבב הוגן', icon: <RotateCcw className="w-4 h-4" /> },
   ];
 
   return (
-    <div className="min-h-screen bg-kkl-bg" dir="rtl">
-      {/* Modals */}
-      {(showAddModal || editingSupplier) && (
-        <SupplierModal
-          supplier={editingSupplier}
-          onClose={() => { setShowAddModal(false); setEditingSupplier(null); }}
-          onSaved={loadData}
-        />
-      )}
-
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/settings')}
-            className="text-kkl-green hover:text-kkl-green-dark flex items-center gap-1 mb-4 text-sm"
-          >
-            <ArrowRight className="w-4 h-4" />
-            חזרה להגדרות
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="max-w-7xl mx-auto">
+          <button onClick={() => navigate('/settings')} className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-800 mb-3">
+            <ArrowRight className="w-4 h-4" /> חזרה להגדרות
           </button>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-kkl-green rounded-xl flex items-center justify-center">
-                <Truck className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-kkl-text">הגדרות ספקים</h1>
-                <p className="text-gray-500">ניהול ספקים, ציוד ותמחור</p>
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">ספקים וציוד</h1>
+              <p className="text-sm text-gray-500 mt-1">ניהול ספקים, ציוד, תמחור וסבב הוגן</p>
             </div>
-            {(activeTab === 'suppliers') && (
-              <button
-                onClick={() => { setEditingSupplier(null); setShowAddModal(true); }}
-                className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                הוסף ספק
-              </button>
-            )}
           </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border mb-6">
-          <div className="flex overflow-x-auto">
-            {tabs.map((tab) => (
+          {/* Tabs */}
+          <div className="flex gap-1 mt-4 overflow-x-auto">
+            {tabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                onClick={() => switchTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                   activeTab === tab.id
-                    ? 'border-kkl-green text-kkl-green bg-kkl-green-light/30'
-                    : 'border-transparent text-gray-500 hover:text-kkl-green hover:bg-gray-50'
+                    ? 'bg-green-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                {tab.icon}
-                {tab.label}
+                {tab.icon} {tab.label}
               </button>
             ))}
           </div>
         </div>
-
-        {/* Search (only for data tabs) */}
-        {(activeTab === 'suppliers' || activeTab === 'equipment') && (
-          <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-4 mb-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder={`חיפוש ${activeTab === 'suppliers' ? 'ספקים' : 'ציוד'}...`}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pr-10 pl-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
-                />
-              </div>
-              <button className="px-4 py-2.5 border border-kkl-border rounded-lg hover:bg-gray-50 flex items-center gap-2 text-gray-600">
-                <Filter className="w-4 h-4" />
-                סינון
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="relative">
-          <div className="w-10 h-10 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="20" height="17">
-                <defs>
-                  <linearGradient id="ss1_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#0097a7"/></linearGradient>
-                  <linearGradient id="ss1_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#0097a7"/><stop offset="50%" stopColor="#2e7d32"/><stop offset="100%" stopColor="#66bb6a"/></linearGradient>
-                  <linearGradient id="ss1_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2e7d32"/><stop offset="40%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#8B5e3c"/></linearGradient>
-                </defs>
-                <path d="M46 20 Q60 9 74 20" stroke="url(#ss1_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#ss1_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#ss1_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
-                <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
-              </svg>
-          </div>
-        </div>
-            </div>
-          ) : activeTab === 'suppliers' ? (
-            /* ── Suppliers Cards ── */
-            <div className="p-4">
-              {filteredSuppliers.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">לא נמצאו ספקים</div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredSuppliers.map((supplier) => (
-                    <div key={supplier.id} className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start gap-4">
-                        {/* Avatar */}
-                        <div className="w-12 h-12 bg-kkl-green-light rounded-xl flex items-center justify-center flex-shrink-0">
-                          <span className="text-lg font-bold text-kkl-green">{supplier.name?.charAt(0)}</span>
-                        </div>
-                        
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-gray-900 text-base">{supplier.name}</span>
-                            <button
-                              onClick={() => toggleSupplierStatus(supplier)}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                                supplier.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                              }`}
-                            >
-                              {supplier.is_active ? 'פעיל' : 'מושבת'}
-                            </button>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-sm text-gray-600">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">ח.פ:</span>
-                              <span className="font-mono text-xs">{supplier.tax_id || supplier.code || '—'}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">קשר:</span>
-                              <span>{supplier.contact_name || supplier.contact_person || '—'}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">טלפון:</span>
-                              <span dir="ltr">{supplier.phone || '—'}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">אימייל:</span>
-                              <span className="text-xs truncate" dir="ltr">{supplier.email || '—'}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">מרחב:</span>
-                              <span className={`text-xs px-1.5 py-0.5 rounded ${supplier.region_name ? 'bg-purple-50 text-purple-700' : 'text-gray-400'}`}>
-                                {supplier.region_name || '—'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-gray-400 text-xs w-12 flex-shrink-0">כלים:</span>
-                              <span className="font-bold text-kkl-green">{supplier.equipment_count || '—'}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button onClick={() => setEditingSupplier(supplier)} className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg" title="עריכה">
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => navigate(`/suppliers/${supplier.id}`)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="צפייה מלאה">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => deleteSupplier(supplier)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg" title="מחיקה">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : activeTab === 'equipment' ? (
-            /* ── Equipment by Supplier (Accordion) ── */
-            <EquipmentAccordion
-              equipment={filteredEquipment.map(eq => ({
-                id: eq.id,
-                license_plate: eq.license_plate || '',
-                name: eq.equipment_name || eq.supplier_name || '',
-                equipment_type: eq.equipment_name || '',
-                supplier_id: eq.supplier_id,
-                supplier_name: eq.supplier_name || '',
-                hourly_rate: eq.hourly_rate || eq.base_rate || 0,
-                is_active: eq.is_active,
-              }))}
-              suppliers={suppliers}
-              navigate={navigate}
-            />
-          ) : activeTab === 'pricing' ? (
-            /* ── Pricing Tab — inline ── */
-            <PricingTab />
-          ) : activeTab === 'rotation' ? (
-            /* ── Fair Rotation Tab — redirect ── */
-            <div className="p-8 text-center">
-              <RotateCcw className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-kkl-text mb-2">סבב הוגן</h3>
-              <p className="text-gray-500 mb-4">הגדרת כללי הקצאת ספקים בסבב הוגן</p>
-              <button
-                onClick={() => navigate('/settings/fair-rotation')}
-                className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors"
-              >
-                עבור להגדרות סבב הוגן
-              </button>
-            </div>
-          ) : (
-            /* ── Constraint Reasons Tab — redirect ── */
-            <div className="p-8 text-center">
-              <AlertCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-kkl-text mb-2">סיבות אילוץ ספק</h3>
-              <p className="text-gray-500 mb-4">ניהול סיבות לבחירת ספק ידנית מחוץ לסבב</p>
-              <button
-                onClick={() => navigate('/settings/constraint-reasons')}
-                className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors"
-              >
-                נהל סיבות אילוץ
-              </button>
-            </div>
-          )}
-        </div>
       </div>
+
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {activeTab === 'suppliers' && (
+          <SuppliersTab onAdd={() => setShowSupplierModal(true)} />
+        )}
+        {activeTab === 'equipment' && (
+          <EquipmentTab onAdd={() => setShowEquipmentModal(true)} />
+        )}
+        {activeTab === 'pricing' && (
+          <PricingTab onAdd={() => setShowTypeModal(true)} />
+        )}
+        {activeTab === 'rotation' && <RotationTab />}
+      </div>
+
+      {/* Modals will be imported from /components/suppliers/ */}
+      {showSupplierModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold">ספק חדש</h2>
+              <button onClick={() => setShowSupplierModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <p className="text-sm text-gray-500">Modal ספק חדש — יבוא מ-components/suppliers/SupplierModal.tsx</p>
+          </div>
+        </div>
+      )}
+      {showEquipmentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold">הוספת כלי</h2>
+              <button onClick={() => setShowEquipmentModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <p className="text-sm text-gray-500">Modal הוספת כלי — יבוא מ-components/suppliers/EquipmentModal.tsx</p>
+          </div>
+        </div>
+      )}
+      {showTypeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold">סוג ציוד חדש</h2>
+              <button onClick={() => setShowTypeModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <p className="text-sm text-gray-500">Modal סוג ציוד — יבוא מ-components/suppliers/EquipmentTypeModal.tsx</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
