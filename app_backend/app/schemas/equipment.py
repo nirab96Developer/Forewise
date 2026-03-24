@@ -70,6 +70,8 @@ class EquipmentCreate(EquipmentBase):
     hourly_rate: Optional[Decimal] = Field(None, ge=0, description="תעריף שעתי")
     daily_rate: Optional[Decimal] = Field(None, ge=0, description="תעריף יומי")
     storage_hourly_rate: Optional[Decimal] = Field(None, ge=0, description="תעריף אחסון שעתי")
+    overnight_rate: Optional[Decimal] = Field(None, ge=0, description="תעריף לינת שטח")
+    night_guard: Optional[bool] = Field(None, description="מתאים לשמירת לילה")
     
     # Maintenance
     last_maintenance: Optional[date] = Field(None, description="תחזוקה אחרונה")

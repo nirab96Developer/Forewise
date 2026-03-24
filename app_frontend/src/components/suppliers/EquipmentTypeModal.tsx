@@ -5,6 +5,7 @@ import api from '../../services/api';
 
 interface Category { id: number; name: string; default_hourly_rate?: number; }
 interface Props { onClose: () => void; onSaved: () => void; }
+const GROUPS = ['כלים כבדים', 'כלים קלים', 'ציוד', 'שמירה'];
 
 const EquipmentTypeModal: React.FC<Props> = ({ onClose, onSaved }) => {
   const [saving, setSaving] = useState(false);
@@ -13,7 +14,7 @@ const EquipmentTypeModal: React.FC<Props> = ({ onClose, onSaved }) => {
   const [showNewCat, setShowNewCat] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [form, setForm] = useState({
-    category_id: '', name: '', hourly_rate: '', overnight_rate: '', night_guard: false, notes: '',
+    category_id: '', name: '', hourly_rate: '', overnight_rate: '', night_guard: false, notes: '', category_group: '',
   });
   const [catDefaultRate, setCatDefaultRate] = useState<number | null>(null);
   const [rateChanged, setRateChanged] = useState(false);
@@ -60,9 +61,12 @@ const EquipmentTypeModal: React.FC<Props> = ({ onClose, onSaved }) => {
     }
     setSaving(true); setError('');
     try {
+      const autoCode = form.name.trim().replace(/[^a-zA-Z0-9\u0590-\u05FF]/g, '_').slice(0, 30) + '_' + Date.now().toString().slice(-4);
       await api.post('/equipment-types', {
+        code: autoCode,
         name: form.name.trim(),
         category_id: Number(form.category_id),
+        category_group: form.category_group || undefined,
         hourly_rate: Number(form.hourly_rate),
         overnight_rate: form.overnight_rate ? Number(form.overnight_rate) : undefined,
         night_guard: form.night_guard,
@@ -136,6 +140,15 @@ const EquipmentTypeModal: React.FC<Props> = ({ onClose, onSaved }) => {
                 placeholder="375"
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500" />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">קבוצת ציוד</label>
+            <select value={form.category_group} onChange={e => f('category_group', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+              <option value="">בחר קבוצה (אופציונלי)</option>
+              {GROUPS.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
           </div>
 
           <label className="flex items-center gap-3 cursor-pointer select-none">

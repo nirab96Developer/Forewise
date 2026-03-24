@@ -17,6 +17,11 @@ class SupplierBase(BaseModel):
 
 class SupplierCreate(SupplierBase):
     status: Optional[str] = Field(None, max_length=50)
+    tax_id: Optional[str] = Field(None, max_length=50)
+    region_id: Optional[int] = None
+    area_id: Optional[int] = None
+    active_area_ids: List[int] = []
+    active_region_ids: List[int] = []
 
 
 class SupplierUpdate(BaseModel):

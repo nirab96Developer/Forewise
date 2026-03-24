@@ -36,10 +36,18 @@ const SupplierModal: React.FC<Props> = ({ onClose, onSaved }) => {
   const save = async () => {
     setSaving(true); setError('');
     try {
+      // Auto-generate code from name (slug)
+      const autoCode = form.name.trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\u0590-\u05FF-]/g, '').slice(0, 20) + '-' + Date.now().toString().slice(-4);
       const res = await api.post('/suppliers', {
-        name: form.name, tax_id: form.tax_id || undefined, address: form.address || undefined,
-        contact_name: form.contact_name || undefined, phone: form.phone || undefined, email: form.email || undefined,
-        region_id: form.region_id ? Number(form.region_id) : undefined, active_area_ids: selectedAreas,
+        code: autoCode,
+        name: form.name,
+        tax_id: form.tax_id || undefined,
+        address: form.address || undefined,
+        contact_name: form.contact_name || undefined,
+        phone: form.phone || undefined,
+        email: form.email || undefined,
+        region_id: form.region_id ? Number(form.region_id) : undefined,
+        active_area_ids: selectedAreas,
       });
       const sid = res.data?.id;
       if (sid && selectedAreas.length > 0) {
