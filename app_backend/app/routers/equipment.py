@@ -616,6 +616,22 @@ def delete_equipment(
         )
 
 
+@router.patch("/{equipment_id}/toggle-active")
+def toggle_equipment_active(
+    equipment_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """הפעל / השבת כלי ציוד"""
+    require_permission(current_user, "EQUIPMENT.UPDATE")
+    eq = db.query(Equipment).filter(Equipment.id == equipment_id).first()
+    if not eq:
+        raise HTTPException(status_code=404, detail="ציוד לא נמצא")
+    eq.is_active = not eq.is_active
+    db.commit()
+    return {"id": equipment_id, "is_active": eq.is_active}
+
+
 @router.post("/{equipment_id}/restore", response_model=EquipmentResponse)
 def restore_equipment(
     equipment_id: int,

@@ -164,6 +164,23 @@ def delete_supplier(
     return None
 
 
+@router.patch("/{supplier_id}/toggle-active")
+def toggle_supplier_active(
+    supplier_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """הפעל / השבת ספק"""
+    require_permission(current_user, "suppliers.update")
+    from app.models.supplier import Supplier as _Sup
+    supplier = db.query(_Sup).filter(_Sup.id == supplier_id).first()
+    if not supplier:
+        raise HTTPException(status_code=404, detail="ספק לא נמצא")
+    supplier.is_active = not supplier.is_active
+    db.commit()
+    return {"id": supplier_id, "is_active": supplier.is_active}
+
+
 # ── Global supplier equipment list (all suppliers) ────────────────────────────
 import io
 import qrcode
