@@ -9,6 +9,9 @@ import {
   RefreshCw
 } from 'lucide-react';
 import api from '../../services/api';
+import SupplierModal from '../../components/suppliers/SupplierModal';
+import EquipmentModal from '../../components/suppliers/EquipmentModal';
+import EquipmentTypeModal from '../../components/suppliers/EquipmentTypeModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -797,37 +800,22 @@ const SupplierSettings: React.FC = () => {
 
       {/* Modals will be imported from /components/suppliers/ */}
       {showSupplierModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold">ספק חדש</h2>
-              <button onClick={() => setShowSupplierModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
-            </div>
-            <p className="text-sm text-gray-500">Modal ספק חדש — יבוא מ-components/suppliers/SupplierModal.tsx</p>
-          </div>
-        </div>
+        <SupplierModal
+          onClose={() => setShowSupplierModal(false)}
+          onSaved={() => { setShowSupplierModal(false); (window as any).showToast?.('ספק נוצר בהצלחה', 'success'); }}
+        />
       )}
       {showEquipmentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold">הוספת כלי</h2>
-              <button onClick={() => setShowEquipmentModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
-            </div>
-            <p className="text-sm text-gray-500">Modal הוספת כלי — יבוא מ-components/suppliers/EquipmentModal.tsx</p>
-          </div>
-        </div>
+        <EquipmentModal
+          onClose={() => setShowEquipmentModal(false)}
+          onSaved={() => { setShowEquipmentModal(false); (window as any).showToast?.('כלי נוסף בהצלחה', 'success'); }}
+        />
       )}
       {showTypeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold">סוג ציוד חדש</h2>
-              <button onClick={() => setShowTypeModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
-            </div>
-            <p className="text-sm text-gray-500">Modal סוג ציוד — יבוא מ-components/suppliers/EquipmentTypeModal.tsx</p>
-          </div>
-        </div>
+        <EquipmentTypeModal
+          onClose={() => setShowTypeModal(false)}
+          onSaved={() => { setShowTypeModal(false); (window as any).showToast?.('סוג ציוד נוצר בהצלחה', 'success'); }}
+        />
       )}
     </div>
   );
