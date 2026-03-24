@@ -73,7 +73,7 @@ const SystemSettings = lazy(() => import("../pages/Settings/SystemSettings"));
 const SupplierSettings = lazy(() => import("../pages/Settings/SupplierSettings"));
 const ConstraintReasons = lazy(() => import("../pages/Settings/ConstraintReasons"));
 const FairRotation = lazy(() => import("../pages/Settings/FairRotation"));
-const EquipmentCatalog = lazy(() => import("../pages/Settings/EquipmentCatalog"));
+// EquipmentCatalog merged into SupplierSettings
 const WorkHours = lazy(() => import("../pages/Settings/WorkHours"));
 const Budgets = lazy(() => import("../pages/Settings/Budgets"));
 const BudgetDetail = lazy(() => import("../pages/Settings/BudgetDetail"));
@@ -239,7 +239,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/suppliers/:id" element={<Navigate to="/settings/suppliers" replace />} />
         <Route path="/suppliers/:id/edit" element={<Navigate to="/settings/suppliers" replace />} />
         <Route path="/suppliers/:supplierId/add-equipment" element={<Navigate to="/settings/suppliers?tab=equipment" replace />} />
-        <Route path="/suppliers/equipment/:equipmentId/update-rate" element={<Navigate to="/settings/equipment-catalog" replace />} />
+        <Route path="/suppliers/equipment/:equipmentId/update-rate" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
 
         {/* ============================================
               INVOICES & REPORTS
@@ -265,13 +265,12 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/settings" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><SystemSettings /></Guarded>} />
         <Route path="/settings/budgets" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><Budgets /></Guarded>} />
         <Route path="/settings/budgets/:id" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><BudgetDetail /></Guarded>} />
-        {/* Equipment catalog - קטלוג כלים עם מחירים */}
-        <Route path="/settings/equipment-catalog" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><EquipmentCatalog /></Guarded>} />
-        <Route path="/settings/equipment-rates" element={<Navigate to="/settings/equipment-catalog?tab=rates" replace />} />
-        {/* equipment-types and pricing-overrides removed - pricing is in equipment catalog */}
-        <Route path="/settings/equipment-types" element={<Navigate to="/settings/equipment-catalog" replace />} />
-        <Route path="/settings/pricing-overrides" element={<Navigate to="/settings/equipment-catalog" replace />} />
-        <Route path="/settings/default-pricing" element={<Navigate to="/settings/equipment-catalog" replace />} />
+        {/* Equipment catalog merged into SupplierSettings */}
+        <Route path="/settings/equipment-catalog" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
+        <Route path="/settings/equipment-rates" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
+        <Route path="/settings/equipment-types" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
+        <Route path="/settings/pricing-overrides" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
+        <Route path="/settings/default-pricing" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
         <Route path="/settings/constraint-reasons" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><ConstraintReasons /></Guarded>} />
         <Route path="/settings/fair-rotation" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><FairRotation /></Guarded>} />
         <Route path="/settings/work-hours" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><WorkHours /></Guarded>} />
@@ -293,7 +292,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         {/* Legacy settings routes */}
         <Route path="/settings/pricing" element={<Navigate to="/settings/pricing-overrides" replace />} />
         <Route path="/settings/supplier-equipment" element={<Navigate to="/settings/suppliers" replace />} />
-        <Route path="/settings/equipment-categories" element={<Navigate to="/settings/equipment-catalog" replace />} />
+        <Route path="/settings/equipment-categories" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
 
         {/* ============================================
               ADMIN - Under Settings
