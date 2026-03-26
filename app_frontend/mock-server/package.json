@@ -1,7 +1,7 @@
 {
-  "name": "kkl-mock-server",
+  "name": "forewise-mock-server",
   "version": "1.0.0",
-  "description": "Mock server for KKL Time Report frontend",
+  "description": "Mock server for Forewise frontend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

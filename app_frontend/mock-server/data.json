@@ -3,7 +3,7 @@
     {
       "id": "1",
       "username": "admin",
-      "email": "admin@kkl.co.il",
+      "email": "admin@forewise.co",
       "firstName": "מנהל",
       "lastName": "מערכת",
       "role": "admin",
@@ -12,7 +12,7 @@
     {
       "id": "2",
       "username": "work_manager",
-      "email": "work@kkl.co.il",
+      "email": "work@forewise.co",
       "firstName": "רחל",
       "lastName": "גולדברג",
       "role": "work_manager",
@@ -21,7 +21,7 @@
     {
       "id": "3",
       "username": "area_manager",
-      "email": "area@kkl.co.il",
+      "email": "area@forewise.co",
       "firstName": "משה",
       "lastName": "לוי",
       "role": "area_manager",
@@ -30,7 +30,7 @@
     {
       "id": "4",
       "username": "space_manager",
-      "email": "space@kkl.co.il",
+      "email": "space@forewise.co",
       "firstName": "דוד",
       "lastName": "כהן",
       "role": "space_manager",
@@ -39,7 +39,7 @@
     {
       "id": "5",
       "username": "accounting_manager",
-      "email": "accounting@kkl.co.il",
+      "email": "accounting@forewise.co",
       "firstName": "שרה",
       "lastName": "לוי",
       "role": "accounting_manager",

@@ -2,7 +2,7 @@
 # Forewise Full Debug Script
 # Runs all checks and saves results to debug report
 
-REPORT_DIR="/root/kkl-forest/docs/debug-reports"
+REPORT_DIR="/root/forewise/docs/debug-reports"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 REPORT="$REPORT_DIR/debug-$TIMESTAMP.md"
 
@@ -41,8 +41,8 @@ echo '```' >> "$REPORT"
 echo "" >> "$REPORT"
 echo "## 4. Frontend dist/" >> "$REPORT"
 echo '```' >> "$REPORT"
-ls -lh /root/kkl-forest/app_frontend/dist/index.html 2>&1 >> "$REPORT"
-ls /root/kkl-forest/app_frontend/dist/assets/*.js 2>/dev/null | wc -l | xargs -I{} echo "JS files: {}" >> "$REPORT"
+ls -lh /root/forewise/app_frontend/dist/index.html 2>&1 >> "$REPORT"
+ls /root/forewise/app_frontend/dist/assets/*.js 2>/dev/null | wc -l | xargs -I{} echo "JS files: {}" >> "$REPORT"
 echo '```' >> "$REPORT"
 
 # 5. API Endpoints Quick Test
@@ -73,8 +73,8 @@ echo '```' >> "$REPORT"
 echo "" >> "$REPORT"
 echo "## 7. Recent Backend Errors" >> "$REPORT"
 echo '```' >> "$REPORT"
-if [ -f /root/kkl-forest/app_backend/logs/development.log ]; then
-  grep -i "error\|exception\|traceback\|failed" /root/kkl-forest/app_backend/logs/development.log 2>/dev/null | tail -20 >> "$REPORT"
+if [ -f /root/forewise/app_backend/logs/development.log ]; then
+  grep -i "error\|exception\|traceback\|failed" /root/forewise/app_backend/logs/development.log 2>/dev/null | tail -20 >> "$REPORT"
 else
   echo "No log file found" >> "$REPORT"
 fi
@@ -91,9 +91,9 @@ echo "" >> "$REPORT"
 echo "## 8. PWA / Service Worker" >> "$REPORT"
 echo '```' >> "$REPORT"
 echo "manifest:" >> "$REPORT"
-cat /root/kkl-forest/app_frontend/public/manifest.webmanifest | head -5 >> "$REPORT"
+cat /root/forewise/app_frontend/public/manifest.webmanifest | head -5 >> "$REPORT"
 echo "sw.js cache:" >> "$REPORT"
-head -4 /root/kkl-forest/app_frontend/public/sw.js >> "$REPORT"
+head -4 /root/forewise/app_frontend/public/sw.js >> "$REPORT"
 echo '```' >> "$REPORT"
 
 # 9. Disk Space
