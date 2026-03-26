@@ -62,17 +62,21 @@ jobs:
             # 6. Restart backend
             echo ">> Restarting backend..."
             systemctl restart forewise.service
-            sleep 8
 
-            # 7. Verify deployment
-            echo ">> Verifying deployment..."
-            systemctl is-active forewise.service
-            HEALTH=$(curl -sf http://localhost:8000/api/v1/health)
-            echo "   Health: $HEALTH"
-            if [ -z "$HEALTH" ]; then
-              echo "DEPLOY FAILED: health check returned empty"
-              exit 1
-            fi
+            # 7. Verify deployment (retry up to 30 seconds)
+            echo ">> Waiting for backend to start..."
+            for i in 1 2 3 4 5 6; do
+              sleep 5
+              HEALTH=$(curl -s http://localhost:8000/api/v1/health 2>/dev/null || true)
+              if echo "$HEALTH" | grep -q '"status":"ok"'; then
+                echo "   Health OK (attempt $i)"
+                break
+              fi
+              echo "   Attempt $i: not ready yet..."
+            done
+
+            systemctl is-active forewise.service || { echo "DEPLOY FAILED: service not active"; exit 1; }
+            echo "$HEALTH" | grep -q '"status":"ok"' || { echo "DEPLOY FAILED: health check failed"; exit 1; }
 
             # 8. Reload nginx
             systemctl reload nginx
