@@ -3,34 +3,30 @@
 // הגדרות זמני עבודה - שעות תקן, חריגות ומנוחה
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Clock, Save, Loader2, Sun, Moon, Coffee, AlertTriangle, Shield } from 'lucide-react';
+import { ArrowRight, Clock, Save, Loader2, Sun, Shield } from 'lucide-react';
 import api from '../../services/api';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface WorkHoursSettings {
-  standard_start_time: string;
-  standard_end_time: string;
-  max_daily_hours: number;
-  max_weekly_hours: number;
-  overtime_threshold: number;
-  break_duration_minutes: number;
-  min_break_after_hours: number;
-  weekend_days: string[];
-  holidays: string[];
-  overnight_guard_rate: number;  // ✅ מחיר שמירת לילה
+  standard_hours_per_day: number;
+  net_work_hours: number;
+  break_hours: number;
+  start_time: string;
+  end_time: string;
+  break_start: string;
+  break_end: string;
+  overnight_guard_rate: number;
 }
 
 const defaultSettings: WorkHoursSettings = {
-  standard_start_time: '07:00',
-  standard_end_time: '16:00',
-  max_daily_hours: 10,
-  max_weekly_hours: 45,
-  overtime_threshold: 8,
-  break_duration_minutes: 30,
-  min_break_after_hours: 6,
-  weekend_days: ['friday', 'saturday'],
-  holidays: [],
-  overnight_guard_rate: 0,
+  standard_hours_per_day: 10.5,
+  net_work_hours: 9.0,
+  break_hours: 1.5,
+  start_time: '06:30',
+  end_time: '17:00',
+  break_start: '12:00',
+  break_end: '13:30',
+  overnight_guard_rate: 250,
 };
 
 const WorkHours: React.FC = () => {
@@ -122,20 +118,61 @@ const WorkHours: React.FC = () => {
 
       {/* Settings Form */}
       <div className="p-4 space-y-4">
-        {/* Standard Hours */}
+        {/* Core: Net hours + Break — THIS IS WHAT worklog_service USES */}
+        <div className="bg-white rounded-xl shadow-sm border border-green-200 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-5 h-5 text-green-600" />
+            <h2 className="font-semibold text-gray-900">חישוב שעות עבודה</h2>
+          </div>
+          <p className="text-xs text-green-700 mb-4">ערכים אלה משמשים לחישוב עלות בדיווחי שעות</p>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">שעות עבודה נטו ביום</label>
+              <input
+                type="number"
+                value={settings.net_work_hours}
+                onChange={(e) => updateSetting('net_work_hours', parseFloat(e.target.value) || 0)}
+                min={1} max={16} step={0.5}
+                className="w-full px-3 py-2.5 border-2 border-green-300 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">דיווח תקן = ערך זה</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">שעות הפסקה</label>
+              <input
+                type="number"
+                value={settings.break_hours}
+                onChange={(e) => updateSetting('break_hours', parseFloat(e.target.value) || 0)}
+                min={0} max={4} step={0.5}
+                className="w-full px-3 py-2.5 border-2 border-green-300 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">לא נספרות בתשלום</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">סה"כ נוכחות ביום</label>
+              <div className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-lg font-bold text-center bg-gray-50 text-gray-600">
+                {(settings.net_work_hours + settings.break_hours).toFixed(1)}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">נטו + הפסקה</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Time Range */}
         <div className="bg-white rounded-xl shadow-sm border p-4">
           <div className="flex items-center gap-2 mb-4">
             <Sun className="w-5 h-5 text-yellow-500" />
-            <h2 className="font-semibold text-gray-900">שעות עבודה תקניות</h2>
+            <h2 className="font-semibold text-gray-900">זמני עבודה</h2>
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm text-gray-600 mb-1.5">שעת התחלה</label>
               <input
                 type="time"
-                value={settings.standard_start_time}
-                onChange={(e) => updateSetting('standard_start_time', e.target.value)}
+                value={settings.start_time}
+                onChange={(e) => updateSetting('start_time', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg"
               />
             </div>
@@ -143,170 +180,59 @@ const WorkHours: React.FC = () => {
               <label className="block text-sm text-gray-600 mb-1.5">שעת סיום</label>
               <input
                 type="time"
-                value={settings.standard_end_time}
-                onChange={(e) => updateSetting('standard_end_time', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Work Limits */}
-        <div className="bg-white rounded-xl shadow-sm border p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-5 h-5 text-orange-500" />
-            <h2 className="font-semibold text-gray-900">מגבלות שעות</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1.5">מקסימום שעות ביום</label>
-                <input
-                  type="number"
-                  value={settings.max_daily_hours}
-                  onChange={(e) => updateSetting('max_daily_hours', parseInt(e.target.value))}
-                  min={1}
-                  max={24}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1.5">מקסימום שעות בשבוע</label>
-                <input
-                  type="number"
-                  value={settings.max_weekly_hours}
-                  onChange={(e) => updateSetting('max_weekly_hours', parseInt(e.target.value))}
-                  min={1}
-                  max={168}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm text-gray-600 mb-1.5">סף שעות נוספות (שעות ביום)</label>
-              <input
-                type="number"
-                value={settings.overtime_threshold}
-                onChange={(e) => updateSetting('overtime_threshold', parseInt(e.target.value))}
-                min={1}
-                max={24}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-              />
-              <p className="text-xs text-gray-500 mt-1">מעבר לסף זה יחשבו שעות נוספות</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Break Settings */}
-        <div className="bg-white rounded-xl shadow-sm border p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Coffee className="w-5 h-5 text-brown-500" />
-            <h2 className="font-semibold text-gray-900">הפסקות</h2>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1.5">משך הפסקה (דקות)</label>
-              <input
-                type="number"
-                value={settings.break_duration_minutes}
-                onChange={(e) => updateSetting('break_duration_minutes', parseInt(e.target.value))}
-                min={0}
-                max={120}
+                value={settings.end_time}
+                onChange={(e) => updateSetting('end_time', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1.5">הפסקה אחרי (שעות)</label>
+              <label className="block text-sm text-gray-600 mb-1.5">תחילת הפסקה</label>
               <input
-                type="number"
-                value={settings.min_break_after_hours}
-                onChange={(e) => updateSetting('min_break_after_hours', parseInt(e.target.value))}
-                min={1}
-                max={12}
+                type="time"
+                value={settings.break_start}
+                onChange={(e) => updateSetting('break_start', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1.5">סיום הפסקה</label>
+              <input
+                type="time"
+                value={settings.break_end}
+                onChange={(e) => updateSetting('break_end', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg"
               />
             </div>
           </div>
         </div>
 
-        {/* Weekend Days */}
-        <div className="bg-white rounded-xl shadow-sm border p-4">
-          <div className="flex items-center gap-2 mb-4">
-            <Moon className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-semibold text-gray-900">ימי מנוחה</h2>
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'sunday', label: 'ראשון' },
-              { key: 'monday', label: 'שני' },
-              { key: 'tuesday', label: 'שלישי' },
-              { key: 'wednesday', label: 'רביעי' },
-              { key: 'thursday', label: 'חמישי' },
-              { key: 'friday', label: 'שישי' },
-              { key: 'saturday', label: 'שבת' },
-            ].map(day => (
-              <button
-                key={day.key}
-                type="button"
-                onClick={() => {
-                  const isSelected = settings.weekend_days.includes(day.key);
-                  updateSetting(
-                    'weekend_days',
-                    isSelected
-                      ? settings.weekend_days.filter(d => d !== day.key)
-                      : [...settings.weekend_days, day.key]
-                  );
-                }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  settings.weekend_days.includes(day.key)
-                    ? 'bg-indigo-500 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {day.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-500 mt-2">בחר את הימים שבהם לא עובדים</p>
-        </div>
-
-        {/* ✅ Overnight Guard Rate — Fix 3 */}
+        {/* Overnight Guard Rate */}
         <div className="bg-white rounded-xl shadow-sm border p-4">
           <div className="flex items-center gap-2 mb-4">
             <Shield className="w-5 h-5 text-indigo-600" />
             <h2 className="font-semibold text-gray-900">שמירת לילה (לינת שטח)</h2>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1.5">
-              מחיר שמירת לילה (₪ ללילה)
-            </label>
-            <div className="relative">
+            <label className="block text-sm text-gray-600 mb-1.5">מחיר שמירת לילה (₪ ללילה)</label>
+            <div className="relative w-48">
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₪</span>
               <input
                 type="number"
                 value={settings.overnight_guard_rate ?? 0}
                 onChange={(e) => updateSetting('overnight_guard_rate', parseFloat(e.target.value) || 0)}
-                min={0}
-                step={10}
-                className="w-full pr-8 pl-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
-                placeholder="0"
+                min={0} step={10}
+                className="w-full pr-8 pl-3 py-2.5 border-2 border-indigo-300 rounded-lg text-lg font-bold text-center focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              סכום קבוע לחיוב ללילה אחד של שמירת ציוד בשטח. ברירת מחדל: 0 (ללא חיוב)
-            </p>
+            <p className="text-xs text-gray-500 mt-1">מתווסף אוטומטית לחישוב עלות כשמסמנים "לינת שטח" בדיווח</p>
           </div>
         </div>
 
         {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p className="text-sm text-blue-800">
-            <strong>שים לב:</strong> הגדרות אלו משפיעות על חישוב שעות העבודה, שעות נוספות והתראות על חריגות בדיווחי העבודה.
-            מחיר שמירת לילה יתווסף אוטומטית לחישוב עלות ההזמנה כאשר סומן checkbox "שמירה".
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <p className="text-sm text-green-800">
+            <strong>שים לב:</strong> ערכים אלה מחוברים ישירות לחישוב העלות בדיווחי שעות.
+            שינוי שעות נטו / הפסקה / תעריף לינה ישפיע על כל הדיווחים החדשים שייווצרו.
           </p>
         </div>
 

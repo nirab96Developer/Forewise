@@ -128,7 +128,7 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = True
     SMTP_TIMEOUT: int = 30
     EMAIL_FROM: str = ""  # Must be set via environment variable
-    EMAIL_FROM_NAME: str = "Forest Management System"
+    EMAIL_FROM_NAME: str = "Forewise"
     # ==========================================
     # הגדרות SMS
     # ==========================================

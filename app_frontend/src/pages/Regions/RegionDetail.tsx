@@ -9,6 +9,7 @@ import {
 import api from '../../services/api';
 import LeafletMap from '../../components/Map/LeafletMap';
 import TreeLoader from '../../components/common/TreeLoader';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface Region {
   id: number;
@@ -42,6 +43,7 @@ const RegionDetail: React.FC = () => {
   const [region, setRegion] = useState<Region | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
+  const { canManageRegions } = useRoleAccess();
   const [error, setError] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [polygons, setPolygons] = useState<any[]>([]);
@@ -160,9 +162,11 @@ const RegionDetail: React.FC = () => {
                 </div>
               </div>
             </div>
-            <Link to={`/regions/${id}/edit`} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-              <Edit className="w-5 h-5" />
-            </Link>
+            {canManageRegions && (
+              <Link to={`/regions/${id}/edit`} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                <Edit className="w-5 h-5" />
+              </Link>
+            )}
           </div>
         </div>
       </div>

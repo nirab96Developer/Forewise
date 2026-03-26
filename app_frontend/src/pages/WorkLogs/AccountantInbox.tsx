@@ -10,6 +10,7 @@ import {
   AlertCircle, RefreshCw, FileDown
 } from 'lucide-react';
 import api from '../../services/api';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface WorklogRow {
   id: number;
@@ -33,15 +34,14 @@ interface WorklogRow {
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  submitted:   { label: 'ממתין לאישור', color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: <Clock className="w-3.5 h-3.5" /> },
-  approved:    { label: 'מאושר',          color: 'bg-green-100 text-green-800 border-green-300',  icon: <CheckCircle className="w-3.5 h-3.5" /> },
-  invoiced:    { label: 'נוצרה חשבונית',  color: 'bg-blue-100 text-blue-800 border-blue-300',    icon: <ReceiptText className="w-3.5 h-3.5" /> },
-  rejected:    { label: 'נדחה',           color: 'bg-red-100 text-red-800 border-red-300',        icon: <XCircle className="w-3.5 h-3.5" /> },
-  pending:     { label: 'ממתין לאישור', color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: <Clock className="w-3.5 h-3.5" /> },
+  PENDING:     { label: 'ממתין',           color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: <Clock className="w-3.5 h-3.5" /> },
+  SUBMITTED:   { label: 'הוגש לאישור',    color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: <Clock className="w-3.5 h-3.5" /> },
+  APPROVED:    { label: 'מאושר',          color: 'bg-green-100 text-green-800 border-green-300',  icon: <CheckCircle className="w-3.5 h-3.5" /> },
+  INVOICED:    { label: 'נוצרה חשבונית',  color: 'bg-blue-100 text-blue-800 border-blue-300',    icon: <ReceiptText className="w-3.5 h-3.5" /> },
+  REJECTED:    { label: 'נדחה',           color: 'bg-red-100 text-red-800 border-red-300',        icon: <XCircle className="w-3.5 h-3.5" /> },
 };
-/** Normalize DB status (uppercase) to lowercase keys for STATUS_LABEL */
-const normStatus = (s: string | null | undefined) => (s || '').toLowerCase();
-const getStatus = (s: string | null) => STATUS_LABEL[normStatus(s) || 'submitted'] || STATUS_LABEL.submitted;
+const normStatus = (s: string | null | undefined) => (s || '').toUpperCase();
+const getStatus = (s: string | null) => STATUS_LABEL[normStatus(s)] || STATUS_LABEL.SUBMITTED;
 
 function openExportPdf(title: string, headers: string[], rows: string[][]) {
   const esc = (s: string) =>
@@ -174,10 +174,11 @@ const AccountantInbox: React.FC = () => {
   const navigate = useNavigate();
   const [worklogs, setWorklogs] = useState<WorklogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const { canApproveWorklogs } = useRoleAccess();
   const [processing, setProcessing] = useState<number | null>(null);
   const [error, setError] = useState('');
   /** Default: מאושרים — מוכנים לחשבונית */
-  const [filterStatus, setFilterStatus] = useState<string>('approved');
+  const [filterStatus, setFilterStatus] = useState<string>('APPROVED');
   const [search, setSearch] = useState('');
   const [filterProjectId, setFilterProjectId] = useState<string>('');
   const [filterSupplierId, setFilterSupplierId] = useState<string>('');
@@ -342,7 +343,7 @@ const AccountantInbox: React.FC = () => {
 
   const pendingCount = worklogs.filter(w => {
     const st = normStatus(w.status);
-    return !st || st === 'submitted' || st === 'pending';
+    return !st || st === 'SUBMITTED' || st === 'PENDING';
   }).length;
 
   return (
@@ -461,9 +462,9 @@ const AccountantInbox: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               {[
-                { value: 'submitted', label: 'ממתינים' },
-                { value: 'approved', label: 'מאושרים (לחשבונית)' },
-                { value: 'rejected', label: 'נדחו' },
+                { value: 'SUBMITTED', label: 'ממתינים' },
+                { value: 'APPROVED', label: 'מאושרים (לחשבונית)' },
+                { value: 'REJECTED', label: 'נדחו' },
                 { value: '', label: 'הכל' },
               ].map(f => (
                 <button
@@ -585,9 +586,9 @@ const AccountantInbox: React.FC = () => {
                   {filtered.map(w => {
                     const st = getStatus(w.status);
                     const ns = normStatus(w.status);
-                    const isPending = !ns || ns === 'submitted' || ns === 'pending';
-                    const isApproved = ns === 'approved';
-                    const isInvoiced = ns === 'invoiced';
+                    const isPending = !ns || ns === 'SUBMITTED' || ns === 'PENDING';
+                    const isApproved = ns === 'APPROVED';
+                    const isInvoiced = ns === 'INVOICED';
                     return (
                       <tr key={w.id} className="border-b border-kkl-border hover:bg-gray-50 transition-colors">
                         {/* Number */}
@@ -657,7 +658,7 @@ const AccountantInbox: React.FC = () => {
                         {/* Actions */}
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-2">
-                            {isPending && (
+                            {isPending && canApproveWorklogs && (
                               <>
                                 <button
                                   onClick={() => handleApprove(w.id)}

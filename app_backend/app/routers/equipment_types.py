@@ -122,6 +122,52 @@ def deactivate_equipment_type(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@router.post("/{item_id}/apply-rate-to-all")
+def apply_rate_to_all_equipment(
+    item_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """
+    Apply the equipment type's hourly_rate to ALL equipment of this type.
+    Updates equipment.hourly_rate WHERE equipment_type_id = item_id.
+    """
+    require_permission(current_user, "equipment_types.manage")
+
+    from app.models.equipment_type import EquipmentType
+    from sqlalchemy import text
+
+    et = db.query(EquipmentType).filter(EquipmentType.id == item_id).first()
+    if not et:
+        raise HTTPException(status_code=404, detail="סוג ציוד לא נמצא")
+
+    rate = float(et.hourly_rate or et.default_hourly_rate or 0)
+    if rate <= 0:
+        raise HTTPException(status_code=400, detail="אין תעריף מוגדר לסוג ציוד זה")
+
+    result = db.execute(text("""
+        UPDATE equipment SET hourly_rate = :rate
+        WHERE equipment_type_id = :type_id AND is_active = true
+    """), {"rate": rate, "type_id": item_id})
+
+    also_by_name = db.execute(text("""
+        UPDATE equipment SET hourly_rate = :rate
+        WHERE LOWER(equipment_type) = LOWER(:name)
+        AND equipment_type_id IS NULL AND is_active = true
+        AND (hourly_rate IS NULL OR hourly_rate != :rate)
+    """), {"rate": rate, "name": et.name})
+
+    total_updated = result.rowcount + also_by_name.rowcount
+    db.commit()
+
+    import logging
+    logging.getLogger(__name__).info(
+        f"Rate ₪{rate} applied to {total_updated} equipment items (type_id={item_id}, name={et.name}) by user {current_user.id}"
+    )
+
+    return {"updated": total_updated, "rate": rate, "type_name": et.name}
+
+
 @router.post("/{item_id}/activate", response_model=EquipmentTypeResponse)
 def activate_equipment_type(
     item_id: int,

@@ -8,6 +8,7 @@ import {
   CheckCircle, XCircle, Save, X, Info
 } from 'lucide-react';
 import api from '../../services/api';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface ConstraintReason {
   id: number;
@@ -34,6 +35,7 @@ const ConstraintReasons: React.FC = () => {
   const navigate = useNavigate();
   const [reasons, setReasons] = useState<ConstraintReason[]>([]);
   const [loading, setLoading] = useState(true);
+  const { canManageSystem } = useRoleAccess();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingReason, setEditingReason] = useState<ConstraintReason | null>(null);
@@ -181,13 +183,15 @@ const ConstraintReasons: React.FC = () => {
                 <p className="text-gray-500">ניהול סיבות לבחירת ספק ידנית במקום סבב הוגן</p>
               </div>
             </div>
-            <button
-              onClick={() => handleOpenModal()}
-              className="px-3 py-1.5 bg-kkl-green text-white text-sm rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>סיבה חדשה</span>
-            </button>
+            {canManageSystem && (
+              <button
+                onClick={() => handleOpenModal()}
+                className="px-3 py-1.5 bg-kkl-green text-white text-sm rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>סיבה חדשה</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -296,22 +300,24 @@ const ConstraintReasons: React.FC = () => {
                           </button>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleOpenModal(reason)}
-                              className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
-                              title="עריכה"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(reason.id)}
-                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              title="מחיקה"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {canManageSystem && (
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleOpenModal(reason)}
+                                className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
+                                title="עריכה"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(reason.id)}
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="מחיקה"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))

@@ -1,4 +1,4 @@
-# SYSTEM MAP — Forewise (KKL Forest Management)
+# SYSTEM MAP — Forewise
 > מפה מלאה של המערכת: routes, דפים, API endpoints, טבלות DB
 > עדכון אחרון: מרץ 2026
 

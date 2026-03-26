@@ -1,6 +1,6 @@
 // utils/offlineStorage.ts — IndexedDB offline queue
 
-const DB_NAME = 'kkl-offline';
+const DB_NAME = 'forewise-offline';
 const STORE = 'pending_items';
 const DB_VERSION = 1;
 

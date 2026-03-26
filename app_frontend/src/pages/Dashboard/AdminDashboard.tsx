@@ -1,421 +1,387 @@
-
-// src/pages/Dashboard/AdminDashboard.tsx
-// דשבורד מנהל מערכת - כל הפרויקטים והנתונים
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Users,
-  Eye,
-  Edit3,
-  Trees,
-  FileText,
-  Wrench,
-  Activity,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  Loader2
+  AlertTriangle, TrendingUp, FileText, Clock, Users, Truck,
+  DollarSign, Activity, ChevronLeft, Plus,
+  BarChart3, Settings, FolderOpen, Briefcase, UserPlus,
+  ClipboardList, Info, ShieldAlert
 } from "lucide-react";
 import api from "../../services/api";
-import dashboardService, {
-  DashboardSummary
-} from "../../services/dashboardService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
 
-// Types for PendingTasksEngine
-interface TaskKPI {
-  id: string;
-  label: string;
-  value: number;
-  icon: string;
-  color: string;
-  link: string;
+interface AdminData {
+  kpis: {
+    open_work_orders: number; stuck_orders: number; pending_worklogs: number;
+    pending_invoices: number; budget_overrun: number; expired_wo_week: number;
+    total_users: number; total_suppliers: number; total_projects: number;
+  };
+  financial: { total: number; committed: number; spent: number; remaining: number; utilization_pct: number };
+  alerts: { type: string; message: string; link: string }[];
+  wo_chart: { date: string; count: number }[];
+  wl_chart: { date: string; count: number }[];
+  recent_events: {
+    id: number; action: string; description: string;
+    entity_type: string; entity_id: number; user_id: number;
+    created_at: string; metadata: string | null; user_name: string | null;
+  }[];
 }
 
-interface TaskAction {
-  id: string;
-  label: string;
-  path: string;
-  icon: string;
-}
+const fmtCurrency = (n: number) =>
+  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M ₪` :
+    n >= 1_000 ? `${(n / 1_000).toFixed(0)}K ₪` :
+      `₪${n.toLocaleString("he-IL", { maximumFractionDigits: 0 })}`;
 
-interface TaskAlert {
-  id: string;
-  type: 'warning' | 'error' | 'info';
-  message: string;
-  link: string;
-}
+const timeAgo = (d: string) => {
+  if (!d) return "";
+  const diff = Date.now() - new Date(d).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "עכשיו";
+  if (mins < 60) return `לפני ${mins} דק׳`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `לפני ${hrs} שע׳`;
+  return `לפני ${Math.floor(hrs / 24)} ימים`;
+};
 
-interface MyTasks {
-  kpis: TaskKPI[];
-  actions: TaskAction[];
-  alerts: TaskAlert[];
-  role: string;
-}
+const ACTION_CFG: Record<string, { label: string; dot: string }> = {
+  STATUS_CHANGE_WORK_ORDER: { label: "שינוי סטטוס הזמנה", dot: "bg-blue-400" },
+  STATUS_CHANGE_WORKLOG: { label: "שינוי סטטוס דיווח", dot: "bg-emerald-400" },
+  STATUS_CHANGE_INVOICE: { label: "שינוי סטטוס חשבונית", dot: "bg-orange-400" },
+  WORK_ORDER_CREATED: { label: "הזמנה חדשה", dot: "bg-green-500" },
+  WORK_ORDER_APPROVED: { label: "הזמנה אושרה", dot: "bg-green-600" },
+  WORK_ORDER_DELETED: { label: "הזמנה נמחקה", dot: "bg-red-400" },
+  INVOICE_CREATED: { label: "חשבונית נוצרה", dot: "bg-orange-500" },
+  BUDGET_FROZEN: { label: "תקציב הוקפא", dot: "bg-amber-500" },
+  BUDGET_RELEASED: { label: "תקציב שוחרר", dot: "bg-emerald-400" },
+  PROJECT_CREATED: { label: "פרויקט נוצר", dot: "bg-blue-500" },
+  WORK_ORDER_EQUIPMENT_REMOVED: { label: "ציוד הוסר", dot: "bg-red-400" },
+};
 
 const AdminDashboard: React.FC = () => {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [myTasks, setMyTasks] = useState<MyTasks | null>(null);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const [summaryData, , tasksData] = await Promise.all([
-          dashboardService.getSummary(),
-          dashboardService.getProjects(),
-          dashboardService.getMyTasks().catch(() => null),
-        ]);
-
-        setSummary(summaryData);
-        setMyTasks(tasksData);
-        setIsLoading(false);
-      } catch (err) {
-        console.error('Error loading admin dashboard data:', err);
-        setError('שגיאה בטעינת נתוני הדאשבורד');
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  if (isLoading) return <UnifiedLoader size="full" />;
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-red-600 font-medium mb-2">שגיאה</h2>
-          <p className="text-gray-600">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  const activeUsers = summary?.active_users || 0;
-  const activeProjects = summary?.active_projects_count || 0;
-
-  return (
-    <div className="min-h-full bg-gray-50" dir="rtl">
-      {/* Main Content - parent App.tsx handles sidebar offset */}
-      <div className="p-4 sm:p-6">
-        <div className="space-y-4">
-            
-            {/* Stats Row - 3 KPI cards from PendingTasksEngine */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {(myTasks?.kpis || [
-                {id:'pending', label:'דיווחים ממתינים', value: summary?.pending_approvals_count || 0, icon:'file', color:'red', link:''},
-                {id:'projects', label:'פרויקטים פעילים', value: activeProjects, icon:'tree', color:'green', link:'/projects'},
-                {id:'users', label:'משתמשים במערכת', value: activeUsers, icon:'users', color:'blue', link:'/settings/admin/users'},
-              ]).map((kpi) => {
-                const colorMap: Record<string, {bg: string, text: string, iconBg: string}> = {
-                  red: {bg: 'bg-red-50', text: 'text-red-500', iconBg: 'bg-red-50'},
-                  orange: {bg: 'bg-orange-50', text: 'text-orange-500', iconBg: 'bg-orange-50'},
-                  green: {bg: 'bg-green-50', text: 'text-green-600', iconBg: 'bg-green-50'},
-                  blue: {bg: 'bg-blue-50', text: 'text-blue-600', iconBg: 'bg-blue-50'},
-                };
-                const c = colorMap[kpi.color] || colorMap.blue;
-                const IconMap: Record<string, any> = {headphones: Wrench, alert: Activity, users: Users, scan: Eye, clock: Clock, file: FileText, building: Trees, truck: Wrench, clipboard: FileText, receipt: FileText, check: Activity, edit: Edit3, send: ChevronLeft};
-                const Icon = IconMap[kpi.icon] || FileText;
-                
-                return (
-                  <div 
-                    key={kpi.id}
-                    onClick={() => kpi.link && navigate(kpi.link)}
-                    className={`bg-white rounded-xl shadow-sm p-5 h-28 flex flex-col justify-between ${kpi.link ? 'cursor-pointer hover:shadow-md hover:ring-1 hover:ring-gray-200 transition-all' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-500">{kpi.label}</span>
-                      <div className={`w-8 h-8 ${c.iconBg} rounded-lg flex items-center justify-center`}>
-                        <Icon className={`w-4 h-4 ${c.text}`} />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-3xl font-bold text-gray-900">{kpi.value}</span>
-                      {kpi.value > 0 && kpi.color === 'red' && (
-                        <span className="text-xs text-red-500 mr-2">דורש טיפול</span>
-                      )}
-                      {kpi.value > 0 && kpi.color === 'orange' && (
-                        <span className="text-xs text-orange-500 mr-2">לבדיקה</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            
-            {/* Alerts from Engine */}
-            {myTasks?.alerts && myTasks.alerts.length > 0 && (
-              <div className="space-y-2">
-                {myTasks.alerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    onClick={() => alert.link && navigate(alert.link)}
-                    className={`rounded-xl p-3 flex items-center gap-3 cursor-pointer transition-all hover:shadow-sm ${
-                      alert.type === 'error' ? 'bg-red-50 border border-red-200 hover:bg-red-100' :
-                      alert.type === 'warning' ? 'bg-orange-50 border border-orange-200 hover:bg-orange-100' :
-                      'bg-blue-50 border border-blue-200 hover:bg-blue-100'
-                    }`}
-                  >
-                    <Activity className={`w-4 h-4 flex-shrink-0 ${
-                      alert.type === 'error' ? 'text-red-600' :
-                      alert.type === 'warning' ? 'text-orange-600' :
-                      'text-blue-600'
-                    }`} />
-                    <span className={`text-sm font-medium ${
-                      alert.type === 'error' ? 'text-red-800' :
-                      alert.type === 'warning' ? 'text-orange-800' :
-                      'text-blue-800'
-                    }`}>{alert.message}</span>
-                    <ChevronLeft className="w-4 h-4 text-gray-400 mr-auto" />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Quick Actions Row - from Engine */}
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <span className="text-sm font-semibold text-gray-700">פעולות מהירות:</span>
-                <div className="flex gap-2 flex-wrap">
-                  {(myTasks?.actions || [
-                    {id:'users', label:'ניהול משתמשים', path:'/settings/admin/users', icon:'users'},
-                    {id:'projects', label:'פרויקטים', path:'/projects', icon:'building'},
-                    {id:'settings', label:'הגדרות', path:'/settings', icon:'settings'},
-                  ]).map((action, idx) => (
-                    <button 
-                      key={action.id}
-                      onClick={() => navigate(action.path)} 
-                      className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                        idx === 0 ? 'bg-blue-600 text-white hover:bg-blue-700' :
-                        idx === 1 ? 'bg-green-600 text-white hover:bg-green-700' :
-                        'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Two Column Section: Calendar + Activity (NO Projects List!) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              {/* Mini Calendar */}
-              <MiniCalendar />
-              
-              {/* Activity Log - real data from API */}
-              <RealActivityLog />
-              
-            </div>
-
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// MiniCalendar Component - לוח שנה קטן כמו ביומן הפעילות
-const MiniCalendar: React.FC = () => {
-  const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const today = new Date();
-  
-  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
-  const prevMonthDays = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).getDate();
-  
-  const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-  const dayNames = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
-  
-  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  const goToToday = () => setCurrentDate(new Date());
-  
-  const isToday = (day: number) => {
-    return day === today.getDate() && 
-           currentDate.getMonth() === today.getMonth() && 
-           currentDate.getFullYear() === today.getFullYear();
-  };
-  
-  // Build calendar grid
-  const calendarDays = [];
-  
-  // Previous month days
-  for (let i = firstDayOfMonth - 1; i >= 0; i--) {
-    calendarDays.push({ day: prevMonthDays - i, isCurrentMonth: false });
-  }
-  
-  // Current month days
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push({ day, isCurrentMonth: true, isToday: isToday(day) });
-  }
-  
-  // Next month days to fill the grid
-  const remainingDays = 42 - calendarDays.length;
-  for (let day = 1; day <= remainingDays; day++) {
-    calendarDays.push({ day, isCurrentMonth: false });
-  }
-  
-  return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-green-600" />
-          <span className="text-sm font-semibold text-gray-900">
-            יומן - {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button onClick={nextMonth} className="p-1 hover:bg-gray-100 rounded text-gray-500">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-          <button onClick={goToToday} className="px-2 py-0.5 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100">
-            היום
-          </button>
-          <button onClick={prevMonth} className="p-1 hover:bg-gray-100 rounded text-gray-500">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      
-      {/* Days header */}
-      <div className="grid grid-cols-7 border-b border-gray-100">
-        {dayNames.map(day => (
-          <div key={day} className="py-1 text-center text-xs font-medium text-gray-400">{day}</div>
-        ))}
-      </div>
-      
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7">
-        {calendarDays.slice(0, 35).map((item, index) => (
-          <div 
-            key={index}
-            onClick={() => item.isCurrentMonth && navigate('/activity-log')}
-            className={`
-              py-2 text-center text-xs cursor-pointer transition-colors border-b border-r border-gray-50
-              ${item.isCurrentMonth ? 'text-gray-700 hover:bg-green-50' : 'text-gray-300'}
-              ${item.isToday ? 'relative' : ''}
-            `}
-          >
-            {item.isToday ? (
-              <span className="inline-flex items-center justify-center w-6 h-6 bg-green-600 text-white rounded-full font-bold">
-                {item.day}
-              </span>
-            ) : (
-              item.day
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Real Activity Log — fetches from /activity-logs API
-const ICON_MAP: Record<string, { icon: React.ElementType; bg: string; color: string }> = {
-  login:                 { icon: Activity,  bg: 'bg-gray-50',   color: 'text-gray-600' },
-  logout:                { icon: Activity,  bg: 'bg-gray-50',   color: 'text-gray-500' },
-  create:                { icon: FileText,  bg: 'bg-green-50',  color: 'text-green-600' },
-  update:                { icon: Edit3,     bg: 'bg-blue-50',   color: 'text-blue-600' },
-  approve:               { icon: FileText,  bg: 'bg-green-50',  color: 'text-green-600' },
-  reject:                { icon: FileText,  bg: 'bg-red-50',    color: 'text-red-600' },
-  submit:                { icon: FileText,  bg: 'bg-blue-50',   color: 'text-blue-600' },
-  assign:                { icon: Users,     bg: 'bg-purple-50', color: 'text-purple-600' },
-  work_order_created:    { icon: Trees,     bg: 'bg-green-50',  color: 'text-green-600' },
-  work_order_approved:   { icon: Trees,     bg: 'bg-green-50',  color: 'text-green-600' },
-  work_order_sent:       { icon: Trees,     bg: 'bg-blue-50',   color: 'text-blue-600' },
-  worklog_created:       { icon: FileText,  bg: 'bg-blue-50',   color: 'text-blue-600' },
-  worklog_approved:      { icon: FileText,  bg: 'bg-green-50',  color: 'text-green-600' },
-  worklog_rejected:      { icon: FileText,  bg: 'bg-red-50',    color: 'text-red-600' },
-  invoice_created:       { icon: FileText,  bg: 'bg-orange-50', color: 'text-orange-600' },
-  user_created:          { icon: Users,     bg: 'bg-purple-50', color: 'text-purple-600' },
-  equipment_assigned:    { icon: Wrench,    bg: 'bg-orange-50', color: 'text-orange-600' },
-  budget_updated:        { icon: FileText,  bg: 'bg-yellow-50', color: 'text-yellow-600' },
-};
-
-const timeAgo = (dateStr: string): string => {
-  if (!dateStr) return '';
-  const diff = Date.now() - new Date(dateStr).getTime();
-  if (isNaN(diff)) return '';
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'עכשיו';
-  if (mins < 60) return `${mins} דק׳`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} שע׳`;
-  const days = Math.floor(hrs / 24);
-  return `${days} ימים`;
-};
-
-const RealActivityLog: React.FC = () => {
-  const navigate = useNavigate();
-  const [logs, setLogs] = useState<any[]>([]);
+  const [data, setData] = useState<AdminData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/activity-logs', { params: { limit: 8, scope: 'system' } })
-      .then(r => {
-        const items = Array.isArray(r.data) ? r.data : r.data?.items || [];
-        setLogs(items.slice(0, 8));
-      })
-      .catch(() => setLogs([]))
+    api.get("/dashboard/admin-overview")
+      .then(r => setData(r.data))
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
+  if (loading) return <UnifiedLoader size="full" />;
+  if (!data) return <div className="p-8 text-center text-gray-500">שגיאה בטעינת נתונים</div>;
+
+  const k = data.kpis;
+  const f = data.financial;
+
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Activity className="w-5 h-5 text-blue-600" />
-          <h3 className="font-semibold text-gray-900">יומן פעילות</h3>
+    <div className="min-h-full bg-gray-50" dir="rtl">
+      <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-screen-2xl mx-auto">
+
+        {/* ── PRIMARY KPIs ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <KPI icon={<Briefcase className="w-5 h-5" />} label="הזמנות פתוחות" value={k.open_work_orders}
+            accent="border-r-4 border-r-blue-500 bg-white" fg="text-blue-600" to="/work-orders" />
+          <KPI icon={<AlertTriangle className="w-5 h-5" />} label="תקועות מעל 48 שעות" value={k.stuck_orders}
+            accent={k.stuck_orders > 0 ? "border-r-4 border-r-red-600 bg-red-50" : "border-r-4 border-r-gray-200 bg-white"}
+            fg={k.stuck_orders > 0 ? "text-red-600" : "text-gray-400"}
+            pulse={k.stuck_orders > 0} to="/work-orders" />
+          <KPI icon={<Clock className="w-5 h-5" />} label="דיווחים ממתינים" value={k.pending_worklogs}
+            accent={k.pending_worklogs > 0 ? "border-r-4 border-r-amber-500 bg-amber-50" : "border-r-4 border-r-gray-200 bg-white"}
+            fg={k.pending_worklogs > 0 ? "text-amber-600" : "text-gray-400"} to="/work-logs" />
+          <KPI icon={<FileText className="w-5 h-5" />} label="חשבוניות טיוטה" value={k.pending_invoices}
+            accent={k.pending_invoices > 0 ? "border-r-4 border-r-orange-500 bg-orange-50" : "border-r-4 border-r-gray-200 bg-white"}
+            fg={k.pending_invoices > 0 ? "text-orange-600" : "text-gray-400"} to="/invoices" />
+          <KPI icon={<DollarSign className="w-5 h-5" />} label="חריגות תקציב" value={k.budget_overrun}
+            accent={k.budget_overrun > 0 ? "border-r-4 border-r-red-600 bg-red-50" : "border-r-4 border-r-green-400 bg-white"}
+            fg={k.budget_overrun > 0 ? "text-red-600" : "text-green-600"}
+            pulse={k.budget_overrun > 0} to="/settings/budgets" />
         </div>
-        <button onClick={() => navigate('/activity-log')} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-          לכל היומן ←
-        </button>
-      </div>
-      <div className="divide-y divide-gray-50">
-        {loading ? (
-          <div className="p-8 text-center">
-            <Loader2 className="w-6 h-6 animate-spin text-gray-300 mx-auto" />
+
+        {/* ── SECONDARY STATS ── */}
+        <div className="grid grid-cols-3 gap-3">
+          <MiniStat icon={<Users className="w-4 h-4 text-blue-500" />} label="משתמשים" value={k.total_users} to="/settings/admin/users" />
+          <MiniStat icon={<Truck className="w-4 h-4 text-green-500" />} label="ספקים" value={k.total_suppliers} to="/settings/suppliers" />
+          <MiniStat icon={<FolderOpen className="w-4 h-4 text-purple-500" />} label="פרויקטים" value={k.total_projects} to="/projects" />
+        </div>
+
+        {/* ── ALERTS ── */}
+        {data.alerts.length > 0 && (
+          <div className="space-y-2">
+            {data.alerts.map((a, i) => (
+              <AlertRow key={i} alert={a} />
+            ))}
           </div>
-        ) : logs.length === 0 ? (
-          <div className="p-6 text-center">
-            <Activity className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">אין פעילות אחרונה</p>
-          </div>
-        ) : (
-          logs.map((log) => {
-            const actionKey = (log.action || log.activity_type || '').toLowerCase();
-            const iconCfg = ICON_MAP[actionKey] || { icon: Activity, bg: 'bg-gray-50', color: 'text-gray-500' };
-            const Icon = iconCfg.icon;
-            const label = log.display_name_he || log.action || '';
-            const sub = log.entity_name || log.user_name || '';
-            return (
-              <div key={log.id} className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 cursor-pointer">
-                <div className={`w-8 h-8 ${iconCfg.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                  <Icon className={`w-4 h-4 ${iconCfg.color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{label}</p>
-                  {sub && <p className="text-xs text-gray-500 truncate">{sub}</p>}
-                </div>
-                <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo(log.created_at)}</span>
-              </div>
-            );
-          })
         )}
+
+        {/* ── QUICK ACTIONS + FINANCIAL ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+          <QuickActions />
+          <FinancialCard f={f} />
+        </div>
+
+        {/* ── CHART + ACTIVITY FEED ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 sm:gap-4">
+          <ActivityChart woChart={data.wo_chart} wlChart={data.wl_chart} />
+          <EventFeed events={data.recent_events} />
+        </div>
+
       </div>
     </div>
   );
 };
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* KPI Card                                                        */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const KPI: React.FC<{
+  icon: React.ReactNode; label: string; value: number;
+  accent: string; fg: string; to: string; pulse?: boolean;
+}> = ({ icon, label, value, accent, fg, to, pulse }) => {
+  const navigate = useNavigate();
+  return (
+    <div onClick={() => navigate(to)}
+      className={`rounded-xl border border-gray-200 shadow-sm p-3 sm:p-4 min-h-[80px] sm:min-h-[96px]
+        cursor-pointer hover:shadow-lg active:scale-[0.98] transition-all ${accent}`}>
+      <div className="flex items-center justify-between mb-1 sm:mb-2">
+        <span className={fg}>{icon}</span>
+        {pulse && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
+      </div>
+      <p className="text-2xl sm:text-3xl font-extrabold text-gray-900">{value}</p>
+      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 leading-snug">{label}</p>
+    </div>
+  );
+};
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Mini Stat (secondary row)                                       */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const MiniStat: React.FC<{ icon: React.ReactNode; label: string; value: number; to: string }> = ({ icon, label, value, to }) => {
+  const navigate = useNavigate();
+  return (
+    <div onClick={() => navigate(to)}
+      className="bg-white rounded-lg border border-gray-200 shadow-sm px-3 py-2.5 sm:py-3
+        flex items-center gap-2.5 cursor-pointer hover:shadow-md active:scale-[0.98] transition-all min-h-[44px]">
+      {icon}
+      <span className="text-lg sm:text-xl font-bold text-gray-900">{value}</span>
+      <span className="text-xs text-gray-500">{label}</span>
+    </div>
+  );
+};
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Alert Row                                                       */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const AlertRow: React.FC<{ alert: { type: string; message: string; link: string } }> = ({ alert: a }) => {
+  const navigate = useNavigate();
+  const isErr = a.type === "error";
+  const isWarn = a.type === "warning";
+
+  const Icon = isErr ? ShieldAlert : isWarn ? AlertTriangle : Info;
+  const border = isErr ? "border-red-300 bg-red-50" : isWarn ? "border-amber-300 bg-amber-50" : "border-blue-200 bg-blue-50";
+  const iconCls = isErr ? "text-red-600" : isWarn ? "text-amber-600" : "text-blue-500";
+  const textCls = isErr ? "text-red-800" : isWarn ? "text-amber-800" : "text-blue-800";
+  const btnCls = isErr ? "bg-red-600 hover:bg-red-700" : isWarn ? "bg-amber-600 hover:bg-amber-700" : "bg-blue-600 hover:bg-blue-700";
+
+  return (
+    <div className={`rounded-xl border px-3 sm:px-4 py-3.5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 ${border}`}>
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <Icon className={`w-[22px] h-[22px] flex-shrink-0 ${iconCls}`} />
+        <span className={`text-sm font-semibold ${textCls}`}>{a.message}</span>
+      </div>
+      <button onClick={() => navigate(a.link)}
+        className={`w-full sm:w-auto px-4 min-h-[44px] text-sm font-bold rounded-lg text-white transition-colors ${btnCls}`}>
+        {isErr ? "טפל עכשיו" : "צפה"}
+      </button>
+    </div>
+  );
+};
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Quick Actions                                                   */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const QuickActions: React.FC = React.memo(() => {
+  const navigate = useNavigate();
+
+  const primaryActions = [
+    { label: "הזמנת עבודה חדשה", path: "/work-orders/new", icon: <ClipboardList className="w-5 h-5" />, cls: "bg-blue-600 text-white hover:bg-blue-700" },
+  ];
+  const secondaryActions = [
+    { label: "משתמש חדש", path: "/settings/admin/users/new", icon: <UserPlus className="w-[18px] h-[18px]" />, cls: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
+    { label: "ספק חדש", path: "/settings/suppliers?action=new", icon: <Truck className="w-[18px] h-[18px]" />, cls: "bg-green-50 text-green-700 hover:bg-green-100" },
+    { label: "פרויקט חדש", path: "/projects/new", icon: <FolderOpen className="w-[18px] h-[18px]" />, cls: "bg-purple-50 text-purple-700 hover:bg-purple-100" },
+  ];
+  const manageActions = [
+    { label: "תקציבות", path: "/settings/budgets", icon: <DollarSign className="w-4 h-4" /> },
+    { label: "סבב ספקים", path: "/settings/fair-rotation", icon: <TrendingUp className="w-4 h-4" /> },
+    { label: "הגדרות", path: "/settings", icon: <Settings className="w-4 h-4" /> },
+    { label: "יומן פעילות", path: "/activity-log", icon: <Activity className="w-4 h-4" /> },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 space-y-3">
+      <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+        <Plus className="w-4 h-4 text-green-600" /> פעולות מהירות
+      </h3>
+
+      {primaryActions.map(a => (
+        <button key={a.path} onClick={() => navigate(a.path)}
+          className={`w-full flex items-center justify-center gap-2 min-h-[48px] text-sm font-bold rounded-xl transition-colors ${a.cls}`}>
+          {a.icon} {a.label}
+        </button>
+      ))}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        {secondaryActions.map(a => (
+          <button key={a.path} onClick={() => navigate(a.path)}
+            className={`flex items-center gap-2.5 px-3 min-h-[44px] text-sm font-medium rounded-lg transition-colors ${a.cls}`}>
+            {a.icon} {a.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="border-t border-gray-100 pt-2.5">
+        <p className="text-[10px] font-semibold text-gray-400 mb-2 uppercase tracking-wide">ניהול</p>
+        <div className="grid grid-cols-2 gap-2">
+          {manageActions.map(a => (
+            <button key={a.path} onClick={() => navigate(a.path)}
+              className="flex items-center gap-2 px-2.5 min-h-[38px] text-xs rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 transition-colors">
+              {a.icon} {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Financial Card                                                  */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const FinancialCard: React.FC<{ f: AdminData["financial"] }> = React.memo(({ f }) => {
+  const pct = Math.min(f.utilization_pct, 100);
+  const barBg = pct > 90 ? "linear-gradient(to left, #dc2626, #f59e0b)"
+    : pct > 60 ? "linear-gradient(to left, #f59e0b, #22c55e)"
+      : "#22c55e";
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:col-span-2">
+      <h3 className="text-sm font-bold text-gray-700 mb-3 sm:mb-4 flex items-center gap-2">
+        <DollarSign className="w-4 h-4" /> סיכום תקציבי
+      </h3>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
+        <div><p className="text-[11px] text-gray-500">סה״כ תקציב</p><p className="text-base sm:text-lg font-bold text-gray-900">{fmtCurrency(f.total)}</p></div>
+        <div><p className="text-[11px] text-gray-500">מוקפא</p><p className="text-base sm:text-lg font-bold text-amber-600">{fmtCurrency(f.committed)}</p></div>
+        <div><p className="text-[11px] text-gray-500">הוצא</p><p className="text-base sm:text-lg font-bold text-red-600">{fmtCurrency(f.spent)}</p></div>
+        <div><p className="text-[11px] text-gray-500">זמין</p><p className="text-base sm:text-lg font-bold text-green-600">{fmtCurrency(f.remaining)}</p></div>
+      </div>
+      <div className="relative w-full bg-gray-100 rounded-full h-3 sm:h-4 overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: barBg }} />
+        {pct > 8 && (
+          <span className="absolute inset-0 flex items-center justify-center text-[9px] sm:text-[10px] font-bold text-white drop-shadow-sm">
+            {f.utilization_pct}%
+          </span>
+        )}
+      </div>
+      <p className="text-[10px] text-gray-400 mt-1 text-left">{f.utilization_pct}% ניצול תקציבי</p>
+    </div>
+  );
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Activity Chart                                                  */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const ActivityChart: React.FC<{ woChart: AdminData["wo_chart"]; wlChart: AdminData["wl_chart"] }> = React.memo(({ woChart, wlChart }) => {
+  const merged = useMemo(() => {
+    const days: Record<string, { wo: number; wl: number }> = {};
+    woChart.forEach(d => { days[d.date] = { ...(days[d.date] || { wo: 0, wl: 0 }), wo: d.count }; });
+    wlChart.forEach(d => { days[d.date] = { ...(days[d.date] || { wo: 0, wl: 0 }), wl: d.count }; });
+    return Object.entries(days).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [woChart, wlChart]);
+
+  const maxVal = useMemo(() => Math.max(...merged.map(([, v]) => Math.max(v.wo, v.wl)), 1), [merged]);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-3 sm:p-5 lg:col-span-3">
+      <h3 className="text-sm font-bold text-gray-700 mb-3 sm:mb-4 flex items-center gap-2">
+        <BarChart3 className="w-4 h-4" /> פעילות 14 ימים אחרונים
+      </h3>
+      <div className="overflow-x-auto -mx-1 px-1">
+        <div className="flex items-end gap-2 sm:gap-2.5 min-w-[320px]" style={{ height: "clamp(140px, 20vw, 200px)" }}>
+          {merged.length === 0 ? (
+            <p className="text-sm text-gray-400 m-auto">אין נתונים</p>
+          ) : merged.map(([date, v]) => {
+            const barH = "calc(100% - 20px)";
+            const woP = Math.max(8, (v.wo / maxVal) * 100);
+            const wlP = Math.max(8, (v.wl / maxVal) * 100);
+            const day = new Date(date).toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
+            return (
+              <div key={date} className="flex-1 flex flex-col items-center gap-1 min-w-[24px]"
+                title={`${day}: ${v.wo} הזמנות, ${v.wl} דיווחים`}>
+                <div className="flex gap-[3px] items-end w-full justify-center" style={{ height: barH }}>
+                  <div className="flex-1 max-w-[10px] bg-blue-400 rounded-t-sm transition-all" style={{ height: `${woP}%` }} />
+                  <div className="flex-1 max-w-[10px] bg-emerald-400 rounded-t-sm transition-all" style={{ height: `${wlP}%` }} />
+                </div>
+                <span className="text-[9px] sm:text-[10px] text-gray-400 font-medium whitespace-nowrap">{day}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex gap-5 mt-3 text-xs text-gray-500">
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-blue-400 rounded-sm" /> הזמנות עבודה</span>
+        <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-400 rounded-sm" /> דיווחי שעות</span>
+      </div>
+    </div>
+  );
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* Event Feed                                                      */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+const EventFeed: React.FC<{ events: AdminData["recent_events"] }> = React.memo(({ events }) => {
+  const navigate = useNavigate();
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden lg:col-span-2">
+      <div className="px-3 sm:px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+          <Activity className="w-4 h-4" /> אירועים אחרונים
+        </h3>
+        <button onClick={() => navigate("/activity-log")}
+          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-0.5 min-h-[44px] px-2">
+          הכל <ChevronLeft className="w-3 h-3" />
+        </button>
+      </div>
+      <div className="divide-y divide-gray-100 max-h-[340px] overflow-y-auto">
+        {events.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">אין אירועים</div>
+        ) : events.map(ev => {
+          const cfg = ACTION_CFG[ev.action] || { label: ev.action, dot: "bg-gray-400" };
+          return (
+            <div key={ev.id} className="px-3 sm:px-4 py-3 hover:bg-blue-50/40 transition-colors">
+              <div className="flex items-start gap-2.5">
+                <div className={`w-2.5 h-2.5 rounded-full ${cfg.dot} mt-1 flex-shrink-0`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] sm:text-sm font-semibold text-gray-800 truncate">{cfg.label}</p>
+                  <p className="text-[11px] sm:text-xs text-gray-500 truncate mt-0.5">{ev.description}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {ev.user_name && <span className="text-[10px] text-gray-500 font-medium">{ev.user_name}</span>}
+                    <span className="text-[10px] text-gray-400">{timeAgo(ev.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
 
 export default AdminDashboard;

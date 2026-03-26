@@ -85,6 +85,25 @@ class AuthService:
 
     # ─── public API ──────────────────────────────────────────
 
+    def lock_account(self, db: Session, user_id: int, reason: str = None, duration_hours: int = None) -> bool:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("משתמש לא נמצא")
+        user.is_locked = True
+        if duration_hours:
+            user.locked_until = datetime.now() + timedelta(hours=duration_hours)
+        db.commit()
+        return True
+
+    def unlock_account(self, db: Session, user_id: int, reason: str = None) -> bool:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("משתמש לא נמצא")
+        user.is_locked = False
+        user.locked_until = None
+        db.commit()
+        return True
+
     def login(self, db: Session, login_data, ip_address=None, user_agent=None) -> dict:
         username = login_data.username.strip()
         password = login_data.password
@@ -98,7 +117,26 @@ class AuthService:
             )
             .first()
         )
+
+        if user and getattr(user, "is_locked", False):
+            locked_until = getattr(user, "locked_until", None)
+            if locked_until and locked_until > datetime.now():
+                raise ValueError("החשבון נעול זמנית. נסה שוב מאוחר יותר")
+            elif locked_until and locked_until <= datetime.now():
+                user.is_locked = False
+                user.locked_until = None
+                db.commit()
+
         if not user or not verify_password(password, user.password_hash):
+            if user:
+                from app.core.rate_limiting import lock_account_on_failure
+                failed = getattr(user, "failed_login_attempts", 0) or 0
+                user.failed_login_attempts = failed + 1
+                if user.failed_login_attempts >= 5:
+                    user.is_locked = True
+                    user.locked_until = datetime.now() + timedelta(minutes=15)
+                db.commit()
+                lock_account_on_failure(username, user.failed_login_attempts)
             raise ValueError("שם משתמש או סיסמה שגויים")
 
         remember_me = getattr(login_data, "remember_me", False)
@@ -155,6 +193,10 @@ class AuthService:
                 "token_type": "bearer",
                 "expires_in": 0,
             }
+
+        # Reset failed attempts on successful login
+        if getattr(user, "failed_login_attempts", 0):
+            user.failed_login_attempts = 0
 
         # Direct login — save previous login time before updating
         previous_login = user.last_login
@@ -250,13 +292,67 @@ class AuthService:
         db.commit()
         return True
 
+    def _generate_reset_token(self, db: Session, user_id: int) -> str:
+        """Create a password-reset OTP with correct purpose."""
+        db.query(OTPToken).filter(
+            OTPToken.user_id == user_id,
+            OTPToken.purpose == "password_reset",
+            OTPToken.is_used == False,
+            OTPToken.is_active == True,
+        ).update({"is_active": False})
+
+        code = "".join(secrets.choice(string.digits) for _ in range(6))
+        code_hash = hashlib.sha256(code.encode()).hexdigest()
+        otp = OTPToken(
+            user_id=user_id,
+            token=code,
+            token_hash=code_hash,
+            code_hash=code_hash,
+            purpose="password_reset",
+            expires_at=datetime.now() + timedelta(minutes=15),
+            is_used=False,
+            is_active=True,
+            attempts=0,
+        )
+        db.add(otp)
+        db.commit()
+        return code
+
     def request_password_reset(self, db: Session, reset_data) -> dict:
         email = getattr(reset_data, "email", "")
         user = db.query(User).filter(User.email == email, User.is_active == True).first()
-        # Always return generic message to prevent enumeration
         if user:
-            token = self._generate_otp_token(db, user.id)
-        return {"message": "אם המייל קיים, תקבל קישור לאיפוס"}
+            token = self._generate_reset_token(db, user.id)
+            try:
+                from app.core.email import send_email
+                full_name = user.full_name or user.email
+                html_body = f"""
+<div dir="rtl" style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
+  <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
+    <h2 style="margin:0;">איפוס סיסמה — Forewise 🌲</h2>
+  </div>
+  <div style="padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+    <p>שלום <strong>{full_name}</strong>,</p>
+    <p>קוד האימות לאיפוס הסיסמה שלך:</p>
+    <div style="text-align:center;margin:24px 0;">
+      <span style="font-size:40px;font-weight:bold;letter-spacing:12px;color:#1a1a1a;font-family:monospace;">{token}</span>
+    </div>
+    <p style="color:#6b7280;font-size:13px;">הקוד תקף ל-15 דקות בלבד.</p>
+    <p style="color:#6b7280;font-size:13px;">אם לא ביקשת לאפס סיסמה — התעלם מהודעה זו.</p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+    <p style="color:#9ca3af;font-size:12px;">Forewise — מערכת ניהול הזמנות</p>
+  </div>
+</div>"""
+                send_email(
+                    to=user.email,
+                    subject="איפוס סיסמה — Forewise",
+                    body=f"שלום {full_name},\n\nקוד האימות לאיפוס הסיסמה שלך: {token}\n\nהקוד תקף ל-15 דקות.\n\nForewise",
+                    html_body=html_body,
+                )
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to send reset email to {user.email}: {e}")
+        return {"message": "אם המייל קיים במערכת, נשלח אליך קוד לאיפוס סיסמה"}
 
     def reset_password(self, db: Session, token: str, new_password: str) -> bool:
         otp = db.query(OTPToken).filter(

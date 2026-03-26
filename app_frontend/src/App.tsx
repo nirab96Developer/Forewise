@@ -12,7 +12,6 @@ import Navigation from "./components/Navigation/Navigation";
 import AppRoutes from "./routes";
 import { ToastProvider } from "./components/common/Toast";
 import { OfflineBanner } from "./components/common/OfflineBanner";
-import DebugPanel from "./components/DebugPanel";
 import HumanSupportChat from "./components/HelpWidget/HumanSupportChat";
 import { FullScreenLoader } from "./components/common/UnifiedLoader";
 import { debugLogger } from "./utils/debug";
@@ -54,7 +53,6 @@ const App: React.FC = () => {
   const [globalLoading, setGlobalLoading] = useState(false);
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(authService.isAuthenticated());
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const isMobile = useIsMobile();
   
@@ -82,7 +80,6 @@ const App: React.FC = () => {
       // Ctrl+Shift+D or F12
       if ((e.ctrlKey && e.shiftKey && e.key === 'D') || e.key === 'F12') {
         e.preventDefault();
-        setShowDebugPanel(prev => !prev);
       }
     };
 
@@ -156,7 +153,6 @@ const App: React.FC = () => {
         {/* Debug Panel Toggle Button */}
         {import.meta.env.DEV && (
           <button
-            onClick={() => setShowDebugPanel(!showDebugPanel)}
             className="fixed bottom-4 left-4 z-40 p-3 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg transition-all"
             title="פאנל Debug (Ctrl+Shift+D או F12)"
           >
@@ -170,7 +166,6 @@ const App: React.FC = () => {
         )}
 
         {/* Debug Panel */}
-        <DebugPanel isOpen={showDebugPanel} onClose={() => setShowDebugPanel(false)} />
         
         {/* Human Support Chat - בוט תמיכה אנושי */}
         {isLoggedIn && !isPublicPage && <HumanSupportChat />}

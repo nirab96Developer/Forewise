@@ -55,9 +55,11 @@ class InvoiceCreate(InvoiceBase):
     @classmethod
     def validate_total_amount(cls, v: Decimal, info) -> Decimal:
         """Validate total_amount = subtotal + tax_amount (if both present)"""
-        if 'subtotal' in info.data and 'tax_amount' in info.data:
-            expected = info.data['subtotal'] + info.data['tax_amount']
-            if abs(v - expected) > Decimal('0.01'):  # Allow small rounding
+        subtotal = info.data.get('subtotal')
+        tax_amount = info.data.get('tax_amount')
+        if subtotal is not None and tax_amount is not None:
+            expected = subtotal + tax_amount
+            if abs(v - expected) > Decimal('0.01'):
                 raise ValueError(f"total_amount should equal subtotal + tax_amount (expected {expected}, got {v})")
         return v
 

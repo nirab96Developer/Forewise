@@ -147,7 +147,7 @@ def list_equipment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list equipment: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -183,7 +183,7 @@ def get_equipment_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get statistics: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -206,7 +206,7 @@ def get_active_equipment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get active equipment: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -233,7 +233,7 @@ def get_equipment_needing_maintenance(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get equipment needing maintenance: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -261,7 +261,7 @@ def get_equipment_types_list(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get equipment types: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -317,6 +317,60 @@ def get_equipment_by_code(
         if supplier:
             result["supplier_name"] = supplier.name
     
+    return result
+
+
+@router.post("/validate-plate")
+def validate_license_plate(
+    body: dict,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """
+    Validate equipment by license plate against an approved work order.
+    """
+    require_permission(current_user, "equipment.read")
+    from app.models.equipment import Equipment
+    from app.models.work_order import WorkOrder
+    from app.models.supplier import Supplier
+    from app.models.supplier_equipment import SupplierEquipment
+    from app.core.enums import WorkOrderStatus
+
+    plate = (body.get("license_plate") or "").strip()
+    wo_id = body.get("work_order_id")
+    if not plate:
+        raise HTTPException(status_code=400, detail="חובה להזין מספר רישוי")
+
+    eq = db.query(Equipment).filter(Equipment.is_active == True, Equipment.license_plate == plate).first()
+    se = None
+    if not eq:
+        se = db.query(SupplierEquipment).filter(SupplierEquipment.license_plate == plate, SupplierEquipment.is_active == True).first()
+    if not eq and not se:
+        raise HTTPException(status_code=404, detail=f"לא נמצא כלי עם מספר רישוי: {plate}")
+
+    supplier_id = (eq.supplier_id if eq else se.supplier_id) if (eq or se) else None
+    equipment_name = (eq.name if eq else None) or "כלי"
+    equipment_id = eq.id if eq else None
+    result = {"valid": True, "license_plate": plate, "equipment_id": equipment_id,
+              "supplier_equipment_id": se.id if se else None, "equipment_name": equipment_name,
+              "supplier_id": supplier_id, "warnings": []}
+
+    if wo_id:
+        wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id, WorkOrder.deleted_at.is_(None)).first()
+        if not wo:
+            raise HTTPException(status_code=404, detail="הזמנת עבודה לא נמצאה")
+        if wo.status not in (WorkOrderStatus.APPROVED_AND_SENT, "APPROVED_AND_SENT"):
+            result["valid"] = False
+            result["warnings"].append(f"הזמנה לא מאושרת (סטטוס: {wo.status})")
+        if supplier_id and wo.supplier_id and supplier_id != wo.supplier_id:
+            wo_supplier = db.query(Supplier).filter(Supplier.id == wo.supplier_id).first()
+            result["valid"] = False
+            result["warnings"].append(f"הכלי שייך לספק אחר. ספק מאושר: {wo_supplier.name if wo_supplier else wo.supplier_id}")
+        result["work_order_id"] = wo.id
+        result["work_order_status"] = wo.status
+        if supplier_id:
+            supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+            result["supplier_name"] = supplier.name if supplier else None
     return result
 
 
@@ -503,7 +557,7 @@ def get_equipment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get equipment: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -538,7 +592,7 @@ def create_equipment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create equipment: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -579,7 +633,7 @@ def update_equipment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update equipment: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -614,7 +668,7 @@ def delete_equipment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete equipment: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -665,7 +719,7 @@ def restore_equipment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to restore equipment: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -717,7 +771,7 @@ def assign_equipment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to assign equipment: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -758,5 +812,5 @@ def update_equipment_maintenance(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update maintenance: {str(e)}"
+            detail="שגיאת שרת"
         )

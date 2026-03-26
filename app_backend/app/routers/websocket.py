@@ -1,5 +1,13 @@
 # app/routers/websocket.py
-"""WebSocket endpoints for real-time notifications."""
+"""WebSocket endpoints for real-time notifications.
+
+LIMITATION: ConnectionManager stores connections in-memory per worker
+process. With Gunicorn's multiple workers, a notification sent from
+worker A will only reach clients connected to worker A.  The DB
+notifications table is always the source of truth; WS push is
+best-effort.  For reliable cross-worker delivery, enable Redis and
+implement a pub/sub bridge (planned improvement).
+"""
 import json
 import logging
 from datetime import datetime
@@ -16,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ws", tags=["WebSocket"])
 
-# Active connections storage
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[int, WebSocket] = {}

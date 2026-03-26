@@ -86,27 +86,48 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 async def rate_limit_middleware(request: Request, call_next):
-    """Rate limiting middleware"""
+    """Rate limiting middleware.
+
+    NOTE: In-memory per-worker. With N Gunicorn workers the effective
+    per-IP limit is N * max_requests.  For true shared state, enable
+    Redis and switch to a Redis-backed counter (Phase 9 improvement).
+    """
     from app.core.config import settings
-    
-    # Skip rate limiting in development/testing
+
     if settings.ENVIRONMENT in ["development", "testing"]:
         return await call_next(request)
-    
-    # Get client IP
+
     client_ip = get_client_ip(request)
-    
-    # Skip rate limiting for health checks
-    if request.url.path in ["/health", "/api/v1/health"]:
+    path = request.url.path
+
+    if path in ("/health", "/api/v1/health"):
         return await call_next(request)
-    
-    # Check rate limit
+
+    # Stricter limits for sensitive endpoints
+    auth_paths = ("/api/v1/auth/login", "/api/v1/auth/register",
+                  "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password")
+    portal_prefix = "/api/v1/supplier-portal/"
+
+    if path in auth_paths:
+        if rate_limiter.is_rate_limited(f"auth:{client_ip}", max_requests=15, window=60):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many authentication attempts. Please wait before trying again."
+            )
+    elif path.startswith(portal_prefix):
+        if rate_limiter.is_rate_limited(f"portal:{client_ip}", max_requests=30, window=60):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many requests. Please try again later."
+            )
+
+    # General API limit
     if rate_limiter.is_rate_limited(client_ip, max_requests=100, window=60):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later."
         )
-    
+
     return await call_next(request)
 
 def check_otp_rate_limit(email: str) -> None:

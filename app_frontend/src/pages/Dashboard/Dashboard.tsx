@@ -7,7 +7,7 @@ import { normalizeRole, UserRole } from "../../utils/permissions";
 import { Navigate } from "react-router-dom";
 
 // דשבורדים לפי תפקיד
-import HilanDashboard from "./HilanDashboard";
+import DefaultDashboard from "./DefaultDashboard";
 import AccountantDashboard from "./AccountantDashboard";
 import OrderCoordinatorDashboard from "./OrderCoordinatorDashboard";
 import WorkManagerDashboard from "./WorkManagerDashboard";
@@ -76,7 +76,7 @@ const Dashboard: React.FC = () => {
     default:
       // משתמש לא מזוהה מקבל דשבורד כללי
       console.warn('[Dashboard] Unknown role, using default dashboard:', userRole);
-      return <HilanDashboard />;
+      return <DefaultDashboard />;
   }
 };
 

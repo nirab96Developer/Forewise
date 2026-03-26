@@ -95,11 +95,11 @@ App: http://localhost:5173
 
 ## Production Deployment
 
-The backend runs under systemd (`kkl-backend.service`). Restart after changes:
+The backend runs under systemd (`forewise.service`). Restart after changes:
 
 ```bash
-sudo systemctl restart kkl-backend
-sudo journalctl -u kkl-backend -f
+sudo systemctl restart forewise
+sudo journalctl -u forewise -f
 ```
 
 Frontend is built and served as static files:

@@ -14,8 +14,12 @@ const REFRESH_TOKEN_KEY = 'refresh_token';
 interface User {
   id: string;
   name: string;
+  role: string;
   roles: string[];
+  permissions?: string[];
   email?: string;
+  region_id?: number;
+  area_id?: number;
 }
 
 // פונקציה לכניסה למערכת - מתחברת ל-Backend האמיתי
@@ -30,12 +34,17 @@ const login = async (username: string, password: string, remember?: boolean): Pr
     if (response.data) {
       const data = response.data;
       
-      // הגדרת נתוני המשתמש
+      // הגדרת נתוני המשתמש — role from backend is a string code (e.g. "ADMIN")
+      const roleCode = data.user.role_code || data.user.role || 'USER';
       const user = {
         id: data.user.id.toString(),
         name: data.user.full_name || data.user.username,
         email: data.user.email,
-        roles: data.user.roles || ['user']
+        role: roleCode,
+        roles: data.user.roles || [roleCode],
+        permissions: data.user.permissions || [],
+        region_id: data.user.region_id,
+        area_id: data.user.area_id,
       };
       
       // שמירה בלוקל סטורג'

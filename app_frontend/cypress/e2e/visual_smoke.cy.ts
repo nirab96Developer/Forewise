@@ -17,7 +17,7 @@ describe('Visual Smoke Tests', () => {
     cy.visit('/login');
 
     cy.eyesOpen({
-      appName: 'Forest Management System',
+      appName: 'Forewise',
       testName: 'Login Page',
     });
 
@@ -34,7 +34,7 @@ describe('Visual Smoke Tests', () => {
     cy.visit('/login');
 
     cy.eyesOpen({
-      appName: 'Forest Management System',
+      appName: 'Forewise',
       testName: 'Login Page - Mobile',
     });
 
@@ -72,7 +72,7 @@ describe('Visual Smoke Tests', () => {
       cy.url({ timeout: 15000 }).should('not.include', '/login');
 
       cy.eyesOpen({
-        appName: 'Forest Management System',
+        appName: 'Forewise',
         testName: 'Dashboard',
       });
 
@@ -100,7 +100,7 @@ describe('Responsive Visual Tests', () => {
       cy.visit('/login');
 
       cy.eyesOpen({
-        appName: 'Forest Management System',
+        appName: 'Forewise',
         testName: `Responsive - ${viewport.name}`,
       });
 

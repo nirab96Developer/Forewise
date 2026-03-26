@@ -19,6 +19,7 @@ import {
   Target,
 } from 'lucide-react';
 import api from '../../services/api';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
 
 interface Location {
@@ -41,6 +42,7 @@ const LocationsClean: React.FC = () => {
   const navigate = useNavigate();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
+  const { canManageLocations } = useRoleAccess();
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
@@ -131,13 +133,15 @@ const LocationsClean: React.FC = () => {
               </div>
               
               {/* Add Button */}
-              <Link
-                to="/locations/new"
-                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
-                <Plus className="w-5 h-5" />
-                מיקום חדש
-              </Link>
+              {canManageLocations && (
+                <Link
+                  to="/locations/new"
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  <Plus className="w-5 h-5" />
+                  מיקום חדש
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -161,7 +165,7 @@ const LocationsClean: React.FC = () => {
                 ? 'נסה לחפש במונחים אחרים'
                 : 'התחל ביצירת מיקום חדש'}
             </p>
-            {!searchTerm && (
+            {!searchTerm && canManageLocations && (
               <Link
                 to="/locations/new"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
@@ -246,16 +250,18 @@ const LocationsClean: React.FC = () => {
                       >
                         <Eye className="w-5 h-5" />
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/locations/${location.id}/edit`);
-                        }}
-                        className="text-gray-600 hover:text-gray-700 transition-colors"
-                        title="ערוך מיקום"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
+                      {canManageLocations && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/locations/${location.id}/edit`);
+                          }}
+                          className="text-gray-600 hover:text-gray-700 transition-colors"
+                          title="ערוך מיקום"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
+                      )}
                       {location.latitude && location.longitude && (
                         <button
                           onClick={(e) => {

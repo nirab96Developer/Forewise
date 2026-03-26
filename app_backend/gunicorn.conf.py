@@ -1,6 +1,6 @@
 # gunicorn.conf.py
 """
-Gunicorn configuration for Forest Management System
+Gunicorn configuration for Forewise
 הגדרות Gunicorn למערכת ניהול יערות
 """
 import multiprocessing
@@ -28,7 +28,7 @@ loglevel  = os.getenv('LOG_LEVEL', 'info').lower()
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
 
 # Process naming
-proc_name = "forest-management-system"
+proc_name = "forewise"
 
 # Server mechanics — daemon/pidfile controlled by CLI flags
 pidfile = "/tmp/gunicorn.pid"
@@ -60,7 +60,7 @@ limit_request_field_size = 8190
 
 def when_ready(server):
     """Called just after the server is started."""
-    server.log.info("🌲 Forest Management System server is ready!")
+    server.log.info("🌲 Forewise server is ready!")
 
 def worker_int(worker):
     """Called just after a worker exited on SIGINT or SIGQUIT."""
@@ -80,7 +80,7 @@ def pre_exec(server):
 
 def when_ready(server):
     """Called just after the server is started."""
-    server.log.info("🌲 Forest Management System server is ready!")
+    server.log.info("🌲 Forewise server is ready!")
 
 def worker_abort(worker):
     """Called when a worker received the SIGABRT signal."""

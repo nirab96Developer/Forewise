@@ -373,8 +373,8 @@ def _get_project_coordinates(db, project_ids):
             WHERE id = ANY(:ids) AND location_geom IS NOT NULL
         """), {"ids": project_ids}).fetchall()
         result = {r.id: {"latitude": r.lat, "longitude": r.lng} for r in rows}
-    except Exception as e:
-        print(f"Warning: PostGIS coordinates unavailable: {e}")
+    except Exception:
+        pass
     # Fallback: locations table
     missing = [pid for pid in project_ids if pid not in result]
     if missing:
@@ -391,8 +391,8 @@ def _get_project_coordinates(db, project_ids):
                     "polygon": r.polygon,
                     "geojson": r.geojson,
                 }
-        except Exception as e:
-            print(f"Warning: locations coordinates fallback failed: {e}")
+        except Exception:
+            pass
     return result
 
 

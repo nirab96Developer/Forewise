@@ -6,8 +6,10 @@ import { Plus, Search, Eye, Edit, Calendar, Clock, User, AlertCircle } from 'luc
 import workOrderService, { WorkOrder, WorkOrderFilters } from '../../services/workOrderService';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
 import { useOffline } from '../../hooks/useOffline';
+import { getUserRole, normalizeRole, UserRole } from '../../utils/permissions';
 
 const WorkOrders: React.FC = () => {
+  const _role = normalizeRole(getUserRole());
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,25 +56,13 @@ const WorkOrders: React.FC = () => {
   }, [filterStatus]); // Only re-fetch when filter changes
 
   const getStatusColor = (status: string) => {
-    const statusLower = status?.toLowerCase();
-    switch (statusLower) {
-      case 'pending':
-      case 'draft':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'accepted':
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
-        return 'bg-gray-100 text-gray-800';
-      case 'sent':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    const upper = (status || '').toUpperCase();
+    if (['APPROVED_AND_SENT'].includes(upper)) return 'bg-green-100 text-green-800';
+    if (['DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(upper)) return 'bg-blue-100 text-blue-800';
+    if (['PENDING'].includes(upper)) return 'bg-yellow-100 text-yellow-800';
+    if (['COMPLETED'].includes(upper)) return 'bg-gray-200 text-gray-800';
+    if (['REJECTED', 'CANCELLED', 'EXPIRED', 'STOPPED'].includes(upper)) return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
   const getStatusText = (status: string) => {
@@ -126,13 +116,15 @@ const WorkOrders: React.FC = () => {
                   )}
                 </div>
               )}
-              <Link
-                to="/work-orders/new"
-                className="bg-gradient-to-r from-kkl-green to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-lg flex items-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-              >
-                <Plus className="w-5 h-5 ml-2" />
-                הזמנה חדשה
-              </Link>
+              {[UserRole.ADMIN, UserRole.AREA_MANAGER, UserRole.WORK_MANAGER].includes(_role) && (
+                <Link
+                  to="/work-orders/new"
+                  className="bg-gradient-to-r from-kkl-green to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-lg flex items-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                >
+                  <Plus className="w-5 h-5 ml-2" />
+                  הזמנה חדשה
+                </Link>
+              )}
             </div>
           </div>
 
@@ -154,11 +146,14 @@ const WorkOrders: React.FC = () => {
               className="pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow min-w-[150px]"
             >
               <option value="all">כל הסטטוסים</option>
-              <option value="pending">ממתין לתגובה</option>
-              <option value="accepted">אושר</option>
-              <option value="rejected">נדחה</option>
-              <option value="completed">הושלם</option>
-              <option value="cancelled">בוטל</option>
+              <option value="PENDING">ממתין</option>
+              <option value="DISTRIBUTING">בהפצה לספקים</option>
+              <option value="APPROVED_AND_SENT">אושר ונשלח</option>
+              <option value="COMPLETED">הושלם</option>
+              <option value="REJECTED">נדחה</option>
+              <option value="CANCELLED">בוטל</option>
+              <option value="EXPIRED">פג תוקף</option>
+              <option value="STOPPED">הופסק</option>
             </select>
           </div>
         </div>

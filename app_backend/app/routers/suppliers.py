@@ -59,18 +59,28 @@ def get_active_suppliers(
     equipment_category_id: Optional[int] = Query(None, description="Filter by equipment category ID"),
     category: Optional[int] = Query(None, description="Alias for equipment_category_id"),
     page: int = Query(1, ge=1),
-    limit: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=200),
 ):
     """Return active suppliers, optionally filtered by equipment category."""
     from sqlalchemy import text as sa_text
 
     cat_id = equipment_category_id or category
 
+    offset = (page - 1) * page_size
+
     if cat_id:
-        # The frontend sends equipment_types.id, but supplier_equipment links
-        # through equipment_models → equipment_categories (different table, different IDs).
-        # We resolve by matching either the category ID directly OR by name-based
-        # cross-reference between equipment_types and equipment_categories.
+        count_sql = sa_text("""
+            SELECT COUNT(DISTINCT s.id)
+            FROM suppliers s
+            JOIN supplier_equipment se ON se.supplier_id = s.id
+            JOIN equipment_models em ON em.id = se.equipment_model_id
+            JOIN equipment_categories ec ON ec.id = em.category_id
+            WHERE (em.category_id = :cat_id
+                   OR ec.name IN (SELECT name FROM equipment_types WHERE id = :cat_id))
+              AND s.is_active = TRUE AND s.deleted_at IS NULL
+        """)
+        total = db.execute(count_sql, {"cat_id": cat_id}).scalar() or 0
+
         sql = sa_text("""
             SELECT DISTINCT s.id, s.code, s.name, s.contact_name, s.contact_phone,
                    s.contact_email, s.supplier_type, s.rating, s.is_active,
@@ -79,19 +89,18 @@ def get_active_suppliers(
             JOIN supplier_equipment se ON se.supplier_id = s.id
             JOIN equipment_models em ON em.id = se.equipment_model_id
             JOIN equipment_categories ec ON ec.id = em.category_id
-            WHERE (
-                em.category_id = :cat_id
-                OR ec.name IN (
-                    SELECT name FROM equipment_types WHERE id = :cat_id
-                )
-            )
-              AND s.is_active = TRUE
-              AND s.deleted_at IS NULL
+            WHERE (em.category_id = :cat_id
+                   OR ec.name IN (SELECT name FROM equipment_types WHERE id = :cat_id))
+              AND s.is_active = TRUE AND s.deleted_at IS NULL
             ORDER BY s.name
             LIMIT :limit OFFSET :offset
         """)
-        rows = db.execute(sql, {"cat_id": cat_id, "limit": limit, "offset": (page - 1) * limit}).mappings().all()
+        rows = db.execute(sql, {"cat_id": cat_id, "limit": page_size, "offset": offset}).mappings().all()
     else:
+        total = db.execute(sa_text(
+            "SELECT COUNT(*) FROM suppliers WHERE is_active = TRUE AND deleted_at IS NULL"
+        )).scalar() or 0
+
         sql = sa_text("""
             SELECT id, code, name, contact_name, contact_phone,
                    contact_email, supplier_type, rating, is_active,
@@ -101,9 +110,9 @@ def get_active_suppliers(
             ORDER BY name
             LIMIT :limit OFFSET :offset
         """)
-        rows = db.execute(sql, {"limit": limit, "offset": (page - 1) * limit}).mappings().all()
+        rows = db.execute(sql, {"limit": page_size, "offset": offset}).mappings().all()
 
-    return [dict(r) for r in rows]
+    return {"items": [dict(r) for r in rows], "total": total, "page": page, "page_size": page_size}
 
 
 @router.get("/by-code/{code}", response_model=SupplierResponse)
@@ -191,19 +200,22 @@ from app.models.equipment_model import EquipmentModel
 
 @router.get("-equipment", tags=["suppliers"])
 def list_all_supplier_equipment(
-    db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """Return all supplier_equipment rows enriched with supplier/model names."""
+    """Return supplier_equipment rows enriched with supplier/model names."""
     require_permission(current_user, "suppliers.read")
-    rows = (
+    base = (
         db.query(SupplierEquipment, SupplierModel, EquipmentModel)
         .join(SupplierModel, SupplierModel.id == SupplierEquipment.supplier_id, isouter=True)
         .join(EquipmentModel, EquipmentModel.id == SupplierEquipment.equipment_model_id, isouter=True)
         .filter(SupplierEquipment.is_active == True)
-        .all()
     )
-    return [
+    total = base.count()
+    rows = base.offset((page - 1) * page_size).limit(page_size).all()
+    items = [
         {
             "id": se.id,
             "supplier_id": se.supplier_id,
@@ -214,13 +226,13 @@ def list_all_supplier_equipment(
             "status": se.status,
             "hourly_rate": float(se.hourly_rate) if se.hourly_rate else None,
             "is_active": se.is_active,
-            # alias fields expected by frontend
             "base_rate": float(se.hourly_rate) if se.hourly_rate else None,
             "night_rate": None,
             "weekend_rate": None,
         }
         for se, s, em in rows
     ]
+    return {"items": items, "total": total, "page": page, "page_size": page_size}
 
 
 @router.get("/{supplier_id}/equipment", tags=["suppliers"])

@@ -1,4 +1,4 @@
-// src/components/suppliers/EquipmentTypeModal.tsx — KKL style
+// src/components/suppliers/EquipmentTypeModal.tsx 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Moon } from 'lucide-react';
 import api from '../../services/api';

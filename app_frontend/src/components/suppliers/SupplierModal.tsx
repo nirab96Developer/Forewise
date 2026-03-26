@@ -1,4 +1,4 @@
-// src/components/suppliers/SupplierModal.tsx — KKL style
+// src/components/suppliers/SupplierModal.tsx 
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft } from 'lucide-react';
 import api from '../../services/api';

@@ -22,17 +22,19 @@ notification_service = NotificationService()
 
 
 # Alias for frontend compatibility - /notifications/my
-@router.get("/my", )
+@router.get("/my")
 def get_my_notifications(
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 50,
+    page: int = 1,
+    page_size: int = 50,
     unread_only: bool = False,
     notification_type: Optional[str] = None,
     current_user: User = Depends(get_current_active_user)
 ):
     """Get current user's notifications."""
-    return get_notifications(db, skip, limit, unread_only, notification_type, current_user)
+    return get_notifications(db, page=page, page_size=page_size,
+                             unread_only=unread_only, notification_type=notification_type,
+                             current_user=current_user)
 
 
 # Alias for frontend compatibility - /notifications/unread-count
@@ -54,38 +56,56 @@ def get_unread_count(
 
 
 # Alias for frontend compatibility - /notifications/recent
-@router.get("/recent", )
+@router.get("/recent")
 def get_recent_notifications(
     limit: int = 5,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get recent notifications."""
-    return get_notifications(db, 0, limit, False, None, current_user)
+    """Get recent notifications (small shortcut, not paginated)."""
+    notifications = notification_service.get_user_notifications(
+        db=db, user_id=current_user.id, skip=0, limit=limit
+    )
+    return notifications or []
 
 
-@router.get("/", )
+@router.get("/")
 def get_notifications(
     db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 50,
+    page: int = 1,
+    page_size: int = 50,
     unread_only: bool = False,
     notification_type: Optional[str] = None,
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get user notifications."""
+    """Get user notifications (paginated)."""
+    from app.models.notification import Notification
     try:
+        skip = (page - 1) * page_size
         notifications = notification_service.get_user_notifications(
             db=db,
             user_id=current_user.id,
             skip=skip,
-            limit=limit,
+            limit=page_size,
             unread_only=unread_only,
             notification_type=notification_type
         )
-        return notifications or []
+
+        count_q = db.query(Notification).filter(Notification.user_id == current_user.id)
+        if unread_only:
+            count_q = count_q.filter(Notification.is_read == False)
+        if notification_type:
+            count_q = count_q.filter(Notification.notification_type == notification_type)
+        total = count_q.count()
+
+        return {
+            "items": notifications or [],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
     except Exception:
-        return []
+        return {"items": [], "total": 0, "page": page, "page_size": page_size}
 
 
 @router.get("/{notification_id}", )

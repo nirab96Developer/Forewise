@@ -65,8 +65,8 @@ export interface WorkOrderUpdate {
   equipment_type?: string;
   work_start_date?: string;
   work_end_date?: string;
-  status?: 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
-  priority?: 'low' | 'medium' | 'high';
+  status?: string;
+  priority?: string;
   estimated_hours?: number;
   hourly_rate?: number;
 }
@@ -204,51 +204,32 @@ class WorkOrderService {
   }
 
   // Helper methods
-  getStatusColor(status: WorkOrder['status']): string {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'approved':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'completed':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  getStatusColor(status: string): string {
+    const upper = (status || '').toUpperCase();
+    if (['APPROVED_AND_SENT'].includes(upper)) return 'bg-green-100 text-green-800 border-green-200';
+    if (['DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(upper)) return 'bg-blue-100 text-blue-800 border-blue-200';
+    if (['PENDING'].includes(upper)) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    if (['COMPLETED'].includes(upper)) return 'bg-gray-100 text-gray-800 border-gray-200';
+    if (['REJECTED', 'CANCELLED', 'EXPIRED', 'STOPPED'].includes(upper)) return 'bg-red-100 text-red-800 border-red-200';
+    return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 
-  getPriorityColor(priority: WorkOrder['priority']): string {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  getPriorityColor(priority: string): string {
+    const upper = (priority || '').toUpperCase();
+    if (upper === 'HIGH') return 'bg-red-100 text-red-800';
+    if (upper === 'MEDIUM') return 'bg-yellow-100 text-yellow-800';
+    if (upper === 'LOW') return 'bg-green-100 text-green-800';
+    return 'bg-gray-100 text-gray-800';
   }
 
-  getStatusText(status: WorkOrder['status']): string {
-    switch (status) {
-      case 'pending':
-        return 'ממתין לאישור';
-      case 'approved':
-        return 'מאושר';
-      case 'in_progress':
-        return 'בביצוע';
-      case 'completed':
-        return 'הושלם';
-      case 'cancelled':
-        return 'בוטל';
-      default:
-        return 'לא ידוע';
-    }
+  getStatusText(status: string): string {
+    const map: Record<string, string> = {
+      PENDING: 'ממתין', DISTRIBUTING: 'בהפצה לספקים',
+      SUPPLIER_ACCEPTED_PENDING_COORDINATOR: 'ספק אישר — ממתין למתאם',
+      APPROVED_AND_SENT: 'אושר ונשלח', COMPLETED: 'הושלם',
+      REJECTED: 'נדחה', CANCELLED: 'בוטל', EXPIRED: 'פג תוקף', STOPPED: 'הופסק',
+    };
+    return map[(status || '').toUpperCase()] || status || 'לא ידוע';
   }
 
   getPriorityText(priority: WorkOrder['priority']): string {

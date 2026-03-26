@@ -2,10 +2,14 @@
 // src/pages/WorkOrders/WorkOrderDetail.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowRight, Printer, Edit, Trash2, Clock, XCircle } from 'lucide-react';
+import { ArrowRight, Printer, Edit, Trash2, Clock, XCircle, ScanLine } from 'lucide-react';
 import api from '../../services/api';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
+import { getUserRole, normalizeRole, UserRole } from '../../utils/permissions';
+
+let ScanEquipmentModal: React.FC<any> = () => null;
+try { ScanEquipmentModal = require('../../components/equipment/ScanEquipmentModal').default; } catch {}
 
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
   'PENDING': { label: 'ממתין לאישור', color: '#854d0e', bg: '#fef9c3' },
@@ -55,6 +59,11 @@ const WorkOrderDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [scanModalOpen, setScanModalOpen] = useState(false);
+  const _role = normalizeRole(getUserRole());
+  const isAdmin = _role === UserRole.ADMIN;
+  const canEdit = [UserRole.ADMIN, UserRole.AREA_MANAGER, UserRole.WORK_MANAGER].includes(_role);
+  
 
   useEffect(() => {
     if (id) fetchWorkOrder();
@@ -105,7 +114,8 @@ const WorkOrderDetail: React.FC = () => {
     { label: 'מספר הזמנה', value: `${wo.order_number || workOrder.id}` },
     { label: 'פרויקט', value: workOrder.project_name || '—' },
     { label: 'סוג ציוד', value: workOrder.equipment_type || '—' },
-    { label: 'ספק', value: workOrder.supplier_name || 'ממתין לשיבוץ' },
+    { label: 'ספק', value: workOrder.supplier_name || (wo.supplier_id ? `ספק #${wo.supplier_id}` : 'ממתין לשיבוץ') },
+    { label: 'מספר כלי', value: wo.equipment_license_plate || (wo.equipment_id ? `כלי #${wo.equipment_id}` : 'לא שויך') },
     { label: 'תאריך התחלה', value: fmtDate(wo.work_start_date) },
     { label: 'תאריך סיום', value: fmtDate(wo.work_end_date) },
     { label: 'שעות משוערות', value: wo.estimated_hours ? `${wo.estimated_hours} שעות` : '—' },
@@ -147,22 +157,26 @@ const WorkOrderDetail: React.FC = () => {
               <Printer className="w-4 h-4" />
               הדפסה / PDF
             </button>
-            <button
-              onClick={() => navigate(`/work-orders/${workOrder.id}/edit`)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm"
-            >
-              <Edit className="w-4 h-4" />
-              עריכה
-            </button>
-            <button
-              type="button"
-              onClick={() => setDeleteModalOpen(true)}
-              disabled={processing}
-              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm disabled:opacity-50"
-            >
-              <Trash2 className="w-4 h-4" />
-              מחיקה
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => navigate(`/work-orders/${workOrder.id}/edit`)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm"
+              >
+                <Edit className="w-4 h-4" />
+                עריכה
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(true)}
+                disabled={processing}
+                className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                מחיקה
+              </button>
+            )}
             {isApproved && wo.equipment_id && (
               <button
                 onClick={() => {
@@ -179,6 +193,15 @@ const WorkOrderDetail: React.FC = () => {
               >
                 <XCircle className="w-4 h-4" />
                 הסר כלי
+              </button>
+            )}
+            {isApproved && !wo.equipment_id && !wo.equipment_license_plate && (
+              <button
+                onClick={() => setScanModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm animate-pulse"
+              >
+                <ScanLine className="w-4 h-4" />
+                סרוק ציוד
               </button>
             )}
           </div>
@@ -237,6 +260,24 @@ const WorkOrderDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* סריקת ציוד — Modal */}
+      <ScanEquipmentModal
+        isOpen={scanModalOpen}
+        onClose={() => setScanModalOpen(false)}
+        workOrderId={workOrder.id}
+        onSuccess={(equipmentId: number, licensePlate: string, _name: string) => {
+          api.post(`/work-orders/${workOrder.id}/confirm-equipment`, { equipment_id: equipmentId })
+            .then(() => {
+              fetchWorkOrder();
+              (window as any).showToast?.(`כלי ${licensePlate} שויך להזמנה`, 'success');
+            })
+            .catch((e: any) => {
+              (window as any).showToast?.(e.response?.data?.detail || 'שגיאה בשיוך', 'error');
+            });
+          setScanModalOpen(false);
+        }}
+      />
 
       {/* מחיקה — דיאלוג מאושר */}
       {deleteModalOpen && (

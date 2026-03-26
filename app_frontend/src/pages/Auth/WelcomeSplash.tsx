@@ -67,14 +67,20 @@ const WelcomeSplash: React.FC = () => {
   const lastLoginTxt = relativeTime(lastLogin);
   const biometric    = getBiometricLabel();
 
-  // Show splash only once per browser session (not on every page refresh)
+  // Show splash only once per user — persist in localStorage
   useEffect(() => {
-    const alreadyShown = sessionStorage.getItem('welcome_shown');
-    if (alreadyShown) {
+    try {
+      const userStr = localStorage.getItem('user');
+      const userId = userStr ? JSON.parse(userStr).id : null;
+      const key = userId ? `welcome_seen_${userId}` : 'welcome_seen';
+      if (localStorage.getItem(key)) {
+        navigate('/', { replace: true });
+        return;
+      }
+      localStorage.setItem(key, 'true');
+    } catch {
       navigate('/', { replace: true });
-      return;
     }
-    sessionStorage.setItem('welcome_shown', 'true');
   }, [navigate]);
 
   // Decide whether to show biometric prompt

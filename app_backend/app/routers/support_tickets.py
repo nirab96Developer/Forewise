@@ -41,8 +41,8 @@ def _notify_admins_new_ticket(db, ticket_id: int, ticket_number: str,
                 link=f"/support",
             )
             notification_service.create_notification(db, notif)
-    except Exception as e:
-        print(f"[WARN] Admin support notification failed: {e}")
+    except Exception:
+        pass
 
 
 def _notify_user_ticket_update(db, ticket_id: int, ticket_number: str,
@@ -67,8 +67,8 @@ def _notify_user_ticket_update(db, ticket_id: int, ticket_number: str,
         )
         notification_service.create_notification(db, notif)
     except Exception as e:
-        print(f"[WARN] User ticket update notification failed: {e}")
 
+        pass
 
 def _generate_ticket_number(db: Session) -> str:
     """Generate unique ticket number: TKT-YYYYMM-NNNN"""
@@ -107,8 +107,8 @@ http://167.99.228.10/support
 """
         send_email(to=ADMIN_EMAIL, subject=subject, body=body)
     except Exception as e:
-        print(f"[WARN] Failed to send ticket email: {e}")
 
+        pass
 
 # Schema for widget ticket creation
 class StepResult(BaseModel):
@@ -324,8 +324,8 @@ async def create_ticket_from_widget(
     try:
         new_ticket.custom_metadata_json = json.dumps(metadata, ensure_ascii=False)
     except Exception as e:
-        print(f"Warning: Could not set metadata: {e}")
-    
+        pass
+
     db.add(new_ticket)
     db.commit()
     db.refresh(new_ticket)
@@ -350,8 +350,6 @@ async def create_ticket_from_widget(
         data.category,
     )
     
-    print(f"[SUPPORT] New ticket #{new_ticket.id} ({ticket_number}) created from widget")
-    print(f"[SUPPORT] Category: {data.category}, User: {data.userName} ({data.userRole})")
 
     # In-app notification to all ADMINs
     _notify_admins_new_ticket(db, new_ticket.id, new_ticket.ticket_number,

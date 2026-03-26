@@ -1,6 +1,6 @@
 version: '3.8'
 
-# KKL Forest Management System - Production Docker Compose
+# Forewise - Production Docker Compose
 # Note: For production with SQL Server, configure DATABASE_URL accordingly
 
 services:

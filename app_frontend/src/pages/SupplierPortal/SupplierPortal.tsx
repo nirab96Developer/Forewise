@@ -28,7 +28,7 @@ import {
 import api from "../../services/api";
 
 // Forewise Logo
-import kklLogo from "/logo-forewise-transparent.png";
+import forewiseLogo from "/logo-forewise-transparent.png";
 
 interface SupplierOrder {
   order_number: number;
@@ -287,7 +287,7 @@ const SupplierPortal: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4" dir="rtl">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
           {/* Logo */}
-          <img src={kklLogo} alt="Forewise Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
+          <img src={forewiseLogo} alt="Forewise Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
           
           <div className={`w-20 h-20 ${actionComplete === 'accepted' ? 'bg-emerald-100' : 'bg-red-100'} rounded-full flex items-center justify-center mx-auto mb-6`}>
             {actionComplete === 'accepted' ? (
@@ -338,7 +338,7 @@ const SupplierPortal: React.FC = () => {
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={kklLogo} alt="Forewise Logo" className="w-14 h-14 object-contain" />
+              <img src={forewiseLogo} alt="Forewise Logo" className="w-14 h-14 object-contain" />
               <div>
                 <h1 className="text-xl font-bold text-slate-800">הזמנת עבודה</h1>
                 <p className="text-sm text-slate-500">Forewise - ניהול יערות</p>

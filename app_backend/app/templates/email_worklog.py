@@ -1,8 +1,20 @@
 """HTML email templates for Forewise — worklog + work order lifecycle.
-Uses the Forewise tree logo SVG and branded design.
+Uses the Forewise logo PNG (base64-embedded) and branded design.
 """
+import os as _os
 
-LOGO_SVG = '''<svg width="70" height="70" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+def _load_logo_base64():
+    """Load logo PNG as base64 data URI — cached after first call."""
+    b64_path = _os.path.join(_os.path.dirname(__file__), "logo_base64.txt")
+    try:
+        with open(b64_path, "r") as f:
+            return f.read().strip()
+    except Exception:
+        return ""
+
+_LOGO_B64 = _load_logo_base64()
+
+LOGO_SVG = f'<img src="data:image/png;base64,{_LOGO_B64}" alt="Forewise" width="120" height="auto" style="max-width:120px;height:auto;" />' if _LOGO_B64 else '''<svg width="70" height="70" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M56 38 Q70 26 84 38" stroke="#4BAEE8" stroke-width="4" stroke-linecap="round" fill="none"/>
 <path d="M44 52 Q70 35 96 52" stroke="#3BAE9A" stroke-width="4" stroke-linecap="round" fill="none"/>
 <path d="M28 70 Q44 54 70 60 Q96 54 112 70 Q109 75 104 73 Q88 64 70 67 Q52 64 36 73 Q31 75 28 70Z" fill="#6B8C3A"/>
@@ -10,7 +22,8 @@ LOGO_SVG = '''<svg width="70" height="70" viewBox="0 0 140 140" fill="none" xmln
 <circle cx="70" cy="98" r="4" fill="#8B5E3C" opacity="0.55"/>
 </svg>'''
 
-BRAND_NAME = '''<div style="margin-top:8px;font-size:13px;font-weight:900;color:#1a6b3c;letter-spacing:0.25em;text-transform:uppercase;font-family:Arial,sans-serif;">FOREWISE</div>'''
+BRAND_NAME = '''<div style="margin-top:8px;font-size:13px;font-weight:900;color:#1a6b3c;letter-spacing:0.25em;text-transform:uppercase;font-family:Arial,sans-serif;">FOREWISE</div>
+<div style="font-size:10px;color:#6b8c6b;font-family:Arial,sans-serif;">מערכת לניהול פרויקטים ויערות</div>'''
 
 FOOTER = '''<tr><td style="padding:24px 32px 28px;text-align:center;">
 <div style="font-size:11px;color:#aab8b2;line-height:1.6;">

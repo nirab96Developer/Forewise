@@ -51,7 +51,7 @@ const EquipmentScan = lazy(() => import("../pages/Equipment/EquipmentScan"));
 const EquipmentDetail = lazy(() => import("../pages/Equipment/EquipmentDetail"));
 const EquipmentRequestsStatus = lazy(() => import("../pages/Equipment/EquipmentRequestsStatus"));
 const EquipmentBalances = lazy(() => import("../pages/Equipment/EquipmentBalances"));
-const EquipmentInventory = lazy(() => import("../pages/Equipment/EquipmentInventory"));
+// EquipmentInventory merged into SupplierSettings tab=equipment
 
 // Suppliers — redirected to /settings/suppliers (old standalone pages removed)
 
@@ -71,6 +71,7 @@ const MyJournal = lazy(() => import("../pages/Journal/MyJournal"));
 // Settings (EquipmentTypes, PricingOverrides, SettingsPlaceholder removed - redirects to catalog)
 const SystemSettings = lazy(() => import("../pages/Settings/SystemSettings"));
 const SupplierSettings = lazy(() => import("../pages/Settings/SupplierSettings"));
+const ProjectsManagement = lazy(() => import("../pages/Settings/ProjectsManagement"));
 const ConstraintReasons = lazy(() => import("../pages/Settings/ConstraintReasons"));
 const FairRotation = lazy(() => import("../pages/Settings/FairRotation"));
 // EquipmentCatalog merged into SupplierSettings
@@ -141,7 +142,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/welcome" element={<WelcomeSplash />} />
         <Route path="/pending-sync" element={<PendingSync />} />
-        <Route path="/budget-transfers" element={<BudgetTransfers />} />
+        <Route path="/budget-transfers" element={<Guarded permission={PERMISSIONS.BUDGETS_VIEW}><BudgetTransfers /></Guarded>} />
         {/* Supplier Portal - External landing page (no auth required) */}
         <Route path="/supplier-portal" element={<SupplierPortal />} />
         <Route path="/supplier-portal/:token" element={<SupplierPortal />} />
@@ -225,8 +226,8 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         {/* ============================================
               EQUIPMENT - סריקה וזיהוי ציוד
           ============================================ */}
-        <Route path="/equipment" element={<Navigate to="/equipment/inventory" replace />} />
-        <Route path="/equipment/inventory" element={<Guarded permission={PERMISSIONS.EQUIPMENT_VIEW}><EquipmentInventory /></Guarded>} />
+        <Route path="/equipment" element={<Navigate to="/settings/suppliers?tab=equipment" replace />} />
+        <Route path="/equipment/inventory" element={<Navigate to="/settings/suppliers?tab=equipment" replace />} />
         <Route path="/equipment/scan" element={<Guarded permission={PERMISSIONS.EQUIPMENT_SCAN}><EquipmentScan /></Guarded>} />
         <Route path="/equipment/requests" element={<Guarded permission={PERMISSIONS.EQUIPMENT_REQUEST}><EquipmentRequestsStatus /></Guarded>} />
         <Route path="/equipment/:id" element={<Guarded permission={PERMISSIONS.EQUIPMENT_VIEW}><EquipmentDetail /></Guarded>} />
@@ -278,7 +279,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/settings/suppliers/:id" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><SupplierSettings /></Guarded>} />
 
         {/* Settings - Organization (מרחבים/אזורים/פרויקטים) */}
-        <Route path="/settings/organization/projects" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><Projects /></Guarded>} />
+        <Route path="/settings/organization/projects" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><ProjectsManagement /></Guarded>} />
         <Route path="/settings/organization/projects/new" element={<Guarded permission={PERMISSIONS.PROJECTS_CREATE}><NewProject /></Guarded>} />
         <Route path="/settings/organization/projects/:code/edit" element={<Guarded permission={PERMISSIONS.PROJECTS_UPDATE}><EditProject /></Guarded>} />
         <Route path="/settings/organization/regions" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><Regions /></Guarded>} />

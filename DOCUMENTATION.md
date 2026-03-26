@@ -1,5 +1,5 @@
 # תיעוד מערכת ניהול יערות קק"ל
-## KKL Forest Management System
+## Forewise
 
 ---
 
@@ -574,7 +574,7 @@ resource.action
 בדרך כלל, יש לך **repo אחד = תיקייה אחת**. אבל Git מאפשר ליצור **עותקים מקושרים** של אותו repo בתיקיות שונות.
 
 ```
-/root/kkl-forest/                    ← הריפו הראשי (main)
+/root/forewise/                    ← הריפו הראשי (main)
     │
     └── .git/                        ← כל ההיסטוריה נשמרת כאן
           │
@@ -594,8 +594,8 @@ resource.action
 
 | שם | כתובת | פלטפורמה |
 |----|-------|----------|
-| origin | `git@github.com:nirab96Developer/forest-management-system.git` | GitHub |
-| gitlab | `git@gitlab.com:nirab96Developer/forest-management-system.git` | GitLab |
+| origin | `git@github.com:nirab96Developer/Forewise.git` | GitHub |
+| gitlab | `git@gitlab.com:nirab96Developer/Forewise.git` | GitLab |
 | backendv2 | `git@github.com:nirab96Developer/backendv2.git` | GitHub |
 
 ## ניקוי worktrees

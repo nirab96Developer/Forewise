@@ -92,8 +92,8 @@ async def get_admin_dashboard(
 async def get_all_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=100),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     search: Optional[str] = None,
     role_id: Optional[int] = None,
     region_id: Optional[int] = None,
@@ -128,11 +128,10 @@ async def get_all_users(
         query = query.filter(User.is_active == is_active)
     
     total = query.count()
-    users = query.offset(skip).limit(limit).all()
-    
+    users = query.offset((page - 1) * page_size).limit(page_size).all()
+
     return {
-        "total": total,
-        "users": [{
+        "items": [{
             "id": u.id,
             "username": u.username,
             "email": u.email,
@@ -158,7 +157,10 @@ async def get_all_users(
             } if u.department else None,
             "created_at": u.created_at,
             "last_login": u.last_login
-        } for u in users]
+        } for u in users],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
     }
 
 

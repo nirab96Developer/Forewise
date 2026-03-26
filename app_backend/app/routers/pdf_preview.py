@@ -1,15 +1,18 @@
 """
 PDF Preview endpoints - תצוגה מקדימה של דוחות PDF
 """
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
+from app.core.dependencies import get_current_active_user
 from app.services.pdf_report_service import pdf_report_service
 
 router = APIRouter(prefix="/pdf-preview", tags=["PDF Preview"])
 
 
 @router.get("/daily-work-report", response_class=HTMLResponse)
-async def preview_daily_work_report():
+async def preview_daily_work_report(
+    current_user=Depends(get_current_active_user)
+):
     """Preview daily work report PDF template with sample data"""
     
     sample_data = {

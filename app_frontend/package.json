@@ -66,8 +66,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.kkl.timereport",
-    "productName": "KKL Time Report",
+    "appId": "com.forewise.app",
+    "productName": "Forewise",
     "directories": {
       "output": "dist_electron"
     },
@@ -80,26 +80,26 @@
       "target": [
         "nsis"
       ],
-      "icon": "public/logo-kkl-transparent.png"
+      "icon": "public/logo.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "KKL Time Report"
+      "shortcutName": "Forewise"
     },
     "mac": {
       "target": [
         "dmg"
       ],
-      "icon": "public/logo-kkl-transparent.png"
+      "icon": "public/logo.png"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "icon": "public/logo-kkl-transparent.png"
+      "icon": "public/logo.png"
     }
   },
   "description": "Forewise - Field Operations Management"

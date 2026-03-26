@@ -322,15 +322,15 @@ def require_manager():
 # ============================================================
 def get_pagination_params(
     page: int = Query(1, ge=1, description="Page number"),
-    per_page: int = Query(None, ge=1, le=100, description="Items per page"),
-    page_size: int = Query(None, ge=1, le=100, description="Items per page (alias for per_page)"),
+    per_page: int = Query(None, ge=1, le=200, description="Items per page"),
+    page_size: int = Query(None, ge=1, le=200, description="Items per page (alias for per_page)"),
     sort_by: str = Query("created_at", description="Sort field"),
     order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order")
 ):
     """Get pagination parameters."""
     from app.schemas.common import PaginationParams
-    items_per_page = per_page or page_size or 20
-    return PaginationParams(page=page, page_size=items_per_page)
+    items_per_page = per_page or page_size or 50
+    return PaginationParams(page=page, page_size=min(items_per_page, 200))
 
 
 # ============================================================

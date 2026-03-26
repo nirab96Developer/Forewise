@@ -3,6 +3,7 @@
 Supplier Portal API endpoints - דף נחיתה לספקים
 Public endpoints - no authentication required (token-based access)
 """
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -12,6 +13,8 @@ from sqlalchemy import and_, or_
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.models.work_order import WorkOrder
 from app.models.supplier import Supplier
 from app.models.supplier_equipment import SupplierEquipment
@@ -386,13 +389,13 @@ def accept_work_order(
                 ).first()
                 if matched_equipment:
                     work_order.equipment_id = matched_equipment.id
-                    import logging
+
                     logging.getLogger(__name__).info(
                         f"WO {work_order.id}: linked equipment_id={matched_equipment.id} "
                         f"(license_plate={effective_plate})"
                     )
                 else:
-                    import logging
+
                     logging.getLogger(__name__).warning(
                         f"WO {work_order.id}: supplier_equipment.license_plate={effective_plate} "
                         f"has no match in equipment table — equipment_id left NULL"
@@ -610,13 +613,13 @@ def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: st
         except Exception:
             pass
 
-        import logging
+
         logging.getLogger(__name__).info(
             f"[Notification] Work order {wo_num} was {action} by supplier"
         )
 
     except Exception as e:
-        import logging
+
         logging.getLogger(__name__).warning(f"[Notification] Failed: {e}")
 
 
@@ -629,7 +632,7 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
         import secrets
         
         if not work_order.project:
-            print(f"[Rotation] No project on WO {work_order.id}")
+            logger.warning(f"Rotation: No project on WO {work_order.id}")
             return
         
         from app.models.supplier_rotation import SupplierRotation
@@ -686,19 +689,17 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
         if area_id:
             next_rotation = find_supplier_with_equipment(filter_area_id=area_id)
             if next_rotation:
-                print(f"[Rotation] Found supplier {next_rotation.supplier_id} in same area={area_id}")
+                pass
         
         # Step 2: Try same REGION (מרחב)
         if not next_rotation and region_id:
-            print(f"[Rotation] No supplier in area={area_id}, trying region={region_id}...")
             next_rotation = find_supplier_with_equipment(filter_region_id=region_id)
             if next_rotation:
-                print(f"[Rotation] Found supplier {next_rotation.supplier_id} in region={region_id}")
+                pass
         
         # Step 3: No suppliers at all → REJECTED + notify coordinator
         if not next_rotation:
             eq_type_name = work_order.equipment_type or f"type_id={eq_type_id}"
-            print(f"[Rotation] No suppliers with equipment for {eq_type_name}")
             work_order.status = "REJECTED"
             
             # Notify coordinators: no suppliers with equipment available
@@ -722,7 +723,7 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
                         action_url=f"/order-coordination",
                     )
             except Exception as ne:
-                print(f"[Rotation] Notification error: {ne}")
+                logger.warning(f"Rotation notification error: {ne}")
             
             db.commit()
             return
@@ -756,13 +757,13 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
         
         db.commit()
         
-        print(f"[Rotation] Moved from supplier {old_supplier_id} to {next_rotation.supplier_id}")
+        logger.info(f"Rotation: moved from supplier {old_supplier_id} to {next_rotation.supplier_id}")
         
         # Send new order to next supplier
         _send_order_to_supplier(db, work_order)
         
     except Exception as e:
-        print(f"[Error] Failed to move to next supplier: {e}")
+        logger.error(f"Failed to move to next supplier: {e}")
         db.rollback()
 
 
@@ -804,9 +805,9 @@ def _send_order_to_supplier(db: Session, work_order: WorkOrder):
 """
             )
         
-        print(f"[SMS/Email] Sent order to supplier {supplier.name}: {landing_url}")
+        logger.info(f"Sent order to supplier {supplier.name}")
         
         # TODO: Add SMS sending via external service
         
     except Exception as e:
-        print(f"[Error] Failed to send order to supplier: {e}")
+        logger.error(f"Failed to send order to supplier: {e}")

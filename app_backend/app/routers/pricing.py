@@ -182,6 +182,9 @@ class PricingReportResponse(BaseModel):
     """דוח תמחור"""
     items: List[PricingReportItem]
     summary: dict
+    total: Optional[int] = None
+    page: Optional[int] = None
+    page_size: Optional[int] = None
 
 
 @router.get("/reports/by-project", response_model=PricingReportResponse)
@@ -190,6 +193,8 @@ async def get_pricing_report_by_project(
     date_to: Optional[date] = Query(None, description="עד תאריך"),
     supplier_id: Optional[int] = Query(None, description="ספק"),
     status: Optional[str] = Query(None, description="סטטוס (approved/submitted/all)"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user)
 ):
@@ -234,7 +239,8 @@ async def get_pricing_report_by_project(
 
     query = query.group_by(Project.id, Project.name).order_by(func.sum(Worklog.cost_before_vat).desc())
 
-    results = query.all()
+    total_groups = query.count()
+    results = query.offset((page - 1) * page_size).limit(page_size).all()
 
     # Build filters string for the detail sub-query
     filter_clauses = ["w.cost_before_vat IS NOT NULL"]
@@ -335,8 +341,11 @@ async def get_pricing_report_by_project(
 
     return PricingReportResponse(
         items=items,
+        total=total_groups,
+        page=page,
+        page_size=page_size,
         summary={
-            "total_projects": len(items),
+            "total_projects": total_groups,
             "total_hours": total_hours,
             "total_cost": total_cost,
             "total_cost_with_vat": total_cost_with_vat,
@@ -353,6 +362,8 @@ async def get_pricing_report_by_supplier(
     date_to: Optional[date] = Query(None, description="עד תאריך"),
     project_id: Optional[int] = Query(None, description="פרויקט"),
     status: Optional[str] = Query(None, description="סטטוס (approved/submitted/all)"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user)
 ):
@@ -390,7 +401,8 @@ async def get_pricing_report_by_supplier(
     
     query = query.group_by(Supplier.id, Supplier.name).order_by(func.sum(Worklog.cost_before_vat).desc())
     
-    results = query.all()
+    total_groups = query.count()
+    results = query.offset((page - 1) * page_size).limit(page_size).all()
     
     items = []
     total_hours = 0
@@ -417,8 +429,11 @@ async def get_pricing_report_by_supplier(
     
     return PricingReportResponse(
         items=items,
+        total=total_groups,
+        page=page,
+        page_size=page_size,
         summary={
-            "total_suppliers": len(items),
+            "total_suppliers": total_groups,
             "total_hours": total_hours,
             "total_cost": total_cost,
             "total_cost_with_vat": total_cost_with_vat,
@@ -434,6 +449,8 @@ async def get_pricing_report_by_equipment_type(
     project_id: Optional[int] = Query(None, description="פרויקט"),
     supplier_id: Optional[int] = Query(None, description="ספק"),
     status: Optional[str] = Query(None, description="סטטוס"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_active_user)
 ):
@@ -484,19 +501,20 @@ async def get_pricing_report_by_equipment_type(
         query = query.filter(Worklog.status == status)
     
     query = query.group_by(EquipmentType.id, EquipmentType.name).order_by(func.sum(Worklog.cost_before_vat).desc())
-    
-    results = query.all()
-    
+
+    total_groups = query.count()
+    results = query.offset((page - 1) * page_size).limit(page_size).all()
+
     items = []
     total_hours = 0
     total_cost = 0
     total_cost_with_vat = 0
-    
+
     for row in results:
         hours = float(row.total_hours or 0)
         cost = float(row.total_cost or 0)
         cost_vat = float(row.total_cost_with_vat or 0)
-        
+
         items.append(PricingReportItem(
             id=row.id,
             name=row.name or f"סוג כלי {row.id}",
@@ -505,15 +523,18 @@ async def get_pricing_report_by_equipment_type(
             total_cost_with_vat=cost_vat,
             worklog_count=row.worklog_count
         ))
-        
+
         total_hours += hours
         total_cost += cost
         total_cost_with_vat += cost_vat
-    
+
     return PricingReportResponse(
         items=items,
+        total=total_groups,
+        page=page,
+        page_size=page_size,
         summary={
-            "total_equipment_types": len(items),
+            "total_equipment_types": total_groups,
             "total_hours": total_hours,
             "total_cost": total_cost,
             "total_cost_with_vat": total_cost_with_vat,

@@ -1,129 +1,56 @@
 // src/services/workOrderStatusService.ts
-// שירות לניהול סטטוסים של הזמנות עבודה
+// Canonical WO statuses — must match backend app/core/enums.py WorkOrderStatus
 
-export type WorkOrderStatus = 'pending' | 'approved' | 'in_progress' | 'completed' | 'cancelled';
-export type WorkOrderPriority = 'low' | 'medium' | 'high';
+export type WorkOrderStatus =
+  | 'PENDING'
+  | 'DISTRIBUTING'
+  | 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'
+  | 'APPROVED_AND_SENT'
+  | 'COMPLETED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'STOPPED';
 
 export interface WorkOrderStatusInfo {
-  status: WorkOrderStatus;
+  status: string;
   label: string;
   color: string;
   icon?: string;
 }
 
-export interface WorkOrderPriorityInfo {
-  priority: WorkOrderPriority;
-  label: string;
-  color: string;
-  icon?: string;
-}
+const STATUS_MAP: Record<string, WorkOrderStatusInfo> = {
+  PENDING:          { status: 'PENDING',       label: 'ממתין',                  color: 'bg-yellow-100 text-yellow-800', icon: '⏳' },
+  DISTRIBUTING:     { status: 'DISTRIBUTING',  label: 'בהפצה לספקים',          color: 'bg-yellow-100 text-yellow-800', icon: '📤' },
+  SUPPLIER_ACCEPTED_PENDING_COORDINATOR: { status: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין למתאם', color: 'bg-blue-100 text-blue-800', icon: '🔄' },
+  APPROVED_AND_SENT:{ status: 'APPROVED_AND_SENT', label: 'אושר ונשלח',       color: 'bg-green-100 text-green-800',  icon: '✅' },
+  COMPLETED:        { status: 'COMPLETED',     label: 'הושלם',                 color: 'bg-gray-100 text-gray-800',    icon: '✔️' },
+  REJECTED:         { status: 'REJECTED',      label: 'נדחה',                  color: 'bg-red-100 text-red-800',      icon: '❌' },
+  CANCELLED:        { status: 'CANCELLED',     label: 'בוטל',                  color: 'bg-red-100 text-red-800',      icon: '❌' },
+  EXPIRED:          { status: 'EXPIRED',       label: 'פג תוקף',              color: 'bg-gray-100 text-gray-600',    icon: '⏰' },
+  STOPPED:          { status: 'STOPPED',       label: 'הופסק',                color: 'bg-red-100 text-red-800',      icon: '🛑' },
+};
+
+const DEFAULT_INFO: WorkOrderStatusInfo = { status: '?', label: 'לא ידוע', color: 'bg-gray-100 text-gray-600' };
 
 class WorkOrderStatusService {
-  getStatusInfo(status: WorkOrderStatus): WorkOrderStatusInfo {
-    const statusMap: Record<WorkOrderStatus, WorkOrderStatusInfo> = {
-      pending: {
-        status: 'pending',
-        label: 'ממתין לאישור',
-        color: 'bg-yellow-100 text-yellow-800',
-        icon: '⏳'
-      },
-      approved: {
-        status: 'approved',
-        label: 'אושר',
-        color: 'bg-blue-100 text-blue-800',
-        icon: '✅'
-      },
-      in_progress: {
-        status: 'in_progress',
-        label: 'בביצוע',
-        color: 'bg-green-100 text-green-800',
-        icon: '🔄'
-      },
-      completed: {
-        status: 'completed',
-        label: 'הושלם',
-        color: 'bg-gray-100 text-gray-800',
-        icon: '✔️'
-      },
-      cancelled: {
-        status: 'cancelled',
-        label: 'בוטל',
-        color: 'bg-red-100 text-red-800',
-        icon: '❌'
-      }
-    };
-
-    return statusMap[status] || statusMap.pending;
-  }
-
-  getPriorityInfo(priority: WorkOrderPriority): WorkOrderPriorityInfo {
-    const priorityMap: Record<WorkOrderPriority, WorkOrderPriorityInfo> = {
-      low: {
-        priority: 'low',
-        label: 'נמוכה',
-        color: 'bg-green-100 text-green-800',
-        icon: '⬇️'
-      },
-      medium: {
-        priority: 'medium',
-        label: 'בינונית',
-        color: 'bg-yellow-100 text-yellow-800',
-        icon: '➡️'
-      },
-      high: {
-        priority: 'high',
-        label: 'גבוהה',
-        color: 'bg-red-100 text-red-800',
-        icon: '⬆️'
-      }
-    };
-
-    return priorityMap[priority] || priorityMap.medium;
+  getStatusInfo(status: string): WorkOrderStatusInfo {
+    const key = (status || '').toUpperCase();
+    return STATUS_MAP[key] || { ...DEFAULT_INFO, status: key, label: key };
   }
 
   getAllStatuses(): WorkOrderStatusInfo[] {
-    return [
-      this.getStatusInfo('pending'),
-      this.getStatusInfo('approved'),
-      this.getStatusInfo('in_progress'),
-      this.getStatusInfo('completed'),
-      this.getStatusInfo('cancelled')
-    ];
+    return Object.values(STATUS_MAP);
   }
 
-  getAllPriorities(): WorkOrderPriorityInfo[] {
-    return [
-      this.getPriorityInfo('low'),
-      this.getPriorityInfo('medium'),
-      this.getPriorityInfo('high')
-    ];
+  getStatusColor(status: string): string {
+    return this.getStatusInfo(status).color;
   }
 
-  canTransition(from: WorkOrderStatus, to: WorkOrderStatus): boolean {
-    const transitions: Record<WorkOrderStatus, WorkOrderStatus[]> = {
-      pending: ['approved', 'cancelled'],
-      approved: ['in_progress', 'cancelled'],
-      in_progress: ['completed', 'cancelled'],
-      completed: [],
-      cancelled: []
-    };
-
-    return transitions[from]?.includes(to) || false;
+  getStatusLabel(status: string): string {
+    return this.getStatusInfo(status).label;
   }
 }
 
 const workOrderStatusService = new WorkOrderStatusService();
 export default workOrderStatusService;
-
-
-
-
-
-
-
-
-
-
-
-
-

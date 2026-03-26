@@ -1224,3 +1224,4 @@ class WorkOrderService:
         """Resend work order to supplier."""
         return self.get_work_order(db, wo_id)
 
+

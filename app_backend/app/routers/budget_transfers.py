@@ -5,7 +5,7 @@ POST /api/v1/budget-transfers/{id}/approve
 POST /api/v1/budget-transfers/{id}/reject
 GET  /api/v1/budget-transfers
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import Annotated, List, Optional
 from pydantic import BaseModel
@@ -131,6 +131,8 @@ def list_transfers(
     area_id: Optional[int] = None,
     budget_id: Optional[int] = None,
     status_filter: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -147,7 +149,6 @@ def list_transfers(
     if status_filter:
         q = q.filter(BudgetTransfer.status == status_filter.upper())
 
-    # סינון לפי אזור/מרחב — דרך טבלת budgets
     if area_id or region_id:
         from app.models.budget import Budget
         budget_ids_q = db.query(Budget.id)
@@ -161,5 +162,13 @@ def list_transfers(
             (BudgetTransfer.to_budget_id.in_(budget_ids))
         )
 
-    transfers = q.order_by(BudgetTransfer.created_at.desc()).all()
-    return [_serialize(t) for t in transfers]
+    q = q.order_by(BudgetTransfer.created_at.desc())
+    total = q.count()
+    transfers = q.offset((page - 1) * page_size).limit(page_size).all()
+
+    return {
+        "items": [_serialize(t) for t in transfers],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }

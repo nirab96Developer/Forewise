@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { useRoleAccess } from "../../hooks/useRoleAccess";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface BudgetItem {
@@ -312,17 +313,35 @@ const Budgets: React.FC = () => {
   const [tab,      setTab]      = useState<TabId>('regions');
   const [search,   setSearch]   = useState('');
   const [expandedRegions, setExpandedRegions] = useState<Set<number>>(new Set());
+  const [filterRegionId, setFilterRegionId] = useState<number | null>(null);
+  const [filterAreaId,   setFilterAreaId]   = useState<number | null>(null);
+
+  const drillToRegion = (regionId: number) => {
+    setFilterRegionId(regionId);
+    setFilterAreaId(null);
+    setTab('areas');
+  };
+  const drillToArea = (areaId: number) => {
+    setFilterAreaId(areaId);
+    setTab('projects');
+  };
+  const breadcrumbReset = () => {
+    setFilterRegionId(null);
+    setFilterAreaId(null);
+    setTab('regions');
+  };
   const [editBudget,  setEditBudget]  = useState<BudgetItem | null>(null);
+  const { canManageBudgets } = useRoleAccess();
   const [showNew,     setShowNew]     = useState(false);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [bRes, rRes, aRes, pRes, sRes] = await Promise.allSettled([
-        api.get('/budgets?page_size=500'),
+        api.get('/budgets?page_size=200'),
         api.get('/regions'),
         api.get('/areas'),
-        api.get('/projects?page_size=500&include_location=true'),
+        api.get('/projects?page_size=200&include_location=true'),
         api.get('/budgets/summary'),
       ]);
       if (bRes.status === 'fulfilled') setBudgets(bRes.value.data?.items || bRes.value.data || []);
@@ -414,8 +433,20 @@ const Budgets: React.FC = () => {
   // ── Filter by search ──────────────────────────────────────────────────────
   const q = search.toLowerCase();
   const filteredRegionRows  = regionRows.filter(r  => !q || r.region.name.toLowerCase().includes(q));
-  const filteredAreaRows    = areaRows.filter(a    => !q || a.area.name.toLowerCase().includes(q) || (a.region?.name || '').toLowerCase().includes(q));
-  const filteredProjectRows = projectRows.filter(p => !q || (p.project_name || '').toLowerCase().includes(q) || (p.project_code || '').toLowerCase().includes(q) || (p.area_name || '').toLowerCase().includes(q) || (p.region_name || '').toLowerCase().includes(q));
+  const filteredAreaRows    = areaRows.filter(a => {
+    if (filterRegionId && a.area.region_id !== filterRegionId) return false;
+    if (q && !a.area.name.toLowerCase().includes(q) && !(a.region?.name || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const filteredProjectRows = projectRows.filter(p => {
+    if (filterAreaId && p.area_id !== filterAreaId) return false;
+    if (filterRegionId && !filterAreaId && p.region_id !== filterRegionId) return false;
+    if (q && !(p.project_name || '').toLowerCase().includes(q) && !(p.project_code || '').toLowerCase().includes(q) && !(p.area_name || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const breadcrumbRegionName = filterRegionId ? regions.find(r => r.id === filterRegionId)?.name : null;
+  const breadcrumbAreaName = filterAreaId ? areas.find(a => a.id === filterAreaId)?.name : null;
 
   const toggleRegion = (id: number) =>
     setExpandedRegions(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
@@ -446,21 +477,45 @@ const Budgets: React.FC = () => {
                 <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">היררכיה: מרחבים → אזורים → פרויקטים</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowNew(true)}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex-shrink-0 min-h-[44px]"
-            >
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden sm:inline">הקצאת תקציב חדש</span>
-              <span className="sm:hidden">+ תקציב</span>
-            </button>
+            {canManageBudgets && (
+              <button
+                onClick={() => setShowNew(true)}
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex-shrink-0 min-h-[44px]"
+              >
+                <Plus className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">הקצאת תקציב חדש</span>
+                <span className="sm:hidden">+ תקציב</span>
+              </button>
+            )}
           </div>
 
-          {/* Tabs + Search */}
+          {/* Breadcrumb + Tabs + Search */}
+          {(filterRegionId || filterAreaId) && (
+            <div className="flex items-center gap-1 mt-2 text-sm text-gray-500 flex-wrap">
+              <button onClick={breadcrumbReset} className="text-orange-600 hover:underline font-medium">מרחבים</button>
+              {breadcrumbRegionName && (
+                <>
+                  <span>›</span>
+                  <button
+                    onClick={() => { setFilterAreaId(null); setTab('areas'); }}
+                    className={`${filterAreaId ? 'text-orange-600 hover:underline' : 'text-gray-800'} font-medium`}
+                  >
+                    {breadcrumbRegionName}
+                  </button>
+                </>
+              )}
+              {breadcrumbAreaName && (
+                <>
+                  <span>›</span>
+                  <span className="text-gray-800 font-medium">{breadcrumbAreaName}</span>
+                </>
+              )}
+            </div>
+          )}
           <div className="flex items-center justify-between mt-3 gap-2">
             <div className="flex gap-0.5 sm:gap-1 bg-gray-100 rounded-lg p-1 overflow-x-auto">
               {([['regions', 'מרחבים'], ['areas', 'אזורים'], ['projects', 'פרויקטים']] as [TabId, string][]).map(([id, label]) => (
-                <button key={id} onClick={() => setTab(id)}
+                <button key={id} onClick={() => { setTab(id); if (id === 'regions') { setFilterRegionId(null); setFilterAreaId(null); } }}
                   className={`px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${tab === id ? 'bg-white shadow-sm text-orange-600' : 'text-gray-600 hover:text-gray-800'}`}>
                   {label}
                 </button>
@@ -493,9 +548,14 @@ const Budgets: React.FC = () => {
               const remaining = total - spent - committed;
               const p = pct(spent + committed, total);
               return (
-                <div key={region.id} className="bg-white rounded-xl border shadow-sm p-4">
+                <div key={region.id}
+                  onClick={() => drillToRegion(region.id)}
+                  className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer hover:border-orange-300 hover:shadow-md transition-all active:scale-[0.98]">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-bold text-gray-800">{region.name}</span>
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="w-4 h-4 text-orange-400" />
+                      <span className="font-bold text-gray-800">{region.name}</span>
+                    </div>
                     <span className={`text-sm font-semibold ${p >= 90 ? 'text-red-600' : p >= 70 ? 'text-yellow-600' : 'text-green-600'}`}>{p}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
@@ -545,13 +605,17 @@ const Budgets: React.FC = () => {
                             </button>
                           )}
                         </td>
-                        <td className="px-4 py-3 font-semibold text-gray-800">{region.name}</td>
+                        <td className="px-4 py-3 font-semibold text-gray-800">
+                          <button onClick={() => drillToRegion(region.id)} className="hover:text-orange-600 hover:underline transition-colors">
+                            {region.name}
+                          </button>
+                        </td>
                         <td className="px-4 py-3 text-gray-700">{fmt(total)}</td>
                         <td className="px-4 py-3 text-gray-700">{fmt(spent)}</td>
                         <td className={`px-4 py-3 font-medium ${remaining < 0 ? 'text-red-600' : 'text-green-700'}`}>{fmt(remaining)}</td>
                         <td className="px-4 py-3 w-32"><PctBar p={p} /></td>
                         <td className="px-4 py-3">
-                          {rBudgets[0] && (
+                          {canManageBudgets && rBudgets[0] && (
                             <button onClick={() => setEditBudget(rBudgets[0])}
                               className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
                               <Edit2 className="w-4 h-4" />
@@ -564,9 +628,9 @@ const Budgets: React.FC = () => {
                         const ar = at - as_ - ac;
                         const ap = pct(as_, at);
                         return (
-                          <tr key={area.id} className="bg-orange-50/50">
+                          <tr key={area.id} className="bg-orange-50/50 hover:bg-orange-100/50 cursor-pointer" onClick={() => drillToArea(area.id)}>
                             <td />
-                            <td className="px-4 py-2 pl-8 text-sm text-gray-600">↳ {area.name}</td>
+                            <td className="px-4 py-2 pl-8 text-sm text-orange-700 font-medium">↳ {area.name}</td>
                             <td className="px-4 py-2 text-sm text-gray-600">{fmt(at)}</td>
                             <td className="px-4 py-2 text-sm text-gray-600">{fmt(as_)}</td>
                             <td className={`px-4 py-2 text-sm font-medium ${ar < 0 ? 'text-red-500' : 'text-green-600'}`}>{fmt(ar)}</td>
@@ -595,9 +659,14 @@ const Budgets: React.FC = () => {
               const remaining = total - spent - committed;
               const p = pct(spent + committed, total);
               return (
-                <div key={area.id} className="bg-white rounded-xl border shadow-sm p-4">
+                <div key={area.id}
+                  onClick={() => drillToArea(area.id)}
+                  className="bg-white rounded-xl border shadow-sm p-4 cursor-pointer hover:border-orange-300 hover:shadow-md transition-all active:scale-[0.98]">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-bold text-gray-800">{area.name}</span>
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="w-4 h-4 text-orange-400" />
+                      <span className="font-bold text-gray-800">{area.name}</span>
+                    </div>
                     <span className={`text-sm font-semibold ${p >= 90 ? 'text-red-600' : p >= 70 ? 'text-yellow-600' : 'text-green-600'}`}>{p}%</span>
                   </div>
                   {region && <div className="text-xs text-gray-400 mb-2">{region.name}</div>}
@@ -636,13 +705,17 @@ const Budgets: React.FC = () => {
                   return (
                     <tr key={area.id} className="hover:bg-orange-50/30 transition-colors">
                       <td className="px-4 py-3 text-sm text-gray-500">{region?.name || '—'}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-800">{area.name}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-800">
+                        <button onClick={() => drillToArea(area.id)} className="hover:text-orange-600 hover:underline transition-colors">
+                          {area.name}
+                        </button>
+                      </td>
                       <td className="px-4 py-3 text-gray-700">{fmt(total)}</td>
                       <td className="px-4 py-3 text-gray-700">{fmt(spent)}</td>
                       <td className={`px-4 py-3 font-medium ${remaining < 0 ? 'text-red-600' : 'text-green-700'}`}>{fmt(remaining)}</td>
                       <td className="px-4 py-3 w-32"><PctBar p={p} /></td>
                       <td className="px-4 py-3">
-                        {areaBudget && (
+                        {canManageBudgets && areaBudget && (
                           <button onClick={() => setEditBudget(areaBudget)}
                             className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
                             <Edit2 className="w-4 h-4" />
@@ -692,10 +765,12 @@ const Budgets: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-xs text-gray-400">תקציב: {fmt(total)}</span>
-                    <button onClick={() => setEditBudget(b)}
-                      className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg">
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
+                    {canManageBudgets && (
+                      <button onClick={() => setEditBudget(b)}
+                        className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg">
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -737,10 +812,12 @@ const Budgets: React.FC = () => {
                       <td className={`px-4 py-3 font-medium ${remaining < 0 ? 'text-red-600' : 'text-green-700'}`}>{fmt(remaining)}</td>
                       <td className="px-4 py-3 w-32"><PctBar p={p} /></td>
                       <td className="px-4 py-3">
-                        <button onClick={() => setEditBudget(b)}
-                          className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
+                        {canManageBudgets && (
+                          <button onClick={() => setEditBudget(b)}
+                            className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

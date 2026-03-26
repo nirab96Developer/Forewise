@@ -48,6 +48,9 @@ class ActivityLog(BaseModel):
     # Entity - DB: nvarchar(50), YES / int, YES
     entity_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     entity_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Human-readable description (DB column exists)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Category - for role-based filtering: operational, financial, management, system
     category: Mapped[Optional[str]] = mapped_column(String(50), default="system", nullable=True)

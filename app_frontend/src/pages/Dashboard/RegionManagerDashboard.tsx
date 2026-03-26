@@ -1,322 +1,203 @@
-
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Map,
-  Briefcase,
-  Clock,
-  DollarSign,
-  ArrowUpRight,
-  TrendingUp,
-  Building2,
-  FileText,
-  CheckCircle,
+  MapPin, AlertTriangle, BarChart3, Info, ShieldAlert
 } from "lucide-react";
-import dashboardService from "../../services/dashboardService";
-import UnifiedLoader from "../../components/common/UnifiedLoader";
 import api from "../../services/api";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
+
+interface AreaRow {
+  id: number; name: string; projects: number;
+  budget_total: number; budget_committed: number; budget_spent: number; budget_remaining: number;
+  utilization_pct: number; open_work_orders: number; pending_worklogs: number; manager_name: string;
+}
+interface RegionData {
+  region_name: string;
+  kpis: {
+    total_areas: number; total_projects: number;
+    total_budget: number; total_spent: number; total_committed: number; total_remaining: number;
+    utilization_pct: number; open_work_orders: number; pending_worklogs: number; overrun_areas: number;
+  };
+  areas: AreaRow[];
+  alerts: { type: string; message: string; link: string }[];
+  wo_trend: { date: string; count: number }[];
+}
+
+const fmtK = (n: number) => n >= 1e6 ? `${(n/1e6).toFixed(1)}M` : n >= 1e3 ? `${(n/1e3).toFixed(0)}K` : `${n}`;
+const fmtCurrency = (n: number) => `₪${fmtK(n)}`;
 
 const RegionManagerDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [data, setData] = useState<RegionData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<any>(null);
-  const [areas, setAreas] = useState<any[]>([]);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [monthlyCosts, setMonthlyCosts] = useState<any[]>([]);
-  const [financial, setFinancial] = useState<any>(null);
-
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [summaryData, projectsData, suppliersData, costsData, financialData, areasData] =
-        await Promise.all([
-          dashboardService.getSummary(),
-          dashboardService.getProjects(),
-          dashboardService.getActiveSuppliers(),
-          api.get("/dashboard/monthly-costs").then((r) => r.data).catch(() => []),
-          api.get("/dashboard/financial-summary").then((r) => r.data).catch(() => null),
-          api.get("/dashboard/region-areas").then((r) => r.data).catch(() => []),
-        ]);
-      setSummary(summaryData);
-      setProjects(projectsData);
-      setSuppliers(suppliersData);
-      setMonthlyCosts(costsData);
-      setFinancial(financialData);
-      setAreas(areasData);
-    } catch (err) {
-      console.error("Error loading dashboard:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const formatCurrency = (v: number) =>
-    new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 0 }).format(v);
-
-  const maxCost = Math.max(...monthlyCosts.map((m) => m.cost), 1);
+    api.get("/dashboard/region-overview")
+      .then(r => setData(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   if (loading) return <UnifiedLoader size="full" />;
+  if (!data) return <div className="p-8 text-center text-gray-500">שגיאה בטעינת נתונים</div>;
 
-  const regionName = summary?.user?.region || "המרחב";
-  const totalOpenWO = areas.reduce((s, a) => s + a.open_work_orders, 0);
-  const totalAreaProjects = areas.reduce((s, a) => s + a.active_projects, 0);
+  const k = data.kpis;
+  const maxChart = Math.max(...data.wo_trend.map(d => d.count), 1);
 
   return (
-    <div className="min-h-screen p-6" dir="rtl">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-full bg-gray-50" dir="rtl">
+      <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-screen-2xl mx-auto">
+
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">לוח בקרה - מנהל מרחב</h1>
-          <p className="text-gray-600 mt-1">מרחב: {regionName}</p>
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div
-            className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => navigate("/projects")}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">פרויקטים פעילים</span>
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Briefcase className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {summary?.active_projects_count || totalAreaProjects}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">אזורים במרחב</span>
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Map className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{areas.length}</div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">הזמנות פתוחות</span>
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <FileText className="w-5 h-5 text-orange-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">{totalOpenWO}</div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-500">שעות החודש</span>
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Clock className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-gray-900">
-              {Math.round(summary?.hours_month_total || 0)}
-            </div>
+        <div className="flex items-center gap-3">
+          <MapPin className="w-6 h-6 text-blue-600" />
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">מרחב {data.region_name}</h1>
+            <p className="text-xs text-gray-500">{k.total_areas} אזורים · {k.total_projects} פרויקטים</p>
           </div>
         </div>
 
-        {/* Budget Overview */}
-        {financial?.budgets && (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-green-600" />
-              תקציב מרחב
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm text-gray-500">תקציב כולל</div>
-                <div className="text-xl font-bold text-gray-900">{formatCurrency(financial.budgets.total)}</div>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4">
-                <div className="text-sm text-green-600">ביצוע</div>
-                <div className="text-xl font-bold text-green-700">{formatCurrency(financial.budgets.spent)}</div>
-              </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="text-sm text-blue-600">התחייבויות</div>
-                <div className="text-xl font-bold text-blue-700">{formatCurrency(financial.budgets.committed)}</div>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-4">
-                <div className="text-sm text-orange-600">יתרה</div>
-                <div className="text-xl font-bold text-orange-700">{formatCurrency(financial.budgets.remaining)}</div>
-              </div>
+        {/* KPIs */}
+        {(() => {
+          const areasAtRisk = data.areas.filter(a =>
+            a.utilization_pct > 85 || a.pending_worklogs > 5 || a.open_work_orders > 3
+          ).length;
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <KPI label="תקציב כולל" value={fmtCurrency(k.total_budget)} sub={`${k.utilization_pct}% ניצול`} color="blue" />
+              <KPI label="הוצא" value={fmtCurrency(k.total_spent)} color="red" />
+              <KPI label="מוקפא" value={fmtCurrency(k.total_committed)} color="amber" />
+              <KPI label="הזמנות פתוחות" value={String(k.open_work_orders)} color={k.open_work_orders > 0 ? "blue" : "gray"} />
+              <KPI label="חריגות תקציב" value={String(k.overrun_areas)} color={k.overrun_areas > 0 ? "red" : "green"} pulse={k.overrun_areas > 0} />
+              <KPI label="אזורים בסיכון" value={String(areasAtRisk)} color={areasAtRisk > 0 ? "red" : "green"} sub="תקציב / עומס / עיכוב" pulse={areasAtRisk > 0} />
             </div>
-            {financial.budgets.total > 0 && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-500">ניצול תקציב</span>
-                  <span className="font-medium">{financial.budgets.utilization_pct}%</span>
+          );
+        })()}
+
+        {/* Alerts */}
+        {data.alerts.length > 0 && (
+          <div className="space-y-2">
+            {data.alerts.map((a, i) => {
+              const isErr = a.type === "error";
+              const Icon = isErr ? ShieldAlert : a.type === "warning" ? AlertTriangle : Info;
+              return (
+                <div key={i} className={`rounded-xl border px-3 sm:px-4 py-3.5 flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 ${
+                  isErr ? "border-red-300 bg-red-50" : "border-amber-300 bg-amber-50"}`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <Icon className={`w-[22px] h-[22px] flex-shrink-0 ${isErr ? "text-red-600" : "text-amber-600"}`} />
+                    <span className={`text-sm font-semibold ${isErr ? "text-red-800" : "text-amber-800"}`}>{a.message}</span>
+                  </div>
+                  <button onClick={() => navigate(a.link)}
+                    className={`w-full sm:w-auto px-4 min-h-[44px] text-sm font-bold rounded-lg text-white ${
+                      isErr ? "bg-red-600 hover:bg-red-700" : "bg-amber-600 hover:bg-amber-700"}`}>
+                    {isErr ? "טפל עכשיו" : "צפה"}
+                  </button>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className={`h-3 rounded-full ${
-                      financial.budgets.utilization_pct > 90 ? "bg-red-500" : financial.budgets.utilization_pct > 70 ? "bg-orange-500" : "bg-green-500"
-                    }`}
-                    style={{ width: `${Math.min(financial.budgets.utilization_pct, 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Areas Breakdown */}
-          <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">אזורים במרחב</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">אזור</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-600">מנהל</th>
-                    <th className="text-center px-4 py-3 font-medium text-gray-600">פרויקטים</th>
-                    <th className="text-center px-4 py-3 font-medium text-gray-600">הזמנות</th>
-                    <th className="text-center px-4 py-3 font-medium text-gray-600">שעות החודש</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {areas.map((area) => (
-                    <tr key={area.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900">{area.name}</td>
-                      <td className="px-4 py-3 text-gray-600">{area.manager_name || "-"}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                          {area.active_projects}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          area.open_work_orders > 0 ? "bg-orange-100 text-orange-800" : "bg-gray-100 text-gray-600"
-                        }`}>
-                          {area.open_work_orders}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-gray-700">{Math.round(area.hours_this_month)}</td>
-                    </tr>
-                  ))}
-                  {areas.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                        לא נמצאו אזורים
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Monthly Costs Chart */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-600" />
-              עלויות חודשי
+        {/* Areas Table (main section) */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+              <MapPin className="w-4 h-4" /> אזורים במרחב
             </h2>
-            <div className="space-y-3">
-              {monthlyCosts.map((m) => (
-                <div key={m.month}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="text-gray-600">{m.month}</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(m.cost)}</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full transition-all"
-                      style={{ width: `${(m.cost / maxCost) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {monthlyCosts.length === 0 && (
-                <p className="text-gray-400 text-sm text-center py-4">אין נתונים</p>
-              )}
-            </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Projects */}
-          <div className="bg-white rounded-xl border border-gray-200">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">פרויקטים אחרונים</h2>
-              <button
-                onClick={() => navigate("/projects")}
-                className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1"
-              >
-                הצג הכל <ArrowUpRight className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {projects.slice(0, 5).map((p) => (
-                <div
-                  key={p.id}
-                  className="p-4 hover:bg-gray-50 cursor-pointer"
-                  onClick={() => navigate(`/projects/${p.code}/workspace`)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-gray-900">{p.name}</div>
-                      <div className="text-sm text-gray-500 mt-1">
-                        {p.area_name && <span>{p.area_name}</span>}
-                        {p.manager_name && <span className="mr-3">{p.manager_name}</span>}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-gray-500 text-xs">
+                  <th className="text-right px-4 py-3 font-semibold">אזור</th>
+                  <th className="text-right px-3 py-3 font-semibold">מנהל</th>
+                  <th className="text-center px-3 py-3 font-semibold">פרויקטים</th>
+                  <th className="text-right px-3 py-3 font-semibold">תקציב</th>
+                  <th className="text-center px-3 py-3 font-semibold">ניצול</th>
+                  <th className="text-center px-3 py-3 font-semibold">הזמנות</th>
+                  <th className="text-center px-3 py-3 font-semibold">דיווחים</th>
+                  <th className="px-2 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {data.areas.map(a => {
+                  const isRisk = a.utilization_pct > 85 || a.pending_worklogs > 5 || a.open_work_orders > 3;
+                  return (
+                  <tr key={a.id} onClick={() => navigate(`/areas/${a.id}`)}
+                    className={`cursor-pointer transition-colors group ${isRisk ? "hover:bg-red-50/50" : "hover:bg-blue-50/40"}`}>
+                    <td className="px-4 py-3.5 font-semibold text-gray-900">
+                      <div className="flex items-center gap-2">
+                        {isRisk && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />}
+                        {a.name}
                       </div>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      p.status === "active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
-                    }`}>
-                      {p.status === "active" ? "פעיל" : p.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Active Suppliers */}
-          <div className="bg-white rounded-xl border border-gray-200">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">ספקים פעילים במרחב</h2>
-              <button
-                onClick={() => navigate("/suppliers")}
-                className="text-sm text-green-600 hover:text-green-700 flex items-center gap-1"
-              >
-                הצג הכל <ArrowUpRight className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {suppliers.slice(0, 6).map((s) => (
-                <div key={s.id} className="p-4 hover:bg-gray-50 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Building2 className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900">{s.name}</div>
-                      {s.contact_name && <div className="text-sm text-gray-500">{s.contact_name}</div>}
-                    </div>
-                  </div>
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                </div>
-              ))}
-              {suppliers.length === 0 && (
-                <div className="p-8 text-center text-gray-400">אין ספקים פעילים</div>
-              )}
-            </div>
+                    </td>
+                    <td className="px-3 py-3.5 text-gray-600 text-xs">{a.manager_name || "—"}</td>
+                    <td className="px-3 py-3.5 text-center">{a.projects}</td>
+                    <td className="px-3 py-3.5 text-right font-medium">₪{a.budget_total.toLocaleString("he-IL", {maximumFractionDigits:0})}</td>
+                    <td className="px-3 py-3.5 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                        a.utilization_pct > 90 ? "bg-red-100 text-red-700" :
+                        a.utilization_pct > 60 ? "bg-amber-100 text-amber-700" :
+                        "bg-green-100 text-green-700"}`}>
+                        {a.utilization_pct}%
+                      </span>
+                    </td>
+                    <td className="px-3 py-3.5 text-center">{a.open_work_orders > 0 ? <span className="font-bold text-blue-600">{a.open_work_orders}</span> : "—"}</td>
+                    <td className="px-3 py-3.5 text-center">{a.pending_worklogs > 0 ? <span className="font-bold text-amber-600">{a.pending_worklogs}</span> : "—"}</td>
+                    <td className="px-2 py-3.5 text-left">
+                      <span className="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        כניסה לאזור ←
+                      </span>
+                    </td>
+                  </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
+
+        {/* Trend Chart */}
+        {data.wo_trend.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5">
+            <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" /> הזמנות עבודה — 14 ימים אחרונים
+            </h3>
+            <div className="overflow-x-auto">
+              <div className="flex items-end gap-2 sm:gap-3 min-w-[320px]" style={{ height: "160px" }}>
+                {data.wo_trend.map(d => {
+                  const h = Math.max(8, (d.count / maxChart) * 100);
+                  const day = new Date(d.date).toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
+                  return (
+                    <div key={d.date} className="flex-1 flex flex-col items-center gap-1 min-w-[24px]">
+                      <div className="w-full flex justify-center" style={{ height: "130px", alignItems: "flex-end" }}>
+                        <div className="w-4 bg-blue-400 rounded-t transition-all" style={{ height: `${h}%` }} />
+                      </div>
+                      <span className="text-[10px] text-gray-400">{day}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
+    </div>
+  );
+};
+
+const KPI: React.FC<{ label: string; value: string; sub?: string; color: string; pulse?: boolean }> = ({ label, value, sub, color, pulse }) => {
+  const bg: Record<string, string> = { blue: "bg-blue-50 border-r-blue-500", red: "bg-red-50 border-r-red-500", amber: "bg-amber-50 border-r-amber-500", green: "bg-white border-r-green-400", gray: "bg-white border-r-gray-200" };
+  const fg: Record<string, string> = { blue: "text-blue-700", red: "text-red-700", amber: "text-amber-700", green: "text-green-600", gray: "text-gray-500" };
+  return (
+    <div className={`rounded-xl border border-gray-200 border-r-4 shadow-sm p-3 sm:p-4 min-h-[80px] ${bg[color] || bg.gray}`}>
+      <p className="text-[11px] text-gray-500 mb-1">{label}</p>
+      <div className="flex items-center gap-2">
+        <p className={`text-2xl font-extrabold ${fg[color] || "text-gray-900"}`}>{value}</p>
+        {pulse && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
+      </div>
+      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
     </div>
   );
 };

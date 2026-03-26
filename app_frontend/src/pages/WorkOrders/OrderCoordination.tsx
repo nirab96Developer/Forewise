@@ -159,11 +159,11 @@ const OrderCoordination: React.FC = () => {
     }
   };
 
-  // Coordinator approve
+  // Coordinator approve — uses dedicated endpoint
   const handleCoordinatorApprove = async (orderId: number) => {
     try {
       setProcessing(orderId);
-      await api.post(`/work-orders/${orderId}/approve`, {});
+      await api.post(`/work-orders/${orderId}/coordinator-approve`);
       if ((window as any).showToast) (window as any).showToast('ההזמנה אושרה ונשלחה לביצוע!', 'success');
       await loadOrders();
     } catch (err: any) {

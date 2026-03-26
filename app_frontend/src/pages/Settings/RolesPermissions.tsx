@@ -28,15 +28,53 @@ interface Permission {
   is_active: boolean;
 }
 
-const permissionCategories = [
-  { code: 'projects', name: 'פרויקטים', icon: '📁' },
-  { code: 'work_orders', name: 'הזמנות עבודה', icon: '📝' },
-  { code: 'work_logs', name: 'דיווחי שעות', icon: '⏱️' },
-  { code: 'suppliers', name: 'ספקים', icon: '🚚' },
-  { code: 'users', name: 'משתמשים', icon: '👥' },
-  { code: 'reports', name: 'דוחות', icon: '📊' },
-  { code: 'settings', name: 'הגדרות', icon: '⚙️' },
-];
+const CATEGORY_LABELS: Record<string, { name: string; icon: string; order: number }> = {
+  'projects':        { name: 'פרויקטים',        icon: '📁', order: 1 },
+  'work_orders':     { name: 'הזמנות עבודה',    icon: '📝', order: 2 },
+  'worklogs':        { name: 'דיווחי שעות',     icon: '⏱️', order: 3 },
+  'suppliers':       { name: 'ספקים',           icon: '🚚', order: 4 },
+  'equipment':       { name: 'ציוד',            icon: '🚜', order: 5 },
+  'budgets':         { name: 'תקציבים',         icon: '💰', order: 6 },
+  'invoices':        { name: 'חשבוניות',        icon: '🧾', order: 7 },
+  'users':           { name: 'משתמשים',         icon: '👥', order: 8 },
+  'roles':           { name: 'תפקידים',         icon: '🎭', order: 9 },
+  'permissions':     { name: 'הרשאות',          icon: '🔒', order: 10 },
+  'reports':         { name: 'דוחות',           icon: '📊', order: 11 },
+  'regions':         { name: 'מרחבים',          icon: '🏔️', order: 12 },
+  'areas':           { name: 'אזורים',          icon: '🗺️', order: 13 },
+  'locations':       { name: 'מיקומים',         icon: '📍', order: 14 },
+  'departments':     { name: 'מחלקות',          icon: '🏢', order: 15 },
+  'settings':        { name: 'הגדרות',          icon: '⚙️', order: 16 },
+  'system':          { name: 'מערכת',           icon: '🖥️', order: 17 },
+  'dashboard':       { name: 'דשבורד',          icon: '📈', order: 18 },
+  'other':           { name: 'אחר',             icon: '📦', order: 99 },
+};
+
+function deriveCategory(p: Permission): string {
+  if (p.category && p.category !== 'null') return p.category.toLowerCase().split('.')[0];
+  const code = (p.code || '').toLowerCase();
+  const resource = code.split('.')[0];
+  if (resource.startsWith('work_order')) return 'work_orders';
+  if (resource.startsWith('worklog')) return 'worklogs';
+  if (resource.startsWith('supplier')) return 'suppliers';
+  if (resource.startsWith('equipment')) return 'equipment';
+  if (resource.startsWith('budget')) return 'budgets';
+  if (resource.startsWith('invoice')) return 'invoices';
+  if (resource.startsWith('project')) return 'projects';
+  if (resource.startsWith('user')) return 'users';
+  if (resource.startsWith('role')) return 'roles';
+  if (resource.startsWith('permission')) return 'permissions';
+  if (resource.startsWith('report')) return 'reports';
+  if (resource.startsWith('region')) return 'regions';
+  if (resource.startsWith('area')) return 'areas';
+  if (resource.startsWith('location')) return 'locations';
+  if (resource.startsWith('department')) return 'departments';
+  if (resource.startsWith('setting') || resource.startsWith('lookups')) return 'settings';
+  if (resource.startsWith('system') || resource.startsWith('dashboard')) return 'system';
+  if (resource.startsWith('support')) return 'other';
+  if (resource.startsWith('balance') || resource.startsWith('sync') || resource.startsWith('activity')) return 'other';
+  return 'other';
+}
 
 const RolesPermissions: React.FC = () => {
   const navigate = useNavigate();
@@ -66,8 +104,8 @@ const RolesPermissions: React.FC = () => {
     
     try {
       const [rolesRes, permissionsRes] = await Promise.all([
-        api.get('/roles').catch(() => ({ data: [] })),
-        api.get('/permissions').catch(() => ({ data: [] }))
+        api.get('/roles', { params: { limit: 50 } }).catch(() => ({ data: [] })),
+        api.get('/permissions', { params: { limit: 300 } }).catch(() => ({ data: [] }))
       ]);
       
       // Handle both array and {items: [...]} response formats
@@ -166,8 +204,18 @@ const RolesPermissions: React.FC = () => {
   };
 
   const getPermissionsByCategory = (categoryCode: string) => {
-    return (permissions || []).filter(p => p.category === categoryCode);
+    return (permissions || []).filter(p => deriveCategory(p) === categoryCode);
   };
+
+  const activeCategories = (() => {
+    const cats = new Set<string>();
+    (permissions || []).forEach(p => cats.add(deriveCategory(p)));
+    return Array.from(cats).sort((a, b) => {
+      const oa = CATEGORY_LABELS[a]?.order ?? 99;
+      const ob = CATEGORY_LABELS[b]?.order ?? 99;
+      return oa - ob;
+    });
+  })();
 
   const filteredRoles = (roles || []).filter(r =>
     r.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -351,15 +399,17 @@ const RolesPermissions: React.FC = () => {
           ) : (
             /* Permissions Grid */
             <div className="p-6">
-              {permissionCategories.map((category) => {
-                const categoryPermissions = getPermissionsByCategory(category.code);
+              {activeCategories.map((catCode) => {
+                const categoryPermissions = getPermissionsByCategory(catCode);
                 if (categoryPermissions.length === 0) return null;
+                const label = CATEGORY_LABELS[catCode] || { name: catCode, icon: '📦' };
 
                 return (
-                  <div key={category.code} className="mb-6 last:mb-0">
+                  <div key={catCode} className="mb-6 last:mb-0">
                     <h3 className="text-lg font-semibold text-kkl-text mb-3 flex items-center gap-2">
-                      <span>{category.icon}</span>
-                      {category.name}
+                      <span>{label.icon}</span>
+                      {label.name}
+                      <span className="text-xs font-normal text-gray-400">({categoryPermissions.length})</span>
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                       {categoryPermissions.map((permission) => (
@@ -478,15 +528,16 @@ const RolesPermissions: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-kkl-text mb-3">הרשאות</label>
                 <div className="space-y-4 max-h-64 overflow-y-auto border border-kkl-border rounded-lg p-4">
-                  {permissionCategories.map((category) => {
-                    const categoryPermissions = getPermissionsByCategory(category.code);
+                  {activeCategories.map((catCode) => {
+                    const categoryPermissions = getPermissionsByCategory(catCode);
                     if (categoryPermissions.length === 0) return null;
+                    const label = CATEGORY_LABELS[catCode] || { name: catCode, icon: '📦' };
 
                     return (
-                      <div key={category.code}>
+                      <div key={catCode}>
                         <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                          <span>{category.icon}</span>
-                          {category.name}
+                          <span>{label.icon}</span>
+                          {label.name}
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {categoryPermissions.map((permission) => (

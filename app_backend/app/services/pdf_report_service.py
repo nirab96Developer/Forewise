@@ -181,6 +181,17 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
     if wl.work_order:
         work_order_num = str(getattr(wl.work_order, 'order_number', ''))
 
+    # Load logo for PDF
+    _logo_html = ""
+    try:
+        _logo_b64_path = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), "templates", "logo_base64.txt")
+        with open(_logo_b64_path, "r") as _lf:
+            _lb64 = _lf.read().strip()
+            if _lb64:
+                _logo_html = f'<img src="data:image/png;base64,{_lb64}" alt="Forewise" width="80" style="max-width:80px;" />'
+    except Exception:
+        pass
+
     html = f"""<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
@@ -188,7 +199,7 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
 <style>
   body {{ font-family: Arial, sans-serif; font-size: 12px; direction: rtl; }}
   h1 {{ color: #1a5c2e; font-size: 18px; }}
-  .header {{ display: flex; justify-content: space-between; margin-bottom: 16px; }}
+  .header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }}
   .meta {{ background: #f5f5f5; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; }}
   .meta td {{ padding: 3px 8px; }}
   .meta .label {{ font-weight: bold; color: #555; }}
@@ -201,6 +212,9 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
   .totals .grand {{ font-size: 14px; font-weight: bold; color: #1a5c2e; }}
   .badge {{ display: inline-block; padding: 2px 10px; border-radius: 99px;
             background: #d1fae5; color: #065f46; font-weight: bold; font-size: 11px; }}
+  .logo-block {{ text-align: center; margin-bottom: 8px; }}
+  .logo-block img {{ max-width: 80px; }}
+  .brand-text {{ font-size: 11px; font-weight: 900; color: #1a6b3c; letter-spacing: 0.2em; }}
   @page {{ margin: 20mm; }}
 </style>
 </head>
@@ -211,8 +225,10 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
     <span class="badge">{wl.status or 'PENDING'}</span>
   </div>
   <div style="text-align:left; color:#888; font-size:11px;">
-    מספר דוח: {wl.report_number or wl.id}<br/>
-    תאריך: {wl.report_date or wl.work_date or ''}
+    {_logo_html}
+    <div class="brand-text">FOREWISE</div>
+    <div style="margin-top:6px;">מספר דוח: {wl.report_number or wl.id}<br/>
+    תאריך: {wl.report_date or wl.work_date or ''}</div>
   </div>
 </div>
 
@@ -276,20 +292,14 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
 
 def _send_worklog_pdf_email(wl, pdf_path: str, db) -> None:
     """שולח את ה-PDF לספק + מנהלת חשבונות"""
-    from app.core.email import send_email_with_attachment
+    from app.core.email import send_email_with_pdf
 
     recipients = []
-    # ספק
     if hasattr(wl, 'supplier') and wl.supplier and getattr(wl.supplier, 'email', None):
         recipients.append(wl.supplier.email)
-    # מנהלות חשבונות
     try:
         from app.models.user import User
-        accountants = db.query(User).filter(
-            User.is_active == True
-        ).all()
-        from app.core.config import settings
-        accountant_roles = {"ACCOUNTANT", "accountant"}
+        accountants = db.query(User).filter(User.is_active == True).all()
         for u in accountants:
             role_code = (u.role.code if hasattr(u, 'role') and u.role else "") or ""
             if role_code.upper() == "ACCOUNTANT" and u.email:
@@ -300,18 +310,25 @@ def _send_worklog_pdf_email(wl, pdf_path: str, db) -> None:
     if not recipients:
         return
 
+    try:
+        with open(pdf_path, 'rb') as f:
+            pdf_bytes = f.read()
+    except Exception as e:
+        logger.warning(f"Could not read PDF file {pdf_path}: {e}")
+        return
+
     project_name = getattr(wl.project, 'name', '') if wl.project else ''
     subject = f"דוח יומי #{wl.report_number or wl.id} — {project_name}"
     body = f"מצ'ב דוח יומי #{wl.report_number or wl.id} לתאריך {wl.report_date or wl.work_date}."
 
     for email in set(recipients):
         try:
-            send_email_with_attachment(
+            send_email_with_pdf(
                 to=email,
                 subject=subject,
                 body=body,
-                attachment_path=pdf_path,
-                attachment_name=f"worklog_{wl.id}.pdf",
+                pdf_bytes=pdf_bytes,
+                pdf_filename=f"worklog_{wl.id}.pdf",
             )
         except Exception as e:
             logger.warning(f"Could not send PDF to {email}: {e}")

@@ -197,7 +197,7 @@ class SupplierService {
         ? `/suppliers/active?equipment_category_id=${equipmentCategoryId}`
         : '/suppliers/active';
       const response = await api.get(url);
-      return response.data;
+      return response.data?.items || response.data || [];
     } catch (error) {
       console.error('Error fetching active suppliers:', error);
       throw error;
@@ -253,7 +253,7 @@ class SupplierService {
    */
   async getActiveSuppliersByCategory(categoryId: number): Promise<Supplier[]> {
     try {
-      const url = `/suppliers/active?equipment_category_id=${encodeURIComponent(categoryId)}&page=1&limit=50`;
+      const url = `/suppliers/active?equipment_category_id=${encodeURIComponent(categoryId)}&page=1&page_size=50`;
       const response = await api.get(url);
       // Handle both array and object with items
       const data = response.data;

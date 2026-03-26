@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { LogOut, Menu, X, Upload } from "lucide-react";
-import NotificationCenter from "../NotificationCenter";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { getRoleDisplayName, isAdmin } from "../../utils/permissions";
 import { getMenuItemsForRole } from "../../config/menuConfig";
@@ -145,7 +144,7 @@ const Navigation: React.FC = () => {
               </svg>
               <div className="flex flex-col leading-tight">
                 <span className="text-[13px] font-bold text-white tracking-wide md:hidden">Forewise</span>
-                <span className="text-[10px] text-white/50 md:hidden" style={{fontFamily:"'Heebo',sans-serif"}}>ניהול יערות</span>
+                <span className="text-[10px] text-white/50 md:hidden" style={{fontFamily:"'Heebo',sans-serif"}}>Forewise</span>
                 <span className="hidden md:block text-sm font-bold text-white tracking-wide">מערכת לניהול פרויקטים ויערות</span>
                 <span className="hidden md:block text-[10px] text-white/50 tracking-widest uppercase" style={{fontFamily:"'Heebo',sans-serif",letterSpacing:'2px'}}>FOREWISE</span>
               </div>
@@ -170,7 +169,6 @@ const Navigation: React.FC = () => {
 
             {userId > 0 && (
               <div className="relative">
-                <NotificationCenter userId={userId} />
               </div>
             )}
           </div>

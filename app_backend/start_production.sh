@@ -1,11 +1,11 @@
 #!/bin/bash
 # start_production.sh
-# Forest Management System - Production Startup Script
+# Forewise - Production Startup Script
 # מערכת ניהול יערות - סקריפט הפעלה לפרודקשן
 
 set -e
 
-echo "🌲 Forest Management System - Production Startup"
+echo "🌲 Forewise - Production Startup"
 echo "================================================"
 
 # Detect virtual environment (venv or .venv)

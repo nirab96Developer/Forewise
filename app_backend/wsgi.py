@@ -23,7 +23,7 @@ try:
     application = app
     
     # Log startup info
-    print("Forest Management System WSGI loaded")
+    print("Forewise WSGI loaded")
     print(f"Environment: {settings.ENVIRONMENT}")
     print(f"Debug mode: {settings.DEBUG}")
     print(f"Host: {settings.APP_HOST}:{settings.APP_PORT}")

@@ -17,12 +17,14 @@ import {
 } from "lucide-react";
 import workLogService, { WorkLog } from "../../services/workLogService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { useRoleAccess } from "../../hooks/useRoleAccess";
 
 const WorklogDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id, code } = useParams();
   const [worklog, setWorklog] = useState<WorkLog | null>(null);
   const [loading, setLoading] = useState(true);
+  const { canApproveWorklogs } = useRoleAccess();
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -511,7 +513,7 @@ const WorklogDetail: React.FC = () => {
                     הגש לאישור
                   </button>
                 )}
-                {(worklog.status === "pending" || worklog.status === "submitted") && (
+                {canApproveWorklogs && (worklog.status === "pending" || worklog.status === "submitted") && (
                   <>
                     <button
                       onClick={handleApprove}

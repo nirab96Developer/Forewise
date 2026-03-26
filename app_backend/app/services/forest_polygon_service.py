@@ -1,5 +1,5 @@
 """
-Forest Polygon Service - שירות פוליגוני יער (נקי, ללא מידע KKL)
+Forest Polygon Service - שירות פוליגוני יער (שירות פוליגוני יער)
 """
 
 import json

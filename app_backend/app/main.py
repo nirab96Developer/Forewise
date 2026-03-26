@@ -175,9 +175,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     **API_METADATA,
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url=None if settings.is_production() else "/docs",
+    redoc_url=None if settings.is_production() else "/redoc",
+    openapi_url=None if settings.is_production() else "/openapi.json",
     debug=settings.DEBUG,
     openapi_tags=tags_metadata,
     swagger_ui_parameters={
@@ -190,47 +190,26 @@ app = FastAPI(
     }
 )
 
-# Configure CORS
-# ⚠️ SECURITY: In production, restrict to only your actual domain(s)
-# For now using IP address - replace with your actual domain when you have one
-
-if settings.is_production():
-    allowed_origins = [
-        "https://forewise.co",
-        "https://www.forewise.co",
-        "http://forewise.co",
-        "http://167.99.228.10",
-        "http://167.99.228.10:3000",
-        "http://167.99.228.10:5173",
+# Configure CORS — use CORS_ORIGINS from env (.env or settings)
+# Fallback to safe defaults if env is empty
+_default_origins = (
+    ["https://forewise.co", "https://www.forewise.co"]
+    if settings.is_production()
+    else [
+        "https://forewise.co", "https://www.forewise.co",
+        "http://localhost:5173", "http://localhost:5174", "http://localhost:3000",
+        "http://127.0.0.1:5173", "http://127.0.0.1:5174",
     ]
-else:
-    allowed_origins = [
-        # Production domain
-        "https://forewise.co",
-        "https://www.forewise.co",
-        "http://forewise.co",
-        # Production server IP
-        "http://167.99.228.10",
-        "http://167.99.228.10:3000",
-        "http://167.99.228.10:5173",
-        "http://167.99.228.10:8000",
-        # Development
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://10.0.0.20:5174",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://10.0.0.20:5173",
-        "http://localhost:3000",
-    ]
+)
+allowed_origins = settings.CORS_ORIGINS if settings.CORS_ORIGINS else _default_origins
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],  # Explicit methods
-    allow_headers=["*"],  # Can be restricted further if needed
-    max_age=600,  # Cache preflight for 10 minutes
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With", "X-Offline-Sync"],
+    max_age=600,
 )
 
 # Add session middleware with secure settings

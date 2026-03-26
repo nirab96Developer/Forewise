@@ -79,14 +79,18 @@ class ProjectService:
         if not region:
             raise ValidationException(f"Region {data.region_id} not found")
         
-        # Validate FK: area_id
+        # Validate FK: area_id + area must belong to region
         area = db.query(Area).filter(
             Area.id == data.area_id,
             Area.deleted_at.is_(None)
         ).first()
         if not area:
             raise ValidationException(f"Area {data.area_id} not found")
-        
+        if area.region_id and data.region_id and area.region_id != data.region_id:
+            raise ValidationException(
+                f"אזור {area.name} לא שייך למרחב שנבחר"
+            )
+
         # Validate FK: location_id
         location = db.query(Location).filter(
             Location.id == data.location_id,
@@ -104,12 +108,20 @@ class ProjectService:
             if not budget:
                 raise ValidationException(f"Budget {data.budget_id} not found")
         
-        # Create
         item = Project(**item_dict)
-        
         db.add(item)
         db.commit()
         db.refresh(item)
+
+        from app.core.audit import log_business_event
+        log_business_event(
+            db, "PROJECT_CREATED", "project", item.id,
+            user_id=current_user_id,
+            description=f"פרויקט '{item.name}' נוצר",
+            metadata={"area_id": item.area_id, "region_id": item.region_id},
+            category="management",
+        )
+        db.commit()
 
         # Auto-create budget for new project
         try:

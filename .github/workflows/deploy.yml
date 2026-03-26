@@ -1,5 +1,5 @@
 # Forewise — CI/CD Pipeline
-# Tests → Build → Deploy
+# Tests -> Backup -> Build -> Deploy -> Verify
 # Triggers on push to main branch
 
 name: Deploy Forewise
@@ -12,7 +12,7 @@ jobs:
   deploy:
     name: Test, Build & Deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -31,24 +31,23 @@ jobs:
             echo "=== Forewise Deploy Started ==="
             cd /root/forewise
 
-            # Pull latest code
+            # 1. Pull latest code
             echo ">> Pulling latest code..."
             git pull origin main
 
-            # Run backend tests BEFORE deploy
-            echo ">> Running tests..."
+            # 2. Run backend tests BEFORE deploy
+            echo ">> Running backend tests..."
             cd app_backend
-            .venv/bin/python3 -m pytest tests/test_health_and_auth.py -v --tb=short
-            echo "✅ All tests passed!"
+            .venv/bin/python3 -m pytest tests/test_health_and_auth.py tests/test_status_transitions.py tests/test_scope_enforcement.py tests/test_flow_validation.py tests/test_budget_integrity.py -v --tb=short
+            echo ">> All tests passed"
             cd ..
 
-            # Update SW cache version (force cache bust on every deploy)
-            echo ">> Updating SW version..."
-            VERSION=$(date +%Y%m%d%H%M)
-            sed -i "s/forewise-v[0-9.]*/forewise-v$VERSION/g" app_frontend/public/sw.js
-            echo "   SW version: forewise-v$VERSION"
+            # 3. Pre-deploy DB backup
+            echo ">> Creating pre-deploy backup..."
+            bash /root/backups/db/backup.sh
+            echo ">> Backup complete"
 
-            # Build frontend (clean)
+            # 4. Build frontend
             echo ">> Building frontend..."
             cd app_frontend
             rm -rf dist
@@ -56,14 +55,27 @@ jobs:
             npm run build
             cd ..
 
-            # Restart backend via systemd (gunicorn, auto-restart on failure)
-            echo ">> Restarting backend via systemd..."
-            systemctl restart forewise.service
-            sleep 6
-            systemctl is-active forewise.service && echo "✅ forewise.service is active"
-            curl -s http://localhost:8000/api/v1/health || echo 'health check failed'
+            # 5. Update SW cache version
+            VERSION=$(date +%Y%m%d%H%M)
+            sed -i "s/forewise-v[0-9.]*/forewise-v$VERSION/g" app_frontend/public/sw.js
 
-            # Reload nginx
+            # 6. Restart backend
+            echo ">> Restarting backend..."
+            systemctl restart forewise.service
+            sleep 8
+
+            # 7. Verify deployment
+            echo ">> Verifying deployment..."
+            systemctl is-active forewise.service
+            HEALTH=$(curl -sf http://localhost:8000/api/v1/health)
+            echo "   Health: $HEALTH"
+            if [ -z "$HEALTH" ]; then
+              echo "DEPLOY FAILED: health check returned empty"
+              exit 1
+            fi
+
+            # 8. Reload nginx
             systemctl reload nginx
+
             echo "=== Forewise Deploy Complete ==="
             exit 0

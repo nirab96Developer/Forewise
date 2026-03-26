@@ -1,4 +1,4 @@
-# GitLab CI/CD Pipeline for Forest Management System
+# GitLab CI/CD Pipeline for Forewise
 # Uses local shell runner on DigitalOcean server
 
 # Force use of local runner (not shared runners)

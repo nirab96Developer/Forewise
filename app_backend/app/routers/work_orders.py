@@ -130,7 +130,7 @@ def list_work_orders(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list work orders: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -161,7 +161,7 @@ def get_work_order_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get statistics: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -202,7 +202,7 @@ def get_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -233,7 +233,7 @@ def create_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -264,7 +264,7 @@ def update_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -318,7 +318,7 @@ def delete_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -346,7 +346,7 @@ def restore_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to restore work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -436,7 +436,7 @@ def approve_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to approve work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -468,7 +468,7 @@ def reject_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reject work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -500,7 +500,7 @@ def cancel_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to cancel work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -534,7 +534,7 @@ def close_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to close work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -612,7 +612,7 @@ def start_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -679,7 +679,7 @@ def send_work_order_to_supplier(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send to supplier: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -706,7 +706,7 @@ def move_to_next_supplier(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to move to next supplier: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -733,7 +733,7 @@ def resend_to_supplier(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to resend to supplier: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -860,7 +860,7 @@ def remove_equipment_from_project(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"שגיאה בהסרת כלי: {str(e)}")
+        raise HTTPException(status_code=500, detail="שגיאת שרת")
 
 
 # ============================================

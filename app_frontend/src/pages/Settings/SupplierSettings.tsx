@@ -1,4 +1,4 @@
-// src/pages/Settings/SupplierSettings.tsx — עיצוב KKL
+// src/pages/Settings/SupplierSettings.tsx 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {

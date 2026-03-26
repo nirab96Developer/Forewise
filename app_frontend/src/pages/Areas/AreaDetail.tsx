@@ -9,6 +9,7 @@ import {
 import api from '../../services/api';
 import LeafletMap from '../../components/Map/LeafletMap';
 import TreeLoader from '../../components/common/TreeLoader';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface Area {
   id: number;
@@ -56,6 +57,7 @@ const AreaDetail: React.FC = () => {
   const [area, setArea] = useState<Area | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const { canManageAreas } = useRoleAccess();
   const [error, setError] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showMapTypes, setShowMapTypes] = useState(false);
@@ -147,9 +149,11 @@ const AreaDetail: React.FC = () => {
                 </div>
               </div>
             </div>
-            <Link to={`/areas/${id}/edit`} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-              <Edit className="w-5 h-5" />
-            </Link>
+            {canManageAreas && (
+              <Link to={`/areas/${id}/edit`} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                <Edit className="w-5 h-5" />
+              </Link>
+            )}
           </div>
         </div>
       </div>

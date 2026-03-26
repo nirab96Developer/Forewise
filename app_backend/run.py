@@ -1,6 +1,6 @@
 # run.py
 """
-Runner script for Forest Management System
+Runner script for Forewise
 מערכת ניהול יערות - סקריפט הרצה
 """
 import os
@@ -43,7 +43,7 @@ def main():
     """Run the application."""
     kill_existing_port(settings.APP_PORT)
 
-    print("Forest Management System")
+    print("Forewise")
     print("=" * 50)
     
     # Environment info

@@ -106,7 +106,7 @@ class BudgetSearch(BaseModel):
     is_active: Optional[bool] = None
     include_deleted: bool = Field(False)
     page: int = Field(1, ge=1)
-    page_size: int = Field(50, ge=1, le=200)
+    page_size: int = Field(50, ge=1, le=500)
     sort_by: str = Field("name")
     sort_desc: bool = Field(False)
 

@@ -76,7 +76,7 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
   suppliers: {
     id: "suppliers",
     icon: Truck,
-    label: "ספקים וציוד",
+    label: "ספקים",
     path: "/settings/suppliers",
     permission: PERMISSIONS.SUPPLIERS_VIEW,
   },
@@ -93,6 +93,13 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
     label: "דיווחים",
     path: "/work-logs",
     permission: PERMISSIONS.WORKLOGS_VIEW,
+  },
+  accountantInbox: {
+    id: "accountant-inbox",
+    icon: ClipboardList,
+    label: "אישור שעות",
+    path: "/accountant-inbox",
+    permission: PERMISSIONS.WORKLOGS_APPROVE,
   },
   invoices: {
     id: "invoices",
@@ -155,7 +162,28 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
     icon: BookOpen,
     label: "יומן אישי",
     path: "/my-journal",
-    permission: PERMISSIONS.DASHBOARD_VIEW, // available to all logged-in users
+    permission: PERMISSIONS.DASHBOARD_VIEW,
+  },
+  journalAccountant: {
+    id: "journal",
+    icon: BookOpen,
+    label: "יומן חשבת",
+    path: "/accountant/activity-log",
+    permission: PERMISSIONS.INVOICES_VIEW,
+  },
+  journalWorkManager: {
+    id: "journal",
+    icon: BookOpen,
+    label: "יומן מנהל עבודה",
+    path: "/work-manager/activity-log",
+    permission: PERMISSIONS.DASHBOARD_VIEW,
+  },
+  journalSystem: {
+    id: "journal",
+    icon: BookOpen,
+    label: "יומן מערכת",
+    path: "/activity-log",
+    permission: PERMISSIONS.DASHBOARD_VIEW,
   },
 };
 
@@ -166,31 +194,32 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
 const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: string[] }> = {
   [UserRole.ADMIN]: {
     items: [
-      "dashboard", "projects", "orderCoordination",
-      "invoices", "reports", "map",
-      "activityLog", "settings"
+      "dashboard", "projects", "workOrders", "orderCoordination",
+      "suppliers", "equipment",
+      "invoices", "budgets", "reports",
+      "map", "activityLog", "settings"
     ],
-    dividerAfter: ["dashboard", "map", "settings"],
+    dividerAfter: ["dashboard", "orderCoordination", "reports", "settings"],
   },
   [UserRole.REGION_MANAGER]: {
-    items: ["dashboard", "projectsRegion", "workOrders", "invoices", "budgets", "reports", "map", "journal"],
-    dividerAfter: ["dashboard", "map"],
+    items: ["dashboard", "projectsRegion", "budgets", "reports", "map", "journalSystem"],
+    dividerAfter: ["dashboard", "reports"],
   },
   [UserRole.AREA_MANAGER]: {
-    items: ["dashboard", "projectsArea", "workOrders", "budgets", "reports", "map", "journal"],
-    dividerAfter: ["dashboard", "map"],
+    items: ["dashboard", "projectsArea", "workOrders", "workLogs", "budgets", "reports", "map", "journalSystem"],
+    dividerAfter: ["dashboard", "workLogs", "reports"],
   },
   [UserRole.WORK_MANAGER]: {
-    items: ["dashboard", "projects", "map", "journal"],
-    dividerAfter: ["dashboard", "map"],
+    items: ["dashboard", "projects", "workOrders", "equipmentScan", "workLogs", "journalWorkManager"],
+    dividerAfter: ["dashboard", "workLogs"],
   },
   [UserRole.ORDER_COORDINATOR]: {
-    items: ["dashboard", "orderCoordination", "suppliers", "map", "journal"],
-    dividerAfter: ["dashboard", "map"],
+    items: ["dashboard", "orderCoordination", "workOrders", "journal"],
+    dividerAfter: ["dashboard", "workOrders"],
   },
   [UserRole.ACCOUNTANT]: {
-    items: ["dashboard", "invoices", "budgets", "reports", "journal"],
-    dividerAfter: ["dashboard", "reports"],
+    items: ["dashboard", "accountantInbox", "invoices", "budgets", "reports", "journalAccountant"],
+    dividerAfter: ["dashboard", "invoices", "reports"],
   },
   [UserRole.SUPPLIER_MANAGER]: {
     items: ["dashboard", "settings", "journal"],

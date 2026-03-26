@@ -6,7 +6,7 @@ from typing import Optional, List
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from pydantic import BaseModel, Field, ConfigDict, model_validator, validator
 
 
 class WorkOrderFilters(BaseModel):
@@ -230,6 +230,10 @@ class WorkOrderSearch(BaseModel):
     page: int = 1
     page_size: int = 50
     per_page: Optional[int] = None  # alias for page_size (frontend compatibility)
+
+    @validator("status", pre=True, always=True)
+    def normalize_status(cls, v):
+        return v.upper() if v else v
 
 
 class WorkOrderStatusUpdate(BaseModel):

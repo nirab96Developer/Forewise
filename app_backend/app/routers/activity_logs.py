@@ -31,10 +31,10 @@ def _get_scope_for_role(role_code: str) -> str:
     return scope_map.get(role_code, "my")
 
 
-@router.get("/", response_model=List[ActivityLogResponse])
+@router.get("/")
 async def get_activity_logs(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     user_id: Optional[int] = None,
@@ -128,10 +128,16 @@ async def get_activity_logs(
         elif role_code == "ORDER_COORDINATOR":
             query = query.filter(ActivityLog.category.in_(["operational", "system"]))
     
-    # Order by most recent first
-    logs = query.order_by(ActivityLog.created_at.desc()).offset(skip).limit(limit).all()
-    
-    return logs
+    query = query.order_by(ActivityLog.created_at.desc())
+    total = query.count()
+    logs = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    return {
+        "items": [ActivityLogResponse.from_orm(log) for log in logs],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
 
 
 @router.get("/{log_id}", response_model=ActivityLogResponse)

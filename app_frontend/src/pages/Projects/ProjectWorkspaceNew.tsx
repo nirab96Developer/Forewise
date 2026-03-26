@@ -152,8 +152,8 @@ const ProjectWorkspaceNew: React.FC = () => {
       // Calculate stats
       const activeOrders = orders.filter(o => ['PENDING','APPROVED','APPROVED_AND_SENT','IN_PROGRESS','ACTIVE','SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(o.status?.toUpperCase())).length;
       const pendingOrders = orders.filter(o => o.status?.toUpperCase() === 'PENDING').length;
-      const openReports = logs.filter(l => ['draft', 'pending', 'submitted'].includes(l.status)).length;
-      const pendingReports = logs.filter(l => l.status === 'pending').length;
+      const openReports = logs.filter(l => ['PENDING', 'SUBMITTED'].includes((l.status || '').toUpperCase())).length;
+      const pendingReports = logs.filter(l => (l.status || '').toUpperCase() === 'PENDING').length;
       
       const budgetTotal = projectData.allocated_budget || 0;
       const budgetSpent = projectData.spent_budget || 0;
@@ -271,7 +271,7 @@ const ProjectWorkspaceNew: React.FC = () => {
           {/* סקירה — זהה לכולם */}
           {activeTab === 'overview' && <OverviewTab project={project} stats={stats} currentUser={storedUser} />}
 
-          {activeTab === 'map' && <MapTab project={project} />}
+          {activeTab === 'map' && <MapTab project={project} userRole={userRoleCode} />}
 
           {/* הזמנות */}
           {activeTab === 'orders' && (
@@ -469,25 +469,26 @@ class MapErrorBoundary extends React.Component<{children: React.ReactNode}, {has
   }
 }
 
-const MapTab: React.FC<{ project: Project }> = ({ project }) => {
+const MapTab: React.FC<{ project: Project; userRole?: string }> = ({ project, userRole }) => {
   const [mapData, setMapData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showPolygonDrawer, setShowPolygonDrawer] = useState(false);
+  const canEditPolygon = ['ADMIN', 'AREA_MANAGER', 'REGION_MANAGER'].includes(userRole || '');
+  const LazyPolygonDrawer = React.lazy(() => import('../../components/map/PolygonDrawer'));
 
   const location = project.location;
   const defaultLat = location?.latitude || 31.7683;
   const defaultLng = location?.longitude || 35.2137;
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        const headers = { 'Authorization': 'Bearer ' + token };
-        
-        // Only fetch project-specific data (fast, small responses)
-        const [geoResp, forestResp] = await Promise.all([
-          fetch('/api/v1/projects/' + project.id + '/geo', { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
-          fetch('/api/v1/projects/' + project.id + '/forest-map', { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
-        ]);
+  const loadMapData = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const headers = { 'Authorization': 'Bearer ' + token };
+      
+      const [geoResp, forestResp] = await Promise.all([
+        fetch('/api/v1/projects/' + project.id + '/geo', { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/v1/projects/' + project.id + '/forest-map', { headers }).then(r => r.ok ? r.json() : null).catch(() => null),
+      ]);
 
         // Only fetch area boundary if we need it (no forest = fallback mask)
         let areaGeom = null;
@@ -506,8 +507,10 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
         console.error('Error fetching map data:', err);
       }
       setIsLoading(false);
-    };
-    if (project.id) fetchAll();
+  };
+
+  useEffect(() => {
+    if (project.id) loadMapData();
   }, [project.id]);
 
   if (isLoading) {
@@ -628,6 +631,32 @@ const MapTab: React.FC<{ project: Project }> = ({ project }) => {
               ? 'גבולות יער לא תואמים למיקום הפרויקט — מוצגת נקודת מיקום בלבד'
               : 'מיפוי שטח לא זמין לפרויקט זה — מוצגת נקודת מיקום בלבד'}
           </span>
+        </div>
+      )}
+
+      {/* Edit polygon button */}
+      {canEditPolygon && !showPolygonDrawer && (
+        <button
+          onClick={() => setShowPolygonDrawer(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors mb-3"
+        >
+          <MapPin className="w-4 h-4" />
+          ערוך גבולות יער
+        </button>
+      )}
+
+      {/* Polygon Drawer */}
+      {showPolygonDrawer && (
+        <div className="mb-4 border-2 border-purple-300 rounded-xl overflow-hidden" style={{ height: 500 }}>
+          <React.Suspense fallback={<div className="h-full flex items-center justify-center"><span className="text-gray-400">טוען...</span></div>}>
+            <LazyPolygonDrawer
+              projectId={project.id}
+              projectName={project.name}
+              existingGeoJSON={mapData?.forest?.has_forest ? mapData.forest.forest?.geojson_full : undefined}
+              onSave={() => { setShowPolygonDrawer(false); loadMapData(); }}
+              onClose={() => setShowPolygonDrawer(false)}
+            />
+          </React.Suspense>
         </div>
       )}
 

@@ -206,8 +206,8 @@ class WorklogService:
 
         # Log activity
         wo_title = ""
-        if work_order:
-            wo_title = getattr(work_order, 'title', '') or getattr(work_order, 'equipment_type', '') or ''
+        if wo:
+            wo_title = getattr(wo, 'title', '') or getattr(wo, 'equipment_type', '') or ''
         activity_logger.log_worklog_created(
             db=db,
             worklog_id=worklog.id,

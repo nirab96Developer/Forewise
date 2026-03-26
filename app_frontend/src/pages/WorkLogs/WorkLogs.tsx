@@ -53,44 +53,28 @@ const WorkLogs: React.FC = () => {
   }, [searchTerm, filterStatus]);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      case 'draft':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    const upper = (status || '').toUpperCase();
+    if (upper === 'APPROVED') return 'bg-green-100 text-green-800';
+    if (upper === 'REJECTED') return 'bg-red-100 text-red-800';
+    if (upper === 'SUBMITTED') return 'bg-blue-100 text-blue-800';
+    if (upper === 'INVOICED') return 'bg-purple-100 text-purple-800';
+    if (upper === 'PENDING') return 'bg-yellow-100 text-yellow-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'ממתין לאישור';
-      case 'approved':
-        return 'אושר';
-      case 'rejected':
-        return 'נדחה';
-      case 'draft':
-        return 'טיוטה';
-      default:
-        return status;
-    }
+    const map: Record<string, string> = {
+      PENDING: 'ממתין', SUBMITTED: 'הוגש', APPROVED: 'אושר',
+      REJECTED: 'נדחה', INVOICED: 'הופק חשבון',
+    };
+    return map[(status || '').toUpperCase()] || status;
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'rejected':
-        return <XCircle className="w-4 h-4" />;
-      default:
-        return <Clock className="w-4 h-4" />;
-    }
+    const upper = (status || '').toUpperCase();
+    if (upper === 'APPROVED') return <CheckCircle className="w-4 h-4" />;
+    if (upper === 'REJECTED') return <XCircle className="w-4 h-4" />;
+    return <Clock className="w-4 h-4" />;
   };
 
   const formatDate = (dateString: string) => {

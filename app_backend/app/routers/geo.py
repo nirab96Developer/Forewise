@@ -140,7 +140,7 @@ async def import_forest_polygons_file(
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON file")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error reading file: {str(e)}")
+        raise HTTPException(status_code=400, detail="שגיאת שרת")
     
     result = forest_polygon_service.import_geojson(db, geojson)
     

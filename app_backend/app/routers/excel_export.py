@@ -23,8 +23,8 @@ router = APIRouter(prefix="/reports/export", tags=["Excel Export"])
 
 # ─── Style helpers ──────────────────────────────────────────────────────────
 
-KKL_GREEN = "00994C"
-HEADER_BG  = PatternFill("solid", fgColor=KKL_GREEN)
+BRAND_GREEN = "00994C"
+HEADER_BG  = PatternFill("solid", fgColor=BRAND_GREEN)
 HEADER_FT  = Font(bold=True, color="FFFFFF", size=11)
 ALT_ROW_BG = PatternFill("solid", fgColor="F0FFF7")
 THIN_BORDER = Border(
@@ -35,7 +35,7 @@ THIN_BORDER = Border(
 )
 
 def _style_header(ws, headers: list[str]) -> None:
-    """Apply KKL green header row."""
+    """Apply branded green header row."""
     ws.sheet_view.rightToLeft = True
     for col_idx, header in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col_idx, value=header)
@@ -82,8 +82,28 @@ def _workbook_to_response(wb: openpyxl.Workbook, filename: str) -> StreamingResp
 
 # ─── Worklogs ────────────────────────────────────────────────────────────────
 
-def _export_worklogs(db: Session) -> openpyxl.Workbook:
-    rows = db.execute(text("""
+def _build_scope_filter(user, table_alias="p") -> tuple:
+    """Build SQL scope filter and params based on user role."""
+    if not user or not hasattr(user, 'role') or not user.role:
+        return "", {}
+    role_code = user.role.code if hasattr(user.role, 'code') else ''
+    if role_code == 'ADMIN':
+        return "", {}
+    if role_code in ('WORK_MANAGER', 'FIELD_WORKER'):
+        return (f"AND {table_alias}.id IN (SELECT project_id FROM project_assignments "
+                f"WHERE user_id = :uid AND status = 'active')"), {"uid": user.id}
+    if role_code == 'AREA_MANAGER' and user.area_id:
+        return f"AND {table_alias}.area_id = :area_id", {"area_id": user.area_id}
+    if role_code == 'REGION_MANAGER' and user.region_id:
+        return f"AND {table_alias}.region_id = :region_id", {"region_id": user.region_id}
+    if role_code == 'ACCOUNTANT' and user.area_id:
+        return f"AND {table_alias}.area_id = :area_id", {"area_id": user.area_id}
+    return "", {}
+
+
+def _export_worklogs(db: Session, user=None) -> openpyxl.Workbook:
+    scope_filter, params = _build_scope_filter(user, "p")
+    rows = db.execute(text(f"""
         SELECT
             wl.report_date,
             p.name         AS project_name,
@@ -105,9 +125,10 @@ def _export_worklogs(db: Session) -> openpyxl.Workbook:
         LEFT JOIN suppliers s  ON s.id  = wl.supplier_id
         LEFT JOIN equipment e  ON e.id  = wl.equipment_id
         LEFT JOIN equipment_types et ON et.id = e.equipment_type_id
+        WHERE wl.deleted_at IS NULL {scope_filter}
         ORDER BY wl.report_date DESC
         LIMIT 5000
-    """)).fetchall()
+    """), params).fetchall()
 
     headers = [
         "תאריך", "פרויקט", "קוד פרויקט", "ספק", "סוג ציוד",
@@ -145,8 +166,9 @@ def _export_worklogs(db: Session) -> openpyxl.Workbook:
 
 # ─── Invoices ────────────────────────────────────────────────────────────────
 
-def _export_invoices(db: Session) -> openpyxl.Workbook:
-    rows = db.execute(text("""
+def _export_invoices(db: Session, user=None) -> openpyxl.Workbook:
+    scope_filter, params = _build_scope_filter(user, "p")
+    rows = db.execute(text(f"""
         SELECT
             inv.invoice_number,
             s.name                              AS supplier_name,
@@ -162,9 +184,10 @@ def _export_invoices(db: Session) -> openpyxl.Workbook:
         FROM invoices inv
         LEFT JOIN suppliers s ON s.id = inv.supplier_id
         LEFT JOIN projects  p ON p.id = inv.project_id
+        WHERE inv.deleted_at IS NULL {scope_filter}
         ORDER BY inv.created_at DESC
         LIMIT 2000
-    """)).fetchall()
+    """), params).fetchall()
 
     headers = [
         "מספר חשבונית", "ספק", "פרויקט", "קוד פרויקט",
@@ -275,7 +298,7 @@ def _export_projects(db: Session, user=None) -> openpyxl.Workbook:
 
 # ─── Equipment ───────────────────────────────────────────────────────────────
 
-def _export_equipment(db: Session) -> openpyxl.Workbook:
+def _export_equipment(db: Session, user=None) -> openpyxl.Workbook:
     rows = db.execute(text("""
         SELECT
             e.code,
@@ -361,10 +384,10 @@ def export_excel(
     filename = f"forewise_{label_he}_{today}.xlsx"
 
     builders = {
-        "worklogs":  lambda db: _export_worklogs(db),
-        "invoices":  lambda db: _export_invoices(db),
+        "worklogs":  lambda db: _export_worklogs(db, user=current_user),
+        "invoices":  lambda db: _export_invoices(db, user=current_user),
         "projects":  lambda db: _export_projects(db, user=current_user),
-        "equipment": lambda db: _export_equipment(db),
+        "equipment": lambda db: _export_equipment(db, user=current_user),
     }
 
     wb = builders[type](db)

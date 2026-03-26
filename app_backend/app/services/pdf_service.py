@@ -29,12 +29,12 @@ def generate_worklog_pdf(worklog_data: Dict[str, Any], segments: List[Dict[str, 
     try:
         import os
         logo_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 
-                                  'app_frontend', 'public', 'logo-kkl-transparent.png')
+                                  'app_frontend', 'public', 'logo.png')
         if os.path.exists(logo_path):
             with open(logo_path, 'rb') as f:
                 logo_base64 = f"data:image/png;base64,{base64.b64encode(f.read()).decode('utf-8')}"
     except Exception as e:
-        logger.warning(f"Could not load KKL logo: {e}")
+        logger.warning(f"Could not load logo: {e}")
     
     # Prepare time entries from segments or create default
     time_entries = []

@@ -82,10 +82,10 @@ async def get_dashboard_summary(
     # For completed projects, we check is_active=False (no status column exists)
     completed_projects = project_query.filter(Project.is_active == False).count()
     
-    # Get budget totals
-    total_budget = db.query(func.sum(Budget.total_amount)).scalar() or 0
-    allocated_budget = db.query(func.sum(Budget.allocated_amount)).scalar() or 0
-    spent_budget = db.query(func.sum(Budget.spent_amount)).scalar() or 0
+    # Get budget totals (use scoped budget_query for consistency)
+    total_budget = budget_query.with_entities(func.sum(Budget.total_amount)).scalar() or 0
+    allocated_budget = budget_query.with_entities(func.sum(Budget.allocated_amount)).scalar() or 0
+    spent_budget = budget_query.with_entities(func.sum(Budget.spent_amount)).scalar() or 0
     
     # Get entity counts
     regions_count = db.query(Region).count()
@@ -128,7 +128,6 @@ async def get_dashboard_summary(
         ).scalar()
         hours_this_month = float(hours_result) if hours_result else 0
     except Exception as e:
-        print(f"Error getting worklog stats: {e}")
         pass
     
     # Get equipment count

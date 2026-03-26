@@ -47,7 +47,7 @@ const PWAInstallBanner: React.FC = () => {
       style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)" }}
     >
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 mb-4 flex items-start gap-3 animate-slide-up">
-        {/* KKL green accent bar */}
+        {/* Green accent bar */}
         <div className="flex-shrink-0 w-1 self-stretch bg-[#00994C] rounded-full" />
 
         <div className="flex-1 min-w-0">

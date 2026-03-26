@@ -205,7 +205,7 @@ def approve_invoice(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to approve invoice: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -231,7 +231,7 @@ def send_invoice_to_supplier(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send invoice: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -270,7 +270,7 @@ def create_invoice_from_work_order(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create invoice from work order: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -402,7 +402,7 @@ def create_invoice_from_worklogs(
     try:
         invoice = invoice_service.create(db, invoice_data, current_user.id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"שגיאה ביצירת חשבונית: {str(e)}")
+        raise HTTPException(status_code=500, detail="שגיאת שרת")
 
     # 5. יצירת invoice_items + עדכון worklog status
     from sqlalchemy import text as sa_text

@@ -5,7 +5,7 @@ Worklog schemas
 from datetime import datetime, date, time
 from decimal import Decimal
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from pydantic import BaseModel, Field, ConfigDict, model_validator, validator
 
 
 class WorklogBase(BaseModel):
@@ -156,6 +156,10 @@ class WorklogSearch(BaseModel):
     page_size: int = Field(50, ge=1, le=200)
     sort_by: str = Field("report_date", description="created_at, report_date, report_number")
     sort_desc: bool = Field(True)
+
+    @validator("status", pre=True, always=True)
+    def normalize_status(cls, v):
+        return v.upper() if v else v
 
 
 class WorklogStatistics(BaseModel):

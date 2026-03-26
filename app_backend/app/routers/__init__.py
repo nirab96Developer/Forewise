@@ -11,7 +11,7 @@ api_router = APIRouter()
 
 # API Metadata
 API_METADATA = {
-    "title": "Forest Management System API",
+    "title": "Forewise API",
     "version": "1.0.0",
     "description": "ניהול יערות ופרויקטים",
 }

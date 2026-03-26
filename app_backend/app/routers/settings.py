@@ -6,7 +6,10 @@ from sqlalchemy import text
 from typing import Annotated
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user, require_permission
+from app.core.dependencies import get_current_active_user
+from app.services.activity_log_service import ActivityLogService
+
+_audit = ActivityLogService(), require_permission
 from app.models.user import User
 
 router = APIRouter(prefix="/settings", tags=["settings"])

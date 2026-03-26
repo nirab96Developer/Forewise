@@ -154,6 +154,62 @@ class BudgetService(BaseService[Budget]):
         )
 
 
+# ── Budget invariant helpers ──────────────────────────────────────────────────
+
+import logging as _logging
+_budget_log = _logging.getLogger("budget")
+
+
+def _sync_remaining(budget) -> None:
+    """Recompute remaining_amount from the canonical formula.
+
+    INVARIANT: remaining = total - committed - spent (floored at 0)
+    Called after every mutation to committed/spent/total.
+    """
+    from decimal import Decimal
+    total = Decimal(str(budget.total_amount or 0))
+    committed = Decimal(str(budget.committed_amount or 0))
+    spent = Decimal(str(budget.spent_amount or 0))
+    budget.remaining_amount = max(Decimal(0), total - committed - spent)
+
+
+def _assert_invariants(budget, label: str = "") -> None:
+    """Enforce budget financial invariants.
+
+    In production (ENVIRONMENT=production): violations raise an exception.
+    In development/testing: violations are logged as warnings.
+    """
+    from app.core.config import settings
+
+    total = float(budget.total_amount or 0)
+    committed = float(budget.committed_amount or 0)
+    spent = float(budget.spent_amount or 0)
+    remaining = float(budget.remaining_amount or 0)
+    strict = settings.is_production()
+
+    violations = []
+    if committed < 0:
+        violations.append(f"committed_amount < 0 ({committed})")
+    if spent < 0:
+        violations.append(f"spent_amount < 0 ({spent})")
+    if remaining < 0:
+        violations.append(f"remaining_amount < 0 ({remaining})")
+    if total > 0 and (committed + spent) > total * 1.01:
+        violations.append(f"committed+spent ({committed+spent:.0f}) exceeds total ({total:.0f})")
+
+    if not violations:
+        return
+
+    msg = f"[{label}] budget #{budget.id}: " + "; ".join(violations)
+
+    if strict:
+        _budget_log.error(msg)
+        from app.core.exceptions import BusinessException
+        raise BusinessException(f"הפרת תקינות תקציבית: {'; '.join(violations)}")
+
+    _budget_log.warning(msg)
+
+
 # ── Freeze / Release / Transfer ────────────────────────────────────────────────
 
 def freeze_budget_for_work_order(
@@ -162,12 +218,10 @@ def freeze_budget_for_work_order(
     amount: float,
     db: "Session",
 ) -> None:
-    """
-    כשנפתחת הזמנה — מקפיא סכום מתקציב הפרויקט (committed_amount).
-    מעלה ValueError אם אין תקציב פעיל או אין יתרה מספיקה.
-    """
+    """Freeze budget for a new work order. Raises ValueError if insufficient."""
     from app.models.budget import Budget
     from app.models.work_order import WorkOrder
+    from decimal import Decimal
 
     budget = (
         db.query(Budget)
@@ -177,9 +231,9 @@ def freeze_budget_for_work_order(
     if not budget:
         raise ValueError("אין תקציב פעיל לפרויקט")
 
+    total = float(budget.total_amount or 0)
     committed = float(budget.committed_amount or 0)
     spent = float(budget.spent_amount or 0)
-    total = float(budget.total_amount or 0)
     available = total - committed - spent
 
     if available < amount:
@@ -187,14 +241,23 @@ def freeze_budget_for_work_order(
             f"אין מספיק תקציב. זמין: ₪{available:,.0f}, נדרש: ₪{amount:,.0f}"
         )
 
-    budget.committed_amount = committed + amount
-    budget.remaining_amount = total - budget.committed_amount - spent
+    budget.committed_amount = Decimal(str(committed + amount))
+    _sync_remaining(budget)
+    _assert_invariants(budget, "freeze")
 
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if wo:
-        wo.frozen_amount = amount
-        wo.remaining_frozen = amount
+        wo.frozen_amount = Decimal(str(amount))
+        wo.remaining_frozen = Decimal(str(amount))
 
+    from app.core.audit import log_business_event
+    log_business_event(
+        db, "BUDGET_FROZEN", "budget", budget.id,
+        description=f"הוקפא ₪{amount:,.0f} עבור הזמנה #{work_order_id}",
+        metadata={"work_order_id": work_order_id, "amount": amount,
+                  "available_after": float(budget.remaining_amount or 0)},
+        category="financial",
+    )
     db.commit()
 
 
@@ -203,11 +266,10 @@ def release_budget_freeze(
     actual_amount: float,
     db: "Session",
 ) -> None:
-    """
-    כשנסגרת הזמנה — שחרר הקפאה ועדכן spent_amount.
-    """
+    """Release frozen budget. actual_amount goes to spent; remainder returns to available."""
     from app.models.budget import Budget
     from app.models.work_order import WorkOrder
+    from decimal import Decimal
 
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if not wo or not wo.project_id:
@@ -222,12 +284,22 @@ def release_budget_freeze(
         return
 
     frozen = float(wo.frozen_amount or 0)
-    budget.committed_amount = max(0, float(budget.committed_amount or 0) - frozen)
-    budget.spent_amount = float(budget.spent_amount or 0) + actual_amount
-    budget.remaining_amount = (
-        float(budget.total_amount or 0) - float(budget.committed_amount) - float(budget.spent_amount)
+    budget.committed_amount = max(Decimal(0), (budget.committed_amount or Decimal(0)) - Decimal(str(frozen)))
+    budget.spent_amount = (budget.spent_amount or Decimal(0)) + Decimal(str(actual_amount))
+    _sync_remaining(budget)
+    _assert_invariants(budget, "release")
+
+    wo.frozen_amount = Decimal(0)
+    wo.remaining_frozen = Decimal(0)
+
+    from app.core.audit import log_business_event
+    log_business_event(
+        db, "BUDGET_RELEASED", "budget", budget.id,
+        description=f"שוחרר הקפאה ₪{frozen:,.0f}, הוצאה ₪{actual_amount:,.0f} (WO #{work_order_id})",
+        metadata={"work_order_id": work_order_id, "frozen_released": frozen,
+                  "actual_spent": actual_amount},
+        category="financial",
     )
-    wo.frozen_amount = 0
     db.commit()
 
 

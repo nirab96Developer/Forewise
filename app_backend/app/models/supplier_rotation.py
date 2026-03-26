@@ -1,6 +1,6 @@
 """
 SupplierRotation model - רוטציה של ספקים
-SYNCED WITH DB (kkl_forest_prod) - 11.02.2026
+SYNCED WITH DB (forewise_prod) - 11.02.2026
 """
 
 from __future__ import annotations

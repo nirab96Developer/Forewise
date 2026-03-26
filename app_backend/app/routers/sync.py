@@ -99,7 +99,7 @@ async def sync_batch(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Batch sync failed: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 async def process_sync_operation(
@@ -383,6 +383,6 @@ async def get_sync_status(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get sync status: {str(e)}"
+            detail="שגיאת שרת"
         )
 

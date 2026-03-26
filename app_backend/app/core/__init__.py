@@ -104,7 +104,7 @@ except ImportError:
 
 # Version info
 __version__ = "1.0.0"
-__author__ = "Forest Management System"
+__author__ = "Forewise"
 
 # Export all public items
 __all__ = [

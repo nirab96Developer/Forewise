@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Truck, Search, Plus, Eye, Edit, X } from "lucide-react";
 import supplierService from "../../services/supplierService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { useRoleAccess } from "../../hooks/useRoleAccess";
 
 interface Supplier {
   id: number;
@@ -26,6 +27,7 @@ const Suppliers: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { canManageSuppliers } = useRoleAccess();
 
   useEffect(() => { loadSuppliers(); }, []);
 
@@ -80,13 +82,15 @@ const Suppliers: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900">ניהול ספקים</h1>
             <p className="text-sm text-gray-500 mt-0.5">{suppliers.length} ספקים · {activeCount} פעילים</p>
           </div>
-          <button
-            onClick={() => navigate('/suppliers/new')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 font-medium shadow-sm transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            ספק חדש
-          </button>
+          {canManageSuppliers && (
+            <button
+              onClick={() => navigate('/suppliers/new')}
+              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 font-medium shadow-sm transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              ספק חדש
+            </button>
+          )}
         </div>
 
         {/* Search + filter bar */}

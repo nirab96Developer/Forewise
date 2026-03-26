@@ -23,7 +23,7 @@ NC='\033[0m' # No Color
 
 # Configuration (עדכן לפי הסביבה שלך!)
 DB_SERVER="${DB_SERVER:-localhost}"
-DB_NAME="${DB_NAME:-kkl_forest}"
+DB_NAME="${DB_NAME:-forewise_prod}"
 DB_USER="${DB_USER:-sa}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 MIGRATIONS_DIR="./app_backend/database/migrations"
@@ -63,7 +63,7 @@ backup_db() {
     
     mkdir -p "$BACKUP_DIR"
     
-    BACKUP_FILE="$BACKUP_DIR/kkl_forest_$(date +%Y%m%d_%H%M%S).bak"
+    BACKUP_FILE="$BACKUP_DIR/forewise_prod_$(date +%Y%m%d_%H%M%S).bak"
     
     echo "Creating backup: $BACKUP_FILE"
     

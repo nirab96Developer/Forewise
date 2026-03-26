@@ -40,6 +40,7 @@ class User(BaseModel):
     must_change_password: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     is_locked: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True, default=False)
     locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    failed_login_attempts: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     # Lifecycle / suspension fields

@@ -51,6 +51,8 @@ class SupplierRotationUpdate(BaseModel):
 async def get_supplier_rotations(
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     equipment_type: Optional[str] = Query(None, description="Filter by equipment type"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -64,27 +66,26 @@ async def get_supplier_rotations(
         if equipment_type:
             query = query.filter(SupplierRotation.equipment_type_id == int(equipment_type) if equipment_type.isdigit() else True)
         
-        rotations = query.order_by(SupplierRotation.rotation_position).all()
+        query = query.order_by(SupplierRotation.rotation_position)
+        total = query.count()
+        rotations = query.offset((page - 1) * page_size).limit(page_size).all()
         
-        # Get supplier names
         supplier_ids = [r.supplier_id for r in rotations]
-        suppliers = db.query(Supplier).filter(Supplier.id.in_(supplier_ids)).all()
+        suppliers = db.query(Supplier).filter(Supplier.id.in_(supplier_ids)).all() if supplier_ids else []
         supplier_map = {s.id: s.name for s in suppliers}
         
-        # Get equipment type names
         from sqlalchemy import text as sa_text
         et_rows = db.execute(sa_text("SELECT id, name FROM equipment_types WHERE is_active = true")).fetchall()
         et_map = {r[0]: r[1] for r in et_rows}
         
-        # Get area/region names
         area_rows = db.execute(sa_text("SELECT id, name FROM areas")).fetchall()
         area_map = {r[0]: r[1] for r in area_rows}
         region_rows = db.execute(sa_text("SELECT id, name FROM regions")).fetchall()
         region_map = {r[0]: r[1] for r in region_rows}
         
-        result = []
+        items = []
         for rot in rotations:
-            result.append({
+            items.append({
                 "id": rot.id,
                 "supplier_id": rot.supplier_id,
                 "supplier_name": supplier_map.get(rot.supplier_id, f"ספק #{rot.supplier_id}"),
@@ -105,7 +106,7 @@ async def get_supplier_rotations(
                 "region_name": region_map.get(rot.region_id, ''),
             })
         
-        return result
+        return {"items": items, "total": total, "page": page, "page_size": page_size}
         
     except Exception as e:
         logger.error(f"Error fetching supplier rotations: {e}", exc_info=True)

@@ -220,7 +220,7 @@ def create_standard_worklog(
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="שגיאת שרת")
 
 
 @router.post("/manual", response_model=WorklogResponse, status_code=status.HTTP_201_CREATED)
@@ -270,7 +270,7 @@ def create_manual_worklog(
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="שגיאת שרת")
 
 
 @router.post("/storage", response_model=WorklogResponse, status_code=status.HTTP_201_CREATED)
@@ -313,7 +313,7 @@ def create_storage_worklog(
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="שגיאת שרת")
 
 
 @router.put("/{worklog_id}", response_model=WorklogResponse)
@@ -478,7 +478,7 @@ def submit_worklog(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit worklog: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -537,7 +537,7 @@ def approve_worklog(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to approve worklog: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 
@@ -664,7 +664,7 @@ def reject_worklog(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reject worklog: {str(e)}"
+            detail="שגיאת שרת"
         )
 
 

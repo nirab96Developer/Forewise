@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
+import { getUserRole, normalizeRole, UserRole } from '../../utils/permissions';
 
 interface InvoiceItem {
   id: number;
@@ -63,6 +64,8 @@ const InvoiceDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
+  const _role = normalizeRole(getUserRole());
+  const canApproveInvoice = [UserRole.ADMIN, UserRole.ACCOUNTANT].includes(_role);
 
   const showToast = (msg: string, type = 'success') => {
     if ((window as any).showToast) (window as any).showToast(msg, type);
@@ -170,7 +173,7 @@ const InvoiceDetail: React.FC = () => {
                 <Mail className="w-4 h-4" />
                 שלח לספק
               </button>
-              {!isPaid && (
+              {!isPaid && canApproveInvoice && (
                 <button
                   onClick={handleMarkPaid}
                   disabled={actionLoading}

@@ -91,9 +91,12 @@ def register(
         
         return {"message": "משתמש נוצר בהצלחה", "email": email}
         
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"שגיאה ביצירת משתמש: {str(e)}")
+        logger.error(f"Registration error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="שגיאה ביצירת משתמש")
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -104,11 +107,6 @@ def login(
 ):
     """Login user."""
     try:
-        print(f"[SERVER] Login attempt for username: {login_data.username}")
-        print(f"[SERVER] Request from IP: {request.client.host if request.client else 'Unknown'}")
-        print(f"[SERVER] User-Agent: {request.headers.get('user-agent', 'Unknown')}")
-        
-        # Get client IP and user agent
         ip_address = request.client.host if request.client else None
         user_agent = request.headers.get("user-agent")
 
@@ -118,13 +116,7 @@ def login(
             ip_address=ip_address, 
             user_agent=user_agent
         )
-        
-        print(f"[SERVER] Login result: {result}")
-        print(f"[SERVER] Result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
-        print(f"[SERVER] requires_2fa: {result.get('requires_2fa', 'Not found')}")
-        print(f"[SERVER] user: {result.get('user', 'Not found')}")
 
-        # Log activity - only if user object exists (not 2FA case)
         if "user" in result and result["user"]:
             try:
                 activity_log_service.log_activity(
@@ -144,20 +136,11 @@ def login(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        logger.error(f"Login error: {str(e)}\n{error_details}")
-        # Return detailed error in debug mode
-        if settings.DEBUG:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Login failed: {str(e)}"
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Login failed. Please contact support."
-            )
+        logger.error(f"Login error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="שגיאת שרת. פנה לתמיכה."
+        )
 
 
 @router.post("/2fa/verify", response_model=LoginResponse)
@@ -170,21 +153,12 @@ def verify_2fa(
 ):
     """Verify two-factor authentication."""
     try:
-        print(f"[SERVER] OTP verification attempt for user_id: {user_id}")
-        print(f"[SERVER] OTP code: {code}")
-        print(f"[SERVER] Backup code: {backup_code}")
-        
         result = auth_service.verify_2fa(
             db=db, 
             user_id=user_id, 
             code=code, 
             backup_code=backup_code
         )
-        
-        print(f"[SERVER] OTP verification result: {result}")
-        print(f"[SERVER] Result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
-        print(f"[SERVER] success: {result.get('success', 'Not found')}")
-        print(f"[SERVER] user: {result.get('user', 'Not found')}")
 
         # Log activity
         activity_log_service.log_activity(
@@ -293,7 +267,7 @@ def request_password_reset(
     """Request password reset."""
     try:
         result = auth_service.request_password_reset(db, reset_data)
-        return {"message": result}
+        return result
 
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -313,8 +287,11 @@ def confirm_password_reset(
         )
 
         if success:
-            return {"message": "Password reset successfully"}
+            return {"message": "הסיסמה אופסה בהצלחה"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="קוד שגוי או פג תוקף")
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -603,22 +580,20 @@ def send_otp(
         # Generate OTP token
         otp_token = auth_service._generate_otp_token(db, user.id)
         
-        # For development: Print OTP to console instead of sending email
-        print(f"[OTP] Code for {email}: {otp_token}")
-        print(f"[INFO] OTP expires in 10 minutes")
-        
-        # Send OTP via email (simplified - just print to console)
         from app.core.email import send_email
         send_email(
             to=email,
-            subject="OTP Code for Forest Management System",
-            body=f"Your OTP code is: {otp_token}\nThis code will expire in 10 minutes."
+            subject="קוד כניסה למערכת Forewise",
+            body=f"קוד הכניסה שלך: {otp_token}\nהקוד תקף ל-10 דקות."
         )
         
         return {"message": "OTP sent successfully", "email": email}
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        logger.error(f"send-otp error: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="שגיאת שרת")
 
 
 @router.post("/verify-otp", response_model=LoginResponse)
@@ -823,7 +798,7 @@ async def biometric_register_start(
 
     except Exception as e:
         logger.error(f"Error starting biometric registration: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="שגיאת שרת")
 
 
 @router.post("/biometric/verify")
@@ -875,7 +850,7 @@ async def biometric_register_verify(
     except Exception as e:
         logger.error(f"Error verifying biometric credential: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="שגיאת שרת")
 
 
 @router.post("/biometric/challenge")
@@ -924,7 +899,7 @@ async def biometric_get_challenge(
         
     except Exception as e:
         logger.error(f"Error getting biometric challenge: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="שגיאת שרת")
 
 
 @router.post("/biometric/authenticate")
@@ -1006,7 +981,7 @@ async def biometric_authenticate(
     except Exception as e:
         logger.error(f"Error in biometric authentication: {e}")
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="שגיאת שרת")
 
 
 @router.get("/biometric/credentials")

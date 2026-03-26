@@ -2,11 +2,14 @@
 import React, { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Clock, Calendar, User } from "lucide-react";
 import workLogService from "../../services/workLogService";
+import { getUserRole, normalizeRole, UserRole } from "../../utils/permissions";
 
 const WorklogApproval: React.FC = () => {
+    const _role = normalizeRole(getUserRole());
+    const canApprove = [UserRole.ADMIN, UserRole.AREA_MANAGER, UserRole.ACCOUNTANT].includes(_role);
     const [worklogs, setWorklogs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState<string>("pending");
+    const [filter, setFilter] = useState<string>("SUBMITTED");
 
     useEffect(() => {
         loadWorklogs();
@@ -58,20 +61,20 @@ const WorklogApproval: React.FC = () => {
                 {/* Filters */}
                 <div className="mb-6 flex gap-2">
                     <button
-                        onClick={() => setFilter("pending")}
-                        className={`px-4 py-2 rounded-lg ${filter === "pending" ? "bg-yellow-100 text-yellow-800" : "bg-white text-gray-700"}`}
+                        onClick={() => setFilter("SUBMITTED")}
+                        className={`px-4 py-2 rounded-lg ${filter === "SUBMITTED" ? "bg-yellow-100 text-yellow-800" : "bg-white text-gray-700"}`}
                     >
                         ממתינים לאישור
                     </button>
                     <button
-                        onClick={() => setFilter("approved")}
-                        className={`px-4 py-2 rounded-lg ${filter === "approved" ? "bg-green-100 text-green-800" : "bg-white text-gray-700"}`}
+                        onClick={() => setFilter("APPROVED")}
+                        className={`px-4 py-2 rounded-lg ${filter === "APPROVED" ? "bg-green-100 text-green-800" : "bg-white text-gray-700"}`}
                     >
                         מאושרים
                     </button>
                     <button
-                        onClick={() => setFilter("rejected")}
-                        className={`px-4 py-2 rounded-lg ${filter === "rejected" ? "bg-red-100 text-red-800" : "bg-white text-gray-700"}`}
+                        onClick={() => setFilter("REJECTED")}
+                        className={`px-4 py-2 rounded-lg ${filter === "REJECTED" ? "bg-red-100 text-red-800" : "bg-white text-gray-700"}`}
                     >
                         נדחו
                     </button>
@@ -119,12 +122,12 @@ const WorklogApproval: React.FC = () => {
                                         <h3 className="text-lg font-semibold">{worklog.project_name || "פרויקט לא ידוע"}</h3>
                                         <p className="text-sm text-gray-500">דיווח #{worklog.report_number || worklog.id}</p>
                                     </div>
-                                    <span className={`px-3 py-1 rounded-full text-sm ${worklog.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                            worklog.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                    <span className={`px-3 py-1 rounded-full text-sm ${(worklog.status || '').toUpperCase() === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                                            (worklog.status || '').toUpperCase() === 'REJECTED' ? 'bg-red-100 text-red-800' :
                                                 'bg-yellow-100 text-yellow-800'
                                         }`}>
-                                        {worklog.status === 'approved' ? 'מאושר' :
-                                            worklog.status === 'rejected' ? 'נדחה' :
+                                        {(worklog.status || '').toUpperCase() === 'APPROVED' ? 'מאושר' :
+                                            (worklog.status || '').toUpperCase() === 'REJECTED' ? 'נדחה' :
                                                 'ממתין'}
                                     </span>
                                 </div>
@@ -148,7 +151,7 @@ const WorklogApproval: React.FC = () => {
                                     <p className="text-sm text-gray-600 mb-4">{worklog.activity_description || worklog.description}</p>
                                 )}
 
-                                {worklog.status === 'pending' && (
+                                {canApprove && ['PENDING', 'SUBMITTED'].includes((worklog.status || '').toUpperCase()) && (
                                     <div className="flex gap-3 pt-4 border-t">
                                         <button
                                             onClick={() => handleApprove(worklog.id)}

@@ -9,6 +9,7 @@ import {
   Info, Save, X, Truck
 } from 'lucide-react';
 import api from '../../services/api';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface SupplierRotation {
   id: number;
@@ -37,6 +38,7 @@ const FairRotation: React.FC = () => {
   const [rotations, setRotations] = useState<SupplierRotation[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  const { canManageRotation } = useRoleAccess();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingRotation, setEditingRotation] = useState<SupplierRotation | null>(null);
@@ -211,13 +213,15 @@ const FairRotation: React.FC = () => {
                 <p className="text-gray-500">ניהול סדר ועדיפות ספקים בהקצאות</p>
               </div>
             </div>
-            <button
-              onClick={() => handleOpenModal()}
-              className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              הוסף ספק לסבב
-            </button>
+            {canManageRotation && (
+              <button
+                onClick={() => handleOpenModal()}
+                className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                הוסף ספק לסבב
+              </button>
+            )}
           </div>
         </div>
 
@@ -383,22 +387,24 @@ const FairRotation: React.FC = () => {
                           </button>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleOpenModal(rotation)}
-                              className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
-                              title="עריכה"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(rotation.id)}
-                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                              title="מחיקה"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {canManageRotation && (
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleOpenModal(rotation)}
+                                className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
+                                title="עריכה"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(rotation.id)}
+                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="מחיקה"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))

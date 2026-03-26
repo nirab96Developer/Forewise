@@ -91,6 +91,11 @@ class WorkOrder(BaseModel):
         comment="סוג ציוד (legacy - use equipment_id)"
     )
 
+    equipment_license_plate: Mapped[Optional[str]] = mapped_column(
+        Unicode(20), nullable=True,
+        comment="מספר רישוי כלי (מתמלא אוטומטית בסריקה/אישור ספק)"
+    )
+
     requested_equipment_model_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("equipment_models.id"), nullable=True, index=True,
         comment="דגם כלי מבוקש להזמנה"

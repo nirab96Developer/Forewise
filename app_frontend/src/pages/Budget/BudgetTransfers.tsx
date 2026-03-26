@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeftRight, Plus, X } from 'lucide-react';
 import api from '../../services/api';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface Transfer {
   id: number;
@@ -188,6 +189,7 @@ const BudgetTransfers: React.FC = () => {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { canApproveBudgetTransfers, canManageBudgets } = useRoleAccess();
   const [filterStatus, setFilterStatus] = useState('');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [approveTarget, setApproveTarget] = useState<Transfer | null>(null);
@@ -199,7 +201,7 @@ const BudgetTransfers: React.FC = () => {
         api.get('/budget-transfers', { params: filterStatus ? { status_filter: filterStatus } : {} }),
         api.get('/budgets').catch(() => ({ data: [] })),
       ]);
-      setTransfers(tr.data || []);
+      setTransfers(tr.data?.items || tr.data || []);
       setBudgets(bud.data?.items || bud.data || []);
     } catch { /* silent */ }
     setLoading(false);
@@ -230,10 +232,12 @@ const BudgetTransfers: React.FC = () => {
             </h1>
             <p className="text-sm text-gray-500 mt-0.5">{pending.length} ממתינות לאישור</p>
           </div>
-          <button onClick={() => setShowRequestModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium shadow-sm">
-            <Plus className="w-4 h-4" /> בקשה חדשה
-          </button>
+          {canManageBudgets && (
+            <button onClick={() => setShowRequestModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium shadow-sm">
+              <Plus className="w-4 h-4" /> בקשה חדשה
+            </button>
+          )}
         </div>
 
         {/* Filter */}
@@ -278,7 +282,7 @@ const BudgetTransfers: React.FC = () => {
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-2 bg-yellow-100 text-yellow-800 text-xs font-semibold">ממתינות לאישור</div>
                 {pending.map(t => (
-                  <TransferRow key={t.id} t={t} onApprove={() => setApproveTarget(t)} />
+                  <TransferRow key={t.id} t={t} onApprove={canApproveBudgetTransfers ? () => setApproveTarget(t) : undefined} />
                 ))}
               </div>
             )}

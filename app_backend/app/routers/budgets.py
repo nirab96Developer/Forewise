@@ -46,7 +46,17 @@ def get_budget_summary(
     except Exception:
         Location = None
 
-    budgets = db.query(Budget).filter(Budget.is_active == True).all()
+    q = db.query(Budget).filter(Budget.is_active == True)
+
+    # Scope by user role so only relevant budgets are loaded
+    role_code = getattr(current_user, 'role', None)
+    role_code = getattr(role_code, 'code', '') if role_code else ''
+    if role_code == 'REGION_MANAGER' and current_user.region_id:
+        q = q.filter(Budget.region_id == current_user.region_id)
+    elif role_code == 'AREA_MANAGER' and current_user.area_id:
+        q = q.filter(Budget.area_id == current_user.area_id)
+
+    budgets = q.all()
 
     # Pre-load all lookups in single queries to avoid N+1
     all_project_ids = {b.project_id for b in budgets if b.project_id}
@@ -259,6 +269,9 @@ def update_budget(
 ):
     """Update budget"""
     require_permission(current_user, "budgets.update")
+    from app.core.scope import enforce_scope_for_entity
+    existing = budget_service.get_by_id_or_404(db, budget_id)
+    enforce_scope_for_entity(current_user, existing, db)
     try:
         budget = budget_service.update(db, budget_id, data, current_user.id)
         return budget
@@ -276,6 +289,9 @@ def delete_budget(
 ):
     """Delete budget"""
     require_permission(current_user, "budgets.delete")
+    from app.core.scope import enforce_scope_for_entity
+    existing = budget_service.get_by_id_or_404(db, budget_id)
+    enforce_scope_for_entity(current_user, existing, db)
     try:
         budget_service.soft_delete(db, budget_id, current_user.id)
     except (NotFoundException, ValidationException) as e:

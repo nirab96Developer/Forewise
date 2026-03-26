@@ -9,6 +9,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_
 
 from app.models.invoice import Invoice
+from app.services.activity_log_service import ActivityLogService
+
+_audit = ActivityLogService()
 from app.models.supplier import Supplier
 from app.models.project import Project
 from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceSearch, InvoiceStatistics
@@ -75,6 +78,34 @@ class InvoiceService(BaseService[Invoice]):
         invoice_dict = data.model_dump(exclude_unset=True)
         invoice_dict['created_by'] = current_user_id
         invoice_dict['paid_amount'] = Decimal(0)
+        
+        if not invoice_dict.get('invoice_number'):
+            from datetime import datetime as dt
+            year = dt.now().year
+            last = db.query(Invoice).filter(
+                Invoice.invoice_number.like(f"INV-{year}-%")
+            ).order_by(Invoice.id.desc()).first()
+            seq = 1
+            if last and last.invoice_number:
+                try:
+                    seq = int(last.invoice_number.split('-')[-1]) + 1
+                except (ValueError, IndexError):
+                    seq = db.query(Invoice).count() + 1
+            invoice_dict['invoice_number'] = f"INV-{year}-{seq:04d}"
+        
+        if not invoice_dict.get('status'):
+            from app.core.enums import InvoiceStatus
+            invoice_dict['status'] = InvoiceStatus.DRAFT
+        
+        if not invoice_dict.get('due_date') and invoice_dict.get('issue_date'):
+            from datetime import timedelta as td
+            invoice_dict['due_date'] = invoice_dict['issue_date'] + td(days=30)
+        
+        total = invoice_dict.get('total_amount', Decimal(0))
+        if invoice_dict.get('subtotal') is None:
+            vat_rate = Decimal('0.17')
+            invoice_dict['subtotal'] = (total / (1 + vat_rate)).quantize(Decimal('0.01'))
+            invoice_dict['tax_amount'] = total - invoice_dict['subtotal']
         
         invoice = Invoice(**invoice_dict)
         
@@ -205,6 +236,10 @@ class InvoiceService(BaseService[Invoice]):
         invoice.status = 'sent'
         db.commit()
         db.refresh(invoice)
+        try:
+            _audit.log_activity(db, user_id=current_user_id, action="invoice_created", entity_type="invoice", entity_id=invoice.id)
+        except Exception:
+            pass
         return invoice
 
 
