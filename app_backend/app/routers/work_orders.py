@@ -812,7 +812,7 @@ def remove_equipment_from_project(
                     "uid": current_user.id,
                     "description": (
                         f"הוסר כלי מהזמנה {work_order.order_number or work_order_id}; "
-                        f"שוחררו ₪{released:,.0f} מהתקציב — {admin_name}"
+                        f"שוחררו {released:,.0f} מהתקציב — {admin_name}"
                     ),
                 },
             )
@@ -844,7 +844,7 @@ def remove_equipment_from_project(
                     db,
                     row[0],
                     title=f"כלי הוסר מפרויקט — הזמנה #{wo_num}",
-                    message=f"יתרה תקציבית ₪{released:,.0f} שוחררה",
+                    message=f"יתרה תקציבית {released:,.0f} שוחררה",
                     notification_type="work_order",
                     entity_type="work_order",
                     entity_id=work_order.id,
@@ -1010,7 +1010,7 @@ def _build_work_order_html(wo, db: Session) -> str:
     def fmt_currency(v):
         if not v:
             return "—"
-        return f"₪{float(v):,.0f}"
+        return f"{float(v):,.0f}"
 
     hours_data = _enrich_hours(wo, db)
     used_hours = hours_data.get("used_hours", 0)
@@ -1066,7 +1066,7 @@ def _build_work_order_html(wo, db: Session) -> str:
     {table_rows}
   </table>
   <div class="no-print" style="text-align:center;margin-top:32px;">
-    <button onclick="window.print()" style="background:#1a6b3c;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:16px;cursor:pointer;font-family:inherit;">🖨️ הדפס / שמור כ-PDF</button>
+    <button onclick="window.print()" style="background:#1a6b3c;color:#fff;border:none;padding:12px 32px;border-radius:8px;font-size:16px;cursor:pointer;font-family:inherit;"> הדפס / שמור כ-PDF</button>
   </div>
   <div style="text-align:center;margin-top:24px;font-size:11px;color:#aab8b2;">
     Forewise — מערכת ניהול יערות &bull; הופק בתאריך {datetime.utcnow().strftime('%d/%m/%Y %H:%M')}
@@ -1083,7 +1083,7 @@ def get_work_order_pdf(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Get work order as printable HTML page (use browser Print → Save as PDF).
+    Get work order as printable HTML page (use browser Print  Save as PDF).
     """
     require_permission(current_user, "work_orders.read")
 

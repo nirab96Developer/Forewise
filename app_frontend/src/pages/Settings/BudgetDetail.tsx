@@ -67,19 +67,19 @@ const BudgetDetail: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-xl border p-4">
             <div className="text-xs text-gray-500">סה"כ תקציב</div>
-            <div className="text-lg font-bold text-gray-900">{fmt(budget.total_amount)}₪</div>
+<div className="text-lg font-bold text-gray-900">{fmt(budget.total_amount)}</div>
           </div>
           <div className="bg-white rounded-xl border p-4">
             <div className="text-xs text-gray-500">התחייבויות</div>
-            <div className="text-lg font-bold text-orange-600">{fmt(budget.committed_amount)}₪</div>
+<div className="text-lg font-bold text-orange-600">{fmt(budget.committed_amount)}</div>
           </div>
           <div className="bg-white rounded-xl border p-4">
             <div className="text-xs text-gray-500">ביצוע בפועל</div>
-            <div className="text-lg font-bold text-blue-600">{fmt(budget.spent_amount)}₪</div>
+<div className="text-lg font-bold text-blue-600">{fmt(budget.spent_amount)}</div>
           </div>
           <div className="bg-white rounded-xl border p-4">
             <div className="text-xs text-gray-500">יתרה</div>
-            <div className="text-lg font-bold text-green-600">{fmt(budget.remaining_amount)}₪</div>
+<div className="text-lg font-bold text-green-600">{fmt(budget.remaining_amount)}</div>
           </div>
           <div className="bg-white rounded-xl border p-4">
             <div className="text-xs text-gray-500">ניצול</div>
@@ -126,9 +126,9 @@ const BudgetDetail: React.FC = () => {
                       <tr key={item.id}>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name}</td>
                         <td className="px-4 py-3 text-sm"><span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{item.category}</span></td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{fmt(item.allocated)}₪</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{fmt(item.used)}₪</td>
-                        <td className="px-4 py-3 text-sm font-medium text-green-600">{fmt(item.remaining)}₪</td>
+<td className="px-4 py-3 text-sm text-gray-700">{fmt(item.allocated)}</td>
+<td className="px-4 py-3 text-sm text-gray-700">{fmt(item.used)}</td>
+<td className="px-4 py-3 text-sm font-medium text-green-600">{fmt(item.remaining)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -140,7 +140,7 @@ const BudgetDetail: React.FC = () => {
           {activeTab === 'committed' && (
             <div>
               <div className="p-4 bg-orange-50 border-b border-orange-200 flex items-center justify-between">
-                <span className="text-sm font-medium text-orange-800">{committed?.total || 0} הזמנות פעילות · סה"כ {fmt(committed?.sum)}₪</span>
+<span className="text-sm font-medium text-orange-800">{committed?.total || 0} הזמנות פעילות · סה"כ {fmt(committed?.sum)}</span>
               </div>
               {committed?.items?.length > 0 ? (
                 <table className="min-w-full divide-y divide-gray-200">
@@ -158,7 +158,7 @@ const BudgetDetail: React.FC = () => {
                         <td className="px-4 py-3 text-sm"><span className="font-medium text-blue-600">{wo.order_number || `#${wo.work_order_id}`}</span><br/><span className="text-xs text-gray-500">{wo.title}</span></td>
                         <td className="px-4 py-3 text-sm text-gray-700">{wo.supplier_name}</td>
                         <td className="px-4 py-3"><span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">{wo.status}</span></td>
-                        <td className="px-4 py-3 text-sm font-medium text-orange-600">{fmt(wo.committed_amount)}₪</td>
+<td className="px-4 py-3 text-sm font-medium text-orange-600">{fmt(wo.committed_amount)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -170,7 +170,7 @@ const BudgetDetail: React.FC = () => {
           {activeTab === 'spent' && (
             <div>
               <div className="p-4 bg-blue-50 border-b border-blue-200 flex items-center justify-between">
-                <span className="text-sm font-medium text-blue-800">{spent?.total || 0} דיווחים · סה"כ {fmt(spent?.sum)}₪ (+ {fmt(spent?.vat_sum)}₪ מע"מ)</span>
+<span className="text-sm font-medium text-blue-800">{spent?.total || 0} דיווחים · סה"כ {fmt(spent?.sum)} (+ {fmt(spent?.vat_sum)} מע"מ)</span>
               </div>
               {spent?.items?.length > 0 ? (
                 <table className="min-w-full divide-y divide-gray-200">
@@ -189,9 +189,9 @@ const BudgetDetail: React.FC = () => {
                       <tr key={wl.worklog_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/work-logs/${wl.worklog_id}`)}>
                         <td className="px-4 py-3 text-sm text-gray-700">{wl.report_date}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{wl.hours}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{fmt(wl.hourly_rate)}₪</td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{fmt(wl.amount)}₪</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{fmt(wl.total_with_vat)}₪</td>
+<td className="px-4 py-3 text-sm text-gray-700">{fmt(wl.hourly_rate)}</td>
+<td className="px-4 py-3 text-sm font-medium text-gray-900">{fmt(wl.amount)}</td>
+<td className="px-4 py-3 text-sm text-gray-700">{fmt(wl.total_with_vat)}</td>
                         <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-xs ${wl.status === 'approved' ? 'bg-green-100 text-green-700' : wl.status === 'submitted' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{wl.status || '—'}</span></td>
                       </tr>
                     ))}

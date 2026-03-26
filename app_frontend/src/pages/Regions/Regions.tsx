@@ -156,7 +156,7 @@ const Regions: React.FC = () => {
               {region.total_budget && region.total_budget > 0 && (
                 <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg font-bold">
                   <DollarSign className="w-4 h-4" />
-                  <span>₪{Number(region.total_budget).toLocaleString()}</span>
+<span>{Number(region.total_budget).toLocaleString()}</span>
                 </div>
               )}
             </div>

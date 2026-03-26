@@ -210,7 +210,7 @@ class SupplierRotationService:
         exclude_ids: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
         """
-        5-check supplier selection with area → region → coordinator fallback.
+5-check supplier selection with area region coordinator fallback.
 
         Checks per supplier:
         1. Active in area/region (active_area_ids / active_region_ids contains id)
@@ -278,7 +278,7 @@ class SupplierRotationService:
                     "notify_coordinator": False,
                 }
 
-        # Fallback 3: no supplier found → notify coordinator
+# Fallback 3: no supplier found notify coordinator
         return {
             "supplier_id": None,
             "fallback_level": "none",

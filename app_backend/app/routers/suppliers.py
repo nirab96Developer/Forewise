@@ -190,7 +190,7 @@ def toggle_supplier_active(
     return {"id": supplier_id, "is_active": supplier.is_active}
 
 
-# ── Global supplier equipment list (all suppliers) ────────────────────────────
+# Global supplier equipment list (all suppliers) 
 import io
 import qrcode
 from app.models.supplier_equipment import SupplierEquipment

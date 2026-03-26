@@ -182,7 +182,7 @@ class OTPService:
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>🌲 מערכת ניהול יערות</h1>
+<h1> מערכת ניהול יערות</h1>
                         <p>קוד אימות דו-שלבי</p>
                     </div>
                     
@@ -195,7 +195,7 @@ class OTPService:
                         </div>
                         
                         <div class="warning">
-                            <strong>⚠️ חשוב:</strong>
+<strong> חשוב:</strong>
                             <ul>
                                 <li>הקוד תקף למשך 5 דקות בלבד</li>
                                 <li>אל תשתף את הקוד עם איש</li>

@@ -3,9 +3,9 @@
 
 const REGISTERED_KEY = 'biometric_registered';
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// Helpers 
 
-/** base64 or base64url string → ArrayBuffer (no atob dependency) */
+/** base64 or base64url string ArrayBuffer (no atob dependency) */
 function b64urlToBuffer(input: string): ArrayBuffer {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   let str = String(input || '').trim().replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
@@ -22,7 +22,7 @@ function b64urlToBuffer(input: string): ArrayBuffer {
   return new Uint8Array(bytes).buffer;
 }
 
-/** ArrayBuffer → base64url */
+/** ArrayBuffer base64url */
 function bufToB64url(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let bin = '';
@@ -58,7 +58,7 @@ function _credentialToJSON(cred: PublicKeyCredential): Record<string, unknown> {
 }
 void _credentialToJSON;
 
-// ── Public API ─────────────────────────────────────────────────────────────
+// Public API 
 
 class BiometricService {
   /** True when WebAuthn platform authenticator is available on this device */
@@ -87,7 +87,7 @@ class BiometricService {
   /**
    * Full registration flow:
    * 1. GET challenge from server (requires valid auth token)
-   * 2. navigator.credentials.create() → shows platform authenticator dialog
+* 2. navigator.credentials.create() shows platform authenticator dialog
    * 3. POST result to server
    */
   async register(): Promise<void> {
@@ -173,9 +173,9 @@ class BiometricService {
 
   /**
    * Full authentication flow:
-   * 1. POST username → server returns challenge + allowCredentials
-   * 2. navigator.credentials.get() → shows platform authenticator dialog
-   * 3. POST assertion → server returns access_token + user
+* 1. POST username server returns challenge + allowCredentials
+* 2. navigator.credentials.get() shows platform authenticator dialog
+* 3. POST assertion server returns access_token + user
    */
   async authenticate(username: string): Promise<{ access_token: string; refresh_token?: string; user: any }> {
     if (!this.isRegistered()) {
@@ -243,7 +243,7 @@ class BiometricService {
     localStorage.removeItem(REGISTERED_KEY);
   }
 
-  // ── Legacy compat ───────────────────────────────────────────────────────
+// Legacy compat 
   hasSavedCredentials(): boolean { return this.isRegistered(); }
   getSavedCredentials() { return this.isRegistered() ? { registered: true } : null; }
   clearCredentials(): void { this.clearRegistration(); }

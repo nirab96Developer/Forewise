@@ -38,7 +38,7 @@ def get_budget_summary(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Hierarchical budget summary: regions → areas → projects"""
+    """Hierarchical budget summary: regions  areas  projects"""
     require_permission(current_user, "budgets.read")
     from app.models import Budget, Project, Region, Area
     try:

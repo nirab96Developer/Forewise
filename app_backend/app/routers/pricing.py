@@ -119,7 +119,7 @@ async def simulate_days_cost(
     """
     סימולציה: חישוב עלות לפי ימים
     
-    דוגמה: 5 ימים × 9 שעות × ₪120 = ₪5,400
+דוגמה: 5 ימים × 9 שעות × 120 = 5,400
     """
     rate_service = get_rate_service(db)
     

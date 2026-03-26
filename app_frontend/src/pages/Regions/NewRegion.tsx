@@ -135,7 +135,7 @@ const NewRegion: React.FC = () => {
             <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
               <label className="flex items-center gap-2 text-sm font-semibold text-emerald-700 mb-2">
                 <DollarSign className="w-4 h-4" />
-                תקציב כולל למרחב (₪)
+תקציב כולל למרחב ()
               </label>
               <input
                 type="number"

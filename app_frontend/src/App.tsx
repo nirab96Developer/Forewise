@@ -39,7 +39,7 @@ const OfflineSyncOnReconnect: React.FC = () => {
         }
       }
       if (synced > 0) {
-        showToast(`✅ ${synced} פעולות סונכרנו`, "success");
+showToast(` ${synced} פעולות סונכרנו`, "success");
       }
     };
     window.addEventListener("online", onOnline);

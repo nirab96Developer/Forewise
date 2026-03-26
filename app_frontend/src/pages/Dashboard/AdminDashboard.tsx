@@ -27,9 +27,9 @@ interface AdminData {
 }
 
 const fmtCurrency = (n: number) =>
-  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M ₪` :
-    n >= 1_000 ? `${(n / 1_000).toFixed(0)}K ₪` :
-      `₪${n.toLocaleString("he-IL", { maximumFractionDigits: 0 })}`;
+n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M ` :
+n >= 1_000 ? `${(n / 1_000).toFixed(0)}K ` :
+`${n.toLocaleString("he-IL", { maximumFractionDigits: 0 })}`;
 
 const timeAgo = (d: string) => {
   if (!d) return "";
@@ -77,7 +77,7 @@ const AdminDashboard: React.FC = () => {
     <div className="min-h-full bg-gray-50" dir="rtl">
       <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-screen-2xl mx-auto">
 
-        {/* ── PRIMARY KPIs ── */}
+{/* PRIMARY KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <KPI icon={<Briefcase className="w-5 h-5" />} label="הזמנות פתוחות" value={k.open_work_orders}
             accent="border-r-4 border-r-blue-500 bg-white" fg="text-blue-600" to="/work-orders" />
@@ -97,14 +97,14 @@ const AdminDashboard: React.FC = () => {
             pulse={k.budget_overrun > 0} to="/settings/budgets" />
         </div>
 
-        {/* ── SECONDARY STATS ── */}
+{/* SECONDARY STATS */}
         <div className="grid grid-cols-3 gap-3">
           <MiniStat icon={<Users className="w-4 h-4 text-blue-500" />} label="משתמשים" value={k.total_users} to="/settings/admin/users" />
           <MiniStat icon={<Truck className="w-4 h-4 text-green-500" />} label="ספקים" value={k.total_suppliers} to="/settings/suppliers" />
           <MiniStat icon={<FolderOpen className="w-4 h-4 text-purple-500" />} label="פרויקטים" value={k.total_projects} to="/projects" />
         </div>
 
-        {/* ── ALERTS ── */}
+{/* ALERTS */}
         {data.alerts.length > 0 && (
           <div className="space-y-2">
             {data.alerts.map((a, i) => (
@@ -113,13 +113,13 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ── QUICK ACTIONS + FINANCIAL ── */}
+{/* QUICK ACTIONS + FINANCIAL */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
           <QuickActions />
           <FinancialCard f={f} />
         </div>
 
-        {/* ── CHART + ACTIVITY FEED ── */}
+{/* CHART + ACTIVITY FEED */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 sm:gap-4">
           <ActivityChart woChart={data.wo_chart} wlChart={data.wl_chart} />
           <EventFeed events={data.recent_events} />
@@ -130,9 +130,9 @@ const AdminDashboard: React.FC = () => {
   );
 };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 /* KPI Card                                                        */
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 
 const KPI: React.FC<{
   icon: React.ReactNode; label: string; value: number;
@@ -153,9 +153,9 @@ const KPI: React.FC<{
   );
 };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 /* Mini Stat (secondary row)                                       */
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 
 const MiniStat: React.FC<{ icon: React.ReactNode; label: string; value: number; to: string }> = ({ icon, label, value, to }) => {
   const navigate = useNavigate();
@@ -170,9 +170,9 @@ const MiniStat: React.FC<{ icon: React.ReactNode; label: string; value: number; 
   );
 };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 /* Alert Row                                                       */
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 
 const AlertRow: React.FC<{ alert: { type: string; message: string; link: string } }> = ({ alert: a }) => {
   const navigate = useNavigate();
@@ -199,9 +199,9 @@ const AlertRow: React.FC<{ alert: { type: string; message: string; link: string 
   );
 };
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 /* Quick Actions                                                   */
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 
 const QuickActions: React.FC = React.memo(() => {
   const navigate = useNavigate();
@@ -258,9 +258,9 @@ const QuickActions: React.FC = React.memo(() => {
   );
 });
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 /* Financial Card                                                  */
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 
 const FinancialCard: React.FC<{ f: AdminData["financial"] }> = React.memo(({ f }) => {
   const pct = Math.min(f.utilization_pct, 100);
@@ -292,9 +292,9 @@ const FinancialCard: React.FC<{ f: AdminData["financial"] }> = React.memo(({ f }
   );
 });
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 /* Activity Chart                                                  */
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 
 const ActivityChart: React.FC<{ woChart: AdminData["wo_chart"]; wlChart: AdminData["wl_chart"] }> = React.memo(({ woChart, wlChart }) => {
   const merged = useMemo(() => {
@@ -341,9 +341,9 @@ const ActivityChart: React.FC<{ woChart: AdminData["wo_chart"]; wlChart: AdminDa
   );
 });
 
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 /* Event Feed                                                      */
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+/* */
 
 const EventFeed: React.FC<{ events: AdminData["recent_events"] }> = React.memo(({ events }) => {
   const navigate = useNavigate();

@@ -109,7 +109,7 @@ const ForestMap = () => {
         '<span style="color:#6b7280;font-size:11px">' + p.code + ' | ' + (REGION_COLORS[p.region_id]?.name || '') + '</span><br>' +
         '<span style="display:inline-block;margin-top:3px;color:#374151;font-size:11px">מיקום פרויקט</span>' +
         (p.geo_validation_status === 'NEAR'
-          ? '<br><span style="display:inline-block;margin-top:3px;color:#b45309;font-size:11px;font-weight:600">⚠ נקודה קרובה לגבול (NEAR ≤ 3km)' +
+? '<br><span style="display:inline-block;margin-top:3px;color:#b45309;font-size:11px;font-weight:600"> נקודה קרובה לגבול (NEAR 3km)' +
             (p.distance_to_area_meters != null ? ' (' + p.distance_to_area_meters + 'm)' : '') +
             '</span>'
           : '') +
@@ -191,11 +191,11 @@ const ForestMap = () => {
           <h3 className="text-xs font-bold text-gray-500 mb-2">שכבות</h3>
           <div className="space-y-1.5">
             {[
-              {key:'forests',label:'גבולות יערות',icon:'🟩'},
-              {key:'regions',label:'מרחבים',icon:'🗺️'},
-              {key:'areas',label:'אזורים',icon:'📍'},
-              {key:'projects',label:'נקודות פרויקטים',icon:'📍'},
-              {key:'myProjects',label:'שלי בלבד',icon:'⭐'},
+{key:'forests',label:'גבולות יערות',icon:''},
+{key:'regions',label:'מרחבים',icon:''},
+{key:'areas',label:'אזורים',icon:''},
+{key:'projects',label:'נקודות פרויקטים',icon:''},
+{key:'myProjects',label:'שלי בלבד',icon:''},
             ]
               .filter(l => isWorkManager ? !['regions','areas'].includes(l.key) : true)
               .map(l => (

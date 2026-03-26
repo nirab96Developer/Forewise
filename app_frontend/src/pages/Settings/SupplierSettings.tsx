@@ -51,7 +51,7 @@ const gc = (g?: string) => {
   return 'bg-gray-100 text-gray-500';
 };
 
-// ─── Shared data ──────────────────────────────────────────────────────────────
+// Shared data 
 function useAllData() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
@@ -88,7 +88,7 @@ function useAllData() {
            rotations, regions, areas, loading, reload: load };
 }
 
-// ─── Stats cards ──────────────────────────────────────────────────────────────
+// Stats cards 
 const StatsBar: React.FC<{ suppliers: Supplier[]; equipment: Equipment[]; rotations: Rotation[] }> = ({ suppliers, equipment, rotations }) => {
   const activeSuppliers = suppliers.filter(s => s.is_active).length;
   const totalEq = equipment.length;
@@ -116,7 +116,7 @@ const StatsBar: React.FC<{ suppliers: Supplier[]; equipment: Equipment[]; rotati
   );
 };
 
-// ─── Tab 1: Suppliers ─────────────────────────────────────────────────────────
+// Tab 1: Suppliers 
 const SuppliersTab: React.FC<{
   suppliers: Supplier[]; setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
   equipment: Equipment[]; regions: Region[]; areas: Area[];
@@ -265,7 +265,7 @@ const SuppliersTab: React.FC<{
   );
 };
 
-// ─── Tab 2: Equipment ─────────────────────────────────────────────────────────
+// Tab 2: Equipment 
 const EquipmentTab: React.FC<{
   equipment: Equipment[]; setEquipment: React.Dispatch<React.SetStateAction<Equipment[]>>;
   suppliers: Supplier[]; eqTypes: EqType[]; regions: Region[];
@@ -354,7 +354,7 @@ const EquipmentTab: React.FC<{
                   <div className="hidden md:grid grid-cols-12 gap-2 px-5 py-2 bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                     <div className="col-span-2">רישוי</div><div className="col-span-3">סוג ציוד</div>
                     <div className="col-span-2">קבוצה</div><div className="col-span-2 text-center">תעריף/שעה</div>
-                    <div className="col-span-1 text-center">לינה</div><div className="col-span-1 text-center">☽</div>
+<div className="col-span-1 text-center">לינה</div><div className="col-span-1 text-center"></div>
                     <div className="col-span-1 text-center">סטטוס</div>
                   </div>
                   {eqList.map(eq => {
@@ -367,9 +367,9 @@ const EquipmentTab: React.FC<{
                           {et?.category_group && <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${gc(et.category_group)}`}>{et.category_group}</span>}
                         </div>
                         <div className="col-span-2 text-center font-bold text-sm text-kkl-green">
-                          {eq.hourly_rate ? `₪${Number(eq.hourly_rate).toLocaleString()}` : <span className="text-amber-500 font-semibold text-xs">לא הוגדר</span>}
+{eq.hourly_rate ? `${Number(eq.hourly_rate).toLocaleString()}` : <span className="text-amber-500 font-semibold text-xs">לא הוגדר</span>}
                         </div>
-                        <div className="col-span-1 text-center text-xs text-gray-500">{eq.overnight_rate ? `₪${eq.overnight_rate}` : '—'}</div>
+<div className="col-span-1 text-center text-xs text-gray-500">{eq.overnight_rate ? `${eq.overnight_rate}` : '—'}</div>
                         <div className="col-span-1 text-center">{eq.night_guard ? <Moon className="w-4 h-4 text-blue-500 mx-auto" /> : <span className="text-gray-200 text-xs">—</span>}</div>
                         <div className="col-span-1 text-center">
                           <button onClick={() => toggle(eq)}>
@@ -392,7 +392,7 @@ const EquipmentTab: React.FC<{
   );
 };
 
-// ─── Tab 3: Pricing ───────────────────────────────────────────────────────────
+// Tab 3: Pricing 
 const PricingTab: React.FC<{
   eqTypes: EqType[]; setEqTypes: React.Dispatch<React.SetStateAction<EqType[]>>;
 }> = ({ eqTypes, setEqTypes }) => {
@@ -447,7 +447,7 @@ const PricingTab: React.FC<{
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 border-b border-gray-200 hidden md:grid grid-cols-12 gap-2 px-4 py-3">
-          {['שם סוג ציוד','קבוצה','תעריף שעתי','תעריף לינה','☽ לילה','עודכן','סטטוס',''].map((h, i) => (
+{['שם סוג ציוד','קבוצה','תעריף שעתי','תעריף לינה',' לילה','עודכן','סטטוס',''].map((h, i) => (
             <div key={i} className={`text-right text-xs font-semibold text-gray-500 uppercase tracking-wider ${i===2||i===3||i===4||i===5||i===6?'text-center':''} ${i===0?'col-span-4':i===1?'col-span-2':'col-span-1'}`}>{h}</div>
           ))}
         </div>
@@ -463,7 +463,7 @@ const PricingTab: React.FC<{
                 ? <input type="number" value={eRate} onChange={e => setERate(e.target.value)} placeholder={String(t.hourly_rate || '')}
                     className="w-full text-center border border-kkl-green rounded-lg px-1 py-1 text-xs focus:outline-none" />
                 : t.hourly_rate
-                  ? <span className="font-bold text-kkl-green">₪{t.hourly_rate}</span>
+? <span className="font-bold text-kkl-green">{t.hourly_rate}</span>
                   : <button onClick={() => { setEdit(t.id); setERate(''); setENight(''); }}
                       className="px-2 py-1 rounded-lg border border-amber-300 text-xs font-semibold text-amber-600 hover:bg-amber-50">הגדר</button>}
             </div>
@@ -471,7 +471,7 @@ const PricingTab: React.FC<{
               {editing === t.id
                 ? <input type="number" value={eNight} onChange={e => setENight(e.target.value)} placeholder={String(t.overnight_rate || '')}
                     className="w-full text-center border border-kkl-green rounded-lg px-1 py-1 text-xs focus:outline-none" />
-                : <span className="text-sm text-gray-600">{t.overnight_rate ? `₪${t.overnight_rate}` : '—'}</span>}
+: <span className="text-sm text-gray-600">{t.overnight_rate ? `${t.overnight_rate}` : '—'}</span>}
             </div>
             <div className="col-span-1 text-center">{t.night_guard ? <Moon className="w-4 h-4 text-blue-500 mx-auto" /> : <span className="text-gray-200 text-xs">—</span>}</div>
             <div className="col-span-1 text-center text-xs text-gray-400">{t.updated_at ? new Date(t.updated_at).toLocaleDateString('he-IL') : '—'}</div>
@@ -496,7 +496,7 @@ const PricingTab: React.FC<{
   );
 };
 
-// ─── Tab 4: Rotation ──────────────────────────────────────────────────────────
+// Tab 4: Rotation 
 const RotationTab: React.FC<{
   rotations: Rotation[]; regions: Region[]; areas: Area[]; reload: () => void;
 }> = ({ rotations, regions, areas, reload }) => {
@@ -609,7 +609,7 @@ const RotationTab: React.FC<{
   );
 };
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// Main 
 const SupplierSettings: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();

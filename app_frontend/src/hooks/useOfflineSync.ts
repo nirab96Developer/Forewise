@@ -46,7 +46,7 @@ export function useOfflineSync() {
 
     const handleOnline = async () => {
       setIsOnline(true);
-      showToast('✅ החיבור חזר', 'success', 4000);
+showToast(' החיבור חזר', 'success', 4000);
       // auto-sync in background
       const pending = await getPendingItems();
       if (pending.length === 0) return;
@@ -64,7 +64,7 @@ export function useOfflineSync() {
       setIsSyncing(false);
       await refreshCount();
       if (successCount > 0) {
-        showToast(`✅ ${successCount} פריטים סונכרנו בהצלחה`, 'success', 5000);
+showToast(` ${successCount} פריטים סונכרנו בהצלחה`, 'success', 5000);
       }
     };
 
@@ -109,7 +109,7 @@ export function useOfflineSync() {
     }
     setIsSyncing(false);
     await refreshCount();
-    showToast(ok > 0 ? `✅ ${ok} פריטים סונכרנו` : '⚠️ חלק מהפריטים נכשלו', ok > 0 ? 'success' : 'warning');
+showToast(ok > 0 ? ` ${ok} פריטים סונכרנו` : ' חלק מהפריטים נכשלו', ok > 0 ? 'success' : 'warning');
   }, [isOnline, refreshCount]);
 
   const loadAllItems = useCallback(() => getAllPendingItems(), []);

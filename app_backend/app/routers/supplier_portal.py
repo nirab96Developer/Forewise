@@ -226,7 +226,7 @@ def get_available_equipment(
     """
     מחזיר רשימת ציוד זמין לספק שתואם לסוג הכלי שהוזמן.
     תנאים:
-    1. equipment_model_id → category_id = work_order.requested_equipment_model.category_id
+1. equipment_model_id category_id = work_order.requested_equipment_model.category_id
     2. supplier_id = work_order.supplier_id
     3. status = 'available' (לא משויך להזמנה פעילה אחרת)
     """
@@ -341,7 +341,7 @@ def accept_work_order(
             detail=error_message
         )
 
-    # ── Tool-match enforcement ────────────────────────────────────
+# Tool-match enforcement 
     if request.equipment_id:
         chosen_eq = db.query(Equipment).filter(Equipment.id == request.equipment_id).first()
         if chosen_eq:
@@ -359,7 +359,7 @@ def accept_work_order(
                 raise HTTPException(status_code=400, detail="הכלי שנבחר אינו שייך לספק הנוכחי")
             if chosen_se.status and chosen_se.status != 'available':
                 raise HTTPException(status_code=400, detail="הכלי שנבחר אינו פנוי כרגע")
-    # ──────────────────────────────────────────────────────────────
+# 
     
     try:
         # Update work order status
@@ -558,11 +558,11 @@ def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: st
         supplier_name = work_order.supplier.name if work_order.supplier else "לא ידוע"
         wo_num = work_order.order_number or work_order.id
 
-        # DB notification → ORDER_COORDINATORs in the area (supplier accepted)
+# DB notification ORDER_COORDINATORs in the area (supplier accepted)
         if action == "accepted":
             notify_supplier_accepted(db, work_order)
         else:
-            # supplier rejected → notify WORK_MANAGER who created + all ORDER_COORDINATORs
+# supplier rejected notify WORK_MANAGER who created + all ORDER_COORDINATORs
             reject_msg = f"הזמנה #{wo_num} נדחתה על ידי {supplier_name}. הזמנה מועברת לספק הבא בסבב."
             creator_id = getattr(work_order, 'created_by', None) or getattr(work_order, 'created_by_id', None)
             if creator_id:
@@ -625,7 +625,7 @@ def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: st
 
 def _move_to_next_supplier(db: Session, work_order: WorkOrder):
     """Move to next supplier in fair rotation.
-    Hierarchy: area → region → REJECTED.
+Hierarchy: area region REJECTED.
     Only selects suppliers who have equipment with a license plate.
     """
     try:
@@ -697,7 +697,7 @@ def _move_to_next_supplier(db: Session, work_order: WorkOrder):
             if next_rotation:
                 pass
         
-        # Step 3: No suppliers at all → REJECTED + notify coordinator
+# Step 3: No suppliers at all REJECTED + notify coordinator
         if not next_rotation:
             eq_type_name = work_order.equipment_type or f"type_id={eq_type_id}"
             work_order.status = "REJECTED"

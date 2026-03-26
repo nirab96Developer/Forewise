@@ -112,7 +112,7 @@ const Navigation: React.FC = () => {
       {/* Offline indicator */}
       {!isOnline && (
         <div className="fixed top-0 left-0 right-0 z-[60] bg-red-600 text-white text-center py-1 text-sm font-medium" dir="rtl">
-          🔴 ללא קליטה — המערכת פועלת במצב אופליין
+ללא קליטה — המערכת פועלת במצב אופליין
         </div>
       )}
       {/* Header */}
@@ -273,7 +273,7 @@ const Navigation: React.FC = () => {
                 className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 transition-colors text-sm font-medium"
               >
                 <Upload className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-right">📤 ממתינים לסנכרון</span>
+<span className="flex-1 text-right"> ממתינים לסנכרון</span>
                 <span className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                   {pendingCount}
                 </span>

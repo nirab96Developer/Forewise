@@ -17,7 +17,7 @@ from app.models.user import User
 router = APIRouter(prefix="/settings/equipment-rates", tags=["Equipment Rates"])
 
 
-# ─── Schemas ──────────────────────────────────────────────────────────────────
+# Schemas 
 
 class EquipmentRateItem(BaseModel):
     id: int
@@ -49,7 +49,7 @@ class RateHistoryItem(BaseModel):
     created_at: str
 
 
-# ─── Endpoints ────────────────────────────────────────────────────────────────
+# Endpoints 
 
 @router.get("", response_model=List[EquipmentRateItem])
 def get_equipment_rates(

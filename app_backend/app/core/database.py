@@ -13,7 +13,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# ── Slow-query monitoring ─────────────────────────────────────────────────────
+# Slow-query monitoring 
 SLOW_QUERY_THRESHOLD_S = 0.5  # log + alert for queries slower than 500 ms
 
 @event.listens_for(Engine, "before_cursor_execute")

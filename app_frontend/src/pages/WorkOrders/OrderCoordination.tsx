@@ -278,7 +278,7 @@ const OrderCoordination: React.FC = () => {
   const STATUS_CONFIG: Record<string, { text: string; color: string; dot: string }> = {
     'PENDING':                            { text: 'ממתין לשליחה',    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',  dot: 'bg-yellow-500' },
     'DISTRIBUTING':                        { text: 'בהפצה לספק',     color: 'bg-blue-100 text-blue-800 border-blue-200',        dot: 'bg-blue-500'   },
-    'SUPPLIER_ACCEPTED_PENDING_COORDINATOR':{ text: 'ספק אישר ✓',    color: 'bg-purple-100 text-purple-800 border-purple-200',  dot: 'bg-purple-500' },
+'SUPPLIER_ACCEPTED_PENDING_COORDINATOR':{ text: 'ספק אישר ', color: 'bg-purple-100 text-purple-800 border-purple-200', dot: 'bg-purple-500' },
     'APPROVED_AND_SENT':                  { text: 'אושר ונשלח',     color: 'bg-green-100 text-green-800 border-green-200',     dot: 'bg-green-500'  },
   };
 
@@ -542,7 +542,7 @@ const OrderCoordination: React.FC = () => {
 
                   {/* Row 2: Main info grid */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-sm">
-                    {/* Project → Area → Region breadcrumb */}
+{/* Project Area Region breadcrumb */}
                     <div className="flex items-start gap-1.5 text-gray-700 col-span-2 sm:col-span-1">
                       <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
                       <div className="min-w-0">

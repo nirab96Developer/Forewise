@@ -282,7 +282,7 @@ const WorklogFormUnified: React.FC = () => {
     try {
       if (!navigator.onLine) {
         await saveOfflineWorklog(payload);
-        showToast('✅ הדיווח נשמר במכשיר — יועלה כשיחזור חיבור', 'success', 6000);
+showToast(' הדיווח נשמר במכשיר — יועלה כשיחזור חיבור', 'success', 6000);
         setTimeout(() => navigate('/projects'), 1500);
         return;
       }
@@ -302,7 +302,7 @@ const WorklogFormUnified: React.FC = () => {
       // Network error — save offline
       if (!err.response) {
         await saveOfflineWorklog(payload);
-        showToast('✅ הדיווח נשמר במכשיר — יועלה כשיחזור חיבור', 'success', 6000);
+showToast(' הדיווח נשמר במכשיר — יועלה כשיחזור חיבור', 'success', 6000);
         setTimeout(() => navigate('/projects'), 1500);
       } else {
         console.error('Error submitting worklog:', err);
@@ -637,7 +637,7 @@ const WorklogFormUnified: React.FC = () => {
                 <Moon className="w-5 h-5 text-indigo-600" />
                 <div>
                   <span className="text-sm font-medium text-indigo-900">לינת שטח</span>
-                  <p className="text-xs text-indigo-600">מסומן: לילה אחד × תעריף לינה (₪250) כפי שנשלח לשרת</p>
+<p className="text-xs text-indigo-600">מסומן: לילה אחד × תעריף לינה (250) כפי שנשלח לשרת</p>
                 </div>
               </div>
             </label>

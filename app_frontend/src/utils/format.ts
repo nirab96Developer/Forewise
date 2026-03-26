@@ -29,10 +29,10 @@ export const formatNumber = (num: number | null | undefined): string => {
   };
   
   /**
-   * פורמט מספר ככסף (₪)
+* פורמט מספר ככסף ()
    * @param amount הסכום לפורמט
    * @param decimals מספר הספרות אחרי הנקודה
-   * @returns מחרוזת עם סמל השקל (לדוגמה: ₪1,234.56)
+* @returns מחרוזת עם סמל השקל (לדוגמה: 1,234.56)
    */
   export const formatCurrency = (
     amount: number | null | undefined, 
@@ -41,7 +41,7 @@ export const formatNumber = (num: number | null | undefined): string => {
     if (amount === null || amount === undefined) return '';
     
     const formattedAmount = formatDecimal(amount, decimals);
-    return `₪${formattedAmount}`;
+return `${formattedAmount}`;
   };
   
   /**

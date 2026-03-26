@@ -40,15 +40,15 @@ function fmtCurrency(val?: number | string | null): string {
   if (val == null) return '—';
   const n = Number(val);
   if (isNaN(n) || n === 0) return '—';
-  return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+return '' + n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
-/** מסכום מוקפא — כולל ₪0 */
+/** מסכום מוקפא — כולל 0 */
 function fmtFrozen(val?: number | string | null): string {
   if (val == null || val === '') return '—';
   const n = Number(val);
   if (isNaN(n)) return '—';
-  return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+return '' + n.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 const WorkOrderDetail: React.FC = () => {

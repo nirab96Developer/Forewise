@@ -46,34 +46,34 @@ except ImportError:
 
 # Custom API metadata בעברית
 API_METADATA = {
-    "title": "🌲 Forewise API",
+    "title": " Forewise API",
     "description": """
 ## מערכת לניהול פרויקטים ויערות
 
 ### אימות
 כל הendpoints (חוץ מ-/auth ו-/supplier-portal) דורשים JWT Bearer token.
-לחץ **Authorize** ↗ והכנס: `Bearer <token>`
+לחץ **Authorize**  והכנס: `Bearer <token>`
 
 ### קבוצות Endpoints
 | קבוצה | תיאור |
 |-------|-------|
-| 🔐 auth | כניסה, OTP, ניהול סיסמאות |
-| 👤 users | ניהול משתמשים |
-| 🎭 roles | תפקידים והרשאות |
-| 📁 projects | פרויקטים |
-| 📋 work_orders | הזמנות עבודה |
-| ⏱️ worklogs | דיווחי שעות |
-| 🚛 suppliers | ספקים |
-| 🔄 supplier_rotations | סבב הוגן |
-| 🌐 supplier_portal | פורטל ספקים (ציבורי) |
-| 🚜 equipment | ציוד |
-| 💰 budgets | תקציבים |
-| 🧾 invoices | חשבוניות |
-| 📊 pricing | דוחות תמחור |
-| 🏔️ regions / areas | מרחבים ואזורים |
-| 📈 dashboard | לוח בקרה |
-| 🔔 notifications | התראות |
-| 📝 activity_logs | יומן פעילות |
+|  auth | כניסה, OTP, ניהול סיסמאות |
+|  users | ניהול משתמשים |
+|  roles | תפקידים והרשאות |
+|  projects | פרויקטים |
+|  work_orders | הזמנות עבודה |
+|  worklogs | דיווחי שעות |
+|  suppliers | ספקים |
+|  supplier_rotations | סבב הוגן |
+|  supplier_portal | פורטל ספקים (ציבורי) |
+|  equipment | ציוד |
+|  budgets | תקציבים |
+|  invoices | חשבוניות |
+|  pricing | דוחות תמחור |
+|  regions / areas | מרחבים ואזורים |
+|  dashboard | לוח בקרה |
+|  notifications | התראות |
+|  activity_logs | יומן פעילות |
 
 **Environment:** {environment} | **Version:** 2.0.0 | **DB:** PostgreSQL
     """.format(environment=settings.ENVIRONMENT),
@@ -86,33 +86,33 @@ API_METADATA = {
 
 # Tags בעברית לקטגוריות
 tags_metadata = [
-    {"name": "auth",                   "description": "🔐 כניסה, OTP, ניהול סיסמאות"},
-    {"name": "users",                  "description": "👤 ניהול משתמשים"},
-    {"name": "roles",                  "description": "🎭 תפקידים והרשאות"},
-    {"name": "permissions",            "description": "🔒 הרשאות"},
-    {"name": "projects",               "description": "📁 פרויקטים"},
-    {"name": "project_assignments",    "description": "📌 הקצאות לפרויקטים"},
-    {"name": "work_orders",            "description": "📋 הזמנות עבודה"},
-    {"name": "worklogs",               "description": "⏱️ דיווחי שעות"},
-    {"name": "suppliers",              "description": "🚛 ספקים"},
-    {"name": "supplier_rotations",     "description": "🔄 סבב הוגן"},
-    {"name": "supplier_portal",        "description": "🌐 פורטל ספקים (ציבורי)"},
-    {"name": "equipment",              "description": "🚜 ציוד"},
-    {"name": "equipment_types",        "description": "📂 סוגי ציוד"},
-    {"name": "equipment_categories",   "description": "🗂️ קטגוריות ציוד"},
-    {"name": "budgets",                "description": "💰 תקציבים"},
-    {"name": "invoices",               "description": "🧾 חשבוניות"},
-    {"name": "pricing",                "description": "📊 דוחות תמחור"},
-    {"name": "regions",                "description": "🏔️ מרחבים"},
-    {"name": "areas",                  "description": "🗺️ אזורים"},
-    {"name": "locations",              "description": "📍 מיקומים"},
-    {"name": "dashboard",              "description": "📈 לוח בקרה"},
-    {"name": "notifications",          "description": "🔔 התראות"},
-    {"name": "activity_logs",          "description": "📝 יומן פעילות"},
-    {"name": "geo",                    "description": "🌍 נתוני GIS ומפות"},
-    {"name": "settings",               "description": "⚙️ הגדרות מערכת"},
-    {"name": "sync",                   "description": "🔁 סנכרון offline"},
-    {"name": "WebSocket",              "description": "🔌 WebSocket — התראות real-time"},
+    {"name": "auth",                   "description": " כניסה, OTP, ניהול סיסמאות"},
+    {"name": "users",                  "description": " ניהול משתמשים"},
+    {"name": "roles",                  "description": " תפקידים והרשאות"},
+    {"name": "permissions",            "description": " הרשאות"},
+    {"name": "projects",               "description": " פרויקטים"},
+    {"name": "project_assignments",    "description": " הקצאות לפרויקטים"},
+    {"name": "work_orders",            "description": " הזמנות עבודה"},
+    {"name": "worklogs",               "description": " דיווחי שעות"},
+    {"name": "suppliers",              "description": " ספקים"},
+    {"name": "supplier_rotations",     "description": " סבב הוגן"},
+    {"name": "supplier_portal",        "description": " פורטל ספקים (ציבורי)"},
+    {"name": "equipment",              "description": " ציוד"},
+    {"name": "equipment_types",        "description": " סוגי ציוד"},
+    {"name": "equipment_categories",   "description": " קטגוריות ציוד"},
+    {"name": "budgets",                "description": " תקציבים"},
+    {"name": "invoices",               "description": " חשבוניות"},
+    {"name": "pricing",                "description": " דוחות תמחור"},
+    {"name": "regions",                "description": " מרחבים"},
+    {"name": "areas",                  "description": " אזורים"},
+    {"name": "locations",              "description": " מיקומים"},
+    {"name": "dashboard",              "description": " לוח בקרה"},
+    {"name": "notifications",          "description": " התראות"},
+    {"name": "activity_logs",          "description": " יומן פעילות"},
+    {"name": "geo",                    "description": " נתוני GIS ומפות"},
+    {"name": "settings",               "description": " הגדרות מערכת"},
+    {"name": "sync",                   "description": " סנכרון offline"},
+    {"name": "WebSocket",              "description": " WebSocket — התראות real-time"},
 ]
 
 # Import routers
@@ -223,7 +223,7 @@ app.add_middleware(
 )
 
 # Add rate limiting middleware
-# ⚠️ PRODUCTION: Rate limiting is enabled automatically in production mode
+#  PRODUCTION: Rate limiting is enabled automatically in production mode
 app.middleware("http")(rate_limit_middleware)
 
 # Add compression
@@ -367,7 +367,7 @@ async def safe_mode_middleware(request: Request, call_next):
                 return JSONResponse(
                     status_code=403,
                     content={
-                        "detail": "🔒 SAFE MODE: Write operations are disabled. Only GET requests allowed.",
+                        "detail": " SAFE MODE: Write operations are disabled. Only GET requests allowed.",
                         "safe_mode": True,
                         "method": request.method,
                         "path": request.url.path
@@ -394,7 +394,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 # System endpoints בעברית
-@app.get("/", tags=["🏠 מערכת"], summary="דף הבית", description="מחזיר מידע בסיסי על המערכת")
+@app.get("/", tags=[" מערכת"], summary="דף הבית", description="מחזיר מידע בסיסי על המערכת")
 async def root():
     """מידע בסיסי על המערכת."""
     return {
@@ -407,7 +407,7 @@ async def root():
     }
 
 
-@app.get("/health", tags=["🏠 מערכת"], summary="בדיקת תקינות", description="בודק את מצב המערכת והחיבורים")
+@app.get("/health", tags=[" מערכת"], summary="בדיקת תקינות", description="בודק את מצב המערכת והחיבורים")
 async def health_check():
     """
     בדיקת תקינות המערכת.
@@ -425,7 +425,7 @@ async def health_check():
     }
 
 
-@app.get("/api/v1/health", tags=["🏠 מערכת"], summary="בדיקת תקינות API", description="בודק את מצב ה-API")
+@app.get("/api/v1/health", tags=[" מערכת"], summary="בדיקת תקינות API", description="בודק את מצב ה-API")
 async def api_health_check():
     """בדיקת תקינות API endpoint."""
     return {
@@ -434,7 +434,7 @@ async def api_health_check():
     }
 
 
-@app.get("/api/v1/health/db", tags=["🏠 מערכת"], summary="בדיקת תקינות Database", description="בודק את חיבור ה-Database")
+@app.get("/api/v1/health/db", tags=[" מערכת"], summary="בדיקת תקינות Database", description="בודק את חיבור ה-Database")
 async def health_check_db():
     """בדיקת תקינות Database."""
     try:
@@ -456,7 +456,7 @@ async def health_check_db():
         }
 
 
-@app.get("/info", tags=["🏠 מערכת"], summary="מידע מערכת", description="מחזיר מידע מפורט על המערכת")
+@app.get("/info", tags=[" מערכת"], summary="מידע מערכת", description="מחזיר מידע מפורט על המערכת")
 async def system_info():
     """
     מידע מפורט על המערכת.
@@ -486,7 +486,7 @@ async def system_info():
     }
 
 
-@app.get("/test", tags=["🏠 מערכת"], summary="בדיקת API", description="endpoint פשוט לבדיקה")
+@app.get("/test", tags=[" מערכת"], summary="בדיקת API", description="endpoint פשוט לבדיקה")
 async def test_endpoint():
     """בדיקה פשוטה ש-API עובד."""
     return {
@@ -558,7 +558,7 @@ if not api_router.routes:
 
 
 # Admin endpoints בעברית
-@app.get("/admin/health", tags=["🔧 ניהול"], summary="בדיקת תקינות ניהול")
+@app.get("/admin/health", tags=[" ניהול"], summary="בדיקת תקינות ניהול")
 async def admin_health():
     """בדיקת תקינות מודול הניהול."""
     return {"סטטוס": "פעיל", "מודול": "ניהול"}
@@ -566,7 +566,7 @@ async def admin_health():
 
 # Debug endpoints
 if settings.DEBUG:
-    @app.get("/debug/routes", tags=["🐛 Debug"], summary="רשימת נתיבים", description="מציג את כל הנתיבים במערכת")
+    @app.get("/debug/routes", tags=[" Debug"], summary="רשימת נתיבים", description="מציג את כל הנתיבים במערכת")
     async def list_routes():
         """רשימת כל הנתיבים הרשומים במערכת."""
         routes = []
@@ -579,7 +579,7 @@ if settings.DEBUG:
                 })
         return {"סה״כ": len(routes), "נתיבים": routes}
 
-    @app.get("/debug/config", tags=["🐛 Debug"], summary="הגדרות מערכת", description="מציג את הגדרות המערכת הנוכחיות")
+    @app.get("/debug/config", tags=[" Debug"], summary="הגדרות מערכת", description="מציג את הגדרות המערכת הנוכחיות")
     async def show_config():
         """הצג הגדרות נוכחיות (רק במצב debug)."""
         return {

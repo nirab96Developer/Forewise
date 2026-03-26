@@ -226,7 +226,7 @@ const EquipmentInventory: React.FC = () => {
           </div>
         </div>
 
-        {/* ═══════ SUPPLIER VIEW ═══════ */}
+{/* SUPPLIER VIEW */}
         {viewMode === 'suppliers' && (
           <div>
             <div className="flex justify-between items-center mb-3">
@@ -343,7 +343,7 @@ const EquipmentInventory: React.FC = () => {
                               </div>
                               <div className="text-left">
                                 <div className="text-sm font-bold text-emerald-600">
-                                  {eq.hourly_rate ? `₪${eq.hourly_rate}` : '—'}
+{eq.hourly_rate ? `${eq.hourly_rate}` : '—'}
                                 </div>
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${eq.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                   {eq.is_active ? 'פעיל' : 'לא פעיל'}
@@ -372,7 +372,7 @@ const EquipmentInventory: React.FC = () => {
                               </div>
                               {/* Rate */}
                               <div className="col-span-2 font-bold text-emerald-600 text-sm">
-                                {eq.hourly_rate ? `₪${eq.hourly_rate.toLocaleString()}/שעה` : '—'}
+{eq.hourly_rate ? `${eq.hourly_rate.toLocaleString()}/שעה` : '—'}
                               </div>
                               {/* Status */}
                               <div className="col-span-1">
@@ -400,7 +400,7 @@ const EquipmentInventory: React.FC = () => {
           </div>
         )}
 
-        {/* ═══════ GRID VIEW ═══════ */}
+{/* GRID VIEW */}
         {viewMode === 'grid' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredEquipment.length === 0 ? (
@@ -432,7 +432,7 @@ const EquipmentInventory: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="font-bold text-emerald-600">{eq.hourly_rate ? `₪${eq.hourly_rate}/שעה` : '—'}</span>
+<span className="font-bold text-emerald-600">{eq.hourly_rate ? `${eq.hourly_rate}/שעה` : '—'}</span>
                       </div>
                     </div>
                     <div className="mt-3 flex justify-between items-center">

@@ -16,7 +16,7 @@ function formatDate(ts: string | null | undefined) {
   return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
-// ─── Suspend Modal ────────────────────────────────────────────────────────────
+// Suspend Modal 
 interface SuspendModalProps {
   user: any;
   onClose: () => void;
@@ -90,7 +90,7 @@ const SuspendModal: React.FC<SuspendModalProps> = ({ user, onClose, onDone }) =>
             disabled={saving}
             className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-medium rounded-xl transition-colors"
           >
-            {saving ? 'מבצע השהיה...' : '⏸️ השהה משתמש'}
+{saving ? 'מבצע השהיה...' : ' השהה משתמש'}
           </button>
           <button onClick={onClose} className="px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm">
             ביטול
@@ -101,7 +101,7 @@ const SuspendModal: React.FC<SuspendModalProps> = ({ user, onClose, onDone }) =>
   );
 };
 
-// ─── Change Role Modal ────────────────────────────────────────────────────────
+// Change Role Modal 
 interface ChangeRoleModalProps {
   user: any;
   roles: any[];
@@ -202,7 +202,7 @@ const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({ user, roles, regions,
             disabled={saving}
             className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-xl transition-colors"
           >
-            {saving ? 'שומר...' : '🔄 עדכן תפקיד'}
+{saving ? 'שומר...' : ' עדכן תפקיד'}
           </button>
           <button onClick={onClose} className="px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm">
             ביטול
@@ -213,7 +213,7 @@ const ChangeRoleModal: React.FC<ChangeRoleModalProps> = ({ user, roles, regions,
   );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Main Component 
 const Users: React.FC = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
@@ -460,7 +460,7 @@ const Users: React.FC = () => {
                         <Building2 className="w-3 h-3 text-purple-400" />{areaName}
                       </span>
                     )}
-                    {missingBinding && <span className="text-xs text-red-500">⚠ חסר שיוך</span>}
+{missingBinding && <span className="text-xs text-red-500"> חסר שיוך</span>}
                     {!regionName && !areaName && !needsBinding && (
                       <span className="text-xs text-gray-400">כלל-ארגוני</span>
                     )}

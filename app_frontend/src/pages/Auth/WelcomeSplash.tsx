@@ -133,7 +133,7 @@ const WelcomeSplash: React.FC = () => {
       className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-7"
       dir="rtl"
     >
-      {/* ── Progress ring + tree ── */}
+{/* Progress ring + tree */}
       <div className="relative" style={{ width: 120, height: 120 }}>
         {/* SVG ring */}
         <svg
@@ -180,10 +180,10 @@ const WelcomeSplash: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Text ── */}
+{/* Text */}
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-green-900">
-          {firstName ? `שלום, ${firstName}! 👋` : 'ברוך הבא! 👋'}
+{firstName ? `שלום, ${firstName}! ` : 'ברוך הבא! '}
         </h2>
         {lastLoginTxt && (
           <p className="text-sm text-gray-500">
@@ -194,7 +194,7 @@ const WelcomeSplash: React.FC = () => {
         {!showBioPrompt && <p className="text-xs text-gray-400">טוען נתונים...</p>}
       </div>
 
-      {/* ── Biometric registration prompt ── */}
+{/* Biometric registration prompt */}
       {showBioPrompt && (
         <div className="bg-white border border-green-200 rounded-2xl shadow-lg p-5 w-80 text-center space-y-4" dir="rtl">
           {/* Icon */}
@@ -211,7 +211,7 @@ const WelcomeSplash: React.FC = () => {
           {bioStatus === 'done' ? (
             <div className="flex flex-col items-center gap-2 text-green-700">
               <CheckCircle className="w-8 h-8" />
-              <p className="font-semibold">הופעל בהצלחה! 🎉</p>
+<p className="font-semibold">הופעל בהצלחה! </p>
             </div>
           ) : (
             <>

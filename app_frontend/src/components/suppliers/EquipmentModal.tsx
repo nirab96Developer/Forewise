@@ -101,7 +101,7 @@ const EquipmentModal: React.FC<Props> = ({ onClose, onSaved }) => {
                 <option value="">— בחר סוג —</option>
                 {eqTypes.map(t=><option key={t.id} value={String(t.id)}>{t.name}</option>)}
               </select>
-              {selType?.hourly_rate && <div className="text-xs text-kkl-green mt-1 font-medium">ברירת מחדל: ₪{selType.hourly_rate}/שעה</div>}
+{selType?.hourly_rate && <div className="text-xs text-kkl-green mt-1 font-medium">ברירת מחדל: {selType.hourly_rate}/שעה</div>}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">מספר רישוי <span className="text-red-500">*</span></label>
@@ -113,12 +113,12 @@ const EquipmentModal: React.FC<Props> = ({ onClose, onSaved }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">תעריף שעתי (₪)</label>
+<label className="block text-xs font-semibold text-gray-600 mb-1">תעריף שעתי ()</label>
               <input type="number" value={form.hourly_rate} onChange={e=>f('hourly_rate',e.target.value)} placeholder="מהקטלוג"
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">תעריף לינה (₪)</label>
+<label className="block text-xs font-semibold text-gray-600 mb-1">תעריף לינה ()</label>
               <input type="number" value={form.overnight_rate} onChange={e=>f('overnight_rate',e.target.value)} placeholder="מהקטלוג"
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green" />
             </div>
@@ -143,7 +143,7 @@ const EquipmentModal: React.FC<Props> = ({ onClose, onSaved }) => {
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-100">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">ביטול</button>
           <button onClick={save} disabled={saving} className="px-5 py-2 rounded-xl bg-kkl-green text-white text-sm font-semibold hover:bg-kkl-green-dark transition-colors disabled:opacity-50">
-            {saving ? 'שומר...' : 'שמור כלי ✓'}
+{saving ? 'שומר...' : 'שמור כלי '}
           </button>
         </div>
       </div>

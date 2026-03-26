@@ -125,7 +125,7 @@ const SupplierModal: React.FC<Props> = ({ onClose, onSaved }) => {
               </div></div>}
             {selectedAreas.length>0 && (
               <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-xs font-medium text-green-700">
-                ✅ הספק ייכנס לסבב הוגן ב-{selectedAreas.length} אזורים אוטומטית
+הספק ייכנס לסבב הוגן ב-{selectedAreas.length} אזורים אוטומטית
               </div>
             )}
           </>)}

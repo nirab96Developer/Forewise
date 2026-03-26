@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// Types 
 
 type TicketStatus = 'open' | 'in_progress' | 'resolved';
 
@@ -36,7 +36,7 @@ interface Comment {
   created_at: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers 
 
 const STATUS_LABEL: Record<TicketStatus, string> = {
   open: 'פתוחה',
@@ -68,7 +68,7 @@ const fmtTime = (iso: string) => {
   return d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// Component 
 
 const Support: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -160,13 +160,13 @@ const Support: React.FC = () => {
       if (selected?.id === ticketId) {
         setSelected(prev => prev ? { ...prev, status: newStatus } : prev);
       }
-      showToast(newStatus === 'resolved' ? '✅ הקריאה סומנה כטופלה' : '🔄 סטטוס עודכן');
+showToast(newStatus === 'resolved' ? ' הקריאה סומנה כטופלה' : ' סטטוס עודכן');
     } catch {
       showToast('שגיאה בעדכון סטטוס');
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+// Render 
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
@@ -178,7 +178,7 @@ const Support: React.FC = () => {
       )}
 
       <div className="flex h-screen">
-        {/* ── LEFT: Ticket List ── */}
+{/* LEFT: Ticket List */}
         <div className={`bg-white border-l border-gray-200 flex flex-col ${selected ? 'hidden md:flex w-80 flex-shrink-0' : 'flex-1 md:w-80 md:flex-none'}`}>
           {/* Header */}
           <div className="px-4 py-4 border-b border-gray-100 bg-green-600">
@@ -250,7 +250,7 @@ const Support: React.FC = () => {
           </div>
         </div>
 
-        {/* ── RIGHT: Conversation Thread ── */}
+{/* RIGHT: Conversation Thread */}
         {selected ? (
           <div className="flex-1 flex flex-col bg-gray-50">
             {/* Thread Header */}

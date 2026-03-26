@@ -23,7 +23,7 @@ router = APIRouter(prefix="/users/me/journal", tags=["Journal"])
 PERSONAL_NOTE_TYPE = "personal_note"
 
 
-# ── Schemas ─────────────────────────────────────────────────────────────
+# Schemas 
 
 class JournalEntry(BaseModel):
     id: int
@@ -44,7 +44,7 @@ class NoteCreate(BaseModel):
     note_text: str
 
 
-# ── Endpoints ────────────────────────────────────────────────────────────
+# Endpoints 
 
 # Activity types that only ADMIN should see in their own journal
 AUTH_TYPES = {'login', 'logout', 'login_failed', '2fa', 'user_login',

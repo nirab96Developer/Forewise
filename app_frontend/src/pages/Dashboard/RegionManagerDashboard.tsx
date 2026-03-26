@@ -24,7 +24,7 @@ interface RegionData {
 }
 
 const fmtK = (n: number) => n >= 1e6 ? `${(n/1e6).toFixed(1)}M` : n >= 1e3 ? `${(n/1e3).toFixed(0)}K` : `${n}`;
-const fmtCurrency = (n: number) => `₪${fmtK(n)}`;
+const fmtCurrency = (n: number) => `${fmtK(n)}`;
 
 const RegionManagerDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -133,7 +133,7 @@ const RegionManagerDashboard: React.FC = () => {
                     </td>
                     <td className="px-3 py-3.5 text-gray-600 text-xs">{a.manager_name || "—"}</td>
                     <td className="px-3 py-3.5 text-center">{a.projects}</td>
-                    <td className="px-3 py-3.5 text-right font-medium">₪{a.budget_total.toLocaleString("he-IL", {maximumFractionDigits:0})}</td>
+<td className="px-3 py-3.5 text-right font-medium">{a.budget_total.toLocaleString("he-IL", {maximumFractionDigits:0})}</td>
                     <td className="px-3 py-3.5 text-center">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                         a.utilization_pct > 90 ? "bg-red-100 text-red-700" :
@@ -146,7 +146,7 @@ const RegionManagerDashboard: React.FC = () => {
                     <td className="px-3 py-3.5 text-center">{a.pending_worklogs > 0 ? <span className="font-bold text-amber-600">{a.pending_worklogs}</span> : "—"}</td>
                     <td className="px-2 py-3.5 text-left">
                       <span className="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        כניסה לאזור ←
+כניסה לאזור 
                       </span>
                     </td>
                   </tr>

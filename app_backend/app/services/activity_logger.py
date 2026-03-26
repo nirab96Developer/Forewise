@@ -756,7 +756,7 @@ def log_invoice_paid(
         details={
             "amount": amount,
             "is_partial": is_partial,
-            "description_he": f"תשלום {payment_type} בוצע - {amount}₪"
+"description_he": f"תשלום {payment_type} בוצע - {amount}"
         }
     )
 

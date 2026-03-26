@@ -78,7 +78,7 @@ const EquipmentTypeModal: React.FC<Props> = ({ onClose, onSaved }) => {
 
           {showRateConfirm && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-700">
-              <div className="font-medium mb-2">התעריף שונה מברירת המחדל של הקבוצה (₪{catDefaultRate}). להמשיך?</div>
+<div className="font-medium mb-2">התעריף שונה מברירת המחדל של הקבוצה ({catDefaultRate}). להמשיך?</div>
               <div className="flex gap-2">
                 <button onClick={()=>{setShowRateConfirm(false);save();}} className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-kkl-green text-white hover:bg-kkl-green-dark border-none cursor-pointer">כן, שמור</button>
                 <button onClick={()=>setShowRateConfirm(false)} className="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-600 text-xs font-semibold hover:bg-gray-50 cursor-pointer">לא</button>
@@ -124,12 +124,12 @@ const EquipmentTypeModal: React.FC<Props> = ({ onClose, onSaved }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">תעריף שעתי (₪) <span className="text-red-500">*</span></label>
+<label className="block text-xs font-semibold text-gray-600 mb-1">תעריף שעתי () <span className="text-red-500">*</span></label>
               <input type="number" value={form.hourly_rate} onChange={e=>f('hourly_rate',e.target.value)} placeholder="—"
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">תעריף לינה (₪)</label>
+<label className="block text-xs font-semibold text-gray-600 mb-1">תעריף לינה ()</label>
               <input type="number" value={form.overnight_rate} onChange={e=>f('overnight_rate',e.target.value)} placeholder="—"
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green" />
             </div>
@@ -152,7 +152,7 @@ const EquipmentTypeModal: React.FC<Props> = ({ onClose, onSaved }) => {
         <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-100">
           <button onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">ביטול</button>
           <button onClick={save} disabled={saving||!form.category_id||!form.name.trim()} className="px-5 py-2 rounded-xl bg-kkl-green text-white text-sm font-semibold hover:bg-kkl-green-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-            {saving ? 'שומר...' : 'שמור סוג ציוד ✓'}
+{saving ? 'שומר...' : 'שמור סוג ציוד '}
           </button>
         </div>
       </div>

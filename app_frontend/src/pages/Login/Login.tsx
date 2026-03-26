@@ -177,7 +177,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
             last_login: data.user.last_login || null,
           };
 
-          // ── שמירה מפורשת ב-localStorage — תמיד, ללא תנאי ──────────────
+// שמירה מפורשת ב-localStorage — תמיד, ללא תנאי 
           localStorage.setItem('access_token',    data.access_token);
           localStorage.setItem('token',           data.access_token);
           localStorage.setItem('user',            JSON.stringify(userObject));

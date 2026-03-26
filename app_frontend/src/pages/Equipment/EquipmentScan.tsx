@@ -196,7 +196,7 @@ const EquipmentScan: React.FC = () => {
   const registerScan = async (equipmentId: number, _scanValue?: string) => {
     if (!navigator.onLine) {
       await saveOfflineScan({ equipment_id: equipmentId, scan_type: 'plate_validation' });
-      showToast('📱 האימות נשמר — יסונכרן כשיחזור חיבור', 'info', 5000);
+showToast(' האימות נשמר — יסונכרן כשיחזור חיבור', 'info', 5000);
       setScanRegistered(true);
       return;
     }
@@ -208,7 +208,7 @@ const EquipmentScan: React.FC = () => {
     } catch (e: any) {
       if (!e.response) {
         await saveOfflineScan({ equipment_id: equipmentId, scan_type: 'plate_validation' });
-        showToast('📱 האימות נשמר — יסונכרן כשיחזור חיבור', 'info', 5000);
+showToast(' האימות נשמר — יסונכרן כשיחזור חיבור', 'info', 5000);
         setScanRegistered(true);
       }
     }
@@ -447,12 +447,12 @@ const EquipmentScan: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <div className="text-xs text-green-700">תעריף שעתי</div>
-                      <div className="font-bold text-green-800 text-lg">₪{equipment.hourly_rate.toLocaleString()}</div>
+<div className="font-bold text-green-800 text-lg">{equipment.hourly_rate.toLocaleString()}</div>
                     </div>
                     {equipment.daily_rate != null && equipment.daily_rate > 0 && (
                       <div className="text-left">
                         <div className="text-xs text-gray-500">יומי</div>
-                        <div className="font-medium text-gray-700">₪{equipment.daily_rate.toLocaleString()}</div>
+<div className="font-medium text-gray-700">{equipment.daily_rate.toLocaleString()}</div>
                       </div>
                     )}
                   </div>

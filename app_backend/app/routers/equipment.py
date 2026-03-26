@@ -460,8 +460,8 @@ def release_equipment(
     Release/Return equipment from work order.
     
     Business rules:
-    1. Equipment status → AVAILABLE
-    2. Work Order status → COMPLETED (if provided)
+    1. Equipment status  AVAILABLE
+    2. Work Order status  COMPLETED (if provided)
     3. Budget release triggered
     4. Activity log recorded
     
@@ -482,11 +482,11 @@ def release_equipment(
         "actions_taken": [],
     }
     
-    # 1. Release equipment → AVAILABLE
+    # 1. Release equipment  AVAILABLE
     old_status = equipment.status
     equipment.status = "available"
     equipment.updated_at = dt.utcnow()
-    result["actions_taken"].append(f"equipment status: {old_status} → available")
+    result["actions_taken"].append(f"equipment status: {old_status}  available")
     
     # 2. Complete work order if provided
     if work_order_id:
@@ -496,7 +496,7 @@ def release_equipment(
             wo.status = "COMPLETED"
             wo.updated_at = dt.utcnow()
             result["work_order_id"] = work_order_id
-            result["actions_taken"].append(f"work_order status: {old_wo_status} → COMPLETED")
+            result["actions_taken"].append(f"work_order status: {old_wo_status}  COMPLETED")
     
     # 3. Budget release (mark frozen amount as released)
     # For now: log the event. Full budget logic depends on your budget model.

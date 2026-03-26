@@ -117,7 +117,7 @@ const Invoices: React.FC = () => {
             className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 transition-colors"
           >
             <Download className="w-4 h-4" />
-            📊 ייצוא Excel
+ייצוא Excel
           </button>
         </div>
 
@@ -142,7 +142,7 @@ const Invoices: React.FC = () => {
                 <div>
                   <div className="text-sm text-gray-500">סה"כ סכום</div>
                   <div className="text-3xl font-semibold mt-2 text-gray-900">
-                    ₪{new Intl.NumberFormat('he-IL').format(summary.total_amount || 0)}
+{new Intl.NumberFormat('he-IL').format(summary.total_amount || 0)}
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
@@ -155,7 +155,7 @@ const Invoices: React.FC = () => {
                 <div>
                   <div className="text-sm text-gray-500">ממתין לתשלום</div>
                   <div className="text-3xl font-semibold mt-2 text-gray-900">
-                    ₪{new Intl.NumberFormat('he-IL').format(summary.balance_due ?? summary.pending_amount ?? 0)}
+{new Intl.NumberFormat('he-IL').format(summary.balance_due ?? summary.pending_amount ?? 0)}
                   </div>
                   {(summary.overdue_count ?? 0) > 0 && (
                     <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
@@ -173,7 +173,7 @@ const Invoices: React.FC = () => {
                 <div>
                   <div className="text-sm text-gray-500">שולם</div>
                   <div className="text-3xl font-semibold mt-2 text-green-700">
-                    ₪{new Intl.NumberFormat('he-IL').format(summary.paid_amount || 0)}
+{new Intl.NumberFormat('he-IL').format(summary.paid_amount || 0)}
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
@@ -238,7 +238,7 @@ const Invoices: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-gray-900">
-                          ₪{new Intl.NumberFormat('he-IL').format(invoice.amount || 0)}
+{new Intl.NumberFormat('he-IL').format(invoice.amount || 0)}
                         </span>
                       </td>
                       <td className="px-6 py-4">

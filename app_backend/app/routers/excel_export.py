@@ -21,7 +21,7 @@ from app.models.user import User
 
 router = APIRouter(prefix="/reports/export", tags=["Excel Export"])
 
-# ─── Style helpers ──────────────────────────────────────────────────────────
+# Style helpers 
 
 BRAND_GREEN = "00994C"
 HEADER_BG  = PatternFill("solid", fgColor=BRAND_GREEN)
@@ -80,7 +80,7 @@ def _workbook_to_response(wb: openpyxl.Workbook, filename: str) -> StreamingResp
     )
 
 
-# ─── Worklogs ────────────────────────────────────────────────────────────────
+# Worklogs 
 
 def _build_scope_filter(user, table_alias="p") -> tuple:
     """Build SQL scope filter and params based on user role."""
@@ -164,7 +164,7 @@ def _export_worklogs(db: Session, user=None) -> openpyxl.Workbook:
     return wb
 
 
-# ─── Invoices ────────────────────────────────────────────────────────────────
+# Invoices 
 
 def _export_invoices(db: Session, user=None) -> openpyxl.Workbook:
     scope_filter, params = _build_scope_filter(user, "p")
@@ -215,7 +215,7 @@ def _export_invoices(db: Session, user=None) -> openpyxl.Workbook:
     return wb
 
 
-# ─── Projects ────────────────────────────────────────────────────────────────
+# Projects 
 
 def _export_projects(db: Session, user=None) -> openpyxl.Workbook:
     # Build filter: limit to user's area or assigned projects
@@ -296,7 +296,7 @@ def _export_projects(db: Session, user=None) -> openpyxl.Workbook:
     return wb
 
 
-# ─── Equipment ───────────────────────────────────────────────────────────────
+# Equipment 
 
 def _export_equipment(db: Session, user=None) -> openpyxl.Workbook:
     rows = db.execute(text("""
@@ -351,7 +351,7 @@ def _export_equipment(db: Session, user=None) -> openpyxl.Workbook:
     return wb
 
 
-# ─── Main endpoint ───────────────────────────────────────────────────────────
+# Main endpoint 
 
 EXPORT_TYPES = Literal["worklogs", "invoices", "projects", "equipment"]
 

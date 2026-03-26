@@ -78,7 +78,7 @@ def get_equipment_rate(
 
     logger.debug(
         f"get_equipment_rate equipment_id={equipment_id} supplier_id={supplier_id} "
-        f"→ hourly={hourly} overnight={overnight} source={source}"
+f" hourly={hourly} overnight={overnight} source={source}"
     )
     return {"hourly_rate": hourly, "overnight_rate": overnight, "source": source}
 
@@ -96,7 +96,7 @@ def get_equipment_rate_by_work_order(work_order_id: int, db: Session) -> Dict[st
     )
 
 
-# ── Legacy class API (backwards-compatible) ───────────────────────────────────
+# Legacy class API (backwards-compatible) 
 
 VAT_RATE = 0.17
 
@@ -125,7 +125,7 @@ class RateService:
     def __init__(self, db: Session):
         self._db = db
 
-    # ── public API used by pricing router ─────────────────────────────────────
+# public API used by pricing router 
 
     def resolve_rate(
         self,
@@ -181,7 +181,7 @@ class RateService:
         determine a reliable rate — return cost=0 with flag 'missing_rate_source'
         instead of showing a fabricated number.
         """
-        # Guard: no equipment context AND no stored snapshot → cannot price
+# Guard: no equipment context AND no stored snapshot cannot price
         if equipment_id is None and equipment_type_id is None and hourly_rate_snapshot is None:
             logger.warning(
                 "compute_worklog_cost: equipment_id=None, equipment_type_id=None, "
@@ -230,7 +230,7 @@ class RateService:
             "rate_source_name": source_name,
         }
 
-    # ── legacy helpers (kept for backward-compat) ─────────────────────────────
+# legacy helpers (kept for backward-compat) 
 
     def get_equipment_rate_full(
         self,

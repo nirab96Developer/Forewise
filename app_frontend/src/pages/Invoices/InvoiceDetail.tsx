@@ -54,7 +54,7 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString('he-IL') : '—';
-const fmtILS  = (n: number) => `₪${n.toLocaleString('he-IL', { minimumFractionDigits: 2 })}`;
+const fmtILS = (n: number) => `${n.toLocaleString('he-IL', { minimumFractionDigits: 2 })}`;
 
 const InvoiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -92,7 +92,7 @@ const InvoiceDetail: React.FC = () => {
     setActionLoading(true);
     try {
       await api.post(`/invoices/${id}/mark-paid`);
-      showToast('החשבונית סומנה כשולמה ✅', 'success');
+showToast('החשבונית סומנה כשולמה ', 'success');
       load();
     } catch (e: any) {
       showToast(e?.response?.data?.detail || 'שגיאה', 'error');
@@ -105,7 +105,7 @@ const InvoiceDetail: React.FC = () => {
     setActionLoading(true);
     try {
       await api.post(`/invoices/${id}/send`);
-      showToast('החשבונית נשלחה לספק במייל ✉️', 'success');
+showToast('החשבונית נשלחה לספק במייל ', 'success');
     } catch (e: any) {
       showToast(e?.response?.data?.detail || 'שגיאה בשליחת המייל', 'error');
     } finally {
@@ -243,7 +243,7 @@ const InvoiceDetail: React.FC = () => {
                 <p className={`text-sm font-bold ${isPaid ? 'text-green-600' : 'text-kkl-text'}`}>
                   {fmtILS(invoice.balance_due)}
                 </p>
-                {isPaid && <p className="text-xs text-green-600 font-medium">✅ שולם</p>}
+{isPaid && <p className="text-xs text-green-600 font-medium"> שולם</p>}
               </div>
             </div>
           </div>
@@ -297,7 +297,7 @@ const InvoiceDetail: React.FC = () => {
                         ) : '—'}
                       </td>
                       <td className="px-4 py-3 text-center text-sm">
-                        {item.hourly_rate != null ? `₪${item.hourly_rate}` : '—'}
+{item.hourly_rate != null ? `${item.hourly_rate}` : '—'}
                       </td>
                       <td className="px-4 py-3 text-center text-sm text-gray-600">{item.quantity}</td>
                       <td className="px-4 py-3 text-center bg-kkl-green-light/30">

@@ -162,7 +162,7 @@ def apply_rate_to_all_equipment(
 
     import logging
     logging.getLogger(__name__).info(
-        f"Rate ₪{rate} applied to {total_updated} equipment items (type_id={item_id}, name={et.name}) by user {current_user.id}"
+f"Rate {rate} applied to {total_updated} equipment items (type_id={item_id}, name={et.name}) by user {current_user.id}"
     )
 
     return {"updated": total_updated, "rate": rate, "type_name": et.name}

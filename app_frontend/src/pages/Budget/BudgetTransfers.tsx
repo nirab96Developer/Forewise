@@ -26,13 +26,13 @@ const STATUS_BADGE: Record<string, string> = {
   COMPLETED:'bg-blue-100 text-blue-700',
 };
 const STATUS_LABEL: Record<string, string> = {
-  PENDING:  '🟡 ממתין',
-  APPROVED: '🟢 מאושר',
-  REJECTED: '🔴 נדחה',
-  COMPLETED:'🔵 הושלם',
+PENDING: ' ממתין',
+APPROVED: ' מאושר',
+REJECTED: ' נדחה',
+COMPLETED:' הושלם',
 };
 
-// ─── Request Modal ────────────────────────────────────────────────────────────
+// Request Modal 
 interface RequestModalProps {
   budgets: any[];
   onClose: () => void;
@@ -80,12 +80,12 @@ const RequestModal: React.FC<RequestModalProps> = ({ budgets, onClose, onDone })
               className="w-full border border-gray-300 rounded-xl px-3 pr-3 pl-10 py-2 text-sm">
               <option value="">בחר תקציב...</option>
               {budgets.map((b: any) => (
-                <option key={b.id} value={b.id}>{b.name || b.code} — ₪{Number(b.total_amount||0).toLocaleString()}</option>
+<option key={b.id} value={b.id}>{b.name || b.code} — {Number(b.total_amount||0).toLocaleString()}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">סכום מבוקש (₪) *</label>
+<label className="block text-sm font-medium text-gray-700 mb-1">סכום מבוקש () *</label>
             <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="1"
               className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" placeholder="0" />
           </div>
@@ -100,7 +100,7 @@ const RequestModal: React.FC<RequestModalProps> = ({ budgets, onClose, onDone })
         <div className="flex gap-2 px-5 py-4 border-t border-gray-100">
           <button onClick={handleSubmit} disabled={saving}
             className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-xl">
-            {saving ? 'שולח...' : '📨 שלח בקשה'}
+{saving ? 'שולח...' : ' שלח בקשה'}
           </button>
           <button onClick={onClose} className="px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm">ביטול</button>
         </div>
@@ -109,7 +109,7 @@ const RequestModal: React.FC<RequestModalProps> = ({ budgets, onClose, onDone })
   );
 };
 
-// ─── Approve Modal ────────────────────────────────────────────────────────────
+// Approve Modal 
 interface ApproveModalProps {
   transfer: Transfer;
   onClose: () => void;
@@ -155,11 +155,11 @@ const ApproveModal: React.FC<ApproveModalProps> = ({ transfer, onClose, onDone }
             <div className="text-gray-600">{transfer.reason}</div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">סכום לאישור (₪)</label>
+<label className="block text-sm font-medium text-gray-700 mb-1">סכום לאישור ()</label>
             <input type="number" value={approvedAmount} onChange={e => setApprovedAmount(e.target.value)}
               min="1" max={transfer.amount}
               className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm" />
-            <p className="text-xs text-gray-400 mt-1">ניתן לאשר סכום חלקי (מקסימום ₪{transfer.amount.toLocaleString()})</p>
+<p className="text-xs text-gray-400 mt-1">ניתן לאשר סכום חלקי (מקסימום {transfer.amount.toLocaleString()})</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">הערות (חובה לדחייה)</label>
@@ -171,11 +171,11 @@ const ApproveModal: React.FC<ApproveModalProps> = ({ transfer, onClose, onDone }
         <div className="flex gap-2 px-5 py-4 border-t border-gray-100">
           <button onClick={handleApprove} disabled={saving}
             className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium rounded-xl text-sm">
-            ✅ אשר
+אשר
           </button>
           <button onClick={handleReject} disabled={saving}
             className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-medium rounded-xl text-sm">
-            ❌ דחה
+דחה
           </button>
           <button onClick={onClose} className="px-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm">ביטול</button>
         </div>
@@ -184,7 +184,7 @@ const ApproveModal: React.FC<ApproveModalProps> = ({ transfer, onClose, onDone }
   );
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// Main Page 
 const BudgetTransfers: React.FC = () => {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
@@ -308,7 +308,7 @@ const TransferRow: React.FC<{ t: Transfer; onApprove?: () => void }> = ({ t, onA
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[t.status] || 'bg-gray-100 text-gray-600'}`}>
           {STATUS_LABEL[t.status] || t.status}
         </span>
-        <span className="text-sm font-semibold text-gray-900">₪{t.amount.toLocaleString()}</span>
+<span className="text-sm font-semibold text-gray-900">{t.amount.toLocaleString()}</span>
         <span className="text-xs text-gray-400">{t.transfer_type}</span>
       </div>
       <p className="text-sm text-gray-600 mt-1">{t.reason}</p>

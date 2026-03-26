@@ -154,7 +154,7 @@ class BudgetService(BaseService[Budget]):
         )
 
 
-# ── Budget invariant helpers ──────────────────────────────────────────────────
+#  Budget invariant helpers 
 
 import logging as _logging
 _budget_log = _logging.getLogger("budget")
@@ -210,7 +210,7 @@ def _assert_invariants(budget, label: str = "") -> None:
     _budget_log.warning(msg)
 
 
-# ── Freeze / Release / Transfer ────────────────────────────────────────────────
+#  Freeze / Release / Transfer 
 
 def freeze_budget_for_work_order(
     project_id: int,
@@ -238,7 +238,7 @@ def freeze_budget_for_work_order(
 
     if available < amount:
         raise ValueError(
-            f"אין מספיק תקציב. זמין: ₪{available:,.0f}, נדרש: ₪{amount:,.0f}"
+            f"אין מספיק תקציב. זמין: {available:,.0f}, נדרש: {amount:,.0f}"
         )
 
     budget.committed_amount = Decimal(str(committed + amount))
@@ -253,7 +253,7 @@ def freeze_budget_for_work_order(
     from app.core.audit import log_business_event
     log_business_event(
         db, "BUDGET_FROZEN", "budget", budget.id,
-        description=f"הוקפא ₪{amount:,.0f} עבור הזמנה #{work_order_id}",
+        description=f"הוקפא {amount:,.0f} עבור הזמנה #{work_order_id}",
         metadata={"work_order_id": work_order_id, "amount": amount,
                   "available_after": float(budget.remaining_amount or 0)},
         category="financial",
@@ -295,7 +295,7 @@ def release_budget_freeze(
     from app.core.audit import log_business_event
     log_business_event(
         db, "BUDGET_RELEASED", "budget", budget.id,
-        description=f"שוחרר הקפאה ₪{frozen:,.0f}, הוצאה ₪{actual_amount:,.0f} (WO #{work_order_id})",
+        description=f"שוחרר הקפאה {frozen:,.0f}, הוצאה {actual_amount:,.0f} (WO #{work_order_id})",
         metadata={"work_order_id": work_order_id, "frozen_released": frozen,
                   "actual_spent": actual_amount},
         category="financial",
@@ -357,7 +357,7 @@ def approve_budget_transfer(
         if from_b:
             avail = float(from_b.remaining_amount or from_b.total_amount or 0)
             if avail < approved_amount:
-                raise ValueError(f"אין מספיק יתרה. זמין: ₪{avail:,.0f}")
+                raise ValueError(f"אין מספיק יתרה. זמין: {avail:,.0f}")
             from_b.total_amount = float(from_b.total_amount or 0) - approved_amount
             from_b.remaining_amount = float(from_b.remaining_amount or 0) - approved_amount
 

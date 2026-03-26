@@ -188,7 +188,7 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
 };
 
 // ============================================================
-// Role → Menu Items Mapping
+// Role Menu Items Mapping
 // כל role מקבל תפריט ייחודי עם סדר ו-dividers מותאמים
 // ============================================================
 const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: string[] }> = {

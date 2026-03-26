@@ -343,14 +343,14 @@ const NewWorkOrder: React.FC = () => {
     try {
       if (!navigator.onLine) {
         await saveOfflineWorkOrder(workOrderData);
-        showToast('📋 ההזמנה נשמרה במכשיר — תועלה כשיחזור חיבור', 'info', 7000);
-        showToast('⚠️ זכור: אחרי סנכרון תצטרך לשלוח את ההזמנה לספק ידנית', 'warning', 8000);
+showToast(' ההזמנה נשמרה במכשיר — תועלה כשיחזור חיבור', 'info', 7000);
+showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמנה לספק ידנית', 'warning', 8000);
         setTimeout(() => navigate('/pending-sync'), 1800);
         return;
       }
 
       await workOrderService.createWorkOrder(workOrderData);
-      showToast('ההזמנה נשלחה בהצלחה למתאם ההזמנות ✅', 'success');
+showToast('ההזמנה נשלחה בהצלחה למתאם ההזמנות ', 'success');
       // Navigate back to project workspace (if came from a project)
       if (projectCode) {
         navigate(`/projects/${projectCode}`);
@@ -369,8 +369,8 @@ const NewWorkOrder: React.FC = () => {
       if (!error.response) {
         // Network error — save offline
         await saveOfflineWorkOrder(workOrderData);
-        showToast('📋 ההזמנה נשמרה במכשיר — תועלה כשיחזור חיבור', 'info', 7000);
-        showToast('⚠️ זכור: אחרי סנכרון תצטרך לשלוח את ההזמנה לספק ידנית', 'warning', 8000);
+showToast(' ההזמנה נשמרה במכשיר — תועלה כשיחזור חיבור', 'info', 7000);
+showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמנה לספק ידנית', 'warning', 8000);
         setTimeout(() => navigate('/pending-sync'), 1800);
       } else {
         console.error('Error creating work order:', error);
@@ -473,10 +473,10 @@ const NewWorkOrder: React.FC = () => {
                         ? 'text-red-600' 
                         : 'text-kkl-green'
                     }`}>
-                      ₪{((selectedProject.allocated_budget || 0) - (selectedProject.spent_budget || 0)).toLocaleString('he-IL')}
+{((selectedProject.allocated_budget || 0) - (selectedProject.spent_budget || 0)).toLocaleString('he-IL')}
                     </span>
                     <span className="text-xs text-gray-500 block">
-                      מתוך ₪{(selectedProject.allocated_budget || 0).toLocaleString('he-IL')}
+מתוך {(selectedProject.allocated_budget || 0).toLocaleString('he-IL')}
                     </span>
                   </div>
                 </div>
@@ -541,7 +541,7 @@ const NewWorkOrder: React.FC = () => {
                   {/* Guard cost inline */}
                   {formData.has_overnight && formData.guard_days > 0 && overnightGuardRate > 0 && (
                     <p className="text-xs text-indigo-600 mt-1 font-medium">
-                      🌙 שמירה: {formData.guard_days} לילות × ₪{overnightGuardRate} = ₪{(formData.guard_days * overnightGuardRate).toLocaleString('he-IL')}
+שמירה: {formData.guard_days} לילות × {overnightGuardRate} = {(formData.guard_days * overnightGuardRate).toLocaleString('he-IL')}
                     </p>
                   )}
                 </div>
@@ -645,20 +645,20 @@ const NewWorkOrder: React.FC = () => {
                       בדיווח השעות תוכל לסמן האם בוצעה שמירה בפועל
                     </p>
 
-                    {/* ✅ תחזית עלות שמירה */}
+{/* תחזית עלות שמירה */}
                     {formData.guard_days > 0 && overnightGuardRate > 0 && (
                       <div className="mt-3 p-3 bg-indigo-100 border border-indigo-200 rounded-lg">
                         <p className="text-xs font-semibold text-indigo-800 mb-1">תחזית עלות שמירת לילה</p>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-indigo-700">
-                            {formData.guard_days} לילות × ₪{overnightGuardRate.toLocaleString('he-IL')}
+{formData.guard_days} לילות × {overnightGuardRate.toLocaleString('he-IL')}
                           </span>
                           <span className="text-base font-bold text-indigo-900">
-                            = ₪{(formData.guard_days * overnightGuardRate).toLocaleString('he-IL')}
+= {(formData.guard_days * overnightGuardRate).toLocaleString('he-IL')}
                           </span>
                         </div>
                         <p className="text-xs text-indigo-500 mt-1">
-                          תעריף לפי הגדרות מערכת (₪{overnightGuardRate}/לילה)
+תעריף לפי הגדרות מערכת ({overnightGuardRate}/לילה)
                         </p>
                       </div>
                     )}

@@ -72,7 +72,7 @@ class WorkOrderService:
         # Normalize status to UPPERCASE
         wo_dict['status'] = (wo_dict.get('status') or 'PENDING').upper()
 
-        # ── Auto-resolve requested_equipment_model_id from equipment_type name ──
+        #  Auto-resolve requested_equipment_model_id from equipment_type name 
         # FK constraint fk_work_orders_req_model requires a valid equipment_models.id
         if not wo_dict.get("requested_equipment_model_id"):
             equipment_type_name = (wo_dict.get("equipment_type") or "").strip()
@@ -110,7 +110,7 @@ class WorkOrderService:
                 )
             wo_dict["requested_equipment_model_id"] = model_row[0]
 
-        # ── Budget validation: block if project budget insufficient ──────────────
+        #  Budget validation: block if project budget insufficient 
         project_id = wo_dict.get("project_id")
         estimated_hours = wo_dict.get("estimated_hours")
         if project_id and estimated_hours:
@@ -154,8 +154,8 @@ class WorkOrderService:
                                 status_code=400,
                                 detail=(
                                     f"אין תקציב מספיק. "
-                                    f"עלות משוערת: ₪{estimated_cost:,.0f}, "
-                                    f"יתרה זמינה: ₪{available:,.0f}"
+                                    f"עלות משוערת: {estimated_cost:,.0f}, "
+                                    f"יתרה זמינה: {available:,.0f}"
                                 )
                             )
             except HTTPException:
@@ -350,11 +350,11 @@ class WorkOrderService:
     </div>
     <div style="text-align:center;margin:30px 0">
       <a href="{portal_url}" style="background:#2d5a27;color:white;padding:15px 35px;text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block">
-        לצפייה ואישור / דחייה ←
+        לצפייה ואישור / דחייה 
       </a>
     </div>
     <p style="color:#888;font-size:12px;text-align:center;border-top:1px solid #eee;padding-top:15px">
-      🕐 הקישור תקף עד {expires_str}<br>
+       הקישור תקף עד {expires_str}<br>
       אי מענה תוך 3 שעות — ההזמנה תועבר לספק הבא אוטומטית
     </p>
   </div>
@@ -364,7 +364,7 @@ class WorkOrderService:
 </div>"""
                     send_email(
                         to=to_email,
-                        subject=f"🌲 הזמנת עבודה #{work_order.order_number} — נדרשת תגובה",
+                        subject=f" הזמנת עבודה #{work_order.order_number} — נדרשת תגובה",
                         body=f"שלום {supplier.name},\nקיבלת הזמנת עבודה חדשה.\nלצפייה: {portal_url}\nתוקף: {expires_str}",
                         html_body=html_body,
                     )
@@ -392,7 +392,7 @@ class WorkOrderService:
 
         Delegates to SupplierRotationService.select_supplier_with_checks
         which applies: active-in-area, is_active, has-equipment-of-type,
-        has-license-plate, equipment-available — with area→region→coordinator
+        has-license-plate, equipment-available — with arearegioncoordinator
         fallback and fewest-assignments selection.
         """
         from app.services.supplier_rotation_service import supplier_rotation_service
@@ -723,7 +723,7 @@ class WorkOrderService:
             "average_hourly_rate": avg_hourly_rate,
         }
 
-    # ── Alias/bridge methods for router compatibility ────────────
+    #  Alias/bridge methods for router compatibility 
     def list(self, db, search=None, current_user=None):
         """List work orders with enriched data (supplier, project, area, region names)."""
         from sqlalchemy import text as sa_text
@@ -819,21 +819,21 @@ class WorkOrderService:
         return items, total
 
     def create(self, db, data, current_user=None, current_user_id=None):
-        """Alias → create_work_order()"""
+        """Alias  create_work_order()"""
         # create_work_order needs created_by_id (int)
         uid = current_user_id or (current_user.id if hasattr(current_user, 'id') else 1)
         return self.create_work_order(db, data, created_by_id=uid)
 
     def update(self, db, wo_id, data, current_user_id=None):
-        """Alias → update_work_order()"""
+        """Alias  update_work_order()"""
         return self.update_work_order(db, wo_id, data)
 
     def soft_delete(self, db, wo_id, current_user_id=None):
-        """Alias → delete_work_order()"""
+        """Alias  delete_work_order()"""
         return self.delete_work_order(db, wo_id)
 
     def get_statistics(self, db, current_user=None):
-        """Alias → get_work_order_statistics()"""
+        """Alias  get_work_order_statistics()"""
         return self.get_work_order_statistics(db)
 
     def get_by_id_or_404(self, db, wo_id):
@@ -873,7 +873,7 @@ class WorkOrderService:
         admin_name = (current_user.full_name or current_user.username) if current_user else 'מתאם'
         order_label = wo.order_number or str(wo_id)
 
-        # ── Activity log ─────────────────────────────────────────────────
+        #  Activity log 
         try:
             from sqlalchemy import text
             db.execute(text("""
@@ -888,7 +888,7 @@ class WorkOrderService:
         except Exception as e:
             log.warning(f"Activity log failed for approve WO {wo_id}: {e}")
 
-        # ── Build location info + Waze link ───────────────────────────────
+        #  Build location info + Waze link 
         location_text = ""
         waze_link = ""
         try:
@@ -914,7 +914,7 @@ class WorkOrderService:
         location_line = f"\nמיקום: {location_text}" if location_text else ""
         waze_line = f"\nניווט Waze: {waze_link}" if waze_link else ""
 
-        # ── Email to supplier ─────────────────────────────────────────────
+        #  Email to supplier 
         try:
             if wo.supplier_id:
                 from app.models.supplier import Supplier
@@ -937,13 +937,13 @@ class WorkOrderService:
                         html_body = f"""
 <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
   <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
-    <h2 style="margin:0;">✅ הזמנה אושרה לביצוע</h2>
+    <h2 style="margin:0;"> הזמנה אושרה לביצוע</h2>
   </div>
   <div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
     <p>שלום <strong>{supplier_name}</strong>,</p>
     <p>הזמנת עבודה מספר <strong>{order_label}</strong> אושרה סופית.</p>
-    {"<p>📍 <strong>מיקום:</strong> " + location_text + "</p>" if location_text else ""}
-    {"<p><a href='" + waze_link + "' style='background:#00b4e8;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:8px;'>🧭 נווט ב-Waze</a></p>" if waze_link else ""}
+    {"<p> <strong>מיקום:</strong> " + location_text + "</p>" if location_text else ""}
+    {"<p><a href='" + waze_link + "' style='background:#00b4e8;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;display:inline-block;margin-top:8px;'> נווט ב-Waze</a></p>" if waze_link else ""}
     <hr style="margin:20px 0;border:none;border-top:1px solid #e5e7eb;"/>
     <p style="color:#6b7280;font-size:13px;">לפרטים נוספים יש לפנות למתאם ההזמנות.</p>
     <p style="color:#6b7280;font-size:13px;">Forewise</p>
@@ -954,7 +954,7 @@ class WorkOrderService:
         except Exception as e:
             log.warning(f"Failed to send supplier approval email for WO {wo_id}: {e}")
 
-        # ── Email to work order creator (work manager) ────────────────────
+        #  Email to work order creator (work manager) 
         try:
             recipient_user = None
             recipient_label = ""
@@ -997,7 +997,7 @@ class WorkOrderService:
         except Exception as e:
             log.warning(f"Failed to send work manager approval email for WO {wo_id}: {e}")
 
-        # ── In-app notification ───────────────────────────────────────────
+        #  In-app notification 
         try:
             from app.services.notification_service import notification_service
             from app.schemas.notification import NotificationCreate
@@ -1016,7 +1016,7 @@ class WorkOrderService:
                 import json as _json
                 notif = NotificationCreate(
                     user_id=nuid,
-                    title=f"הזמנה {order_label} אושרה ✅",
+                    title=f"הזמנה {order_label} אושרה ",
                     message=f"הזמנת עבודה {order_label} אושרה לביצוע על ידי {admin_name}.",
                     notification_type="work_order_approved",
                     priority="high",
@@ -1033,7 +1033,7 @@ class WorkOrderService:
         return wo
 
     def reject(self, db, wo_id, request=None, reason=None, current_user=None, current_user_id=None):
-        """Reject a work order → rejected."""
+        """Reject a work order  rejected."""
         from app.models.work_order import WorkOrder
         import datetime
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
@@ -1045,7 +1045,7 @@ class WorkOrderService:
         return wo
 
     def cancel(self, db, wo_id, notes=None, version=None, current_user=None, current_user_id=None):
-        """Cancel a work order → cancelled."""
+        """Cancel a work order  cancelled."""
         from app.models.work_order import WorkOrder
         import datetime
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
@@ -1057,7 +1057,7 @@ class WorkOrderService:
         return wo
 
     def start(self, db, wo_id, request=None, current_user=None, current_user_id=None):
-        """Start a work order → active."""
+        """Start a work order  active."""
         from app.models.work_order import WorkOrder
         import datetime
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
@@ -1069,7 +1069,7 @@ class WorkOrderService:
         return wo
 
     def close(self, db, wo_id, actual_hours=None, version=None, current_user=None, current_user_id=None):
-        """Close/complete a work order → completed + email + notification."""
+        """Close/complete a work order  completed + email + notification."""
         from app.models.work_order import WorkOrder
         import datetime as _dt
         import logging
@@ -1161,7 +1161,7 @@ class WorkOrderService:
                 from app.core.email import send_email
                 send_email(
                     to=user.email,
-                    subject=f"✅ הזמנה #{order_label} הושלמה",
+                    subject=f" הזמנה #{order_label} הושלמה",
                     body=(
                         f"שלום {user.full_name or user.username or ''},\n\n"
                         f"הזמנת עבודה מספר {order_label} הושלמה בהצלחה.\n"
@@ -1182,7 +1182,7 @@ class WorkOrderService:
                     continue
                 notif = NotificationCreate(
                     user_id=user.id,
-                    title=f"הזמנה {order_label} הושלמה ✅",
+                    title=f"הזמנה {order_label} הושלמה ",
                     message=f"הזמנת עבודה {order_label} הושלמה.",
                     notification_type="work_order_completed",
                     priority="medium",

@@ -29,18 +29,18 @@ const Dashboard: React.FC = () => {
   
   // בחירת דשבורד לפי תפקיד
   switch (userRole) {
-    // 🔴 הנהלה מערכתית
+// הנהלה מערכתית
     case UserRole.ADMIN:
       return <AdminDashboard />;
     
-    // 🟠 ניהול מרחבי/אזורי  
+// ניהול מרחבי/אזורי 
     case UserRole.REGION_MANAGER:
       return <RegionManagerDashboard />;
       
     case UserRole.AREA_MANAGER:
       return <AreaManagerDashboard />;
     
-    // 🟡 ניהול תפעול וכספים
+// ניהול תפעול וכספים
     case UserRole.WORK_MANAGER:
       return <WorkManagerDashboard />;
       
@@ -50,11 +50,11 @@ const Dashboard: React.FC = () => {
     case UserRole.ACCOUNTANT:
       return <AccountantDashboard />;
     
-    // 🟢 ניהול ספקים
+// ניהול ספקים
     case UserRole.SUPPLIER_MANAGER:
       return <SupplierManagerDashboard />;
     
-    // 🔵 שטח וספקים
+// שטח וספקים
     case UserRole.FIELD_WORKER:
       return <FieldWorkerDashboard />;
       
@@ -68,7 +68,7 @@ const Dashboard: React.FC = () => {
       window.dispatchEvent(new Event('storage'));
       return <Navigate to="/login" replace />;
     
-    // 👁️ צפייה בלבד
+// צפייה בלבד
     case UserRole.VIEWER:
       return <ViewerDashboard />;
       

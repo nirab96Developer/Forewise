@@ -319,7 +319,7 @@ def send_worklog_approval_email(
     pdf_filename = f"worklog_{report_num}_{report_date}.pdf"
     
     # Email subject
-    subject = f"🧾 אישור דיווח שעות - {report_num}"
+    subject = f" אישור דיווח שעות - {report_num}"
     
     # Email body based on recipient type
     if recipient_type == "supplier":

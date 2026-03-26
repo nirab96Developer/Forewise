@@ -481,7 +481,7 @@ const SupplierPortal: React.FC = () => {
                   <div>
                     <div className="text-sm text-slate-500">תעריף לשעה</div>
                     <div className="font-medium text-slate-800">
-                      {order.hourly_rate ? `₪${order.hourly_rate.toFixed(2)}` : 'לפי הסכם'}
+{order.hourly_rate ? `${order.hourly_rate.toFixed(2)}` : 'לפי הסכם'}
                     </div>
                   </div>
                 </div>
@@ -492,7 +492,7 @@ const SupplierPortal: React.FC = () => {
                 <div className="pt-4 border-t border-slate-100">
                   <div className="bg-emerald-50 rounded-lg p-4 text-center">
                     <div className="text-sm text-emerald-700">סכום משוער</div>
-                    <div className="text-2xl font-bold text-emerald-800">₪{order.total_amount.toFixed(2)}</div>
+<div className="text-2xl font-bold text-emerald-800">{order.total_amount.toFixed(2)}</div>
                   </div>
                 </div>
               )}
@@ -520,7 +520,7 @@ const SupplierPortal: React.FC = () => {
                 </div>
               ) : availableEquipment.length === 0 ? (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
-                  ⚠️ לא נמצאו כלים זמינים מהסוג המבוקש. אנא פנה למנהל העבודה.
+לא נמצאו כלים זמינים מהסוג המבוקש. אנא פנה למנהל העבודה.
                 </div>
               ) : (
                 <select
@@ -538,14 +538,14 @@ const SupplierPortal: React.FC = () => {
                   {availableEquipment.map(eq => (
                     <option key={eq.id} value={eq.id}>
                       {eq.model_name || 'כלי'} | לוחית: {eq.license_plate || 'לא רשומה'}
-                      {eq.hourly_rate ? ` | ₪${eq.hourly_rate}/שעה` : ''}
+{eq.hourly_rate ? ` | ${eq.hourly_rate}/שעה` : ''}
                     </option>
                   ))}
                 </select>
               )}
               {selectedEquipmentId && (
                 <p className="text-xs text-emerald-700 mt-1">
-                  ✅ לוחית רישוי: {availableEquipment.find(e=>e.id===selectedEquipmentId)?.license_plate || '—'}
+לוחית רישוי: {availableEquipment.find(e=>e.id===selectedEquipmentId)?.license_plate || '—'}
                 </p>
               )}
             </div>

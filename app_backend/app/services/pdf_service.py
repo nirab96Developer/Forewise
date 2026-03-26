@@ -357,7 +357,7 @@ def generate_worklog_pdf(worklog_data: Dict[str, Any], segments: List[Dict[str, 
             </div>
             <div class="doc-info-item">
                 <div class="label">סטטוס</div>
-                <div class="value" style="color: #009557;">✓ מאושר</div>
+<div class="value" style="color: #009557;"> מאושר</div>
             </div>
         </div>
         
@@ -453,7 +453,7 @@ def generate_worklog_pdf(worklog_data: Dict[str, Any], segments: List[Dict[str, 
                         <span class="signature-value">{worklog_data.get('approved_at', datetime.now().strftime('%d/%m/%Y %H:%M'))}</span>
                     </div>
                 </div>
-                <div class="approved-badge">✓ אושר</div>
+<div class="approved-badge"> אושר</div>
             </div>
         </div>
         

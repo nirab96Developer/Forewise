@@ -825,7 +825,7 @@ async def biometric_register_verify(
         # Clear challenge
         del _biometric_challenges[str(user_id)]
         
-        # Store the credential (base64url string → bytes)
+# Store the credential (base64url string bytes)
         public_key = attestation_object.encode('utf-8') if attestation_object else b"demo_key"
         
         credential = BiometricCredential(
@@ -1376,8 +1376,8 @@ def list_devices(
 import os as _os
 
 # In-memory challenge store (replace with Redis in production)
-_wn_reg_challenges:   dict = {}   # user_id  → challenge bytes
-_wn_login_challenges: dict = {}   # username → (challenge bytes, credential_ids)
+_wn_reg_challenges: dict = {} # user_id challenge bytes
+_wn_login_challenges: dict = {} # username (challenge bytes, credential_ids)
 
 try:
     import webauthn as _wn

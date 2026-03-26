@@ -61,7 +61,7 @@ const WorkManagerDashboard: React.FC = () => {
     <div className="min-h-full bg-gray-50" dir="rtl">
       <div className="p-3 sm:p-5 space-y-4 max-w-screen-lg mx-auto">
 
-        {/* ── Active Work (Hero) ── */}
+{/* Active Work (Hero) */}
         {aw && (
           <div className="bg-gradient-to-l from-green-600 to-green-700 rounded-2xl p-4 sm:p-5 text-white shadow-lg">
             <div className="flex items-center gap-2 mb-3">
@@ -106,7 +106,7 @@ const WorkManagerDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ── KPIs ── */}
+{/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <MiniKPI icon={<Clock className="w-5 h-5 text-blue-500" />} label="שעות היום" value={k.hours_today.toFixed(1)} />
           <MiniKPI icon={<Briefcase className="w-5 h-5 text-green-500" />} label="הזמנות פתוחות" value={String(k.open_work_orders)} />
@@ -114,7 +114,7 @@ const WorkManagerDashboard: React.FC = () => {
           <MiniKPI icon={<CheckCircle className="w-5 h-5 text-emerald-500" />} label="אושרו" value={String(k.approved_reports)} />
         </div>
 
-        {/* ── Alerts ── */}
+{/* Alerts */}
         {data.alerts.length > 0 && (
           <div className="space-y-2">
             {data.alerts.map((a, i) => {
@@ -136,7 +136,7 @@ const WorkManagerDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* ── Quick Actions ── */}
+{/* Quick Actions */}
         <div className="grid grid-cols-3 gap-2">
           <button onClick={() => navigate("/equipment/scan")}
             className="flex flex-col items-center gap-1.5 min-h-[72px] bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md active:scale-[0.97] transition-all justify-center">
@@ -155,7 +155,7 @@ const WorkManagerDashboard: React.FC = () => {
           </button>
         </div>
 
-        {/* ── Work Orders + Equipment ── */}
+{/* Work Orders + Equipment */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* Work Orders (card-based) */}
@@ -231,7 +231,7 @@ const WorkManagerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Quick Report ── */}
+{/* Quick Report */}
         <QuickReportCard />
 
       </div>

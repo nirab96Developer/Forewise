@@ -207,11 +207,11 @@ def require_permission(user_or_first_perm, *permissions: str, require_all: bool 
     Inline mode (most common in this codebase):
         require_permission(current_user, "users.list")
         require_permission(current_user, "perm1", "perm2")
-        → raises HTTP 403 immediately if not authorized, returns user if OK
+raises HTTP 403 immediately if not authorized, returns user if OK
 
     Factory/Depends mode:
         Depends(require_permission("PROJECTS.VIEW"))
-        → returns a PermissionChecker callable for FastAPI dependency injection
+returns a PermissionChecker callable for FastAPI dependency injection
     """
     # Detect inline mode: first arg is a user object (has role_id attribute)
     if hasattr(user_or_first_perm, 'role_id') or hasattr(user_or_first_perm, 'is_active'):
@@ -236,7 +236,7 @@ def require_permission(user_or_first_perm, *permissions: str, require_all: bool 
                 )
         return user
     else:
-        # Factory mode: require_permission("perm1", "perm2") → PermissionChecker for Depends
+# Factory mode: require_permission("perm1", "perm2") PermissionChecker for Depends
         all_perms = (user_or_first_perm,) + permissions
         return PermissionChecker(*all_perms, require_all=require_all)
 
@@ -261,7 +261,7 @@ def require_write_access():
         if settings.SAFE_MODE:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="🔒 SAFE MODE: Write operations are disabled. Contact admin to enable writes."
+detail=" SAFE MODE: Write operations are disabled. Contact admin to enable writes."
             )
         return None
     return check_safe_mode

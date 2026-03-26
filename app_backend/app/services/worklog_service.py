@@ -525,7 +525,7 @@ class WorklogService:
         return stats
 
 
-# ── Notification helpers ──────────────────────────────────────────────────────
+#  Notification helpers 
 
 def _notify_managers_worklog_submitted(db, worklog):
     """Notify area/region managers when a worklog is submitted for approval."""
@@ -592,7 +592,7 @@ def _notify_low_hours(db, worklog, hours_meta: dict):
         ), {"wid": worklog.work_order_id}).first()
         if not wo_row:
             return
-        title_body = f"⚠️ יתרת שעות נמוכה — {wo_row.equipment_type or 'כלי'}"
+        title_body = f" יתרת שעות נמוכה — {wo_row.equipment_type or 'כלי'}"
         body = f"נשארו {remaining:.1f} שעות בלבד מהזמנה #{worklog.work_order_id}. שקול להזמין המשך."
 
         # Notify work order creator
@@ -645,7 +645,7 @@ def _audit_worklog(db, user_id: int, worklog_id: int, action: str):
             pass
 
 
-# ── Segments + Overnight calculation ──────────────────────────────────────────
+#  Segments + Overnight calculation 
 
 MAX_NET_HOURS_PER_DAY = 12.0
 
@@ -654,7 +654,7 @@ ACTIVITY_TYPES = {"נטיעה", "ניקוי", "גיזום", "תחזוקה", "ה�
 
 
 def _calc_duration(start: str, end: str) -> float:
-    """HH:MM → hours (float)"""
+    """HH:MM  hours (float)"""
     from datetime import datetime as _dt
     fmt = "%H:%M"
     s = _dt.strptime(start, fmt)
@@ -927,7 +927,7 @@ def send_worklog_invoiced_emails(db, worklogs, invoice):
             f"חשבונית {invoice_number} הופקה.\n"
             f"פרויקט: {project_name}\n"
             f"ספק: {supplier_name}\n"
-            f"סה\"כ: ₪{total_amount:,.0f}\n"
+            f"סה\"כ: {total_amount:,.0f}\n"
             f"תאריך: {invoice_date}\n\n"
             "Forewise"
         )

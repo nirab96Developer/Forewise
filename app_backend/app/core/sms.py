@@ -64,7 +64,7 @@ class SMSService:
             telegram_url = f"{self.api_url}{self.api_key}/sendMessage"
             payload = {
                 'chat_id': self.chat_id,
-                'text': f"📱 SMS to {clean_phone}:\n\n{message}",
+'text': f" SMS to {clean_phone}:\n\n{message}",
                 'parse_mode': 'HTML'
             }
             

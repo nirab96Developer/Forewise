@@ -7,7 +7,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
-# ── Nested basic schemas ────────────────────────────────────────────────────
+# Nested basic schemas 
 
 class RegionBasic(BaseModel):
     id: int
@@ -26,7 +26,7 @@ class UserBasic(BaseModel):
     full_name: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
-# ───────────────────────────────────────────────────────────────────────────
+# 
 
 
 class ProjectBase(BaseModel):

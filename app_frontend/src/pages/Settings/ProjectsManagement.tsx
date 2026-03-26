@@ -67,7 +67,7 @@ const ProjectsManagement: React.FC = () => {
     }
     return true;
   }), [projects, search, filterRegion, filterArea, filterStatus]);
-  const fmt = (n?: number) => n ? `₪${n.toLocaleString('he-IL')}` : '—';
+const fmt = (n?: number) => n ? `${n.toLocaleString('he-IL')}` : '—';
 
   if (loading) return <UnifiedLoader size="full" />;
   if (loading) return <UnifiedLoader size="full" />;

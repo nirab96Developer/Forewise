@@ -201,7 +201,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
           permissions: permissions
         };
 
-        // ── שמירה מפורשת ב-localStorage — תמיד, ללא תנאי ──────────────
+// שמירה מפורשת ב-localStorage — תמיד, ללא תנאי 
         localStorage.setItem('access_token',    result.access_token);
         localStorage.setItem('token',           result.access_token);
         localStorage.setItem('user',            JSON.stringify(userObject));
@@ -509,7 +509,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
                 disabled={!canResend || isLoading}
                 className="text-green-600 hover:text-green-800 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 underline-offset-4 hover:underline"
               >
-                {canResend ? '✨ שלח קוד חדש' : `שלח שוב בעוד ${formatTime(timeLeft)}`}
+{canResend ? ' שלח קוד חדש' : `שלח שוב בעוד ${formatTime(timeLeft)}`}
               </button>
             </div>
           </form>
@@ -537,7 +537,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
             onClick={() => navigate('/login')}
             className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors duration-200"
           >
-            ← חזרה להתחברות
+חזרה להתחברות
           </button>
         </div>
       </div>

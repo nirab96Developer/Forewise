@@ -34,7 +34,7 @@ class WorkOrder(BaseModel):
     Category: CORE (has created_at, updated_at, deleted_at, is_active, version)
     
     Represents a work order in the system with state machine:
-    PENDING → APPROVED → ACTIVE → COMPLETED
+PENDING APPROVED ACTIVE COMPLETED
     Can be REJECTED or CANCELLED at various stages.
     """
     __tablename__ = "work_orders"

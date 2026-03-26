@@ -58,7 +58,7 @@ function openExportPdf(title: string, headers: string[], rows: string[][]) {
   w.document.close();
 }
 
-// ─── Monthly Invoice Button ───────────────────────────────────────────────────
+// Monthly Invoice Button 
 const MonthlyInvoiceButton: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
@@ -92,10 +92,10 @@ const MonthlyInvoiceButton: React.FC = () => {
         month: Number(month),
         year: Number(year),
       });
-      setMsg(`✅ ${res.data.message}`);
+setMsg(` ${res.data.message}`);
       setTimeout(() => { setOpen(false); setMsg(''); }, 2500);
     } catch (e: any) {
-      setMsg(`❌ ${e?.response?.data?.detail || 'שגיאה'}`);
+setMsg(` ${e?.response?.data?.detail || 'שגיאה'}`);
     }
     setSaving(false);
   };
@@ -153,12 +153,12 @@ const MonthlyInvoiceButton: React.FC = () => {
                   {suppliers.map((s:any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-              {msg && <p className={`text-sm ${msg.startsWith('✅') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
+{msg && <p className={`text-sm ${msg.startsWith('') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
             </div>
             <div className="flex gap-2 px-5 py-4 border-t border-gray-100">
               <button onClick={handleGenerate} disabled={saving}
                 className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-medium rounded-xl text-sm">
-                {saving ? 'מפיק...' : '📄 הפק חשבונית'}
+{saving ? 'מפיק...' : ' הפק חשבונית'}
               </button>
               <button onClick={() => setOpen(false)}
                 className="px-4 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 text-sm">ביטול</button>
@@ -294,7 +294,7 @@ const AccountantInbox: React.FC = () => {
       });
       const { invoice_id, invoice_number, total_amount } = res.data;
       showToast(
-        `✅ חשבונית ${invoice_number} נוצרה בהצלחה — ₪${total_amount.toLocaleString('he-IL')}`,
+` חשבונית ${invoice_number} נוצרה בהצלחה — ${total_amount.toLocaleString('he-IL')}`,
         'success'
       );
       // Refresh list immediately, then navigate to detail after 2s
@@ -396,7 +396,7 @@ const AccountantInbox: React.FC = () => {
                 <p className="text-gray-500 text-sm">
                   {pendingCount > 0 ? (
                     <span className="text-yellow-700 font-medium">{pendingCount} ממתינים לאישורך</span>
-                  ) : 'כל הדיווחים טופלו ✅'}
+) : 'כל הדיווחים טופלו '}
                 </p>
               </div>
             </div>
@@ -416,7 +416,7 @@ const AccountantInbox: React.FC = () => {
                 title="ייצוא Excel (CSV)"
               >
                 <FileText className="w-4 h-4" />
-                📊 Excel
+Excel
               </button>
               <button
                 type="button"
@@ -428,8 +428,8 @@ const AccountantInbox: React.FC = () => {
                     w.project_name || '',
                     w.supplier_name || '',
                     String(w.total_hours ?? ''),
-                    w.cost_before_vat ? `₪${parseFloat(String(w.cost_before_vat)).toLocaleString('he-IL')}` : '',
-                    w.cost_with_vat ? `₪${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')}` : '',
+w.cost_before_vat ? `${parseFloat(String(w.cost_before_vat)).toLocaleString('he-IL')}` : '',
+w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')}` : '',
                     getStatus(w.status).label,
                   ]);
                   openExportPdf('תיבת נכנסים — דיווחי שעות', headers, rows);
@@ -623,7 +623,7 @@ const AccountantInbox: React.FC = () => {
                               ? 'bg-green-50 text-green-700'
                               : 'bg-orange-50 text-orange-700'
                           }`}>
-                            {w.report_type === 'standard' ? '✓ תקן' : '⚡ לא תקן'}
+{w.report_type === 'standard' ? ' תקן' : ' לא תקן'}
                           </span>
                         </td>
                         {/* Hours */}
@@ -636,7 +636,7 @@ const AccountantInbox: React.FC = () => {
                         <td className="px-4 py-3 text-center">
                           <span className="text-sm font-bold text-kkl-text">
                             {w.cost_before_vat
-                              ? `₪${parseFloat(String(w.cost_before_vat)).toLocaleString('he-IL')}`
+? `${parseFloat(String(w.cost_before_vat)).toLocaleString('he-IL')}`
                               : '—'}
                           </span>
                         </td>
@@ -644,7 +644,7 @@ const AccountantInbox: React.FC = () => {
                         <td className="px-4 py-3 text-center">
                           <span className="text-sm font-semibold text-gray-700">
                             {w.cost_with_vat
-                              ? `₪${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')}`
+? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')}`
                               : '—'}
                           </span>
                         </td>
@@ -717,7 +717,7 @@ const AccountantInbox: React.FC = () => {
           <div className="mt-4 flex items-center justify-between text-sm text-gray-500 px-1">
             <span>{filtered.length} דיווחים מוצגים</span>
             <span className="font-medium text-kkl-text">
-              סה"כ: ₪{filtered
+סה"כ: {filtered
                 .reduce((sum, w) => sum + parseFloat(w.cost_before_vat || '0'), 0)
                 .toLocaleString('he-IL')}
             </span>

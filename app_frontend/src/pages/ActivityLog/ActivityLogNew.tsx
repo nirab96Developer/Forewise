@@ -76,9 +76,9 @@ const getActivityTitle = (action: string): string => {
     'user.login': 'כניסה למערכת',
     'user.logout': 'יציאה מהמערכת',
     // Support ticket activities
-    'support_ticket.created': '🎫 פנייה חדשה נפתחה',
-    'support_ticket.replied': '💬 תגובה חדשה בפנייה',
-    'support_ticket.status_changed': '🔄 סטטוס פנייה השתנה',
+'support_ticket.created': ' פנייה חדשה נפתחה',
+'support_ticket.replied': ' תגובה חדשה בפנייה',
+'support_ticket.status_changed': ' סטטוס פנייה השתנה',
   };
   return actionTitles[action] || action.replace(/[._]/g, ' ');
 };
@@ -453,7 +453,7 @@ const ActivityLogNew: React.FC<ActivityLogNewProps> = ({ mode = 'default' }) => 
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl"
               >
-                📊 Excel
+Excel
               </button>
               <button
                 type="button"

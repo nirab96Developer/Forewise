@@ -124,7 +124,7 @@ def generate_confirmation_number(worklog_id: int, date: datetime) -> str:
 
 
 
-# ── Auto Worklog PDF ───────────────────────────────────────────────────────────
+# Auto Worklog PDF 
 
 import os as _os
 
@@ -151,7 +151,7 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
         WorklogSegment.worklog_id == worklog_id
     ).order_by(WorklogSegment.start_time).all()
 
-    # ── Build HTML ────────────────────────────────────────────────────────────
+# Build HTML 
     seg_rows = ""
     for s in segments:
         seg_rows += f"""
@@ -161,7 +161,7 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
           <td>{s.activity_type or ''}</td>
           <td>{float(s.duration_hours or 0):.2f}</td>
           <td>{s.payment_pct or 100}%</td>
-          <td>₪{float(s.amount or 0):,.2f}</td>
+<td>{float(s.amount or 0):,.2f}</td>
         </tr>"""
 
     overnight_row = ""
@@ -169,7 +169,7 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
         overnight_row = f"""
         <tr class="overnight">
           <td colspan="6">שמירת לילה × {wl.overnight_nights} לילות</td>
-          <td>₪{float(wl.overnight_total or 0):,.2f}</td>
+<td>{float(wl.overnight_total or 0):,.2f}</td>
         </tr>"""
 
     project_name = getattr(wl.project, 'name', '') if wl.project else ''
@@ -238,7 +238,7 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
   <tr><td class="label">כלי:</td><td>{getattr(wl.equipment,'name','') if wl.equipment else ''} {equipment_license}</td>
       <td class="label">ספק:</td><td>{supplier_name}</td></tr>
   <tr><td class="label">מנהל עבודה:</td><td>{getattr(wl.user,'full_name','') if wl.user else ''}</td>
-      <td class="label">תעריף שעתי:</td><td>₪{float(wl.hourly_rate_snapshot or 0):,.2f}</td></tr>
+<td class="label">תעריף שעתי:</td><td>{float(wl.hourly_rate_snapshot or 0):,.2f}</td></tr>
 </table>
 
 <table class="segs">
@@ -255,14 +255,14 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
 <table class="totals" align="left">
   <tr><td>שעות ברוטו:</td><td>{float(wl.net_hours or 0):.2f}</td></tr>
   <tr><td>שעות לתשלום:</td><td>{float(wl.paid_hours or 0):.2f}</td></tr>
-  <tr><td>שמירת לילה:</td><td>₪{float(wl.overnight_total or 0):,.2f}</td></tr>
-  <tr><td>סה"כ לפני מע"מ:</td><td>₪{float(wl.cost_before_vat or 0):,.2f}</td></tr>
-  <tr class="grand"><td>סה"כ כולל מע"מ:</td><td>₪{float(wl.cost_with_vat or 0):,.2f}</td></tr>
+<tr><td>שמירת לילה:</td><td>{float(wl.overnight_total or 0):,.2f}</td></tr>
+<tr><td>סה"כ לפני מע"מ:</td><td>{float(wl.cost_before_vat or 0):,.2f}</td></tr>
+<tr class="grand"><td>סה"כ כולל מע"מ:</td><td>{float(wl.cost_with_vat or 0):,.2f}</td></tr>
 </table>
 </body>
 </html>"""
 
-    # ── Write PDF ─────────────────────────────────────────────────────────────
+# Write PDF 
     _os.makedirs(REPORTS_DIR, exist_ok=True)
     pdf_path = _os.path.join(REPORTS_DIR, f"{worklog_id}.pdf")
 
@@ -276,12 +276,12 @@ def generate_and_save_worklog_pdf(worklog_id: int, db) -> str:
         with open(pdf_path, "w", encoding="utf-8") as f:
             f.write(html)
 
-    # ── Update worklog ────────────────────────────────────────────────────────
+# Update worklog 
     wl.pdf_path = pdf_path
     wl.pdf_generated_at = _dt.now()
     db.commit()
 
-    # ── Send email ────────────────────────────────────────────────────────────
+# Send email 
     try:
         _send_worklog_pdf_email(wl, pdf_path, db)
     except Exception as e:

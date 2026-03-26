@@ -29,7 +29,7 @@ class BaseModel(Base):
     """
     Base model with standard audit columns matching DB structure.
     
-    ✅ AFTER MIGRATIONS (2026-01-11):
+AFTER MIGRATIONS (2026-01-11):
     - created_at, updated_at: NOT NULL + DEFAULT SYSUTCDATETIME() (all tables)
     - updated_at: Auto-updated by DB triggers (48 triggers created)
     - deleted_at, is_active, version: Optional (not all tables have these)

@@ -81,7 +81,7 @@ const NewUser: React.FC = () => {
     );
   };
 
-  // Filter projects by selected area → region → all
+// Filter projects by selected area region all
   const filteredProjects = projects.filter(p => {
     if (formData.area_id) return p.area_id === Number(formData.area_id);
     if (formData.region_id) return p.region_id === Number(formData.region_id);

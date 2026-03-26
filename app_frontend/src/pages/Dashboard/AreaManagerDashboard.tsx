@@ -28,7 +28,7 @@ interface AreaData {
 }
 
 const fmtCurrency = (n: number) =>
-  n >= 1e6 ? `${(n/1e6).toFixed(1)}M ₪` : n >= 1e3 ? `${(n/1e3).toFixed(0)}K ₪` : `₪${n.toLocaleString("he-IL", {maximumFractionDigits:0})}`;
+n >= 1e6 ? `${(n/1e6).toFixed(1)}M ` : n >= 1e3 ? `${(n/1e3).toFixed(0)}K ` : `${n.toLocaleString("he-IL", {maximumFractionDigits:0})}`;
 
 const WO_STATUS: Record<string, { label: string; cls: string }> = {
   PENDING: { label: "ממתין", cls: "bg-yellow-100 text-yellow-800" },
@@ -275,7 +275,7 @@ const PendingApprovalsList: React.FC<{ approvals: AreaData["pending_approvals"] 
             </div>
             {done ? (
               <span className={`text-xs font-bold ${done === "approve" ? "text-green-600" : "text-red-600"}`}>
-                {done === "approve" ? "✓ אושר" : "✕ נדחה"}
+{done === "approve" ? " אושר" : " נדחה"}
               </span>
             ) : (
               <div className="flex gap-2">

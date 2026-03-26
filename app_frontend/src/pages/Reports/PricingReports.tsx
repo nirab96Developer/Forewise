@@ -162,7 +162,7 @@ const PricingReports: React.FC = () => {
 
     const unverifiedBanner =
       (summary?.total_unverified_worklogs ?? 0) > 0
-        ? `<div class="warning-banner">⚠️ ${summary!.total_unverified_worklogs} דיווחים ללא תעריף מאומת — הסכומים המוצגים הם הערכה בלבד</div>`
+? `<div class="warning-banner"> ${summary!.total_unverified_worklogs} דיווחים ללא תעריף מאומת — הסכומים המוצגים הם הערכה בלבד</div>`
         : "";
 
     const projectRows = items.map((item) => {
@@ -174,9 +174,9 @@ const PricingReports: React.FC = () => {
           <td>${w.supplier_name ?? "—"}</td>
           <td class="license">${w.equipment_license_plate ?? "—"}</td>
           <td>${w.work_hours}</td>
-          <td>${w.hourly_rate_snapshot != null ? "₪" + w.hourly_rate_snapshot : "⚠️ לא מאומת"}</td>
-          <td>${w.cost_before_vat != null ? "₪" + Number(w.cost_before_vat).toLocaleString("he-IL") : "—"}</td>
-          <td>${w.cost_with_vat != null ? "₪" + Number(w.cost_with_vat).toLocaleString("he-IL") : "—"}</td>
+<td>${w.hourly_rate_snapshot != null ? "" + w.hourly_rate_snapshot : " לא מאומת"}</td>
+<td>${w.cost_before_vat != null ? "" + Number(w.cost_before_vat).toLocaleString("he-IL") : "—"}</td>
+<td>${w.cost_with_vat != null ? "" + Number(w.cost_with_vat).toLocaleString("he-IL") : "—"}</td>
         </tr>`
         )
         .join("");
@@ -186,8 +186,8 @@ const PricingReports: React.FC = () => {
         <td colspan="6">
           <div class="project-header">
             <span class="project-name">${item.name}</span>
-            ${item.unverified_count > 0 ? `<span class="badge">⚠️ ${item.unverified_count} ללא אימות תעריף</span>` : ""}
-            <span class="project-stats">${item.worklog_count} דיווחים · ${item.total_hours} שעות · ₪${Number(item.total_cost_with_vat).toLocaleString("he-IL")} כולל מע"מ</span>
+${item.unverified_count > 0 ? `<span class="badge"> ${item.unverified_count} ללא אימות תעריף</span>` : ""}
+<span class="project-stats">${item.worklog_count} דיווחים · ${item.total_hours} שעות · ${Number(item.total_cost_with_vat).toLocaleString("he-IL")} כולל מע"מ</span>
           </div>
           <table class="detail-table">
             <thead><tr><th>תאריך</th><th>ספק</th><th>מספר כלי</th><th>שעות</th><th>תעריף</th><th>לפני מע"מ</th><th>כולל מע"מ</th></tr></thead>
@@ -234,8 +234,8 @@ const PricingReports: React.FC = () => {
   <div class="summary-grid">
     <div class="summary-card"><div class="label">פרויקטים</div><div class="value">${summary?.total_projects ?? 0}</div></div>
     <div class="summary-card"><div class="label">שעות</div><div class="value">${summary?.total_hours ?? 0}</div></div>
-    <div class="summary-card"><div class="label">לפני מע"מ</div><div class="value">₪${Number(summary?.total_cost ?? 0).toLocaleString("he-IL")}</div></div>
-    <div class="summary-card"><div class="label">כולל מע"מ</div><div class="value" style="color:#15803d">₪${Number(summary?.total_cost_with_vat ?? 0).toLocaleString("he-IL")}</div><div class="hint">ממוצע ₪${Math.round(summary?.average_hourly_rate ?? 0)}/שעה</div></div>
+<div class="summary-card"><div class="label">לפני מע"מ</div><div class="value">${Number(summary?.total_cost ?? 0).toLocaleString("he-IL")}</div></div>
+<div class="summary-card"><div class="label">כולל מע"מ</div><div class="value" style="color:#15803d">${Number(summary?.total_cost_with_vat ?? 0).toLocaleString("he-IL")}</div><div class="hint">ממוצע ${Math.round(summary?.average_hourly_rate ?? 0)}/שעה</div></div>
   </div>
   <table style="width:100%"><tbody>${projectRows}</tbody></table>
   <div class="footer"><span>מערכת ניהול יערות — Forewise</span><span>forewise.co</span></div>
@@ -360,14 +360,14 @@ const PricingReports: React.FC = () => {
                   onClick={handleExportPDF}
                   className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 transition-colors"
                 >
-                  📄 ייצוא PDF
+ייצוא PDF
                 </button>
                 <button
                   onClick={handleExportExcel}
                   className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 transition-colors"
                 >
                   <Download className="w-4 h-4" />
-                  📊 ייצוא Excel
+ייצוא Excel
                 </button>
               </div>
             )}
@@ -416,7 +416,7 @@ const PricingReports: React.FC = () => {
             {/* Unverified rates banner */}
             {(data.summary.total_unverified_worklogs ?? 0) > 0 && (
               <div className="mb-4 flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-                ⚠️ {data.summary.total_unverified_worklogs} דיווחים ללא תעריף מאומת —
+{data.summary.total_unverified_worklogs} דיווחים ללא תעריף מאומת —
                 הסכומים המוצגים הם הערכה בלבד
               </div>
             )}
@@ -518,7 +518,7 @@ const PricingReports: React.FC = () => {
                               <span>{item.name}</span>
                               {item.unverified_count > 0 && (
                                 <span className="mr-2 inline-flex items-center gap-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold px-2 py-0.5">
-                                  ⚠️ {item.unverified_count} ללא אימות תעריף
+{item.unverified_count} ללא אימות תעריף
                                 </span>
                               )}
                             </td>
@@ -570,9 +570,9 @@ const PricingReports: React.FC = () => {
                                           <td className="px-3 py-2 text-gray-700">{w.work_hours}</td>
                                           <td className="px-3 py-2">
                                             {w.hourly_rate_snapshot != null ? (
-                                              <span className="text-gray-700">₪{w.hourly_rate_snapshot}</span>
+<span className="text-gray-700">{w.hourly_rate_snapshot}</span>
                                             ) : (
-                                              <span className="text-orange-600 font-semibold">⚠️ ללא תעריף</span>
+<span className="text-orange-600 font-semibold"> ללא תעריף</span>
                                             )}
                                           </td>
                                           <td className="px-3 py-2 text-gray-700">{fmtNull(w.cost_before_vat)}</td>

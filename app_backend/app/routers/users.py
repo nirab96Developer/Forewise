@@ -180,7 +180,7 @@ def unlock_user(
     return user
 
 
-# ── Lifecycle endpoints ────────────────────────────────────────────────────────
+# Lifecycle endpoints 
 
 from pydantic import BaseModel as _BaseModel
 from datetime import datetime as _dt, timedelta as _td

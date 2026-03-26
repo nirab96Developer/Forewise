@@ -182,7 +182,7 @@ const SystemSettings: React.FC = () => {
     }
   };
 
-  // Badge map: item id → { value, color }
+// Badge map: item id { value, color }
   const getBadge = (itemId: string): { text: string; color: string } | null => {
     const c = counts;
     const badges: Record<string, { text: string; color: string } | null> = {
@@ -190,7 +190,7 @@ const SystemSettings: React.FC = () => {
       'roles': c.roles ? { text: `${c.roles} תפקידים · ${c.permissions} הרשאות`, color: 'bg-purple-100 text-purple-700' } : null,
       'suppliers-list': c.suppliers_active ? { text: `${c.suppliers_active} ספקים פעילים`, color: 'bg-green-100 text-green-700' } : null,
       'supplier-equipment': c.equipment_total ? { text: `${c.equipment_total} כלים`, color: 'bg-orange-100 text-orange-700' } : null,
-      'budgets-list': c.budgets_total ? { text: `${c.budgets_total} תקציבים${c.budgets_overrun > 0 ? ' · ⚠' + c.budgets_overrun + ' חריגות' : ''}`, color: c.budgets_overrun > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' } : null,
+'budgets-list': c.budgets_total ? { text: `${c.budgets_total} תקציבים${c.budgets_overrun > 0 ? ' · ' + c.budgets_overrun + ' חריגות' : ''}`, color: c.budgets_overrun > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' } : null,
       'invoices': c.wo_pending > 0 ? { text: `${c.wo_pending} ממתינים`, color: 'bg-red-100 text-red-700' } : null,
       'regions': c.regions ? { text: `${c.regions} מרחבים`, color: 'bg-purple-100 text-purple-700' } : null,
       'areas': c.areas ? { text: `${c.areas} אזורים`, color: 'bg-indigo-100 text-indigo-700' } : null,
@@ -214,7 +214,7 @@ const SystemSettings: React.FC = () => {
         if (c.budgets_total) parts.push(`${c.budgets_total} תקציבים`);
         if (c.invoices_total) parts.push(`${c.invoices_total} חשבוניות`);
         if (c.invoices_pending > 0) parts.push(`${c.invoices_pending} ממתינות`);
-        if (c.budgets_overrun > 0) parts.push(`⚠ ${c.budgets_overrun} חריגות`);
+if (c.budgets_overrun > 0) parts.push(` ${c.budgets_overrun} חריגות`);
         return parts.join(' · ');
       }
       case 'organization': return `${c.regions || 0} מרחבים · ${c.areas || 0} אזורים · ${c.projects_active || 0} פרויקטים`;
@@ -270,7 +270,7 @@ const SystemSettings: React.FC = () => {
                   </div>
                   {getCategoryBadge(category.id) && (
                     <span className={`mr-auto ml-4 px-3 py-1 text-xs font-medium rounded-full ${
-                      getCategoryBadge(category.id).includes('⚠') ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+getCategoryBadge(category.id).includes('') ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                     }`}>
                       {getCategoryBadge(category.id)}
                     </span>

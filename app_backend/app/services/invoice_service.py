@@ -243,7 +243,7 @@ class InvoiceService(BaseService[Invoice]):
         return invoice
 
 
-# ── Budget helpers ────────────────────────────────────────────────────────────
+# Budget helpers 
 
 def _update_budget_spent(db, project_id: int):
     """Recalculate and update budget.spent_amount from approved invoices."""
@@ -313,7 +313,7 @@ def _send_budget_alert(db, project_id: int, pct: float, budget_id: int):
         for uid in recipient_ids:
             notif = NotificationCreate(
                 user_id=uid,
-                title=f"⚠️ חריגת תקציב — {project_name}",
+title=f" חריגת תקציב — {project_name}",
                 message=f"הפרויקט {project_name} הגיע ל-{pct:.0f}% מהתקציב המאושר.",
                 notification_type="BUDGET_ALERT",
                 priority="high",
@@ -385,7 +385,7 @@ def _notify_accountants_invoice(db, invoice_id: int, invoice_number: str, projec
         log.warning(f"Invoice notification failed: {e}")
 
 
-# ── Monthly Invoice Generator ──────────────────────────────────────────────────
+# Monthly Invoice Generator 
 
 def generate_monthly_invoice(
     supplier_id: int,
@@ -396,7 +396,7 @@ def generate_monthly_invoice(
     db: Session,
 ) -> Invoice:
     """
-    מרכזת כל worklogs APPROVED של ספק+פרויקט לחודש → חשבונית DRAFT.
+מרכזת כל worklogs APPROVED של ספק+פרויקט לחודש חשבונית DRAFT.
     מקבצת לפי equipment_id (מספר רישוי).
     """
     from sqlalchemy import extract, or_
@@ -550,5 +550,5 @@ def get_uninvoiced_suppliers(project_id: int, month: int, year: int, db: Session
     return [{"supplier_id": r.supplier_id, "project_id": r.project_id} for r in rows]
 
 
-# ── Endpoint registration helper ──────────────────────────────────────────────
+# Endpoint registration helper 
 # ה-endpoint נרשם ב-invoices.py עצמו (ראה שלב הבא)

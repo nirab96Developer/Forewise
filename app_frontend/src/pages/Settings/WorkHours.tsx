@@ -213,9 +213,9 @@ const WorkHours: React.FC = () => {
             <h2 className="font-semibold text-gray-900">שמירת לילה (לינת שטח)</h2>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1.5">מחיר שמירת לילה (₪ ללילה)</label>
+<label className="block text-sm text-gray-600 mb-1.5">מחיר שמירת לילה ( ללילה)</label>
             <div className="relative w-48">
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₪</span>
+<span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium"></span>
               <input
                 type="number"
                 value={settings.overnight_guard_rate ?? 0}

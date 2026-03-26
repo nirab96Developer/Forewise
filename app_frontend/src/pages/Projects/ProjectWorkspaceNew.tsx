@@ -68,7 +68,7 @@ const ProjectWorkspaceNew: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get('tab');
 
-  // ── Role detection ───────────────────────────────────────────────────────
+// Role detection 
   const storedUser = (() => {
     try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
   })();
@@ -198,7 +198,7 @@ const ProjectWorkspaceNew: React.FC = () => {
     );
   }
 
-  // ── Tabs per role ────────────────────────────────────────────────────────
+// Tabs per role 
   const tabs = (isWorkManager || isAdminUser)
     ? [
         { id: 'overview',  label: 'סקירה',         icon: Eye },
@@ -334,7 +334,7 @@ const OverviewTab: React.FC<{ project: Project; stats: ProjectStats; currentUser
       {/* כרטיסי סטטיסטיקה - 2x2 */}
       <div className="grid grid-cols-2 gap-2">
         <StatCard 
-          icon={<span className="text-green-600 font-bold text-lg leading-none">₪</span>}
+icon={<span className="text-green-600 font-bold text-lg leading-none"></span>}
           label="תקציב"
           value={`${stats.budgetUsedPercent}%`}
           subtitle="נוצל"
@@ -367,27 +367,27 @@ const OverviewTab: React.FC<{ project: Project; stats: ProjectStats; currentUser
       <div className="bg-white rounded-xl border p-4">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-semibold text-gray-700">מצב תקציב</span>
-          <span className="text-base font-bold text-gray-900">₪{stats.budgetTotal.toLocaleString()}</span>
+<span className="text-base font-bold text-gray-900">{stats.budgetTotal.toLocaleString()}</span>
         </div>
 
         {/* 4 שורות פירוט */}
         <div className="space-y-1.5 text-xs mb-3">
           <div className="flex justify-between">
             <span className="text-gray-500">תקציב כולל:</span>
-            <span className="font-medium text-gray-800">₪{stats.budgetTotal.toLocaleString()}</span>
+<span className="font-medium text-gray-800">{stats.budgetTotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-yellow-600">🟡 מוקפא (הזמנות פתוחות):</span>
-            <span className="font-medium text-yellow-700">₪{stats.budgetCommitted.toLocaleString()}</span>
+<span className="text-yellow-600"> מוקפא (הזמנות פתוחות):</span>
+<span className="font-medium text-yellow-700">{stats.budgetCommitted.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-green-600">🟢 נוצל (חשבוניות שולמו):</span>
-            <span className="font-medium text-green-700">₪{stats.budgetSpent.toLocaleString()}</span>
+<span className="text-green-600"> נוצל (חשבוניות שולמו):</span>
+<span className="font-medium text-green-700">{stats.budgetSpent.toLocaleString()}</span>
           </div>
           <div className="flex justify-between border-t border-gray-100 pt-1.5 mt-1.5">
             <span className="font-semibold text-gray-700">זמין:</span>
             <span className={`font-bold ${stats.budgetAvailable < 0 ? 'text-red-600' : 'text-green-700'}`}>
-              ₪{stats.budgetAvailable.toLocaleString()}
+{stats.budgetAvailable.toLocaleString()}
             </span>
           </div>
         </div>
@@ -731,7 +731,7 @@ const MapTab: React.FC<{ project: Project; userRole?: string }> = ({ project, us
 };
 
 // טאב הזמנות - נתונים אמיתיים
-// ── helpers shared by OrdersTab + WorkOrderDetail ──────────
+// helpers shared by OrdersTab + WorkOrderDetail 
 const APPROVED_STATUSES = ['APPROVED', 'APPROVED_AND_SENT', 'COORDINATOR_APPROVED', 'ACTIVE', 'IN_PROGRESS'];
 
 function woStatusBadge(status: string): { label: string; cls: string } {
@@ -757,7 +757,7 @@ function safeWODate(dateStr?: string | null, fallback?: string | null): string {
   return d.toLocaleDateString('he-IL');
 }
 
-// ── Scan Equipment Modal ──────────────────────────────────────────────────────
+// Scan Equipment Modal 
 const ScanEquipmentModal: React.FC<{
   orderId: number;
   orderNumber: string | number;
@@ -835,7 +835,7 @@ const ScanEquipmentModal: React.FC<{
   );
 };
 
-// ── OrdersTab ─────────────────────────────────────────────────────────────────
+// OrdersTab 
 const OrdersTab: React.FC<{
   projectCode: string;
   projectId: number;
@@ -847,9 +847,9 @@ const OrdersTab: React.FC<{
 }> = ({ projectCode: _projectCode, projectId, projectName, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs, onAfterScan }) => {
   const navigate = useNavigate();
 
-  // localScans: orderId → equipment number (persists within the session until reload)
+// localScans: orderId equipment number (persists within the session until reload)
   const [localScans, setLocalScans]   = useState<Record<number, string>>({});
-  // justScanned: orderId → true, only set immediately after scan (for success banner)
+// justScanned: orderId true, only set immediately after scan (for success banner)
   const [justScanned, setJustScanned] = useState<Record<number, boolean>>({});
   const [scanModal, setScanModal]     = useState<{ orderId: number; orderNumber: string | number } | null>(null);
 
@@ -859,7 +859,7 @@ const OrdersTab: React.FC<{
     // After scan — notify parent to switch tab and show toast
     setTimeout(() => {
       onAfterScan?.();
-      (window as any).showToast?.('✅ כלי נסרק בהצלחה — עבר לכלים בשטח', 'success');
+(window as any).showToast?.(' כלי נסרק בהצלחה — עבר לכלים בשטח', 'success');
     }, 600);
   };
 
@@ -906,7 +906,7 @@ const OrdersTab: React.FC<{
               <div key={order.id} className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden transition-all hover:shadow-md ${
                 isRejected ? 'border-red-200' : isApproved ? 'border-green-200' : 'border-gray-200'
               }`}>
-                {/* ── Card Header (always visible) — coordinator style ── */}
+{/* Card Header (always visible) — coordinator style */}
                 <div className="px-4 py-3">
                   {/* Row 1: Order number + badges */}
                   <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -920,28 +920,28 @@ const OrdersTab: React.FC<{
                   {/* Row 2: Main info grid — like coordinator */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-sm">
                     <div className="flex items-center gap-1.5 text-gray-700">
-                      <span className="text-gray-400 text-xs">🚜</span>
+<span className="text-gray-400 text-xs"></span>
                       <span className="truncate">{order.equipment_type || '—'}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-gray-700">
-                      <span className="text-gray-400 text-xs">🏢</span>
+<span className="text-gray-400 text-xs"></span>
                       {order.supplier_name
                         ? <span className="truncate text-green-700 font-medium">{order.supplier_name}</span>
                         : <span className="text-gray-400 italic text-xs">טרם נבחר</span>
                       }
                     </div>
                     <div className="flex items-center gap-1.5 text-gray-700">
-                      <span className="text-gray-400 text-xs">📅</span>
+<span className="text-gray-400 text-xs"></span>
                       <span className="text-xs">{displayDate}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-gray-700">
-                      <span className="text-gray-400 text-xs">⏱️</span>
+<span className="text-gray-400 text-xs"></span>
                       <span>{(order as any).estimated_hours || '—'} שעות</span>
                     </div>
                   </div>
                 </div>
 
-                {/* ── Expanded details ── */}
+{/* Expanded details */}
                 <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Left: Order details */}
@@ -980,7 +980,7 @@ const OrdersTab: React.FC<{
                             const startDate = wo.work_start_date ? new Date(wo.work_start_date).toLocaleDateString('he-IL') : '—';
                             const endDate = wo.work_end_date ? new Date(wo.work_end_date).toLocaleDateString('he-IL') : '—';
                             const html = `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"><title>הזמנה #${wo.order_number || wo.id}</title><style>@media print{body{margin:0}}body{font-family:Arial,sans-serif;padding:30px;max-width:700px;margin:0 auto;color:#333}h1{color:#2d5016;border-bottom:3px solid #2d5016;padding-bottom:10px}table{width:100%;border-collapse:collapse;margin:20px 0}td{padding:10px 14px;border-bottom:1px solid #e0e0e0}td:first-child{font-weight:bold;color:#555;width:35%}td:last-child{color:#111}.badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600}.status-approved{background:#dcfce7;color:#166534}.status-pending{background:#fef9c3;color:#854d0e}.status-rejected{background:#fee2e2;color:#991b1b}.footer{margin-top:40px;text-align:center;color:#999;font-size:12px;border-top:1px solid #eee;padding-top:15px}@media print{.no-print{display:none}}</style></head><body>` +
-                            `<div class="no-print" style="text-align:center;margin-bottom:20px"><button onclick="window.print()" style="background:#2d5016;color:white;border:none;padding:10px 30px;border-radius:8px;font-size:14px;cursor:pointer">🖨️ הדפסה / שמירה כ-PDF</button></div>` +
+`<div class="no-print" style="text-align:center;margin-bottom:20px"><button onclick="window.print()" style="background:#2d5016;color:white;border:none;padding:10px 30px;border-radius:8px;font-size:14px;cursor:pointer"> הדפסה / שמירה כ-PDF</button></div>` +
                             `<h1>הזמנת עבודה #${wo.order_number || wo.id}</h1>` +
                             `<table><tr><td>סטטוס</td><td><span class="badge ${statusHe === 'מאושר' || statusHe === 'אושר ונשלח' ? 'status-approved' : statusHe === 'נדחה' || statusHe === 'בוטל' ? 'status-rejected' : 'status-pending'}">${statusHe}</span></td></tr>` +
                             `<tr><td>פרויקט</td><td>${projectName || '—'}</td></tr>` +
@@ -989,8 +989,8 @@ const OrdersTab: React.FC<{
                             `<tr><td>תאריך התחלה</td><td>${startDate}</td></tr>` +
                             `<tr><td>תאריך סיום</td><td>${endDate}</td></tr>` +
                             `<tr><td>שעות משוערות</td><td>${wo.estimated_hours || '—'}</td></tr>` +
-                            `<tr><td>תעריף לשעה</td><td>${wo.hourly_rate ? '₪' + wo.hourly_rate : '—'}</td></tr>` +
-                            `<tr><td>עלות כוללת</td><td>${wo.total_amount ? '₪' + Number(wo.total_amount).toLocaleString() : '—'}</td></tr>` +
+`<tr><td>תעריף לשעה</td><td>${wo.hourly_rate ? '' + wo.hourly_rate : '—'}</td></tr>` +
+`<tr><td>עלות כוללת</td><td>${wo.total_amount ? '' + Number(wo.total_amount).toLocaleString() : '—'}</td></tr>` +
                             `<tr><td>תיאור</td><td>${wo.description || '—'}</td></tr>` +
                             `</table>` +
                             `<div class="footer">Forewise — מערכת ניהול יערות | ${new Date().toLocaleDateString('he-IL')}</div>` +
@@ -1015,7 +1015,7 @@ const OrdersTab: React.FC<{
                         )}
                         {isApproved && scanned && (
                           <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2 text-center text-xs text-green-700 font-medium">
-                            ✅ כלי נסרק — עבור לטאב "כלים בפרויקט" לדיווח
+כלי נסרק — עבור לטאב "כלים בפרויקט" לדיווח
                           </div>
                         )}
                       </div>
@@ -1040,7 +1040,7 @@ const OrdersTab: React.FC<{
   );
 };
 
-// ── WorklogsTab ───────────────────────────────────────────────────────────────
+// WorklogsTab 
 interface WorklogFormState {
   work_order_id: string;
   work_date: string;
@@ -1138,7 +1138,7 @@ const WorklogsTab: React.FC<{
         <h2 className="text-lg font-bold">דיווחי שעות</h2>
       </div>
 
-      {/* ── Cannot report yet ── */}
+{/* Cannot report yet */}
       {isWorkManager && approvedOrders.length === 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -1152,7 +1152,7 @@ const WorklogsTab: React.FC<{
         </div>
       )}
 
-      {/* ── Inline worklog form ── */}
+{/* Inline worklog form */}
       {showForm && (
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="bg-green-700 px-4 py-3 flex items-center justify-between">
@@ -1240,7 +1240,7 @@ const WorklogsTab: React.FC<{
         </div>
       )}
 
-      {/* ── כלים בפרויקט — Equipment cards from approved orders ── */}
+{/* כלים בפרויקט — Equipment cards from approved orders */}
       {approvedOrders.length > 0 && (
         <div className="space-y-3">
           {approvedOrders.map((order) => {
@@ -1395,9 +1395,9 @@ const WorklogsTab: React.FC<{
   );
 };
 
-// ─────────────────────────────────────────────────────
+// 
 // טאב יומן פעילות
-// ─────────────────────────────────────────────────────
+// 
 interface ActivityEntry {
   id: number;
   action: string;
@@ -1584,7 +1584,7 @@ const ActivityLogTab: React.FC<{ projectId: number }> = ({ projectId }) => {
   );
 };
 
-// ── BudgetTab ────────────────────────────────────────────────────────────────
+// BudgetTab 
 const BudgetTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ project, stats }) => {
   const paidPercent      = stats.budgetTotal > 0 ? Math.round((stats.budgetSpent / stats.budgetTotal) * 100) : 0;
   const committedPercent = stats.budgetTotal > 0 ? Math.round((stats.budgetCommitted / stats.budgetTotal) * 100) : 0;
@@ -1603,7 +1603,7 @@ const BudgetTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ projec
         <div className="mb-4">
           <div className="flex justify-between text-sm mb-1">
             <span className="text-gray-500">תקציב כולל</span>
-            <span className="font-bold text-gray-900">₪{stats.budgetTotal.toLocaleString()}</span>
+<span className="font-bold text-gray-900">{stats.budgetTotal.toLocaleString()}</span>
           </div>
           <div className="h-4 bg-gray-100 rounded-full overflow-hidden flex">
             <div className="bg-green-500 h-full transition-all" style={{ width: `${paidPercent}%` }} title={`נוצל ${paidPercent}%`} />
@@ -1620,20 +1620,20 @@ const BudgetTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ projec
         <div className="divide-y divide-gray-50 text-sm">
           <div className="flex justify-between py-2">
             <span className="text-gray-500">תקציב כולל</span>
-            <span className="font-semibold text-gray-800">₪{stats.budgetTotal.toLocaleString()}</span>
+<span className="font-semibold text-gray-800">{stats.budgetTotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between py-2">
-            <span className="text-yellow-600">🟡 מוקפא (הזמנות פתוחות)</span>
-            <span className="font-semibold text-yellow-700">₪{stats.budgetCommitted.toLocaleString()}</span>
+<span className="text-yellow-600"> מוקפא (הזמנות פתוחות)</span>
+<span className="font-semibold text-yellow-700">{stats.budgetCommitted.toLocaleString()}</span>
           </div>
           <div className="flex justify-between py-2">
-            <span className="text-green-600">🟢 נוצל (חשבוניות שולמו)</span>
-            <span className="font-semibold text-green-700">₪{stats.budgetSpent.toLocaleString()}</span>
+<span className="text-green-600"> נוצל (חשבוניות שולמו)</span>
+<span className="font-semibold text-green-700">{stats.budgetSpent.toLocaleString()}</span>
           </div>
           <div className="flex justify-between py-2 font-bold text-base">
             <span className="text-gray-700">זמין לשימוש</span>
             <span className={stats.budgetAvailable < 0 ? 'text-red-600' : 'text-green-700'}>
-              ₪{stats.budgetAvailable.toLocaleString()}
+{stats.budgetAvailable.toLocaleString()}
             </span>
           </div>
         </div>
@@ -1643,7 +1643,7 @@ const BudgetTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ projec
       {stats.budgetAvailable < 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <p className="text-sm text-red-700 font-medium">חריגה מהתקציב של ₪{Math.abs(stats.budgetAvailable).toLocaleString()}</p>
+<p className="text-sm text-red-700 font-medium">חריגה מהתקציב של {Math.abs(stats.budgetAvailable).toLocaleString()}</p>
         </div>
       )}
 
@@ -1665,7 +1665,7 @@ const BudgetTab: React.FC<{ project: Project; stats: ProjectStats }> = ({ projec
   );
 };
 
-// ── DocumentsTab ─────────────────────────────────────────────────────────────
+// DocumentsTab 
 const DocumentsTab: React.FC<{ projectId: number }> = ({ projectId: _projectId }) => (
   <div className="bg-white rounded-xl border p-12 text-center">
     <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />

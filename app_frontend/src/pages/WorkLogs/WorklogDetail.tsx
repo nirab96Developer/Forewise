@@ -179,7 +179,7 @@ const WorklogDetail: React.FC = () => {
     return new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS" }).format(num);
   };
 
-  /** PENDING/submitted/draft → 0, APPROVED → 1, INVOICED → 2 */
+/** PENDING/submitted/draft 0, APPROVED 1, INVOICED 2 */
   const getWorklogProgressStage = (status: string): number => {
     const s = status.toLowerCase();
     if (s === "invoiced") return 2;
@@ -248,8 +248,8 @@ const WorklogDetail: React.FC = () => {
             <div className="flex items-center gap-2 flex-wrap justify-end">
               {worklog.is_overnight && (
                 <span className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                  🌙 שמירת לילה
-                  {(worklog.overnight_total ?? 0) > 0 && ` — ₪${Number(worklog.overnight_total).toLocaleString()}`}
+שמירת לילה
+{(worklog.overnight_total ?? 0) > 0 && ` — ${Number(worklog.overnight_total).toLocaleString()}`}
                 </span>
               )}
               <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${getStatusColor(worklog.status)}`}>
@@ -260,7 +260,7 @@ const WorklogDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Progress — ממתין → מאושר → חשבונית (PENDING=0, APPROVED=1, INVOICED=2) */}
+{/* Progress — ממתין מאושר חשבונית (PENDING=0, APPROVED=1, INVOICED=2) */}
         {worklog.status && !["rejected", "draft"].includes(worklog.status?.toLowerCase()) && (
           <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
             <div className="relative h-3 rounded-full bg-gray-200 overflow-hidden mb-4">

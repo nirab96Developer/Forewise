@@ -371,7 +371,7 @@ class BaseService(Generic[T]):
         """
         Permanently delete record from database.
         
-        ⚠️ USE WITH CAUTION! This cannot be undone.
+USE WITH CAUTION! This cannot be undone.
         
         Args:
             db: Database session

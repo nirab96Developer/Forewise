@@ -30,7 +30,7 @@ def list_projects(
     """List projects filtered by the caller's role scope."""
     require_permission(current_user, "projects.read")
 
-    # ── Role-based scope filtering ──────────────────────────────────────────
+# Role-based scope filtering 
     role_code = current_user.role.code if current_user.role else ""
 
     if role_code in ("ADMIN", "ORDER_COORDINATOR"):
@@ -59,7 +59,7 @@ def list_projects(
     elif role_code == "WORK_MANAGER":
         # Always show only assigned projects
         my_projects = True
-    # ────────────────────────────────────────────────────────────────────────
+# 
 
     items, total = service.list(db, search)
 

@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # ==========================================
     # הגדרות מסד נתונים
     # ==========================================
-    # ⚠️ CRITICAL SECURITY: Never hardcode database credentials!
+    #  CRITICAL SECURITY: Never hardcode database credentials!
     # Use environment variables or Azure Key Vault
     DATABASE_URL: str  # No default - MUST be provided via environment
     TEST_DATABASE_URL: str = "postgresql://test_user:test_pass@localhost:5432/test_db"
@@ -73,7 +73,7 @@ class Settings(BaseSettings):
     # ==========================================
     # הגדרות אבטחה
     # ==========================================
-    # ⚠️ CRITICAL SECURITY: SECRET_KEY must be set via environment variable!
+    #  CRITICAL SECURITY: SECRET_KEY must be set via environment variable!
     # Generate strong key: python -c "import secrets; print(secrets.token_urlsafe(32))"
     SECRET_KEY: str  # No default - MUST be provided
     ALGORITHM: str = "HS256"
@@ -119,7 +119,7 @@ class Settings(BaseSettings):
     # ==========================================
     # הגדרות אימייל
     # ==========================================
-    # ⚠️ SECURITY: Never hardcode credentials!
+    #  SECURITY: Never hardcode credentials!
     # Use environment variables or Azure Key Vault
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
@@ -499,7 +499,7 @@ class Settings(BaseSettings):
         # בדיקות פרודקשן מחמירות
         if self.is_production():
             if self.DEBUG:
-                errors.append("⚠️ CRITICAL: DEBUG must be False in production!")
+                errors.append(" CRITICAL: DEBUG must be False in production!")
             
             if "*" in self.CORS_ORIGINS or "localhost" in str(self.CORS_ORIGINS):
                 # Log only — localhost origins are kept for gradual rollout; prod origins already included
@@ -510,7 +510,7 @@ class Settings(BaseSettings):
                 )
             
             if not self.SMTP_USER or not self.SMTP_PASSWORD:
-                errors.append("⚠️ WARNING: SMTP credentials not configured")
+                errors.append(" WARNING: SMTP credentials not configured")
             
             if "localhost" in self.DATABASE_URL or "127.0.0.1" in self.DATABASE_URL:
                 # Single-server deployment: DB on localhost is valid — log only, do not block startup

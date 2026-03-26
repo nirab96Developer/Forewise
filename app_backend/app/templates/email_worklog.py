@@ -82,26 +82,26 @@ def _cost_block(work_hours, hourly_rate, overnight_nights=0, overnight_rate=250,
     overnight_row = ""
     if overnight_cost > 0:
         overnight_row = f'''<tr style="background:#f0f7f2;">
-<td style="padding:10px 14px;font-size:12px;color:#6b7c72;">🌙 לינת שטח</td>
-<td style="padding:10px 4px;font-size:12px;color:#6b7c72;text-align:center;">{overnight_nights} לילה × ₪{overnight_rate:,.0f}</td>
-<td style="padding:10px 14px;font-size:13px;font-weight:700;color:#111d15;text-align:left;">₪{overnight_cost:,.0f}</td></tr>'''
+<td style="padding:10px 14px;font-size:12px;color:#6b7c72;"> לינת שטח</td>
+<td style="padding:10px 4px;font-size:12px;color:#6b7c72;text-align:center;">{overnight_nights} לילה × {overnight_rate:,.0f}</td>
+<td style="padding:10px 14px;font-size:13px;font-weight:700;color:#111d15;text-align:left;">{overnight_cost:,.0f}</td></tr>'''
 
     return f'''<tr><td style="padding:16px 32px 0;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0"
 style="border-radius:10px;overflow:hidden;border:1px solid #b8dfc8;background:#f8fbf9;">
 <tr><td colspan="3" style="padding:10px 14px 6px;font-size:11px;font-weight:700;color:#1a6b3c;letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid #ddeee5;">
-💰 &nbsp;חישוב עלות</td></tr>
+ &nbsp;חישוב עלות</td></tr>
 <tr>
 <td style="padding:10px 14px;font-size:12px;color:#6b7c72;width:44%;">שעות עבודה</td>
-<td style="padding:10px 4px;font-size:12px;color:#6b7c72;text-align:center;">{work_hours} שע' × ₪{hourly_rate:,.0f}</td>
-<td style="padding:10px 14px;font-size:13px;font-weight:700;color:#111d15;text-align:left;">₪{hours_cost:,.0f}</td></tr>
+<td style="padding:10px 4px;font-size:12px;color:#6b7c72;text-align:center;">{work_hours} שע' × {hourly_rate:,.0f}</td>
+<td style="padding:10px 14px;font-size:13px;font-weight:700;color:#111d15;text-align:left;">{hours_cost:,.0f}</td></tr>
 {overnight_row}
 <tr><td colspan="3" style="padding:0 14px;"><hr style="border:none;border-top:1px dashed #b8dfc8;"></td></tr>
 <tr style="background:#e8f5ee;">
 <td style="padding:12px 14px;font-size:13px;font-weight:700;color:#1a6b3c;">סה"כ לפני מע"מ</td><td></td>
-<td style="padding:12px 14px;text-align:left;"><span style="font-size:20px;font-weight:800;color:#1a6b3c;">₪{total_before:,.0f}</span></td></tr>
+<td style="padding:12px 14px;text-align:left;"><span style="font-size:20px;font-weight:800;color:#1a6b3c;">{total_before:,.0f}</span></td></tr>
 <tr><td style="padding:8px 14px 10px;font-size:11px;color:#6b7c72;">כולל מע"מ ({int(vat_rate*100)}%)</td><td></td>
-<td style="padding:8px 14px 10px;font-size:12px;font-weight:600;color:#6b7c72;text-align:left;">₪{total_with_vat:,.1f}</td></tr>
+<td style="padding:8px 14px 10px;font-size:12px;font-weight:600;color:#6b7c72;text-align:left;">{total_with_vat:,.1f}</td></tr>
 </table></td></tr>'''
 
 
@@ -116,15 +116,15 @@ style="background:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.
 </table></td></tr></table></body></html>'''
 
 
-# ═══════════════════════════════════════════════════
-# STAGE 1: Worklog created → PENDING
-# ═══════════════════════════════════════════════════
+# 
+# STAGE 1: Worklog created  PENDING
+# 
 
 def stage1_pending(report_number, project_name, supplier_name, equipment_type,
                    license_plate, work_date, work_hours, report_type,
                    worker_name, hourly_rate=0, overnight_nights=0,
                    overnight_rate=250, recipient_role="accountant", **kw):
-    type_badge = '<span style="background:#e8f5ee;color:#1a6b3c;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">✅ תקן</span>' if report_type == 'standard' else '<span style="background:#fff3e0;color:#e65100;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">⚠️ לא תקן</span>'
+    type_badge = '<span style="background:#e8f5ee;color:#1a6b3c;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;"> תקן</span>' if report_type == 'standard' else '<span style="background:#fff3e0;color:#e65100;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;"> לא תקן</span>'
 
     details = f'''<tr><td style="padding:16px 32px 0;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:10px;overflow:hidden;border:1px solid #e8ede9;">
@@ -143,25 +143,25 @@ def stage1_pending(report_number, project_name, supplier_name, equipment_type,
     if recipient_role == "accountant":
         title = "דיווח שעות חדש"
         subtitle = f'דיווח <strong style="color:#1a6b3c;">{report_number}</strong> ממתין לאישורך'
-        badge = _badge('⏳ &nbsp;הדיווח ממתין לאישורך במערכת Forewise')
-        cta = _cta_button('עבור לאישור הדיווח ←', 'https://forewise.co/accountant-inbox')
+        badge = _badge(' &nbsp;הדיווח ממתין לאישורך במערכת Forewise')
+        cta = _cta_button('עבור לאישור הדיווח ', 'https://forewise.co/accountant-inbox')
         subject = f"דיווח חדש ממתין לאישורך — {report_number}"
     elif recipient_role == "supplier":
         title = "אישור קבלת דיווח שעות"
         subtitle = f'שלום <strong>{supplier_name}</strong>,<br>דיווח שעות עבור הזמנה התקבל במערכת.'
-        badge = _badge('⏳ ממתין לאישור מנהלת חשבונות', '#fff8e8', '#f0c060', '#8a6000')
+        badge = _badge(' ממתין לאישור מנהלת חשבונות', '#fff8e8', '#f0c060', '#8a6000')
         cta = ''
         subject = f"אסמכתא — דיווח שעות התקבל {report_number}"
     else:
         title = "דיווח שעות נשמר"
         subtitle = f'דיווח <strong style="color:#1a6b3c;">{report_number}</strong> נשמר בהצלחה'
-        badge = _badge('⏳ ממתין לאישור מנהלת חשבונות')
+        badge = _badge(' ממתין לאישור מנהלת חשבונות')
         cta = ''
         subject = f"דיווח שעות נשמר — {report_number}"
 
     inner = f'''{_header()}
 <tr><td style="padding:20px 32px 0;text-align:center;">
-{_icon_circle('⏱')}
+{_icon_circle('')}
 <div style="font-size:22px;font-weight:800;color:#111d15;margin-bottom:6px;">{title}</div>
 <div style="font-size:13px;color:#6b7c72;line-height:1.5;">{subtitle}</div>
 </td></tr>
@@ -171,9 +171,9 @@ def stage1_pending(report_number, project_name, supplier_name, equipment_type,
     return {"subject": subject, "html": _wrap(inner)}
 
 
-# ═══════════════════════════════════════════════════
-# STAGE 2: Worklog approved → APPROVED
-# ═══════════════════════════════════════════════════
+# 
+# STAGE 2: Worklog approved  APPROVED
+# 
 
 def stage2_approved(report_number, project_name, supplier_name, equipment_type,
                     work_date, total_hours, hourly_rate, overnight_nights=0,
@@ -189,16 +189,16 @@ def stage2_approved(report_number, project_name, supplier_name, equipment_type,
 </table></td></tr>'''
 
     cost = _cost_block(total_hours, hourly_rate, overnight_nights, overnight_rate)
-    badge = _badge('✅ &nbsp;אושר — ממתין להפקת חשבונית', '#e8f5ee', '#b8dfc8', '#1a6b3c')
+    badge = _badge(' &nbsp;אושר — ממתין להפקת חשבונית', '#e8f5ee', '#b8dfc8', '#1a6b3c')
 
     if recipient_role == "supplier":
-        subject = f"✅ אסמכתא מאושרת — {report_number}"
+        subject = f" אסמכתא מאושרת — {report_number}"
     else:
         subject = f"דיווח אושר — {report_number}"
 
     inner = f'''{_header()}
 <tr><td style="padding:20px 32px 0;text-align:center;">
-{_icon_circle('✅')}
+{_icon_circle('')}
 <div style="font-size:22px;font-weight:800;color:#111d15;margin-bottom:6px;">דיווח שעות אושר</div>
 <div style="font-size:13px;color:#6b7c72;">דיווח <strong style="color:#1a6b3c;">{report_number}</strong> אושר</div>
 </td></tr>
@@ -208,9 +208,9 @@ def stage2_approved(report_number, project_name, supplier_name, equipment_type,
     return {"subject": subject, "html": _wrap(inner)}
 
 
-# ═══════════════════════════════════════════════════
-# STAGE 3: Invoice created → INVOICED
-# ═══════════════════════════════════════════════════
+# 
+# STAGE 3: Invoice created  INVOICED
+# 
 
 def stage3_invoiced(invoice_number, invoice_date, supplier_name, project_name,
                     worklogs_summary, total_amount, recipient_role="supplier", **kw):
@@ -220,7 +220,7 @@ def stage3_invoiced(invoice_number, invoice_date, supplier_name, project_name,
         rows += f'''<tr><td style="padding:6px 8px;font-size:12px;border-bottom:1px solid #eee;">{wl.get('report_number','')}</td>
 <td style="padding:6px 8px;font-size:12px;border-bottom:1px solid #eee;">{wl.get('work_date','')}</td>
 <td style="padding:6px 8px;font-size:12px;border-bottom:1px solid #eee;">{wl.get('hours',0)} שעות</td>
-<td style="padding:6px 8px;font-size:12px;border-bottom:1px solid #eee;">₪{wl.get('amount',0):,.0f}</td></tr>'''
+<td style="padding:6px 8px;font-size:12px;border-bottom:1px solid #eee;">{wl.get('amount',0):,.0f}</td></tr>'''
 
     table = f'''<tr><td style="padding:16px 32px 0;">
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:10px;overflow:hidden;border:1px solid #e8ede9;">
@@ -239,16 +239,16 @@ def stage3_invoiced(invoice_number, invoice_date, supplier_name, project_name,
 <tbody>{rows}</tbody>
 <tfoot><tr style="background:#e8f5ee;">
 <td colspan="3" style="padding:10px 8px;font-size:14px;font-weight:900;color:#1b5e20;">סה"כ לתשלום</td>
-<td style="padding:10px 8px;font-size:18px;font-weight:900;color:#1b5e20;">₪{total_amount:,.0f}</td></tr></tfoot>
+<td style="padding:10px 8px;font-size:18px;font-weight:900;color:#1b5e20;">{total_amount:,.0f}</td></tr></tfoot>
 </table></td></tr>'''
 
-    badge = _badge('📄 &nbsp;חשבונית הופקה', '#e3f2fd', '#90caf9', '#1565c0')
+    badge = _badge(' &nbsp;חשבונית הופקה', '#e3f2fd', '#90caf9', '#1565c0')
 
-    subject = f"📄 חשבונית הופקה — {invoice_number}" if recipient_role == "supplier" else f"חשבונית {invoice_number} הופקה"
+    subject = f" חשבונית הופקה — {invoice_number}" if recipient_role == "supplier" else f"חשבונית {invoice_number} הופקה"
 
     inner = f'''{_header()}
 <tr><td style="padding:20px 32px 0;text-align:center;">
-{_icon_circle('📄')}
+{_icon_circle('')}
 <div style="font-size:22px;font-weight:800;color:#111d15;margin-bottom:6px;">חשבונית הופקה</div>
 <div style="font-size:13px;color:#6b7c72;">חשבונית <strong style="color:#1565c0;">{invoice_number}</strong></div>
 </td></tr>
@@ -258,9 +258,9 @@ def stage3_invoiced(invoice_number, invoice_date, supplier_name, project_name,
     return {"subject": subject, "html": _wrap(inner)}
 
 
-# ═══════════════════════════════════════════════════
-# EMAIL 4: Work order approved → all stakeholders
-# ═══════════════════════════════════════════════════
+# 
+# EMAIL 4: Work order approved  all stakeholders
+# 
 
 def work_order_approved(order_number, project_name, project_code, supplier_name,
                         equipment_type, license_plate, work_start, work_end,
@@ -278,24 +278,24 @@ def work_order_approved(order_number, project_name, project_code, supplier_name,
 {_detail_row('מנהל עבודה', worker_name, True)}
 </table></td></tr>'''
 
-    badge = _badge('✅ &nbsp;ההזמנה אושרה ונשלחה לספק לביצוע', '#e8f5ee', '#b8dfc8', '#1a6b3c')
+    badge = _badge(' &nbsp;ההזמנה אושרה ונשלחה לספק לביצוע', '#e8f5ee', '#b8dfc8', '#1a6b3c')
 
     nav = ""
     if lat and lng:
         nav = f'''<tr><td style="padding:16px 32px 0;text-align:center;">
-<div style="font-size:12px;color:#6b7c72;margin-bottom:8px;">📍 ניווט לאתר העבודה</div>
-<a href="https://waze.com/ul?ll={lat},{lng}&navigate=yes" style="display:inline-block;background:#33ccff;color:#0a2540;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;margin-left:8px;">🚗 Waze</a>
-<a href="https://www.google.com/maps/dir/?api=1&destination={lat},{lng}" style="display:inline-block;background:#fff;border:1.5px solid #dde8e2;color:#1a2e21;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;">🗺 Google Maps</a>
+<div style="font-size:12px;color:#6b7c72;margin-bottom:8px;"> ניווט לאתר העבודה</div>
+<a href="https://waze.com/ul?ll={lat},{lng}&navigate=yes" style="display:inline-block;background:#33ccff;color:#0a2540;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;margin-left:8px;"> Waze</a>
+<a href="https://www.google.com/maps/dir/?api=1&destination={lat},{lng}" style="display:inline-block;background:#fff;border:1.5px solid #dde8e2;color:#1a2e21;padding:11px 22px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;"> Google Maps</a>
 </td></tr>'''
 
-    cta = _cta_button('צפה בפרטי ההזמנה ←')
+    cta = _cta_button('צפה בפרטי ההזמנה ')
     subject = f"הזמנת עבודה #{order_number} אושרה — {project_name}"
 
     role_tag = f'<span style="font-size:11px;background:#f4f8f5;padding:2px 8px;border-radius:20px;color:#6b7c72;">{recipient_label}</span>' if recipient_label else ''
 
     inner = f'''{_header()}
 <tr><td style="padding:20px 32px 0;text-align:center;">
-{_icon_circle('📋')}
+{_icon_circle('')}
 <div style="font-size:22px;font-weight:800;color:#111d15;margin-bottom:6px;">הזמנת עבודה אושרה!</div>
 <div style="font-size:13px;color:#6b7c72;line-height:1.6;">הזמנה <strong style="color:#1a6b3c;">#{order_number}</strong> אושרה ונשלחה לספק<br>{role_tag}</div>
 </td></tr>

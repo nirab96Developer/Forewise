@@ -28,7 +28,7 @@ export const supportArticles: SupportArticle[] = [
     category: 'LOGIN',
     title: 'בעיות התחברות למערכת',
     shortTitle: 'בעיית התחברות',
-    icon: '🔐',
+icon: '',
     steps: [
       {
         id: 'login-1',
@@ -74,7 +74,7 @@ export const supportArticles: SupportArticle[] = [
     category: 'WORKLOG',
     title: 'בעיות בדיווח שעות',
     shortTitle: 'בעיה בדיווח שעות',
-    icon: '⏰',
+icon: '',
     steps: [
       {
         id: 'worklog-1',
@@ -131,7 +131,7 @@ export const supportArticles: SupportArticle[] = [
     category: 'WORK_ORDER',
     title: 'בעיות בהזמנת עבודה',
     shortTitle: 'בעיה בהזמנת עבודה',
-    icon: '📋',
+icon: '',
     steps: [
       {
         id: 'wo-1',
@@ -187,7 +187,7 @@ export const supportArticles: SupportArticle[] = [
     category: 'PROJECT',
     title: 'בעיות בפרויקטים',
     shortTitle: 'בעיה בפרויקט',
-    icon: '🏗️',
+icon: '',
     steps: [
       {
         id: 'proj-1',
@@ -228,7 +228,7 @@ export const supportArticles: SupportArticle[] = [
     category: 'GENERAL',
     title: 'בעיות כלליות',
     shortTitle: 'בעיה אחרת',
-    icon: '❓',
+icon: '',
     steps: [
       {
         id: 'gen-1',
@@ -277,10 +277,10 @@ export const getArticleById = (id: string): SupportArticle | undefined => {
 
 // קטגוריות זמינות
 export const supportCategories = [
-  { id: 'LOGIN', label: 'בעיית התחברות', icon: '🔐', description: 'לא מצליח להתחבר, שכחתי סיסמה' },
-  { id: 'WORKLOG', label: 'בעיה בדיווח שעות', icon: '⏰', description: 'לא מצליח לדווח, שגיאה בדיווח' },
-  { id: 'WORK_ORDER', label: 'בעיה בהזמנת עבודה', icon: '📋', description: 'ספק לא מגיב, בעיה בהזמנה' },
-  { id: 'PROJECT', label: 'בעיה בפרויקט', icon: '🏗️', description: 'לא רואה פרויקט, בעיית הרשאות' },
-  { id: 'GENERAL', label: 'בעיה אחרת', icon: '❓', description: 'משהו אחר' },
+{ id: 'LOGIN', label: 'בעיית התחברות', icon: '', description: 'לא מצליח להתחבר, שכחתי סיסמה' },
+{ id: 'WORKLOG', label: 'בעיה בדיווח שעות', icon: '', description: 'לא מצליח לדווח, שגיאה בדיווח' },
+{ id: 'WORK_ORDER', label: 'בעיה בהזמנת עבודה', icon: '', description: 'ספק לא מגיב, בעיה בהזמנה' },
+{ id: 'PROJECT', label: 'בעיה בפרויקט', icon: '', description: 'לא רואה פרויקט, בעיית הרשאות' },
+{ id: 'GENERAL', label: 'בעיה אחרת', icon: '', description: 'משהו אחר' },
 ];
 

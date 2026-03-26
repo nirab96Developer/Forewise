@@ -4,9 +4,9 @@ Runs every 10 minutes via the FastAPI lifespan scheduler.
 
 Flow:
 1. Find DISTRIBUTING work orders with expired portal_expiry
-2. For forced supplier (is_forced) → mark as expired, notify coordinator
-3. For fair rotation → auto-move to next supplier in same area with same equipment type
-4. If no more suppliers → mark as EXPIRED, notify coordinator
+2. For forced supplier (is_forced) mark as expired, notify coordinator
+3. For fair rotation auto-move to next supplier in same area with same equipment type
+4. If no more suppliers mark as EXPIRED, notify coordinator
 """
 import asyncio
 import logging
@@ -91,7 +91,7 @@ def process_expired_portals() -> dict:
                     _send_to_next_supplier(db, wo, next_supplier_id)
                     stats["rotated"] += 1
                     logger.info(
-                        f"[PORTAL_EXPIRY] WO {wo.id}: rotated from supplier {current_supplier_id} → {next_supplier_id} (tried: {tried_suppliers})"
+f"[PORTAL_EXPIRY] WO {wo.id}: rotated from supplier {current_supplier_id} {next_supplier_id} (tried: {tried_suppliers})"
                     )
                 else:
                     wo.status = "EXPIRED"
@@ -122,7 +122,7 @@ def process_expired_portals() -> dict:
 
 def _find_next_supplier(db, work_order, area_id, exclude_id=None, exclude_ids=None):
     """Find next supplier in rotation who has equipment with license plate.
-    Hierarchy: area → region → None.
+Hierarchy: area region None.
     Excludes all previously tried suppliers.
     """
     from app.models.supplier_rotation import SupplierRotation

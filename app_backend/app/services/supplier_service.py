@@ -402,7 +402,7 @@ class SupplierService(BaseService[Supplier]):
         db.refresh(row)
         return row
 
-    # ── Alias methods for backward-compat with older router ──────
+# Alias methods for backward-compat with older router 
     def list_with_filters(self, db, filters):
         return self.list(db, filters)
 

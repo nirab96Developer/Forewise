@@ -121,12 +121,12 @@ const PendingSync: React.FC = () => {
               className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'מסנכרן...' : `🔄 סנכרן הכל עכשיו (${pending.length})`}
+{isSyncing ? 'מסנכרן...' : ` סנכרן הכל עכשיו (${pending.length})`}
             </button>
           ) : (
             <div className="flex items-center gap-2 px-5 py-2.5 bg-orange-100 text-orange-700 rounded-xl font-medium border border-orange-200">
               <WifiOff className="w-4 h-4" />
-              📵 אין חיבור — הסנכרון יתבצע אוטומטית
+אין חיבור — הסנכרון יתבצע אוטומטית
             </div>
           )}
         </div>
@@ -140,7 +140,7 @@ const PendingSync: React.FC = () => {
           </div>
         ) : items.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-            <div className="text-4xl mb-3">✅</div>
+<div className="text-4xl mb-3"></div>
             <p className="text-gray-600 font-medium">הכל מסונכרן — אין פריטים ממתינים</p>
           </div>
         ) : (

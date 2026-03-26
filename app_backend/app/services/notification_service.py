@@ -19,9 +19,9 @@ from app.schemas.notification import (
 
 log = logging.getLogger(__name__)
 
-# ─────────────────────────────────────────────────────────────
+# 
 # Internal helpers
-# ─────────────────────────────────────────────────────────────
+# 
 
 def _ws_send(user_id: int, payload: dict):
     """Best-effort WebSocket push — never raises."""
@@ -107,13 +107,13 @@ def _find_users_by_role(db: Session, role_code: str, area_id: Optional[int] = No
     return q.all()
 
 
-# ─────────────────────────────────────────────────────────────
+# 
 # Business-event notification helpers
-# ─────────────────────────────────────────────────────────────
+# 
 
 def notify_work_order_created(db: Session, work_order):
     """
-    הזמנה חדשה נוצרה → התראה ל-ORDER_COORDINATOR של האזור.
+הזמנה חדשה נוצרה התראה ל-ORDER_COORDINATOR של האזור.
     """
     try:
         from app.models.project import Project
@@ -145,7 +145,7 @@ def notify_work_order_created(db: Session, work_order):
 
 def notify_supplier_accepted(db: Session, work_order):
     """
-    ספק אישר הזמנה → התראה ל-ORDER_COORDINATOR.
+ספק אישר הזמנה התראה ל-ORDER_COORDINATOR.
     """
     try:
         from app.models.project import Project
@@ -184,7 +184,7 @@ def notify_supplier_accepted(db: Session, work_order):
 
 def notify_work_order_approved(db: Session, work_order):
     """
-    ORDER_COORDINATOR אישר הזמנה → התראה ל-WORK_MANAGER שיצר.
+ORDER_COORDINATOR אישר הזמנה התראה ל-WORK_MANAGER שיצר.
     """
     try:
         creator_id = getattr(work_order, 'created_by_id', None)
@@ -205,7 +205,7 @@ def notify_work_order_approved(db: Session, work_order):
 
 def notify_work_order_rejected(db: Session, work_order, reason: str = ""):
     """
-    הזמנה נדחתה → התראה ל-WORK_MANAGER שיצר.
+הזמנה נדחתה התראה ל-WORK_MANAGER שיצר.
     """
     try:
         creator_id = getattr(work_order, 'created_by_id', None)
@@ -230,7 +230,7 @@ def notify_work_order_rejected(db: Session, work_order, reason: str = ""):
 
 def notify_worklog_created(db: Session, worklog):
     """
-    דיווח שעות נוצר → התראה ל-AREA_MANAGER של האזור לאישור.
+דיווח שעות נוצר התראה ל-AREA_MANAGER של האזור לאישור.
     """
     try:
         from app.models.project import Project
@@ -269,7 +269,7 @@ def notify_worklog_created(db: Session, worklog):
 
 def notify_worklog_approved(db: Session, worklog):
     """
-    דיווח שעות אושר → התראה ל-WORK_MANAGER שדיווח.
+דיווח שעות אושר התראה ל-WORK_MANAGER שדיווח.
     """
     try:
         reporter_id = getattr(worklog, 'user_id', None)
@@ -278,7 +278,7 @@ def notify_worklog_approved(db: Session, worklog):
         if reporter_id:
             notify(
                 db, reporter_id,
-                title="דיווח שעות אושר ✓",
+title="דיווח שעות אושר ",
                 message=f"דיווח השעות שלך מתאריך {report_date} אושר על ידי מנהל האזור",
                 notification_type="work_log",
                 entity_type="worklog",
@@ -291,7 +291,7 @@ def notify_worklog_approved(db: Session, worklog):
 
 def notify_worklog_rejected(db: Session, worklog, reason: str = ""):
     """
-    דיווח שעות נדחה → התראה ל-WORK_MANAGER שדיווח.
+דיווח שעות נדחה התראה ל-WORK_MANAGER שדיווח.
     """
     try:
         reporter_id = getattr(worklog, 'user_id', None)
@@ -317,7 +317,7 @@ def notify_worklog_rejected(db: Session, worklog, reason: str = ""):
 
 def notify_invoice_created(db: Session, invoice):
     """
-    חשבונית חדשה → התראה לכל מנהלות החשבונות.
+חשבונית חדשה התראה לכל מנהלות החשבונות.
     """
     try:
         from app.models.project import Project
@@ -332,7 +332,7 @@ def notify_invoice_created(db: Session, invoice):
             notify(
                 db, acct.id,
                 title="חשבונית חדשה לאישור",
-                message=f"חשבונית {invoice.invoice_number} עבור {project_name} (₪{amount:,.0f}) ממתינה לאישורך",
+message=f"חשבונית {invoice.invoice_number} עבור {project_name} ({amount:,.0f}) ממתינה לאישורך",
                 notification_type="invoice",
                 entity_type="invoice",
                 entity_id=invoice.id,
@@ -345,7 +345,7 @@ def notify_invoice_created(db: Session, invoice):
 
 def notify_invoice_approved(db: Session, invoice):
     """
-    חשבונית אושרה → התראה ל-AREA_MANAGER.
+חשבונית אושרה התראה ל-AREA_MANAGER.
     """
     try:
         from app.models.project import Project
@@ -369,7 +369,7 @@ def notify_invoice_approved(db: Session, invoice):
                 notify(
                     db, mgr.id,
                     title="חשבונית אושרה",
-                    message=f"חשבונית {invoice.invoice_number} עבור {project_name} (₪{amount:,.0f}) אושרה",
+message=f"חשבונית {invoice.invoice_number} עבור {project_name} ({amount:,.0f}) אושרה",
                     notification_type="invoice",
                     entity_type="invoice",
                     entity_id=invoice.id,
@@ -379,9 +379,9 @@ def notify_invoice_approved(db: Session, invoice):
         log.warning(f"notify_invoice_approved failed: {e}")
 
 
-# ─────────────────────────────────────────────────────────────
+# 
 # NotificationService class (used by notifications router)
-# ─────────────────────────────────────────────────────────────
+# 
 
 class NotificationService:
     """Service for notification CRUD operations."""

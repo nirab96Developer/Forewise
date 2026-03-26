@@ -93,7 +93,7 @@ class DebugLogger {
   }
 
   logAPIResponse(method: string, url: string, status: number, data?: any, duration?: number) {
-    this.addLog('api', `[${method}] ${url} → ${status}${duration ? ` (${duration}ms)` : ''}`, {
+this.addLog('api', `[${method}] ${url} ${status}${duration ? ` (${duration}ms)` : ''}`, {
       method,
       url,
       status,
@@ -104,7 +104,7 @@ class DebugLogger {
   }
 
   logAPIError(method: string, url: string, error: any) {
-    this.addLog('error', `[${method}] ${url} → שגיאה`, {
+this.addLog('error', `[${method}] ${url} שגיאה`, {
       method,
       url,
       error: error.message || error,

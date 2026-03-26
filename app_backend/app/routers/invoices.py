@@ -274,10 +274,10 @@ def create_invoice_from_work_order(
         )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # POST /invoices/from-worklogs
 # יצירת חשבונית מרשימת דיווחי שעות מאושרים
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 from pydantic import BaseModel as _BaseModel
 from typing import List as _List
 from decimal import Decimal as _Decimal
@@ -311,7 +311,7 @@ def create_invoice_from_worklogs(
     2. בדיקה שכולם status='approved'
     3. חישוב סכום כולל לפי cost_before_vat (אם קיים) או total_hours × hourly_rate_snapshot
     4. יצירת invoice + invoice_items
-    5. עדכון worklogs → status='invoiced'
+    5. עדכון worklogs  status='invoiced'
     """
     require_permission(current_user, "invoices.create")
 
@@ -430,7 +430,7 @@ def create_invoice_from_worklogs(
 
         desc_parts = [f"דיווח שעות #{w.report_number} — {w.report_date}"]
         if overnight_cost > 0:
-            desc_parts.append(f"שמירת לילה: {guard_info['guard_days']} לילות × ₪{overnight_guard_rate}")
+            desc_parts.append(f"שמירת לילה: {guard_info['guard_days']} לילות × {overnight_guard_rate}")
 
         if col_exists:
             db.execute(sa_text("""
@@ -461,10 +461,10 @@ def create_invoice_from_worklogs(
     )
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # GET /invoices/{invoice_id}/items
 # פריטי חשבונית כולל שמות ספק/פרויקט
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 @router.get("/{invoice_id}/items")
 def get_invoice_items(
     invoice_id: int,
@@ -546,10 +546,10 @@ def get_invoice_items(
     }
 
 
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 # POST /invoices/{invoice_id}/mark-paid
 # סמן חשבונית כשולמה
-# ──────────────────────────────────────────────────────────────────────────────
+# 
 @router.post("/{invoice_id}/mark-paid")
 def mark_invoice_paid(
     invoice_id: int,
@@ -569,7 +569,7 @@ def mark_invoice_paid(
     return {"message": "החשבונית סומנה כשולמה", "invoice_id": invoice_id, "status": "PAID"}
 
 
-# ── Monthly Invoice Generation ────────────────────────────────────────────────
+#  Monthly Invoice Generation 
 from pydantic import BaseModel as _BaseModel
 
 

@@ -79,9 +79,9 @@ const getActivityTitle = (action: string): string => {
     'user.login': 'כניסה למערכת',
     'user.logout': 'יציאה מהמערכת',
     // Support ticket activities
-    'support_ticket.created': '🎫 פנייה חדשה נפתחה',
-    'support_ticket.replied': '💬 תגובה חדשה בפנייה',
-    'support_ticket.status_changed': '🔄 סטטוס פנייה השתנה',
+'support_ticket.created': ' פנייה חדשה נפתחה',
+'support_ticket.replied': ' תגובה חדשה בפנייה',
+'support_ticket.status_changed': ' סטטוס פנייה השתנה',
   };
   return actionTitles[action] || action.replace(/[._]/g, ' ');
 };
@@ -140,7 +140,7 @@ const ISRAELI_HOLIDAYS = [
   { name: 'יום העצמאות', date: '2026-04-23' },
 ];
 
-// ── Get current user ID from localStorage ───────────────────────────────────
+// Get current user ID from localStorage 
 function getCurrentUserId(): number | undefined {
   try {
     const u = JSON.parse(localStorage.getItem('user') || '{}');
@@ -165,7 +165,7 @@ const MyJournal: React.FC = () => {
   const [showAddNote, setShowAddNote] = useState<boolean>(false);
   const [newNote, setNewNote] = useState<{title: string; content: string}>({title: '', content: ''});
 
-  // ── Quick note bar (top of page) ──────────────────────────────────────────
+// Quick note bar (top of page) 
   const [quickNote, setQuickNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
 
@@ -261,7 +261,7 @@ const MyJournal: React.FC = () => {
           setPersonalNotes(JSON.parse(savedNotes));
         }
         
-        // ── שינוי 1: סנן לפי user_id של המשתמש הנוכחי ──────────────────
+// שינוי 1: סנן לפי user_id של המשתמש הנוכחי 
         try {
           const response = await activityLogService.getActivityLogs({
             start_date: startDate,
@@ -491,7 +491,7 @@ const MyJournal: React.FC = () => {
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl"
               >
-                📊 Excel
+Excel
               </button>
               <button
                 type="button"
@@ -836,9 +836,9 @@ const MyJournal: React.FC = () => {
                               wo.data.status === 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR' ? 'bg-blue-100 text-blue-700' :
                               'bg-gray-100 text-gray-600'
                             }`}>
-                              {wo.data.status === 'APPROVED_AND_SENT' ? '✅ אושר — ניתן לדווח' :
-                               wo.data.status === 'PENDING' ? '🟡 ממתין לתיאום' :
-                               wo.data.status === 'PENDING_APPROVAL' ? '🔵 ממתין לאישור' :
+{wo.data.status === 'APPROVED_AND_SENT' ? ' אושר — ניתן לדווח' :
+wo.data.status === 'PENDING' ? ' ממתין לתיאום' :
+wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
                                workOrderService.getStatusText(wo.data.status)}
                             </span>
                           </div>

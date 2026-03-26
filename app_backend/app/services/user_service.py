@@ -133,7 +133,7 @@ class UserService(BaseService[User]):
         user_dict['must_change_password'] = True  # enforce password change on first login
         user = self.create(db, user_dict)
 
-        # ── Project assignments ───────────────────────────────────────────
+# Project assignments 
         project_ids = getattr(user_data, 'project_ids', None) or []
         if project_ids:
             try:
@@ -150,7 +150,7 @@ class UserService(BaseService[User]):
             except Exception as e:
                 log.warning(f"Failed to create project assignments for user {user.id}: {e}")
 
-        # ── Send welcome email with temp password ─────────────────────────
+# Send welcome email with temp password 
         try:
             from app.core.email import send_email
             from app.core.config import settings
@@ -170,7 +170,7 @@ class UserService(BaseService[User]):
             html_body = f"""
 <div dir="rtl" style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
   <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
-    <h2 style="margin:0;">ברוך הבא למערכת Forewise 🌲</h2>
+<h2 style="margin:0;">ברוך הבא למערכת Forewise </h2>
   </div>
   <div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
     <p>שלום <strong>{full_name}</strong>,</p>
@@ -180,7 +180,7 @@ class UserService(BaseService[User]):
       <tr><td style="padding:6px 8px;color:#6b7280;">סיסמה זמנית</td><td style="padding:6px 8px;font-weight:bold;font-family:monospace;font-size:16px;">{plain_password}</td></tr>
     </table>
     <a href="{login_url}" style="display:inline-block;background:#2d6a2d;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:15px;margin:8px 0;">
-      כניסה למערכת →
+כניסה למערכת 
     </a>
     <p style="color:#6b7280;font-size:13px;margin-top:20px;">מומלץ לשנות את הסיסמה לאחר הכניסה הראשונה.</p>
     <p style="color:#6b7280;font-size:13px;">Forewise</p>

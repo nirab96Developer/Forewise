@@ -397,7 +397,7 @@ def format_release_summary(
     """יצירת סיכום שחרור"""
     summary_parts = [
         f"סוג שחרור: {release_type}",
-        f"סכום: ₪{amount:,.2f}",
+f"סכום: {amount:,.2f}",
         f"סטטוס: {status}",
     ]
 

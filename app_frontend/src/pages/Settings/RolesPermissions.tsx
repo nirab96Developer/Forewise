@@ -29,25 +29,25 @@ interface Permission {
 }
 
 const CATEGORY_LABELS: Record<string, { name: string; icon: string; order: number }> = {
-  'projects':        { name: 'פרויקטים',        icon: '📁', order: 1 },
-  'work_orders':     { name: 'הזמנות עבודה',    icon: '📝', order: 2 },
-  'worklogs':        { name: 'דיווחי שעות',     icon: '⏱️', order: 3 },
-  'suppliers':       { name: 'ספקים',           icon: '🚚', order: 4 },
-  'equipment':       { name: 'ציוד',            icon: '🚜', order: 5 },
-  'budgets':         { name: 'תקציבים',         icon: '💰', order: 6 },
-  'invoices':        { name: 'חשבוניות',        icon: '🧾', order: 7 },
-  'users':           { name: 'משתמשים',         icon: '👥', order: 8 },
-  'roles':           { name: 'תפקידים',         icon: '🎭', order: 9 },
-  'permissions':     { name: 'הרשאות',          icon: '🔒', order: 10 },
-  'reports':         { name: 'דוחות',           icon: '📊', order: 11 },
-  'regions':         { name: 'מרחבים',          icon: '🏔️', order: 12 },
-  'areas':           { name: 'אזורים',          icon: '🗺️', order: 13 },
-  'locations':       { name: 'מיקומים',         icon: '📍', order: 14 },
-  'departments':     { name: 'מחלקות',          icon: '🏢', order: 15 },
-  'settings':        { name: 'הגדרות',          icon: '⚙️', order: 16 },
-  'system':          { name: 'מערכת',           icon: '🖥️', order: 17 },
-  'dashboard':       { name: 'דשבורד',          icon: '📈', order: 18 },
-  'other':           { name: 'אחר',             icon: '📦', order: 99 },
+'projects': { name: 'פרויקטים', icon: '', order: 1 },
+'work_orders': { name: 'הזמנות עבודה', icon: '', order: 2 },
+'worklogs': { name: 'דיווחי שעות', icon: '', order: 3 },
+'suppliers': { name: 'ספקים', icon: '', order: 4 },
+'equipment': { name: 'ציוד', icon: '', order: 5 },
+'budgets': { name: 'תקציבים', icon: '', order: 6 },
+'invoices': { name: 'חשבוניות', icon: '', order: 7 },
+'users': { name: 'משתמשים', icon: '', order: 8 },
+'roles': { name: 'תפקידים', icon: '', order: 9 },
+'permissions': { name: 'הרשאות', icon: '', order: 10 },
+'reports': { name: 'דוחות', icon: '', order: 11 },
+'regions': { name: 'מרחבים', icon: '', order: 12 },
+'areas': { name: 'אזורים', icon: '', order: 13 },
+'locations': { name: 'מיקומים', icon: '', order: 14 },
+'departments': { name: 'מחלקות', icon: '', order: 15 },
+'settings': { name: 'הגדרות', icon: '', order: 16 },
+'system': { name: 'מערכת', icon: '', order: 17 },
+'dashboard': { name: 'דשבורד', icon: '', order: 18 },
+'other': { name: 'אחר', icon: '', order: 99 },
 };
 
 function deriveCategory(p: Permission): string {
@@ -402,7 +402,7 @@ const RolesPermissions: React.FC = () => {
               {activeCategories.map((catCode) => {
                 const categoryPermissions = getPermissionsByCategory(catCode);
                 if (categoryPermissions.length === 0) return null;
-                const label = CATEGORY_LABELS[catCode] || { name: catCode, icon: '📦' };
+const label = CATEGORY_LABELS[catCode] || { name: catCode, icon: '' };
 
                 return (
                   <div key={catCode} className="mb-6 last:mb-0">
@@ -531,7 +531,7 @@ const RolesPermissions: React.FC = () => {
                   {activeCategories.map((catCode) => {
                     const categoryPermissions = getPermissionsByCategory(catCode);
                     if (categoryPermissions.length === 0) return null;
-                    const label = CATEGORY_LABELS[catCode] || { name: catCode, icon: '📦' };
+const label = CATEGORY_LABELS[catCode] || { name: catCode, icon: '' };
 
                     return (
                       <div key={catCode}>

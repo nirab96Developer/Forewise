@@ -45,10 +45,10 @@ const statusColors: Record<string, string> = {
 
 // סוגי מפה
 const mapTypes = [
-  { id: 'roadmap', label: 'רגיל', icon: '🗺️' },
-  { id: 'satellite', label: 'לוויין', icon: '🛰️' },
-  { id: 'hybrid', label: 'היברידי', icon: '🌍' },
-  { id: 'terrain', label: 'טופוגרפי', icon: '⛰️' },
+{ id: 'roadmap', label: 'רגיל', icon: '' },
+{ id: 'satellite', label: 'לוויין', icon: '' },
+{ id: 'hybrid', label: 'היברידי', icon: '' },
+{ id: 'terrain', label: 'טופוגרפי', icon: '' },
 ];
 
 const AreaDetail: React.FC = () => {
@@ -77,7 +77,7 @@ const AreaDetail: React.FC = () => {
       const projectsRes = await api.get('/projects', { params: { area_id: id, per_page: 100 } });
       const projectsData = projectsRes.data.projects || projectsRes.data.items || [];
       
-      // Add random locations for projects without coordinates (for demo)
+      // Generate approximate coordinates for projects without precise location data
       const enrichedProjects = projectsData.map((p: Project) => {
         if (!p.location?.latitude || !p.location?.longitude) {
           return {

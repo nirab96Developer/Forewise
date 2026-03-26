@@ -187,7 +187,7 @@ const RegionDetail: React.FC = () => {
             {region.total_budget && region.total_budget > 0 && (
               <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full">
                 <DollarSign className="w-4 h-4 text-emerald-600" />
-                <span className="font-bold text-emerald-700">₪{Number(region.total_budget).toLocaleString()}</span>
+<span className="font-bold text-emerald-700">{Number(region.total_budget).toLocaleString()}</span>
                 <span className="text-emerald-600">תקציב</span>
               </div>
             )}

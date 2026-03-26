@@ -23,7 +23,7 @@ from app.models.role import Role
 
 class AuthService:
 
-    # ─── helpers ─────────────────────────────────────────────
+# helpers 
 
     def _build_user_payload(self, user: User) -> dict:
         role = user.role
@@ -83,7 +83,7 @@ class AuthService:
         db.commit()
         return code
 
-    # ─── public API ──────────────────────────────────────────
+# public API 
 
     def lock_account(self, db: Session, user_id: int, reason: str = None, duration_hours: int = None) -> bool:
         user = db.query(User).filter(User.id == user_id).first()
@@ -162,7 +162,7 @@ class AuthService:
                 html_body = f"""
 <div dir="rtl" style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
   <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
-    <h2 style="margin:0;">קוד אימות — Forewise 🌲</h2>
+<h2 style="margin:0;">קוד אימות — Forewise </h2>
   </div>
   <div style="padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
     <p>שלום <strong>{full_name}</strong>,</p>
@@ -329,7 +329,7 @@ class AuthService:
                 html_body = f"""
 <div dir="rtl" style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
   <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
-    <h2 style="margin:0;">איפוס סיסמה — Forewise 🌲</h2>
+<h2 style="margin:0;">איפוס סיסמה — Forewise </h2>
   </div>
   <div style="padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
     <p>שלום <strong>{full_name}</strong>,</p>

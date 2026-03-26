@@ -9,7 +9,7 @@ import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
 import { useRoleAccess } from "../../hooks/useRoleAccess";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// Types 
 interface BudgetItem {
   id: number;
   total_amount: number;
@@ -62,9 +62,9 @@ interface Project {
 
 type TabId = 'regions' | 'areas' | 'projects';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// Helpers 
 const fmt = (n?: number | null) =>
-  n != null ? `₪${Number(n).toLocaleString('he-IL')}` : '₪0';
+n != null ? `${Number(n).toLocaleString('he-IL')}` : '0';
 
 const pct = (spent?: number | null, total?: number | null) => {
   if (!total || total <= 0) return 0;
@@ -88,7 +88,7 @@ function PctBar({ p }: { p: number }) {
   );
 }
 
-// ─── Edit Modal ───────────────────────────────────────────────────────────────
+// Edit Modal 
 function EditBudgetModal({
   budget, onClose, onSaved,
 }: { budget: BudgetItem; onClose: () => void; onSaved: () => void }) {
@@ -120,7 +120,7 @@ function EditBudgetModal({
             {budget.project_name || budget.area_name || budget.region_name}
           </p>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">סכום תקציב (₪)</label>
+<label className="block text-sm font-medium text-gray-700 mb-1">סכום תקציב ()</label>
             <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="0"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-400 text-sm" />
           </div>
@@ -144,7 +144,7 @@ function EditBudgetModal({
   );
 }
 
-// ─── New Budget Modal ─────────────────────────────────────────────────────────
+// New Budget Modal 
 function NewBudgetModal({
   regions, areas, projects, onClose, onSaved,
 }: {
@@ -262,7 +262,7 @@ function NewBudgetModal({
 
             {selectedProject && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
-                🌳 {selectedProject.name}
+{selectedProject.name}
                 {(selectedProject.location?.name || selectedProject.forest_name) &&
                   ` — יער ${selectedProject.location?.name || selectedProject.forest_name}`}
                 {` (${selectedProject.code})`}
@@ -273,7 +273,7 @@ function NewBudgetModal({
 
           {/* שלב 3 — סכום */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">שלב 3 — סכום תקציב (₪)</label>
+<label className="block text-sm font-medium text-gray-700 mb-1">שלב 3 — סכום תקציב ()</label>
             <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="0" placeholder="לדוגמה: 500000"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-400" />
           </div>
@@ -302,7 +302,7 @@ function NewBudgetModal({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// Main Component 
 const Budgets: React.FC = () => {
   const [budgets,  setBudgets]  = useState<BudgetItem[]>([]);
   const [regions,  setRegions]  = useState<Region[]>([]);
@@ -355,7 +355,7 @@ const Budgets: React.FC = () => {
 
   useEffect(() => { loadData(); }, []);
 
-  // ── Aggregations ──────────────────────────────────────────────────────────
+// Aggregations 
 
   const regionRows = useMemo(() => {
     // Prefer server-side summary (handles rollups correctly)
@@ -430,7 +430,7 @@ const Budgets: React.FC = () => {
     return budgets.filter(b => !!b.project_id);
   }, [budgets, summary]);
 
-  // ── Filter by search ──────────────────────────────────────────────────────
+// Filter by search 
   const q = search.toLowerCase();
   const filteredRegionRows  = regionRows.filter(r  => !q || r.region.name.toLowerCase().includes(q));
   const filteredAreaRows    = areaRows.filter(a => {
@@ -451,7 +451,7 @@ const Budgets: React.FC = () => {
   const toggleRegion = (id: number) =>
     setExpandedRegions(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
-  // ── Table header ──────────────────────────────────────────────────────────
+// Table header 
   const TH: React.FC<{ children: React.ReactNode; className?: string }> =
     ({ children, className = '' }) => (
       <th className={`text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${className}`}>
@@ -464,7 +464,7 @@ const Budgets: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-16 sm:pt-0" dir="rtl">
 
-      {/* ── Header ── */}
+{/* Header */}
       <div className="bg-white border-b shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-3">
@@ -474,7 +474,7 @@ const Budgets: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">ניהול תקציבים</h1>
-                <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">היררכיה: מרחבים → אזורים → פרויקטים</p>
+<p className="text-xs sm:text-sm text-gray-500 hidden sm:block">היררכיה: מרחבים אזורים פרויקטים</p>
               </div>
             </div>
             {canManageBudgets && (
@@ -534,10 +534,10 @@ const Budgets: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Content ── */}
+{/* Content */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
 
-        {/* ══ Tab: מרחבים ══ */}
+{/* Tab: מרחבים */}
         {tab === 'regions' && (
           <>
           {/* Mobile: cards */}
@@ -630,7 +630,7 @@ const Budgets: React.FC = () => {
                         return (
                           <tr key={area.id} className="bg-orange-50/50 hover:bg-orange-100/50 cursor-pointer" onClick={() => drillToArea(area.id)}>
                             <td />
-                            <td className="px-4 py-2 pl-8 text-sm text-orange-700 font-medium">↳ {area.name}</td>
+<td className="px-4 py-2 pl-8 text-sm text-orange-700 font-medium"> {area.name}</td>
                             <td className="px-4 py-2 text-sm text-gray-600">{fmt(at)}</td>
                             <td className="px-4 py-2 text-sm text-gray-600">{fmt(as_)}</td>
                             <td className={`px-4 py-2 text-sm font-medium ${ar < 0 ? 'text-red-500' : 'text-green-600'}`}>{fmt(ar)}</td>
@@ -648,7 +648,7 @@ const Budgets: React.FC = () => {
           </>
         )}
 
-        {/* ══ Tab: אזורים ══ */}
+{/* Tab: אזורים */}
         {tab === 'areas' && (
           <>
           {/* Mobile: cards */}
@@ -731,7 +731,7 @@ const Budgets: React.FC = () => {
           </>
         )}
 
-        {/* ══ Tab: פרויקטים ══ */}
+{/* Tab: פרויקטים */}
         {tab === 'projects' && (
           <>
           {/* Mobile: cards */}
@@ -829,7 +829,7 @@ const Budgets: React.FC = () => {
         )}
       </div>
 
-      {/* ── Modals ── */}
+{/* Modals */}
       {editBudget && (
         <EditBudgetModal
           budget={editBudget}

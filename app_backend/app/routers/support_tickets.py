@@ -34,7 +34,7 @@ def _notify_admins_new_ticket(db, ticket_id: int, ticket_number: str,
         for admin in admins:
             notif = NotificationCreate(
                 user_id=admin.id,
-                title=f"📨 קריאת תמיכה חדשה מ-{user_name}",
+                title=f" קריאת תמיכה חדשה מ-{user_name}",
                 message=description[:120] + ('...' if len(description) > 120 else ''),
                 notification_type="SUPPORT_TICKET",
                 priority="high",
@@ -52,10 +52,10 @@ def _notify_user_ticket_update(db, ticket_id: int, ticket_number: str,
         from app.services.notification_service import notification_service
         from app.schemas.notification import NotificationCreate
         if is_resolved:
-            title = f"✅ קריאתך {ticket_number} טופלה"
+            title = f" קריאתך {ticket_number} טופלה"
             message = "הצוות טיפל בקריאתך. תוכל לראות את הפרטים בדף התמיכה."
         else:
-            title = f"💬 תגובה חדשה על קריאה {ticket_number}"
+            title = f" תגובה חדשה על קריאה {ticket_number}"
             message = "הצוות הגיב לקריאתך. לחץ לצפייה בתגובה."
         notif = NotificationCreate(
             user_id=user_id,
@@ -87,19 +87,19 @@ def _generate_ticket_number(db: Session) -> str:
 def _send_new_ticket_email(ticket_id: int, title: str, description: str, user_name: str, category: str):
     """Send email notification to admin about new support ticket (runs in background)."""
     try:
-        subject = f"🎫 טיקט חדש #{ticket_id}: {title}"
+        subject = f" טיקט חדש #{ticket_id}: {title}"
         body = f"""טיקט תמיכה חדש נפתח במערכת.
 
-📋 פרטים:
+ פרטים:
 • מספר: #{ticket_id}
 • כותרת: {title}
 • קטגוריה: {category}
 • נפתח ע״י: {user_name}
 
-📝 תיאור:
+ תיאור:
 {description[:500]}
 
-🔗 לצפייה במערכת:
+ לצפייה במערכת:
 http://167.99.228.10/support
 
 ---
