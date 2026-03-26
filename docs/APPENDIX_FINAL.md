@@ -223,9 +223,13 @@
 
 ## תהליך 1: יצירת הזמנת עבודה + שיבוץ ספק
 
-### מטרה
-תהליך יצירת הזמנת עבודה חדשה, מהרגע שמנהל העבודה מגדיר את הצורך
-ועד שליחת ההזמנה לספק שנבחר (בסבב הוגן או בבחירה ידנית).
+### למה התהליך הזה קריטי
+בארגון שמנהל עשרות פרויקטים במקביל עם עשרות ספקים, חלוקת עבודה ידנית (טלפונים, וואטסאפ, אקסלים) גורמת לעיכובים, טעויות ואי-הוגנות בחלוקה. תהליך זה מחליף את העבודה הידנית במנגנון אוטומטי: ההזמנה נוצרת, ספק נבחר בהגינות (סבב הוגן), ומקבל קישור מאובטח לאישור — ללא צורך בתיאום ידני.
+
+### איזו בעיה עסקית נפתרת
+- ספקים מקבלים הזמנות בצורה שוויונית (Fair Rotation) — לא לפי קשרים אישיים
+- מניעת שכחת הזמנות — token בתוקף 3 שעות, לאחר מכן מעבר אוטומטי לספק הבא
+- שקיפות מלאה — כל שלב (שליחה, תגובה, אישור) מתועד ומנוטר
 
 ### קבצי Frontend
 - `app_frontend/src/pages/WorkOrders/NewWorkOrder.tsx` — טופס יצירת הזמנה
@@ -243,10 +247,11 @@
         # Validate equipment type exists in system categories
         equipment_type_name = wo_dict.get("equipment_type")
         cat_row = db.execute(text(
-            "SELECT id FROM equipment_categories WHERE LOWER(name) = LOWER(:n)"
+            "SELECT id FROM equipment_categories "
+            "WHERE LOWER(name) = LOWER(:n)"
         ), {"n": equipment_type_name}).fetchone()
         if not cat_row:
-            raise HTTPException(400, "Equipment type not found in system")
+            raise HTTPException(400, "Equipment type not found")
 
         # Create work order with PENDING status
         wo_dict['status'] = 'PENDING'
@@ -264,7 +269,7 @@
         if not work_order.supplier_id:
             selected = self._select_supplier_by_rotation(db, work_order)
             if not selected:
-                raise ValidationException("No available supplier found")
+                raise ValidationException("No available supplier")
             work_order.supplier_id = selected
 
         # Generate time-limited portal token (3 hours)
@@ -273,7 +278,7 @@
         work_order.portal_expiry = datetime.utcnow() + timedelta(hours=3)
         work_order.status = "DISTRIBUTING"
 
-        # Send email with portal link to supplier
+        # Send branded email with portal link to supplier
         send_email(to=supplier.email, subject="New Work Order",
                    html_body=branded_html)
 
@@ -288,9 +293,22 @@
 
 ### מסד נתונים
 
-**טבלאות:** work_orders, suppliers, supplier_equipment, supplier_rotations, projects, budgets
+**טבלה: work_orders**
 
-**שדות מפתח:** work_orders.project_id -> projects.id, work_orders.supplier_id -> suppliers.id, work_orders.portal_token (supplier link), work_orders.status (state machine)
+| שדה | סוג | תיאור | קשר |
+|-----|------|-------|------|
+| id | integer PK | מזהה ייחודי | |
+| order_number | integer NOT NULL | מספר הזמנה | |
+| project_id | integer | פרויקט | -> projects.id |
+| supplier_id | integer | ספק שנבחר | -> suppliers.id |
+| equipment_id | integer | כלי שהוצמד | -> equipment.id |
+| created_by_id | integer | מי יצר | -> users.id |
+| status | varchar | סטטוס (מכונת מצבים) | |
+| portal_token | varchar | token לפורטל ספק | |
+| portal_expiry | timestamp | תוקף הtoken | |
+| allocation_method | varchar | שיטת הקצאה (fair_rotation/forced) | |
+| frozen_amount | numeric | סכום מוקפא מתקציב | |
+| requested_equipment_model_id | integer | דגם ציוד | -> equipment_models.id |
 
 [הכנס צילום מסך של מבנה הטבלה: db-work-orders.png]
 
@@ -298,9 +316,14 @@
 
 ## תהליך 2: אימות כלי לפי מספר רישוי
 
-### מטרה
-מנהל העבודה בשטח מזין את מספר הרישוי של הכלי שהגיע, והמערכת מוודאת
-שהכלי תואם להזמנה המאושרת — שייך לספק הנכון ומסוג הציוד הנדרש.
+### למה התהליך הזה קריטי
+בשטח, ספק עלול לשלוח כלי שונה מהכלי שאושר — כלי קטן יותר, כלי שלא שייך לספק, או כלי שכבר מוקצה לפרויקט אחר. ללא מנגנון אימות, הארגון משלם עבור ציוד שלא תואם את ההזמנה. מנגנון האימות מונע הפסדים כספיים ומבטיח שהכלי שמגיע לשטח הוא בדיוק הכלי שאושר.
+
+### איזו בעיה עסקית נפתרת
+- **מניעת זיוף/החלפה** — אימות שמספר הרישוי שייך לספק שאושר בהזמנה
+- **מניעת הקצאה כפולה** — כלי שכבר מוקצה לפרויקט אחר יזוהה
+- **בקרת סטטוס** — לא ניתן לאמת כלי אם ההזמנה לא מאושרת (APPROVED_AND_SENT)
+- **אזהרות מפורטות** — במקרה של אי-התאמה, המערכת מציגה בדיוק מה לא תואם
 
 ### קבצי Frontend
 - `app_frontend/src/pages/Equipment/EquipmentScan.tsx` — מסך אימות כלי
@@ -315,25 +338,28 @@
         plate = body.get("license_plate").strip()
         wo_id = body.get("work_order_id")
 
-        # Search in equipment table, fallback to supplier_equipment
+        # Search in equipment table, then supplier_equipment
         eq = db.query(Equipment).filter(
-            Equipment.license_plate == plate, Equipment.is_active == True
+            Equipment.license_plate == plate,
+            Equipment.is_active == True
         ).first()
         if not eq:
             se = db.query(SupplierEquipment).filter(
                 SupplierEquipment.license_plate == plate
             ).first()
         if not eq and not se:
-            raise HTTPException(404, "Equipment not found with this plate")
+            raise HTTPException(404, "Equipment not found")
 
-        # Validate against work order if provided
+        # Cross-validate against the approved work order
         if wo_id:
             wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
-            # Check: WO is approved
+
+            # Rule 1: WO must be in APPROVED_AND_SENT status
             if wo.status != "APPROVED_AND_SENT":
                 result["valid"] = False
                 result["warnings"].append("Work order not approved")
-            # Check: equipment belongs to the approved supplier
+
+            # Rule 2: Equipment must belong to the approved supplier
             if supplier_id != wo.supplier_id:
                 result["valid"] = False
                 result["warnings"].append("Equipment belongs to different supplier")
@@ -349,10 +375,9 @@
         work_order_id: woIdParam ? parseInt(woIdParam) : undefined,
       });
 
-      // Show result: green for valid, amber for warnings
       setValidation(res.data);
       if (res.data.valid) {
-        registerScan(res.data.equipment_id, plate);  // Record the validation
+        registerScan(res.data.equipment_id, plate);
       }
     };
 
@@ -360,15 +385,43 @@
 
 | שלב | קלט | עיבוד | פלט |
 |-----|------|-------|-----|
-| 1 | מספר רישוי | חיפוש בטבלאות equipment / supplier_equipment | כלי נמצא / לא נמצא |
-| 2 | כלי + הזמנה | בדיקת סטטוס הזמנה, התאמת ספק | valid: true/false + warnings |
-| 3 | אימות מוצלח | רישום סריקה (equipment_scans) | מעבר לדיווח שעות |
+| 1 | מספר רישוי | חיפוש ב-equipment + supplier_equipment | כלי נמצא / לא נמצא |
+| 2 | כלי + הזמנה | בדיקת סטטוס הזמנה + התאמת ספק | valid: true/false + warnings |
+| 3 | אימות מוצלח | רישום סריקה ב-equipment_scans | מעבר לדיווח שעות |
 
 ### מסד נתונים
 
-**טבלאות:** equipment, supplier_equipment, work_orders, equipment_scans
+**טבלה: equipment**
 
-**שדות מפתח:** equipment.license_plate, supplier_equipment.license_plate, equipment_scans.equipment_id -> equipment.id, equipment_scans.work_order_id -> work_orders.id
+| שדה | סוג | תיאור | קשר |
+|-----|------|-------|------|
+| id | integer PK | מזהה ייחודי | |
+| license_plate | varchar | מספר רישוי | |
+| supplier_id | integer | ספק בעלים | -> suppliers.id |
+| equipment_type_id | integer | סוג ציוד | -> equipment_types.id |
+| is_active | boolean | פעיל | |
+
+**טבלה: supplier_equipment**
+
+| שדה | סוג | תיאור | קשר |
+|-----|------|-------|------|
+| id | integer PK | מזהה | |
+| supplier_id | integer | ספק | |
+| license_plate | varchar | מספר רישוי | |
+| hourly_rate | numeric | תעריף שעתי | |
+| equipment_model_id | integer | דגם | -> equipment_models.id |
+
+**טבלה: equipment_scans**
+
+| שדה | סוג | תיאור | קשר |
+|-----|------|-------|------|
+| id | integer PK | מזהה | |
+| equipment_id | integer NOT NULL | כלי שנסרק | -> equipment.id |
+| work_order_id | integer | הזמנת עבודה | -> work_orders.id |
+| scanned_by | integer NOT NULL | מי סרק | -> users.id |
+| scan_type | varchar NOT NULL | סוג סריקה (plate_validation) | |
+| scan_timestamp | timestamp NOT NULL | זמן סריקה | |
+| is_valid | boolean | תוצאת אימות | |
 
 [הכנס צילום מסך של מבנה הטבלה: db-equipment.png]
 
@@ -376,14 +429,19 @@
 
 ## תהליך 3: דיווח שעות -> אישור -> חשבונית
 
-### מטרה
-התהליך הכספי המרכזי — מנהל העבודה מדווח שעות עבודה, מנהלת החשבונות מאשרת,
-ומהדיווחים המאושרים נוצרת חשבונית. התהליך מבטיח שלא ניתן לדלג על שלבים
-ושאין כפילויות בחיוב.
+### למה התהליך הזה קריטי
+זהו התהליך שבו כסף עובר ידיים. ללא בקרה הדוקה, ספק יכול לדווח שעות מנופחות, מנהל עבודה יכול לאשר דיווח של עצמו, וחשבוניות יכולות להיווצר ללא אישור מוסמך. תהליך זה מבטיח שכל שקל שמשולם עבר: (1) דיווח מסודר, (2) אישור מנהלת חשבונות מוסמכת, ו-(3) יצירת חשבונית רשמית — ללא אפשרות לדלג על שלבים.
+
+### איזו בעיה עסקית נפתרת
+- **מניעת self-approval** — מנהל עבודה לא יכול לאשר דיווח שיצר בעצמו
+- **הפרדת סמכויות** — רק מנהלת חשבונות באזור הנכון יכולה לאשר
+- **מכונת מצבים קשיחה** — חשבונית חייבת לעבור DRAFT -> APPROVED -> PAID, ללא דילוגים
+- **עדכון תקציב אוטומטי** — בכל אישור דיווח, הסכום מתעדכן בתקציב הפרויקט
+- **מניעת כפילות** — לא ניתן ליצור חשבונית מדיווח שכבר חויב
 
 ### קבצי Frontend
 - `app_frontend/src/pages/WorkLogs/WorklogFormUnified.tsx` — טופס דיווח
-- `app_frontend/src/pages/WorkLogs/AccountantInbox.tsx` — תיבת אישור
+- `app_frontend/src/pages/WorkLogs/AccountantInbox.tsx` — תיבת אישור חשבונאית
 
 ### קבצי Backend
 - `app_backend/app/services/worklog_service.py` — דיווח + אישור
@@ -401,7 +459,7 @@
         project_id = data.project_id or wo.project_id
         supplier_id = data.supplier_id or wo.supplier_id
 
-        # Calculate costs from hourly rate
+        # Calculate costs: hours * hourly rate + VAT
         worklog_dict['hourly_rate_snapshot'] = hourly_rate
         worklog_dict['cost_before_vat'] = work_hours * hourly_rate
         worklog_dict['cost_with_vat'] = cost_before_vat * Decimal('1.17')
@@ -416,25 +474,26 @@
     def approve(self, db, worklog_id, current_user_id):
         worklog = self.get_by_id(db, worklog_id)
 
+        # Set approval metadata
         worklog.status = 'APPROVED'
         worklog.approved_by_user_id = current_user_id
         worklog.approved_at = datetime.utcnow()
         db.commit()
 
-        # Update project budget: add cost to spent_amount
+        # Financial side-effect: update project budget
         if worklog.work_order_id:
             wo = db.query(WorkOrder).filter_by(id=worklog.work_order_id).first()
             if wo and wo.project_id:
                 cost = float(worklog.work_hours) * float(worklog.hourly_rate_snapshot)
                 budget = db.query(Budget).filter_by(project_id=wo.project_id).first()
                 if budget:
-                    budget.spent_amount += Decimal(str(cost))
+                    budget.spent_amount += Decimal(str(cost))  # atomic budget update
                     db.commit()
 
-### קטע קוד — Backend: יצירת חשבונית אוטומטית
+### קטע קוד — Backend: יצירת חשבונית
 
     def create(self, db, data, current_user_id):
-        # Auto-generate invoice number: INV-YYYY-NNNN
+        # Auto-generate sequential invoice number
         year = datetime.now().year
         last = db.query(Invoice).filter(
             Invoice.invoice_number.like(f"INV-{year}-%")
@@ -442,12 +501,12 @@
         seq = int(last.invoice_number.split('-')[-1]) + 1 if last else 1
         invoice_dict['invoice_number'] = f"INV-{year}-{seq:04d}"
 
-        # Auto-calculate subtotal and VAT (17%)
+        # Auto-calculate VAT (17%) and due date (+30 days)
         total = invoice_dict['total_amount']
         invoice_dict['subtotal'] = total / Decimal('1.17')
         invoice_dict['tax_amount'] = total - invoice_dict['subtotal']
-        invoice_dict['status'] = 'DRAFT'
         invoice_dict['due_date'] = invoice_dict['issue_date'] + timedelta(days=30)
+        invoice_dict['status'] = 'DRAFT'
 
         invoice = Invoice(**invoice_dict)
         db.add(invoice)
@@ -455,25 +514,62 @@
 
 ### זרימה
 
-| שלב | שחקן | פעולה | סטטוס |
-|-----|-------|-------|-------|
-| 1 | מנהל עבודה | יוצר דיווח שעות | PENDING |
-| 2 | מנהל עבודה | שולח לאישור | SUBMITTED |
-| 3 | מנהלת חשבונות | מאשרת / דוחה | APPROVED / REJECTED |
-| 4 | מנהל מערכת | יוצר חשבונית מדיווחים מאושרים | DRAFT |
-| 5 | מנהלת חשבונות | מאשרת חשבונית | APPROVED |
-| 6 | מנהלת חשבונות | מסמנת כשולם | PAID |
+| שלב | שחקן | פעולה | סטטוס | השפעה כספית |
+|-----|-------|-------|-------|-------------|
+| 1 | מנהל עבודה | יוצר דיווח שעות | PENDING | אין |
+| 2 | מנהל עבודה | שולח לאישור | SUBMITTED | אין |
+| 3 | מנהלת חשבונות | מאשרת | APPROVED | budget.spent_amount += cost |
+| 4 | מנהלת חשבונות | דוחה (אם יש בעיה) | REJECTED | אין |
+| 5 | מנהל מערכת | יוצר חשבונית | DRAFT | חשבונית עם מע"מ + מספר סידורי |
+| 6 | מנהלת חשבונות | מאשרת חשבונית | APPROVED | |
+| 7 | מנהלת חשבונות | מסמנת כשולם | PAID | סיום מחזור כספי |
 
 ### מסד נתונים
 
-**טבלאות:** worklogs, invoices, invoice_items, work_orders, budgets
+**טבלה: worklogs**
 
-**שדות מפתח:**
-- worklogs.work_order_id -> work_orders.id
-- worklogs.status (PENDING -> SUBMITTED -> APPROVED -> INVOICED)
-- invoices.invoice_number (auto: INV-YYYY-NNNN)
-- invoices.status (DRAFT -> APPROVED -> PAID)
-- budgets.spent_amount — updated on each worklog approval
+| שדה | סוג | תיאור | קשר |
+|-----|------|-------|------|
+| id | integer PK | מזהה | |
+| work_order_id | integer | הזמנת עבודה | -> work_orders.id |
+| project_id | integer | פרויקט | -> projects.id |
+| user_id | integer | מדווח | -> users.id |
+| report_date | date | תאריך דיווח | |
+| work_hours | numeric | שעות עבודה | |
+| break_hours | numeric | שעות הפסקה | |
+| hourly_rate_snapshot | numeric | תעריף (צילום מרגע הדיווח) | |
+| cost_before_vat | numeric | עלות לפני מע"מ | |
+| cost_with_vat | numeric | עלות כולל מע"מ | |
+| status | varchar | סטטוס (PENDING->SUBMITTED->APPROVED) | |
+| approved_by_user_id | integer | מאשר | |
+| approved_at | timestamp | זמן אישור | |
+
+**טבלה: invoices**
+
+| שדה | סוג | תיאור | קשר |
+|-----|------|-------|------|
+| id | integer PK | מזהה | |
+| invoice_number | varchar NOT NULL | מספר חשבונית (INV-YYYY-NNNN) | |
+| supplier_id | integer NOT NULL | ספק | |
+| project_id | integer | פרויקט | |
+| subtotal | numeric NOT NULL | סכום לפני מע"מ | |
+| tax_amount | numeric NOT NULL | מע"מ (17%) | |
+| total_amount | numeric NOT NULL | סכום כולל | |
+| paid_amount | numeric | סכום ששולם | |
+| status | varchar NOT NULL | סטטוס (DRAFT->APPROVED->PAID) | |
+| issue_date | date NOT NULL | תאריך הפקה | |
+| due_date | date NOT NULL | תאריך פירעון | |
+
+**טבלה: budgets**
+
+| שדה | סוג | תיאור | קשר |
+|-----|------|-------|------|
+| id | integer PK | מזהה | |
+| project_id | integer | פרויקט | |
+| total_amount | numeric | תקציב כולל | |
+| committed_amount | numeric | סכום מוקפא (הזמנות פתוחות) | |
+| spent_amount | numeric | סכום שנוצל (דיווחים מאושרים) | |
+| remaining_amount | numeric | יתרה זמינה | |
 
 [הכנס צילום מסך של מבנה הטבלה: db-invoices.png]
 
