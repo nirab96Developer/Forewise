@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import Annotated, List
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.services.activity_log_service import ActivityLogService
 
 _audit = ActivityLogService(), require_permission
