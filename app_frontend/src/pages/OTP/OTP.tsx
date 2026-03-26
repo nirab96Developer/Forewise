@@ -1,9 +1,11 @@
 
-// OTP Page - אימות דו-שלבי (ללא כפילות שליחה)
+// OTP Page - אימות דו-שלבי: ביומטרי (ראשי) + OTP (גיבוי)
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Fingerprint, ArrowRight, AlertCircle, Mail, Clock } from 'lucide-react';
+import { Fingerprint, ArrowRight, AlertCircle, Mail, Clock, ScanFace, KeyRound } from 'lucide-react';
 import otpService from '../../services/otpService';
+import biometricService from '../../services/biometricService';
+import { getBiometricLabel } from '../../utils/deviceDetector';
 import { getRememberPreference, setAuthSession } from '../../utils/authStorage';
 
 interface OTPProps {
@@ -21,6 +23,10 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
   const [canResend, setCanResend] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  
+  const [authMethod, setAuthMethod] = useState<'choose' | 'otp' | 'biometric'>('choose');
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const _biometric = getBiometricLabel(); void _biometric;
   
   // Prevent double OTP send and double navigation
   const hasSentOTP = useRef(false);
@@ -57,31 +63,38 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
     }
   }, []);
 
-  // שליחת OTP פעם אחת בלבד
+  // Check biometric availability
   useEffect(() => {
-    // Don't send if already sent or if we have a token
-    if (hasSentOTP.current || otpToken) {
-      return;
-    }
-    
-    // Validate email
+    const checkBio = async () => {
+      if (biometricService.isSupported() && biometricService.isRegistered()) {
+        try {
+          const avail = await biometricService.isAvailable();
+          setBiometricAvailable(avail);
+        } catch { setBiometricAvailable(false); }
+      } else {
+        setBiometricAvailable(false);
+        setAuthMethod('otp');
+      }
+    };
+    checkBio();
+  }, []);
+
+  // Send OTP when user chooses OTP method (or if no biometric available)
+  useEffect(() => {
+    if (authMethod !== 'otp') return;
+    if (hasSentOTP.current || otpToken) return;
     if (!userEmail || !userEmail.includes('@')) {
-      console.error('Invalid email:', userEmail);
       setError('כתובת מייל לא תקינה. אנא חזור להתחברות.');
       return;
     }
     
     const sendInitialOTP = async () => {
-      hasSentOTP.current = true; // Mark as sent immediately to prevent double calls
-      
+      hasSentOTP.current = true;
       try {
         setIsLoading(true);
         setError('');
-        
         await otpService.sendOTP(userEmail);
       } catch (error: any) {
-        console.error('Error sending OTP:', error);
-        // Don't show error if OTP was already sent
         if (!error.response?.data?.detail?.includes('already sent')) {
           setError('שגיאה בשליחת OTP. אנא נסה שוב');
         }
@@ -89,9 +102,8 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         setIsLoading(false);
       }
     };
-
     sendInitialOTP();
-  }, []); // Empty deps - run only once on mount
+  }, [authMethod]);
 
   // טיפול בהקלדה בשדות OTP
   const handleInputChange = (index: number, value: string) => {
@@ -272,6 +284,54 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
     }
   };
 
+  const handleBiometricAuth = async () => {
+    if (!username) {
+      setError('שם משתמש חסר. אנא חזור להתחברות.');
+      return;
+    }
+    try {
+      setIsLoading(true);
+      setError('');
+      setGlobalLoading(true);
+
+      const result = await biometricService.authenticate(username);
+      if (result?.access_token) {
+        const userObject = result.user || {};
+        localStorage.setItem('access_token', result.access_token);
+        localStorage.setItem('token', result.access_token);
+        localStorage.setItem('user', JSON.stringify(userObject));
+        localStorage.setItem('isAuthenticated', 'true');
+        if (result.refresh_token) localStorage.setItem('refresh_token', result.refresh_token);
+
+        setAuthSession({
+          accessToken: result.access_token,
+          refreshToken: result.refresh_token || '',
+          user: userObject,
+          userName: userObject?.name || userObject?.full_name || '',
+          rememberMe: true,
+        });
+
+        localStorage.removeItem('otp_email');
+        localStorage.removeItem('otp_username');
+        localStorage.removeItem('otp_user_id');
+        localStorage.removeItem('otp_token');
+
+        window.dispatchEvent(new Event('storage'));
+        hasNavigated.current = true;
+        setGlobalLoading(false);
+        navigate('/welcome', { replace: true });
+      } else {
+        setError('אימות ביומטרי נכשל. נסה שוב או השתמש בקוד אימות.');
+        setGlobalLoading(false);
+      }
+    } catch (err: any) {
+      setError(err.message || 'שגיאה באימות ביומטרי. ניתן להשתמש בקוד אימות.');
+      setGlobalLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -300,9 +360,48 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
           <h1 className="text-3xl font-bold text-green-900 mb-3">אימות דו-שלבי</h1>
           {isFirstLogin && (
             <div className="mb-3 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm font-medium">
-              🎉 כניסה ראשונה — אמת את זהותך ואז תועבר לשינוי סיסמה
+              כניסה ראשונה — אמת את זהותך ואז תועבר לשינוי סיסמה
             </div>
           )}
+        </div>
+
+        {/* Choice screen — biometric vs OTP */}
+        {authMethod === 'choose' && biometricAvailable && (
+          <div className="bg-white rounded-2xl shadow-2xl border-2 border-green-100 p-8 mb-6">
+            <p className="text-gray-700 text-center text-lg mb-6 font-medium">בחר אופן אימות:</p>
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={handleBiometricAuth}
+                disabled={isLoading}
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-green-600 text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 min-h-[56px] disabled:opacity-50"
+              >
+                <ScanFace className="w-6 h-6" />
+                כניסה ביומטרית
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMethod('otp')}
+                disabled={isLoading}
+                className="w-full py-4 bg-white border-2 border-green-300 text-green-700 text-lg font-bold rounded-xl hover:bg-green-50 transition-all flex items-center justify-center gap-3 min-h-[56px] disabled:opacity-50"
+              >
+                <KeyRound className="w-6 h-6" />
+                המשך עם קוד אימות
+              </button>
+            </div>
+            {error && (
+              <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-lg">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* OTP form — shown when OTP method is chosen or biometric not available */}
+        {(authMethod === 'otp' || (!biometricAvailable && authMethod === 'choose')) && (
+        <>
+        <div className="text-center mb-6">
           <p className="text-gray-600 text-lg">
             שלחנו קוד אימות לכתובת המייל שלך
           </p>
@@ -312,7 +411,6 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
           </div>
         </div>
 
-        {/* טופס OTP */}
         <div className="bg-white rounded-2xl shadow-2xl border-2 border-green-100 p-8">
           <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
             {/* שדות OTP */}
@@ -416,6 +514,22 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
             </div>
           </form>
         </div>
+
+        {/* Switch to biometric from OTP view */}
+        {authMethod === 'otp' && biometricAvailable && (
+          <div className="text-center mt-4">
+            <button
+              type="button"
+              onClick={() => { setError(''); handleBiometricAuth(); }}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
+            >
+              <ScanFace className="w-4 h-4 inline mr-1" />
+              השתמש באימות ביומטרי במקום
+            </button>
+          </div>
+        )}
+        </>
+        )}
 
         {/* קישור חזרה */}
         <div className="text-center mt-6">
