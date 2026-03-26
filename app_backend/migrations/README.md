@@ -91,7 +91,7 @@ These migrations implement the architecture decisions for audit columns across a
 ### Option A: Python Script (Recommended)
 
 ```bash
-cd /root/kkl-forest/app_backend
+cd /root/forewise/app_backend
 python3 run_migrations.py
 ```
 
@@ -105,7 +105,7 @@ This will:
 
 ```bash
 # Connect to DB
-sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -d KKLForest
+sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -d ForewiseForest
 
 # Run each file
 :r migrations/01_fix_timestamps.sql

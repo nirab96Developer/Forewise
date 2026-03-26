@@ -1,7 +1,7 @@
-# 📊 דוח מבנה מסד הנתונים - KKL Forest Management System
+# 📊 דוח מבנה מסד הנתונים - Forewise
 
 **תאריך:** 2 בפברואר 2026  
-**Database:** kkl_forest_prod  
+**Database:** forewise_prod  
 **סוג:** PostgreSQL 16.11
 
 ---

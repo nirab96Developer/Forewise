@@ -156,9 +156,9 @@ if self.is_production():
 
 2. **הגדר Azure Key Vault:**
    ```bash
-   az keyvault create --name kkl-forest-vault --resource-group your-rg
-   az keyvault secret set --vault-name kkl-forest-vault --name SECRET_KEY --value "..."
-   az keyvault secret set --vault-name kkl-forest-vault --name DB_PASSWORD --value "..."
+   az keyvault create --name forewise-vault --resource-group your-rg
+   az keyvault secret set --vault-name forewise-vault --name SECRET_KEY --value "..."
+   az keyvault secret set --vault-name forewise-vault --name DB_PASSWORD --value "..."
    ```
 
 3. **צור `.env` חדש:**

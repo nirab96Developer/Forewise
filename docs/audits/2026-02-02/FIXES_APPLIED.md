@@ -1,4 +1,4 @@
-# ✅ תיקונים שבוצעו - KKL Forest Management System
+# ✅ תיקונים שבוצעו - Forewise
 
 **תאריך:** 2 בפברואר 2026  
 **גרסה:** 1.0.1 → 1.1.0 (Security Hardened)

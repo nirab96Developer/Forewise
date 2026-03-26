@@ -1,4 +1,4 @@
-# ✅ דוח בדיקת מערכת מלא - KKL Forest Management System
+# ✅ דוח בדיקת מערכת מלא - Forewise
 
 **תאריך:** 2 בפברואר 2026, 18:17  
 **גרסה:** 1.1.0 (Security Hardened)  
@@ -146,14 +146,14 @@ GET /docs
 
 ## 💾 בדיקות צד Database
 
-### Database: `kkl_forest_prod`
+### Database: `forewise_prod`
 
 **Connection:**
 ```
 Host: localhost
 Port: 5432
-User: kkl_app
-Database: kkl_forest_prod
+User: forewise_app
+Database: forewise_prod
 PostgreSQL: 16.11
 ```
 
@@ -580,7 +580,7 @@ $ curl http://localhost:8000/docs
 ### 1. Database Connection (Low Priority)
 ```
 ⚠️ Warning: Database connection issues in startup
-Error: password authentication failed for user "kkl_app"
+Error: password authentication failed for user "forewise_app"
 ```
 
 **הערה:** זה לא משפיע על פעולת השרת כרגע.  

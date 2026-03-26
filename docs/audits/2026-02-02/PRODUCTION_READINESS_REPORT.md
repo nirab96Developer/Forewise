@@ -1,5 +1,5 @@
 # 📊 Production Readiness Assessment Report
-## KKL Forest Management System
+## Forewise
 
 **תאריך:** 2 בפברואר 2026  
 **מבצע הבדיקה:** AI Production Auditor  
@@ -195,7 +195,7 @@ DEBUG=False
 ENVIRONMENT="production"
 
 # CORS - רק דומיינים מאושרים
-CORS_ORIGINS=["https://forest.kkl.org.il"]
+CORS_ORIGINS=["https://forest.forewise.org.il"]
 
 # Session
 SessionMiddleware(
@@ -289,7 +289,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 app.add_middleware(HTTPSRedirectMiddleware)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["forest.kkl.org.il"])
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["forest.forewise.org.il"])
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
@@ -306,7 +306,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
 credential = DefaultAzureCredential()
-client = SecretClient(vault_url="https://kkl-vault.vault.azure.net/", credential=credential)
+client = SecretClient(vault_url="https://forewise-vault.vault.azure.net/", credential=credential)
 SECRET_KEY = client.get_secret("SECRET_KEY").value
 DB_PASSWORD = client.get_secret("DB_PASSWORD").value
 
@@ -406,7 +406,7 @@ def create_db_engine():
         echo=settings.DB_ECHO,
         connect_args={
             "connect_timeout": 10,
-            "application_name": "KKL Forest Management"
+            "application_name": "Forewise Management"
         }
     )
 
@@ -738,7 +738,7 @@ version: '3.8'
 
 services:
   backend:
-    image: kkl-forest-backend:${VERSION}
+    image: forewise-backend:${VERSION}
     restart: always
     env_file: .env.production
     environment:
@@ -824,7 +824,7 @@ deploy-production:
     - ssh production "docker pull $IMAGE_TAG"
     - ssh production "docker-compose -f docker-compose.production.yml up -d"
     - sleep 10
-    - curl -f https://forest.kkl.org.il/health || exit 1
+    - curl -f https://forest.forewise.org.il/health || exit 1
   only:
     - main
   when: manual
@@ -858,7 +858,7 @@ import sentry_sdk
 sentry_sdk.init(dsn=os.getenv("SENTRY_DSN"))
 
 # 2. UptimeRobot (חינם עד 50 monitors)
-# הגדר monitor ל-https://forest.kkl.org.il/health
+# הגדר monitor ל-https://forest.forewise.org.il/health
 
 # 3. Prometheus + Grafana (self-hosted)
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -914,16 +914,16 @@ newrelic.agent.initialize('newrelic.ini')
 2. **הפעל Secret Manager** ✅
    ```bash
    # Azure Key Vault
-   az keyvault create --name kkl-forest-vault --resource-group kkl-rg
-   az keyvault secret set --vault-name kkl-forest-vault --name SECRET_KEY --value "..."
-   az keyvault secret set --vault-name kkl-forest-vault --name DB_PASSWORD --value "..."
+   az keyvault create --name forewise-vault --resource-group forewise-rg
+   az keyvault secret set --vault-name forewise-vault --name SECRET_KEY --value "..."
+   az keyvault secret set --vault-name forewise-vault --name DB_PASSWORD --value "..."
    
    # בקוד:
    from azure.identity import DefaultAzureCredential
    from azure.keyvault.secrets import SecretClient
    
    credential = DefaultAzureCredential()
-   client = SecretClient(vault_url="https://kkl-forest-vault.vault.azure.net/", credential=credential)
+   client = SecretClient(vault_url="https://forewise-vault.vault.azure.net/", credential=credential)
    SECRET_KEY = client.get_secret("SECRET_KEY").value
    ```
 

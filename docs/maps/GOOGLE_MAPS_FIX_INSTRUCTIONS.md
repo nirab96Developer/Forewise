@@ -18,7 +18,7 @@
 ### אופציה 1: בנה מחדש (לproduction)
 
 ```bash
-cd /root/kkl-forest/app_frontend
+cd /root/forewise/app_frontend
 
 # 1. Install dependencies (אם צריך)
 npm install
@@ -33,7 +33,7 @@ npm run build
 ### אופציה 2: הרץ Dev Server (לבדיקה)
 
 ```bash
-cd /root/kkl-forest/app_frontend
+cd /root/forewise/app_frontend
 npm run dev
 ```
 

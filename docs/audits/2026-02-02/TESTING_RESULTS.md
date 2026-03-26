@@ -1,4 +1,4 @@
-# ✅ דוח בדיקות תקינות - KKL Forest Management System
+# ✅ דוח בדיקות תקינות - Forewise
 
 **תאריך בדיקה:** 2 בפברואר 2026  
 **גרסה:** 1.1.0 (Security Hardened)  
@@ -125,7 +125,7 @@ GET /docs
 
 ```bash
 ⚠️ Database connection: FAILED
-Error: password authentication failed for user "kkl_app"
+Error: password authentication failed for user "forewise_app"
 
 Note: This is NOT related to security fixes.
       The .env file points to a local PostgreSQL
@@ -146,7 +146,7 @@ Note: This is NOT related to security fixes.
 
 ```bash
 ✅ package.json exists
-✅ Name: kkl-time-report
+✅ Name: forewise-time-report
 ✅ Version: 1.0.0
 ✅ Main: electron/main.js
 
@@ -270,7 +270,7 @@ $ curl http://localhost:8002/info
 
 ### 1. Database Connection
 ```
-Error: password authentication failed for user "kkl_app"
+Error: password authentication failed for user "forewise_app"
 ```
 
 **פתרון:**

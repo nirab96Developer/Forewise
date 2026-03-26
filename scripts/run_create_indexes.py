@@ -8,13 +8,13 @@ import os
 import sys
 
 # Add backend to path
-sys.path.insert(0, '/root/kkl-forest/app_backend')
+sys.path.insert(0, '/root/forewise/app_backend')
 
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
 # Load environment
-load_dotenv('/root/kkl-forest/app_backend/.env')
+load_dotenv('/root/forewise/app_backend/.env')
 
 DATABASE_URL = os.getenv('DATABASE_URL')
 

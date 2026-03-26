@@ -1,5 +1,5 @@
 # Forewise v2.0.0 — Appendices
-## Forest Management System | Final Project Book
+## Forewise | Final Project Book
 **Date:** 22.03.2026 | **Author:** nirab96Developer
 **Stack:** FastAPI (Python 3.10) + React 18 (TypeScript) + PostgreSQL + Leaflet
 

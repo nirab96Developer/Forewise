@@ -5,7 +5,7 @@ const API   = process.env.API_URL  || "http://localhost:8000";
 
 // Real WORK_MANAGER credentials from DB
 const WM_EMAIL    = "avitbulnir+kobi.nissim@gmail.com";
-const WM_PASSWORD = "KKL2026!";
+const WM_PASSWORD = "Test1234!";
 
 test.describe("Work Order Flow", () => {
   let authToken: string;

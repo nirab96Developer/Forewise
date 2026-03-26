@@ -57,7 +57,7 @@ if (loadError) {
 
 ### בדיקה 1: Frontend Dev Server
 ```bash
-cd /root/kkl-forest/app_frontend
+cd /root/forewise/app_frontend
 npm run dev
 ```
 
@@ -207,7 +207,7 @@ if (!GOOGLE_MAPS_API_KEY) {
 ### 🎯 נסה עכשיו:
 
 ```bash
-cd /root/kkl-forest/app_frontend
+cd /root/forewise/app_frontend
 npm run dev
 ```
 

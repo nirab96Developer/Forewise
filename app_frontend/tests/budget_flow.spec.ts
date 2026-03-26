@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 const API = process.env.API_URL || "http://localhost:8000";
 
 const ADMIN_EMAIL    = "avitbulnir@gmail.com";
-const ADMIN_PASSWORD = "KKL2026!";
+const ADMIN_PASSWORD = "Test1234!";
 
 test.describe("Budget Flow", () => {
   let authToken: string;

@@ -1,7 +1,7 @@
-# 🗄️ ניתוח מלא של מסד הנתונים - KKL Forest Management System
+# 🗄️ ניתוח מלא של מסד הנתונים - Forewise
 
 **תאריך:** 2 בפברואר 2026, 18:16  
-**Database:** `kkl_forest_prod`  
+**Database:** `forewise_prod`  
 **PostgreSQL:** 16.11  
 **סה"כ טבלאות:** 35
 
@@ -722,5 +722,5 @@ WL = Worklogs
 ---
 
 *נוצר ב: 2 בפברואר 2026, 18:16*  
-*Database: kkl_forest_prod*  
+*Database: forewise_prod*  
 *PostgreSQL 16.11 + PostGIS*

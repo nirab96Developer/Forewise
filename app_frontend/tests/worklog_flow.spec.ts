@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 const API = process.env.API_URL || "http://localhost:8000";
 
 const WM_EMAIL    = "avitbulnir+kobi.nissim@gmail.com";
-const WM_PASSWORD = "KKL2026!";
+const WM_PASSWORD = "Test1234!";
 
 test.describe("Worklog Flow", () => {
   let authToken: string;
