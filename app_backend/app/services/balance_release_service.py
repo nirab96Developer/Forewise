@@ -195,7 +195,7 @@ class BalanceReleaseService:
                 count += 1
             except Exception as e:
                 # Log error but continue with other releases
-                print(f"Failed to execute release {release.id}: {e}")
+                import logging; logging.getLogger(__name__).error(f"Failed to execute release {release.id}: {e}")
 
         db.commit()
         return count

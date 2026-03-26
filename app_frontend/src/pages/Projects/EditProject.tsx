@@ -57,7 +57,6 @@ const EditProject: React.FC = () => {
       
       // Safety timeout - force stop loading after 10 seconds
       const timeout = setTimeout(() => {
-        console.log('[EditProject] Safety timeout - forcing loading to stop');
         setLoadingData(false);
       }, 10000);
       
@@ -171,13 +170,10 @@ const EditProject: React.FC = () => {
   };
 
   const loadData = async () => {
-    console.log('[EditProject] Starting loadData...');
     setLoadingData(true);
     
     try {
-      console.log('[EditProject] Fetching project:', code);
       const projectData = await projectService.getProjectByCode(code!);
-      console.log('[EditProject] Project loaded:', projectData);
       setProject(projectData);
       
       // Set form data
@@ -196,7 +192,6 @@ const EditProject: React.FC = () => {
         area_id: projectData.area_id,
       });
 
-      console.log('[EditProject] Loading related data...');
       // Load areas and managers if region_id exists
       if (projectData.region_id) {
         await Promise.all([
@@ -208,14 +203,12 @@ const EditProject: React.FC = () => {
         await loadUsers();
       }
       
-      console.log('[EditProject] All data loaded successfully');
     } catch (error: any) {
       console.error('[EditProject] Error loading project:', error);
       setError('שגיאה בטעינת פרטי הפרויקט');
     }
     
     // Always stop loading
-    console.log('[EditProject] Stopping loading...');
     setLoadingData(false);
   };
 

@@ -26,7 +26,6 @@ const Dashboard: React.FC = () => {
   const userRole = normalizeRole(user?.role || '');
   
   // Debug log
-  console.log('[Dashboard] User role:', user?.role, '-> Normalized:', userRole);
   
   // בחירת דשבורד לפי תפקיד
   switch (userRole) {

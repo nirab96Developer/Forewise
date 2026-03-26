@@ -75,12 +75,10 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
       hasSentOTP.current = true; // Mark as sent immediately to prevent double calls
       
       try {
-        console.log('Sending OTP to:', userEmail);
         setIsLoading(true);
         setError('');
         
         await otpService.sendOTP(userEmail);
-        console.log('OTP sent successfully');
       } catch (error: any) {
         console.error('Error sending OTP:', error);
         // Don't show error if OTP was already sent

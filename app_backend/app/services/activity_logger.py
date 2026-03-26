@@ -38,7 +38,7 @@ def _log(
     except Exception as e:
         # Never fail the main operation due to logging
         import traceback
-        print(f"Warning: Failed to log activity: {e}")
+        import logging; logging.getLogger(__name__).warning(f"Failed to log activity: {e}")
         traceback.print_exc()
 
 

@@ -75,19 +75,15 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
     
     if (!actualUsername && usernameRef.current) {
       actualUsername = usernameRef.current.value;
-      console.log('Using DOM fallback for username:', actualUsername);
     }
     if (!actualPassword && passwordRef.current) {
       actualPassword = passwordRef.current.value;
-      console.log('Using DOM fallback for password');
     }
     
     // DEBUG - בדיקה שה-submit רץ
-    console.log('LOGIN SUBMIT CALLED', { username: actualUsername, passwordLength: actualPassword?.length });
     
     // ולידציה בסיסית
     if (!actualUsername?.trim() || !actualPassword) {
-      console.log('LOGIN VALIDATION FAILED', { username: actualUsername, password: !!actualPassword });
       setError('נא למלא שם משתמש וסיסמה');
       return;
     }
@@ -97,14 +93,12 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
     setGlobalLoading(true);
 
     try {
-      console.log('LOGIN API CALL STARTING');
       // קריאה לשרת האמיתי באמצעות api service
       const response = await api.post('/auth/login', {
         username: actualUsername.trim(),
         password: actualPassword,
         remember_me: rememberMe,
       });
-      console.log('LOGIN API RESPONSE', response.data);
 
       if (response.data) {
         const data = response.data;
@@ -144,16 +138,12 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
         // אם אין 2FA - התחברות רגילה
         if (data.user) {
           // Debug: Log the raw user data from API
-          console.log('[Login] Raw user data from API:', JSON.stringify(data.user, null, 2));
-          console.log('[Login] data.user.role type:', typeof data.user.role);
-          console.log('[Login] data.user.role value:', data.user.role);
           
           // Extract role - backend returns role as object with code, name, permissions
           const roleCode = typeof data.user.role === 'object' && data.user.role?.code 
             ? data.user.role.code 
             : (data.user.role || 'USER');
           
-          console.log('[Login] Extracted roleCode:', roleCode);
           
           // ספקים לא יכולים להתחבר לאפליקציה - הם משתמשים בפורטל החיצוני
           if (roleCode === 'SUPPLIER') {
@@ -352,7 +342,6 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
                   data-testid="login-email"
                   defaultValue={username}
                   onChange={(e) => {
-                    console.log('USERNAME CHANGE:', e.target.value);
                     setUsername(e.target.value);
                   }}
                   onBlur={() => handleBlur('username')}
@@ -381,7 +370,6 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
                   data-testid="login-password"
                   defaultValue={password}
                   onChange={(e) => {
-                    console.log('PASSWORD CHANGE:', e.target.value.length, 'chars');
                     setPassword(e.target.value);
                   }}
                   onBlur={() => handleBlur('password')}

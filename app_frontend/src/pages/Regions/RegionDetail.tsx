@@ -79,7 +79,6 @@ const RegionDetail: React.FC = () => {
             };
           }
         } catch (err) {
-          console.log(`No forest polygon for project ${project.id}`);
         }
         return null;
       });

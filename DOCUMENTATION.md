@@ -571,42 +571,11 @@ resource.action
 
 ## מה זה Git Worktree?
 
-בדרך כלל, יש לך **repo אחד = תיקייה אחת**. אבל Git מאפשר ליצור **עותקים מקושרים** של אותו repo בתיקיות שונות.
-
-```
-/root/forewise/                    ← הריפו הראשי (main)
-    │
-    └── .git/                        ← כל ההיסטוריה נשמרת כאן
-          │
-          ├── worktree: abc  ──────→ /root/.cursor/worktrees/.../abc/
-          ├── worktree: xyz  ──────→ /root/.cursor/worktrees/.../xyz/
-          └── ...
-```
-
-## למה Cursor יוצר worktrees?
-
-כשפותחים את הפרויקט ב-Cursor דרך SSH, הוא יוצר worktree חדש כדי:
-1. **לא לפגוע בריפו הראשי**
-2. **לאפשר עריכה מקבילה**
-3. **בידוד** - כל session עובד בנפרד
-
 ## חיבורי Git (Remotes)
 
 | שם | כתובת | פלטפורמה |
 |----|-------|----------|
 | origin | `git@github.com:nirab96Developer/Forewise.git` | GitHub |
-| gitlab | `git@gitlab.com:nirab96Developer/Forewise.git` | GitLab |
-| backendv2 | `git@github.com:nirab96Developer/backendv2.git` | GitHub |
-
-## ניקוי worktrees
-
-```bash
-# הצג כל ה-worktrees
-git worktree list
-
-# מחק worktree ספציפי
-git worktree remove /path/to/worktree
-```
 
 ---
 

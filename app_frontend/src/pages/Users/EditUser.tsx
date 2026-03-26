@@ -58,7 +58,6 @@ const EditUser: React.FC = () => {
       
       // Safety timeout
       const timeout = setTimeout(() => {
-        console.log('[EditUser] Safety timeout - forcing loading to stop');
         setLoadingData(false);
       }, 10000);
       

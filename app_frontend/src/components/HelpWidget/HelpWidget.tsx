@@ -63,7 +63,6 @@ const HelpWidget: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Here you would actually send to your support API
-    console.log('Support ticket:', { category: selectedCategory, message });
     
     setIsSending(false);
     setSent(true);
