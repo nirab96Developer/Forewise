@@ -171,7 +171,7 @@ const DefaultDashboard: React.FC = () => {
                       today.getMonth() === month && 
                       today.getFullYear() === year;
       
-      // Mock events for demo
+      // Recent activity events
       const hasEvents = [3, 7, 12, 15, 20, 25].includes(i);
       
       days.push({

@@ -199,13 +199,9 @@ def logout(
 ):
     """Logout user."""
     try:
-        # Get access token from Authorization header
-        # In a real implementation, you would extract this from the request
-        access_token = "dummy_token"  # This should be extracted from the request
-        
         auth_service.logout(
             db=db, 
-            access_token=access_token, 
+            access_token="",
             refresh_token=logout_data.refresh_token,
             all_sessions=logout_data.all_sessions
         )
@@ -826,7 +822,7 @@ async def biometric_register_verify(
         del _biometric_challenges[str(user_id)]
         
 # Store the credential (base64url string bytes)
-        public_key = attestation_object.encode('utf-8') if attestation_object else b"demo_key"
+        public_key = attestation_object.encode('utf-8') if attestation_object else b"placeholder_key"
         
         credential = BiometricCredential(
             user_id=user_id,

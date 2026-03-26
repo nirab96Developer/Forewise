@@ -80,7 +80,6 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
       actualPassword = passwordRef.current.value;
     }
     
-    // DEBUG - בדיקה שה-submit רץ
     
     // ולידציה בסיסית
     if (!actualUsername?.trim() || !actualPassword) {

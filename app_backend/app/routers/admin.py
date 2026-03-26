@@ -1,4 +1,5 @@
 """Admin management endpoints - ניהול מלא למנהל המערכת"""
+import secrets
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -192,7 +193,7 @@ async def create_user(
         username=user_data["username"],
         email=user_data["email"],
         full_name=user_data["full_name"],
-        password_hash=get_password_hash(user_data.get("password", "Test123!")),
+        password_hash=get_password_hash(user_data.get("password", secrets.token_urlsafe(16))),
         phone=user_data.get("phone"),
         role_id=user_data.get("role_id"),
         region_id=user_data.get("region_id"),
