@@ -1,276 +1,239 @@
 
 // src/pages/WorkOrders/WorkOrders.tsx
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Search, Eye, Edit, Calendar, Clock, User, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  Plus, Search, Eye, Clock, User, AlertCircle,
+  Truck, ClipboardList
+} from 'lucide-react';
 import workOrderService, { WorkOrder, WorkOrderFilters } from '../../services/workOrderService';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
-import { useOffline } from '../../hooks/useOffline';
 import { getUserRole, normalizeRole, UserRole } from '../../utils/permissions';
 
+const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
+  PENDING:                                { label: 'ממתין לתיאום',     bg: 'bg-amber-50',  text: 'text-amber-700',  dot: 'bg-amber-400' },
+  DISTRIBUTING:                           { label: 'בהפצה לספקים',    bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-400' },
+  SUPPLIER_ACCEPTED_PENDING_COORDINATOR:  { label: 'ספק אישר — ממתין למתאם', bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
+  APPROVED_AND_SENT:                      { label: 'מאושר — ניתן לדווח', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
+  COMPLETED:                              { label: 'הושלם',           bg: 'bg-gray-100',  text: 'text-gray-600',   dot: 'bg-gray-400' },
+  REJECTED:                               { label: 'נדחה',            bg: 'bg-red-50',    text: 'text-red-700',    dot: 'bg-red-500' },
+  CANCELLED:                              { label: 'בוטל',            bg: 'bg-red-50',    text: 'text-red-600',    dot: 'bg-red-400' },
+  EXPIRED:                                { label: 'פג תוקף',         bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-400' },
+  STOPPED:                                { label: 'הופסק',           bg: 'bg-gray-100',  text: 'text-gray-700',   dot: 'bg-gray-500' },
+};
+
+const getStatus = (s: string) => STATUS_CONFIG[(s || '').toUpperCase()] || { label: s || '—', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-300' };
+
 const WorkOrders: React.FC = () => {
+  const navigate = useNavigate();
   const _role = normalizeRole(getUserRole());
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [error, setError] = useState<string | null>(null);
-  const { isOnline, pendingCount } = useOffline();
 
-  // Fetch work orders only once on initial load
   useEffect(() => {
-    let isCancelled = false;
-    
-    const fetchData = async () => {
+    let cancelled = false;
+    const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const filters: WorkOrderFilters = {
-          status: filterStatus !== 'all' ? filterStatus : undefined
-        };
-        
-        const response = await workOrderService.getWorkOrders(1, 50, filters);
-        
-        if (!isCancelled) {
-          setWorkOrders(response?.items || response?.data || response || []);
-        }
-      } catch (error: any) {
-        console.error('[WorkOrders] Error:', error?.message || error);
-        if (!isCancelled) {
-          setError('שגיאה בטעינת הזמנות העבודה. אנא נסה שוב.');
-          setWorkOrders([]);
-        }
+        const filters: WorkOrderFilters = { status: filterStatus !== 'all' ? filterStatus : undefined };
+        const res = await workOrderService.getWorkOrders(1, 100, filters);
+        if (!cancelled) setWorkOrders(res?.items || res?.data || res || []);
+      } catch {
+        if (!cancelled) { setError('שגיאה בטעינת הזמנות.'); setWorkOrders([]); }
       } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     };
-    
-    fetchData();
-    
-    return () => {
-      isCancelled = true;
+    load();
+    return () => { cancelled = true; };
+  }, [filterStatus]);
+
+  // Stats
+  const stats = useMemo(() => {
+    const all = workOrders;
+    return {
+      total: all.length,
+      pending: all.filter(o => (o.status || '').toUpperCase() === 'PENDING').length,
+      distributing: all.filter(o => ['DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes((o.status || '').toUpperCase())).length,
+      approved: all.filter(o => (o.status || '').toUpperCase() === 'APPROVED_AND_SENT').length,
+      terminal: all.filter(o => ['EXPIRED', 'STOPPED', 'REJECTED', 'CANCELLED', 'COMPLETED'].includes((o.status || '').toUpperCase())).length,
     };
-  }, [filterStatus]); // Only re-fetch when filter changes
+  }, [workOrders]);
 
-  const getStatusColor = (status: string) => {
-    const upper = (status || '').toUpperCase();
-    if (['APPROVED_AND_SENT'].includes(upper)) return 'bg-green-100 text-green-800';
-    if (['DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(upper)) return 'bg-blue-100 text-blue-800';
-    if (['PENDING'].includes(upper)) return 'bg-yellow-100 text-yellow-800';
-    if (['COMPLETED'].includes(upper)) return 'bg-gray-200 text-gray-800';
-    if (['REJECTED', 'CANCELLED', 'EXPIRED', 'STOPPED'].includes(upper)) return 'bg-red-100 text-red-800';
-    return 'bg-gray-100 text-gray-800';
-  };
+  // Search filter
+  const filtered = useMemo(() => {
+    if (!searchTerm.trim()) return workOrders;
+    const q = searchTerm.toLowerCase();
+    return workOrders.filter(o =>
+      (o.title || '').toLowerCase().includes(q) ||
+      (o.description || '').toLowerCase().includes(q) ||
+      (o.project_name || '').toLowerCase().includes(q) ||
+      (o.supplier_name || '').toLowerCase().includes(q) ||
+      (o.equipment_type || '').toLowerCase().includes(q) ||
+      String(o.order_number || '').includes(q)
+    );
+  }, [workOrders, searchTerm]);
 
-  const getStatusText = (status: string) => {
-    const s = (status || '').toUpperCase();
-    switch (s) {
-      case 'PENDING':        return 'ממתין לתיאום';
-      case 'DISTRIBUTING':   return 'בתיאום';
-      case 'DRAFT':          return 'טיוטה';
-      case 'ACCEPTED':
-      case 'APPROVED':
-      case 'COORDINATOR_APPROVED':
-      case 'APPROVED_AND_SENT': return 'אושר — ניתן לדווח';
-      case 'SENT_TO_SUPPLIER':
-      case 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': return 'אצל הספק';
-      case 'REJECTED':       return 'נדחה';
-      case 'COMPLETED':      return 'הושלם';
-      case 'CANCELLED':      return 'בוטל';
-      case 'ACTIVE':
-      case 'IN_PROGRESS':    return 'בביצוע';
-      case 'SENT':           return 'נשלח לספק';
-      default:               return status || '—';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('he-IL');
-  };
-
+  const formatDate = (d: string) => d ? new Date(d).toLocaleDateString('he-IL') : '—';
 
   if (loading) return <UnifiedLoader size="full" />;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 animate-fadeIn">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">ניהול הזמנות עבודה</h1>
-              <p className="text-gray-600">ניהול ועקיבה אחר הזמנות עבודה לספקים</p>
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Header */}
+      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <ClipboardList className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">הזמנות עבודה</h1>
+                <p className="text-sm text-gray-500">{stats.total} הזמנות</p>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              {!isOnline && (
-                <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-2 rounded-lg">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>מצב לא מקוון</span>
-                  {pendingCount > 0 && (
-                    <span className="bg-yellow-200 text-yellow-900 px-2 py-1 rounded text-sm">
-                      {pendingCount} ממתינות
-                    </span>
-                  )}
-                </div>
-              )}
-              {[UserRole.ADMIN, UserRole.AREA_MANAGER, UserRole.WORK_MANAGER].includes(_role) && (
-                <Link
-                  to="/work-orders/new"
-                  className="bg-gradient-to-r from-kkl-green to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-lg flex items-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                >
-                  <Plus className="w-5 h-5 ml-2" />
-                  הזמנה חדשה
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row gap-4 animate-slideIn">
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="חיפוש הזמנות עבודה..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow"
-              />
-            </div>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow min-w-[150px]"
-            >
-              <option value="all">כל הסטטוסים</option>
-              <option value="PENDING">ממתין</option>
-              <option value="DISTRIBUTING">בהפצה לספקים</option>
-              <option value="APPROVED_AND_SENT">אושר ונשלח</option>
-              <option value="COMPLETED">הושלם</option>
-              <option value="REJECTED">נדחה</option>
-              <option value="CANCELLED">בוטל</option>
-              <option value="EXPIRED">פג תוקף</option>
-              <option value="STOPPED">הופסק</option>
-            </select>
+            {[UserRole.ADMIN, UserRole.AREA_MANAGER, UserRole.WORK_MANAGER].includes(_role) && (
+              <Link to="/work-orders/new"
+                className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium shadow-sm transition-colors min-h-[44px]">
+                <Plus className="w-4 h-4" /> הזמנה חדשה
+              </Link>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Work Orders Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {workOrders.map((workOrder, index) => (
-            <div 
-              key={workOrder.id} 
-              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 hover:scale-105 animate-fadeIn"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-bold text-gray-900">{workOrder.title}</h3>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(workOrder.status)}`}>
-                  {getStatusText(workOrder.status)}
-                </span>
-              </div>
-              
-              <p className="text-gray-600 text-sm mb-6 leading-relaxed">{workOrder.description}</p>
-              
-              <div className="space-y-3 mb-6">
-                {workOrder.project_name && (
-                  <div className="flex items-center text-sm">
-                    <Calendar className="w-4 h-4 text-gray-400 ml-2" />
-                    <span className="text-gray-600">פרויקט:</span>
-                    <span className="font-medium mr-auto">{workOrder.project_name}</span>
-                  </div>
-                )}
-                <div className="flex items-center text-sm">
-                  <Calendar className="w-4 h-4 text-gray-400 ml-2" />
-                  <span className="text-gray-600">תאריך:</span>
-                  <span className="font-medium mr-auto">{formatDate(workOrder.work_start_date)}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <Clock className="w-4 h-4 text-gray-400 ml-2" />
-                  <span className="text-gray-600">שעות משוערות:</span>
-                  <span className="font-medium mr-auto">{workOrder.estimated_hours || 'לא מוגדר'}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <User className="w-4 h-4 text-gray-400 ml-2" />
-                  <span className="text-gray-600">ספק:</span>
-                  <span className="font-medium mr-auto">{workOrder.supplier_name || (workOrder.supplier_id ? `ספק #${workOrder.supplier_id}` : 'לא מוגדר')}</span>
-                </div>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
 
-              {/* Portal Status */}
-              {workOrder.supplier_id && (
-                <div className="mb-6 p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center text-sm text-blue-800">
-                    <AlertCircle className="w-4 h-4 ml-2" />
-                    <span>פורטל ספק פעיל</span>
-                  </div>
-                  {workOrder.supplier_name && (
-                    <div className="text-xs text-blue-600 mt-1">
-                      ספק: {workOrder.supplier_name}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Link
-                  to={`/work-orders/${workOrder.id}`}
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-3 rounded-lg text-sm flex items-center justify-center font-medium shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  <Eye className="w-4 h-4 ml-1" />
-                  צפייה
-                </Link>
-                <Link
-                  to={`/work-orders/${workOrder.id}/edit`}
-                  className="flex-1 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-4 py-3 rounded-lg text-sm flex items-center justify-center font-medium shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  <Edit className="w-4 h-4 ml-1" />
-                  עריכה
-                </Link>
-              </div>
-            </div>
-          ))}
+        {/* Stats Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+          <button onClick={() => setFilterStatus('PENDING')}
+            className={`p-3 rounded-xl border text-center transition-all ${filterStatus === 'PENDING' ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-200' : 'border-gray-200 bg-white hover:border-amber-200'}`}>
+            <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
+            <div className="text-xs text-gray-500 mt-0.5">ממתינים</div>
+          </button>
+          <button onClick={() => setFilterStatus('DISTRIBUTING')}
+            className={`p-3 rounded-xl border text-center transition-all ${filterStatus === 'DISTRIBUTING' ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-200' : 'border-gray-200 bg-white hover:border-blue-200'}`}>
+            <div className="text-2xl font-bold text-blue-600">{stats.distributing}</div>
+            <div className="text-xs text-gray-500 mt-0.5">בתיאום</div>
+          </button>
+          <button onClick={() => setFilterStatus('APPROVED_AND_SENT')}
+            className={`p-3 rounded-xl border text-center transition-all ${filterStatus === 'APPROVED_AND_SENT' ? 'border-green-400 bg-green-50 ring-2 ring-green-200' : 'border-gray-200 bg-white hover:border-green-200'}`}>
+            <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
+            <div className="text-xs text-gray-500 mt-0.5">מאושרים</div>
+          </button>
+          <button onClick={() => setFilterStatus('all')}
+            className={`p-3 rounded-xl border text-center transition-all ${filterStatus === 'all' ? 'border-gray-400 bg-gray-50 ring-2 ring-gray-200' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+            <div className="text-2xl font-bold text-gray-700">{stats.total}</div>
+            <div className="text-xs text-gray-500 mt-0.5">סה"כ</div>
+          </button>
         </div>
 
-        {workOrders.length === 0 && !loading && (
-          <div className="text-center py-16 animate-fadeIn">
-            <div className="bg-white rounded-xl shadow-lg p-12 max-w-md mx-auto">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">לא נמצאו הזמנות עבודה</h3>
-              <p className="text-gray-600 mb-6">לא נמצאו הזמנות עבודה המתאימות לחיפוש שלך</p>
-              <button 
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilterStatus('all');
-                }}
-                className="bg-kkl-green hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              >
-                נקה מסננים
-              </button>
-            </div>
+        {/* Search */}
+        <div className="relative mb-5">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            placeholder="חיפוש לפי פרויקט, ספק, ציוד..."
+            className="w-full pr-10 pl-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+            style={{ fontSize: '16px' }} />
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500" />
+            <span className="text-red-700 text-sm">{error}</span>
+            <button onClick={() => window.location.reload()} className="mr-auto text-red-600 underline text-sm">נסה שוב</button>
           </div>
         )}
 
-        {error && (
-          <div className="text-center py-16 animate-fadeIn">
-            <div className="bg-red-50 border border-red-200 rounded-xl shadow-lg p-12 max-w-md mx-auto">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="w-8 h-8 text-red-400" />
-              </div>
-              <h3 className="text-lg font-semibold text-red-900 mb-2">שגיאה</h3>
-              <p className="text-red-600 mb-6">{error}</p>
-                <button 
-                  onClick={() => window.location.reload()}
-                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-                >
-                  נסה שוב
-                </button>
-            </div>
+        {/* Orders List */}
+        {filtered.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <ClipboardList className="w-14 h-14 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 mb-4">לא נמצאו הזמנות</p>
+            {filterStatus !== 'all' && (
+              <button onClick={() => { setFilterStatus('all'); setSearchTerm(''); }}
+                className="text-blue-600 text-sm underline">נקה מסננים</button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map(wo => {
+              const st = getStatus(wo.status);
+              return (
+                <div key={wo.id}
+                  onClick={() => navigate(`/work-orders/${wo.id}`)}
+                  className="bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer">
+                  
+                  {/* Top row: status + order number + date */}
+                  <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${st.bg} ${st.text}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                        {st.label}
+                      </span>
+                      {wo.order_number && (
+                        <span className="text-xs text-gray-400 font-mono">#{wo.order_number}</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-400">{formatDate(wo.work_start_date)}</span>
+                  </div>
+
+                  {/* Content */}
+                  <div className="px-4 pb-3">
+                    {/* Project + Equipment type */}
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div>
+                        <div className="font-semibold text-gray-900 text-sm">
+                          {wo.project_name || wo.title || `הזמנה #${wo.id}`}
+                        </div>
+                        {wo.equipment_type && (
+                          <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                            <Truck className="w-3 h-3" />
+                            {wo.equipment_type}
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={e => { e.stopPropagation(); navigate(`/work-orders/${wo.id}`); }}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-medium transition-colors min-h-[36px]">
+                        <Eye className="w-3.5 h-3.5" /> צפייה
+                      </button>
+                    </div>
+
+                    {/* Info row */}
+                    <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+                      {wo.supplier_name && (
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {wo.supplier_name}
+                        </span>
+                      )}
+                      {wo.estimated_hours && wo.estimated_hours > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {wo.estimated_hours} שעות
+                        </span>
+                      )}
+                      {(wo as any).equipment_license_plate && (
+                        <span className="flex items-center gap-1 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
+                          {(wo as any).equipment_license_plate}
+                        </span>
+                      )}
+                      {wo.description && (
+                        <span className="text-gray-400 truncate max-w-[200px]">
+                          {wo.description}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
