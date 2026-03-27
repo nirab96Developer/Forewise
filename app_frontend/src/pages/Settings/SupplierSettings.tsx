@@ -64,21 +64,20 @@ function useAllData() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [sR, eR, tR, rR, regR, aR] = await Promise.all([
-        api.get('/suppliers',          { params: { page_size: 500 } }),
-        api.get('/equipment',          { params: { page_size: 500 } }),
-        api.get('/equipment-types',    { params: { page_size: 50 } }),
-        api.get('/supplier-rotations', { params: { page_size: 500 } }),
-        api.get('/regions').catch(() => ({ data: [] })),
-        api.get('/areas').catch(() => ({ data: [] })),
+      const [sR, eR, tR, rR, regR, aR] = await Promise.allSettled([
+        api.get('/suppliers',           { params: { page_size: 500 } }),
+        api.get('/equipment',           { params: { page_size: 500 } }),
+        api.get('/equipment-types',     { params: { page_size: 50 } }),
+        api.get('/supplier-rotations/', { params: { page_size: 500 } }),
+        api.get('/regions'),
+        api.get('/areas'),
       ]);
-      setSuppliers(sR.data?.items || sR.data || []);
-      setEquipment(eR.data?.items || []);
-      setEqTypes(tR.data?.items || []);
-      const rots = rR.data?.items || rR.data || [];
-      setRotations(Array.isArray(rots) ? rots : []);
-      setRegions(regR.data?.items || regR.data || []);
-      setAreas(aR.data?.items || aR.data || []);
+      if (sR.status === 'fulfilled')   setSuppliers(sR.value.data?.items || sR.value.data || []);
+      if (eR.status === 'fulfilled')   setEquipment(eR.value.data?.items || []);
+      if (tR.status === 'fulfilled')   setEqTypes(tR.value.data?.items || []);
+      if (rR.status === 'fulfilled')   { const rots = rR.value.data?.items || rR.value.data || []; setRotations(Array.isArray(rots) ? rots : []); }
+      if (regR.status === 'fulfilled') setRegions(regR.value.data?.items || regR.value.data || []);
+      if (aR.status === 'fulfilled')   setAreas(aR.value.data?.items || aR.value.data || []);
     } catch (e) { console.error(e); }
     setLoading(false);
   }, []);
