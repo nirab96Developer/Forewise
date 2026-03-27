@@ -83,14 +83,14 @@ const AreaManagerDashboard: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <KPI icon={<Briefcase className="w-5 h-5" />} label="הזמנות פתוחות" value={k.open_work_orders}
             accent={k.open_work_orders > 0 ? "border-r-blue-500 bg-blue-50" : "border-r-gray-200 bg-white"}
-            fg={k.open_work_orders > 0 ? "text-blue-600" : "text-gray-400"} to="/work-orders" />
+            fg={k.open_work_orders > 0 ? "text-blue-600" : "text-gray-400"} to="/order-coordination" />
           <KPI icon={<AlertTriangle className="w-5 h-5" />} label="תקועות >48שע" value={k.stuck_work_orders || 0}
             accent={(k.stuck_work_orders || 0) > 0 ? "border-r-red-600 bg-red-50" : "border-r-gray-200 bg-white"}
             fg={(k.stuck_work_orders || 0) > 0 ? "text-red-600" : "text-gray-400"}
-            pulse={(k.stuck_work_orders || 0) > 0} to="/work-orders" />
+            pulse={(k.stuck_work_orders || 0) > 0} to="/order-coordination" />
           <KPI icon={<Clock className="w-5 h-5" />} label="ממתינים לאישורי" value={k.submitted_for_approval}
             accent={k.submitted_for_approval > 0 ? "border-r-amber-500 bg-amber-50" : "border-r-gray-200 bg-white"}
-            fg={k.submitted_for_approval > 0 ? "text-amber-600" : "text-gray-400"} to="/work-logs" pulse={k.submitted_for_approval > 0} />
+            fg={k.submitted_for_approval > 0 ? "text-amber-600" : "text-gray-400"} to="/accountant-inbox" pulse={k.submitted_for_approval > 0} />
           <KPI icon={<FileText className="w-5 h-5" />} label="חשבוניות טיוטה" value={k.draft_invoices}
             accent={k.draft_invoices > 0 ? "border-r-orange-500 bg-orange-50" : "border-r-gray-200 bg-white"}
             fg={k.draft_invoices > 0 ? "text-orange-600" : "text-gray-400"} to="/invoices" />

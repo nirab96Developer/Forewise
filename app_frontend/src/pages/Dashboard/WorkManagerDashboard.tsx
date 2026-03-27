@@ -148,7 +148,7 @@ const WorkManagerDashboard: React.FC = () => {
             <Plus className="w-6 h-6 text-green-600" />
             <span className="text-xs font-bold text-gray-700">דיווח חדש</span>
           </button>
-          <button onClick={() => navigate("/work-logs")}
+          <button onClick={() => navigate("/projects")}
             className="flex flex-col items-center gap-1.5 min-h-[72px] bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md active:scale-[0.97] transition-all justify-center">
             <FileText className="w-6 h-6 text-gray-500" />
             <span className="text-xs font-bold text-gray-700">היסטוריה</span>
@@ -164,7 +164,7 @@ const WorkManagerDashboard: React.FC = () => {
               <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                 <Briefcase className="w-4 h-4" /> הזמנות עבודה
               </h3>
-              <button onClick={() => navigate("/work-orders")}
+              <button onClick={() => navigate("/projects")}
                 className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-0.5">
                 הכל <ChevronLeft className="w-3 h-3" />
               </button>
