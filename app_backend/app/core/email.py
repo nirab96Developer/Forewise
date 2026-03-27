@@ -163,6 +163,12 @@ def send_email(to=None, subject="", body="", email_to=None, html_body=None, **kw
     3. SMTP (direct connection)
     4. Console fallback
     """
+    import os
+    if os.environ.get("DISABLE_EMAILS") == "1":
+        import logging
+        logging.getLogger(__name__).info(f"[EMAIL DISABLED] Would send to {to or email_to}: {subject}")
+        return True
+
     recipient = to or email_to or "unknown"
     body_text = body or ""
 

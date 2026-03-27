@@ -65,10 +65,10 @@ function useAllData() {
     setLoading(true);
     try {
       const [sR, eR, tR, rR, regR, aR] = await Promise.allSettled([
-        api.get('/suppliers',           { params: { page_size: 500 } }),
-        api.get('/equipment',           { params: { page_size: 500 } }),
+        api.get('/suppliers',           { params: { page_size: 200 } }),
+        api.get('/equipment',           { params: { page_size: 200 } }),
         api.get('/equipment-types',     { params: { page_size: 50 } }),
-        api.get('/supplier-rotations/', { params: { page_size: 500 } }),
+        api.get('/supplier-rotations/', { params: { page_size: 200 } }),
         api.get('/regions'),
         api.get('/areas'),
       ]);

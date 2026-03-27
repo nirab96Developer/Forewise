@@ -1,9 +1,0 @@
--- Check suppliers table structure
-SELECT 
-    COLUMN_NAME,
-    DATA_TYPE,
-    IS_NULLABLE
-FROM INFORMATION_SCHEMA.COLUMNS 
-WHERE TABLE_NAME = 'suppliers'
-ORDER BY ORDINAL_POSITION;
-

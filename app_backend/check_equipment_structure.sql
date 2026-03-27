@@ -1,9 +1,0 @@
--- Check equipment table structure
-SELECT 
-    COLUMN_NAME,
-    DATA_TYPE,
-    IS_NULLABLE
-FROM INFORMATION_SCHEMA.COLUMNS 
-WHERE TABLE_NAME = 'equipment'
-ORDER BY ORDINAL_POSITION;
-
