@@ -1,5 +1,5 @@
 // Forewise Service Worker
-const CACHE_NAME = 'forewise-v202603271554';
+const CACHE_NAME = 'forewise-v202603271844';
 const STATIC_ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', (event) => {

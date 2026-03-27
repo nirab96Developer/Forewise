@@ -39,26 +39,47 @@ class WorklogService:
         return f"WL-{datetime.now().year}-{str(report_number).zfill(4)}"
 
     def _resolve_hourly_rate(self, db: Session, worklog_dict: dict) -> float:
-        """Resolve hourly rate from work order or equipment type."""
+        """Resolve hourly rate from supplier pricing (source of truth).
+        
+        Priority:
+        1. work_orders.hourly_rate — if explicitly set on the order
+        2. supplier_equipment.hourly_rate — per-supplier pricing from settings page
+        3. None → raise error (no valid pricing)
+        """
+        from sqlalchemy import text as sa_text
         wo_id = worklog_dict.get('work_order_id')
-        if wo_id:
-            wo = db.query(WorkOrder).filter_by(id=wo_id).first()
-            if wo and wo.hourly_rate:
-                return float(wo.hourly_rate)
-            if wo and wo.equipment_type:
-                from app.models.equipment_type import EquipmentType
-                et = db.query(EquipmentType).filter(
-                    EquipmentType.name.ilike(wo.equipment_type),
-                    EquipmentType.is_active == True
-                ).first()
-                if et:
-                    return float(et.default_hourly_rate)
-        eq_type_id = worklog_dict.get('equipment_type_id')
-        if eq_type_id:
-            from app.models.equipment_type import EquipmentType
-            et = db.query(EquipmentType).filter_by(id=eq_type_id).first()
-            if et:
-                return float(et.default_hourly_rate)
+        if not wo_id:
+            return 0
+
+        wo = db.query(WorkOrder).filter_by(id=wo_id).first()
+        if not wo:
+            return 0
+
+        # Priority 1: explicit rate on the work order
+        if wo.hourly_rate and float(wo.hourly_rate) > 0:
+            return float(wo.hourly_rate)
+
+        # Priority 2: supplier_equipment rate (matched by supplier + license plate)
+        if wo.supplier_id and wo.equipment_license_plate:
+            row = db.execute(sa_text(
+                "SELECT hourly_rate FROM supplier_equipment "
+                "WHERE supplier_id = :sid AND license_plate = :plate AND is_active = true "
+                "LIMIT 1"
+            ), {"sid": wo.supplier_id, "plate": wo.equipment_license_plate}).fetchone()
+            if row and row[0] and float(row[0]) > 0:
+                return float(row[0])
+
+        # Priority 2b: supplier_equipment rate (any active for this supplier)
+        if wo.supplier_id:
+            row = db.execute(sa_text(
+                "SELECT hourly_rate FROM supplier_equipment "
+                "WHERE supplier_id = :sid AND is_active = true AND hourly_rate > 0 "
+                "ORDER BY hourly_rate DESC LIMIT 1"
+            ), {"sid": wo.supplier_id}).fetchone()
+            if row and row[0]:
+                return float(row[0])
+
+        # No valid pricing found
         return 0
     
     def create(self, db: Session, data: WorklogCreate, current_user_id: int) -> Worklog:
@@ -184,12 +205,15 @@ class WorklogService:
             worklog_dict['overnight_rate'] = Decimal('250')
             overnight_total = 250.0
         
-        # Calculate hourly_rate_snapshot and costs
+        # Calculate hourly_rate_snapshot from supplier pricing
         rate = None
         if not worklog_dict.get('hourly_rate_snapshot'):
             rate = self._resolve_hourly_rate(db, worklog_dict)
-            if rate:
-                worklog_dict['hourly_rate_snapshot'] = rate
+            if not rate or rate <= 0:
+                raise ValidationException(
+                    "לא מוגדר תעריף לכלי/ספק זה. יש להגדיר מחיר בדף ספקים ותמחורים."
+                )
+            worklog_dict['hourly_rate_snapshot'] = rate
         else:
             rate = float(worklog_dict['hourly_rate_snapshot'])
 
