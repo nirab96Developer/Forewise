@@ -7,7 +7,7 @@ from sqlalchemy import func, and_, or_, select, desc, extract, text
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
-from app.models import User, Project, Budget, WorkOrder, Region, Area, Location
+from app.models import User, Project, Budget, WorkOrder, Region, Area, Location, Invoice, Supplier
 
 router = APIRouter(
     prefix="/dashboard",
@@ -232,6 +232,123 @@ async def get_dashboard_summary(
             "area": current_user.area.name if current_user.area else None
         }
     }
+
+@router.get("/admin-overview")
+async def get_admin_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Admin dashboard overview — aggregates KPIs, financial, alerts, charts, events."""
+    from datetime import timedelta
+    now = datetime.now()
+    week_ago = now - timedelta(days=7)
+
+    wo_total = db.query(func.count(WorkOrder.id)).filter(WorkOrder.deleted_at.is_(None)).scalar() or 0
+    wo_open = db.query(func.count(WorkOrder.id)).filter(
+        WorkOrder.status.in_(['PENDING', 'DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', 'APPROVED_AND_SENT']),
+        WorkOrder.deleted_at.is_(None)
+    ).scalar() or 0
+    wo_stuck = db.query(func.count(WorkOrder.id)).filter(
+        WorkOrder.status.in_(['DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR']),
+        WorkOrder.updated_at < now - timedelta(hours=48),
+        WorkOrder.deleted_at.is_(None)
+    ).scalar() or 0
+    wo_expired_week = db.query(func.count(WorkOrder.id)).filter(
+        WorkOrder.status == 'EXPIRED', WorkOrder.updated_at >= week_ago
+    ).scalar() or 0
+
+    from app.models.worklog import Worklog
+    pending_wl = db.query(func.count(Worklog.id)).filter(
+        Worklog.status.in_(['PENDING', 'SUBMITTED']), Worklog.is_active == True
+    ).scalar() or 0
+
+    pending_inv = db.query(func.count(Invoice.id)).filter(
+        Invoice.status == 'DRAFT', Invoice.deleted_at.is_(None)
+    ).scalar() or 0
+
+    budget_query = db.query(Budget)
+    total_budget = budget_query.with_entities(func.sum(Budget.total_amount)).scalar() or 0
+    committed = budget_query.with_entities(func.sum(Budget.committed_amount)).scalar() or 0
+    spent = budget_query.with_entities(func.sum(Budget.spent_amount)).scalar() or 0
+    remaining = float(total_budget) - float(committed) - float(spent)
+    utilization = (float(spent) / float(total_budget) * 100) if float(total_budget) > 0 else 0
+    overrun = db.query(func.count(Budget.id)).filter(
+        Budget.spent_amount > Budget.total_amount, Budget.total_amount > 0, Budget.is_active == True
+    ).scalar() or 0
+
+    # Alerts
+    alerts = []
+    if wo_stuck > 0:
+        alerts.append({"type": "critical", "message": f"{wo_stuck} הזמנות תקועות מעל 48 שעות", "link": "/work-orders"})
+    if overrun > 0:
+        alerts.append({"type": "critical", "message": f"{overrun} פרויקטים בחריגת תקציב", "link": "/settings/budgets"})
+    if pending_wl > 5:
+        alerts.append({"type": "warning", "message": f"{pending_wl} דיווחים ממתינים לאישור", "link": "/accountant-inbox"})
+    if pending_inv > 0:
+        alerts.append({"type": "info", "message": f"{pending_inv} חשבוניות בטיוטה", "link": "/invoices"})
+
+    # Charts: WO per day last 14 days
+    wo_chart = []
+    for i in range(13, -1, -1):
+        d = (now - timedelta(days=i)).date()
+        cnt = db.query(func.count(WorkOrder.id)).filter(
+            func.date(WorkOrder.created_at) == d
+        ).scalar() or 0
+        wo_chart.append({"date": d.isoformat(), "count": cnt})
+
+    wl_chart = []
+    for i in range(13, -1, -1):
+        d = (now - timedelta(days=i)).date()
+        cnt = db.query(func.count(Worklog.id)).filter(
+            func.date(Worklog.created_at) == d
+        ).scalar() or 0
+        wl_chart.append({"date": d.isoformat(), "count": cnt})
+
+    # Recent events
+    recent = db.execute(text("""
+        SELECT al.id, al.action, al.description, al.entity_type, al.entity_id,
+               al.user_id, al.created_at, al.metadata_json,
+               u.full_name as user_name
+        FROM activity_logs al
+        LEFT JOIN users u ON u.id = al.user_id
+        ORDER BY al.created_at DESC
+        LIMIT 20
+    """)).fetchall()
+    events = [
+        {
+            "id": r[0], "action": r[1] or "", "description": r[2] or "",
+            "entity_type": r[3] or "", "entity_id": r[4],
+            "user_id": r[5], "created_at": r[6].isoformat() if r[6] else "",
+            "metadata": r[7], "user_name": r[8]
+        }
+        for r in recent
+    ]
+
+    return {
+        "kpis": {
+            "open_work_orders": wo_open,
+            "stuck_orders": wo_stuck,
+            "pending_worklogs": pending_wl,
+            "pending_invoices": pending_inv,
+            "budget_overrun": overrun,
+            "expired_wo_week": wo_expired_week,
+            "total_users": db.query(func.count(User.id)).filter(User.is_active == True).scalar() or 0,
+            "total_suppliers": db.query(func.count(Supplier.id)).filter(Supplier.is_active == True).scalar() or 0,
+            "total_projects": db.query(func.count(Project.id)).filter(Project.deleted_at.is_(None)).scalar() or 0,
+        },
+        "financial": {
+            "total": float(total_budget),
+            "committed": float(committed),
+            "spent": float(spent),
+            "remaining": remaining,
+            "utilization_pct": round(utilization, 1),
+        },
+        "alerts": alerts,
+        "wo_chart": wo_chart,
+        "wl_chart": wl_chart,
+        "recent_events": events,
+    }
+
 
 @router.get("/map")
 async def get_dashboard_map(
