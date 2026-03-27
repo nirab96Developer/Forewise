@@ -1,88 +1,60 @@
-// Forewise Service Worker v1.1.0
-const CACHE_NAME = 'forewise-v202603261452';
-const APP_VERSION = 'forewise-v202603261452';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/logo-forewise-transparent.png',
-  '/icons/forewise-icon-192.png',
-];
+// Forewise Service Worker
+const CACHE_NAME = 'forewise-v202603271012';
+const STATIC_ASSETS = ['/', '/index.html'];
 
-// Install: cache static shell + notify clients about update
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch(() => {});
-    })
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(STATIC_ASSETS).catch(() => {}))
+      .catch(() => {})
   );
   self.skipWaiting();
 });
 
-// Activate: clean old caches + notify all clients
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      const oldKeys = keys.filter((key) => key !== CACHE_NAME);
-      if (oldKeys.length > 0) {
-        self.clients.matchAll().then((clients) => {
-          clients.forEach((client) => {
-            client.postMessage({
-              type: 'APP_UPDATED',
-              version: APP_VERSION,
-            });
-          });
-        });
-      }
-      return Promise.all(oldKeys.map((key) => caches.delete(key)));
-    })
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    )
   );
   self.clients.claim();
 });
 
-// Listen for skip-waiting message from frontend
-self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-// Fetch: network-first for API, cache-first for assets
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+
+  // Skip non-GET and API calls
   if (event.request.method !== 'GET') return;
   if (url.pathname.startsWith('/api/')) return;
+  if (url.pathname.startsWith('/ws/')) return;
 
-  if (url.pathname.startsWith('/supplier-portal/')) {
-    event.respondWith(
-      fetch(event.request).catch(() => caches.match('/index.html'))
-    );
-    return;
-  }
-
+  // For navigation: network-first with cache fallback
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
         .then((res) => {
           const clone = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)).catch(() => {});
           return res;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match('/index.html').then((r) => r || new Response('Offline', { status: 503 })))
     );
     return;
   }
 
+  // Static assets: cache-first
   event.respondWith(
-    caches.match(event.request).then(
-      (cached) =>
-        cached ||
-        fetch(event.request).then((res) => {
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request)
+        .then((res) => {
           if (res.ok) {
             const clone = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(event.request, clone));
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone)).catch(() => {});
           }
           return res;
         })
-    )
+        .catch(() => new Response('', { status: 503 }));
+    })
   );
 });

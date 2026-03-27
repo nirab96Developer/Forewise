@@ -745,8 +745,28 @@ async def resend_otp(
 # Biometric Authentication (WebAuthn / Face ID / Touch ID)
 # ============================================================
 
-# Store challenges temporarily (in production, use Redis)
-_biometric_challenges = {}
+# Challenge storage via DB (works across Gunicorn workers)
+def _store_bio_challenge(db, user_id, challenge, purpose="biometric_register"):
+    db.query(OTPToken).filter(OTPToken.user_id == user_id, OTPToken.purpose == purpose, OTPToken.is_used == False).update({"is_active": False})
+    otp = OTPToken(user_id=user_id, token=challenge, token_hash=hashlib.sha256(challenge.encode()).hexdigest(),
+                   code_hash=hashlib.sha256(challenge.encode()).hexdigest(), purpose=purpose,
+                   expires_at=datetime.now() + timedelta(minutes=5), is_used=False, is_active=True, attempts=0)
+    db.add(otp)
+    db.commit()
+
+def _get_bio_challenge(db, user_id, purpose="biometric_register"):
+    otp = db.query(OTPToken).filter(OTPToken.user_id == user_id, OTPToken.purpose == purpose,
+                                     OTPToken.is_used == False, OTPToken.is_active == True,
+                                     OTPToken.expires_at > datetime.now()).order_by(OTPToken.created_at.desc()).first()
+    if otp:
+        ch = otp.token
+        otp.is_used = True
+        otp.is_active = False
+        db.commit()
+        return ch
+    return None
+
+_biometric_challenges = {}  # kept for WebAuthn login flow (short-lived)
 
 
 @router.post("/biometric/register")
@@ -771,10 +791,7 @@ async def biometric_register_start(
         challenge = base64.b64encode(os.urandom(32)).decode('utf-8')
 
         # Store challenge temporarily
-        _biometric_challenges[str(user_id)] = {
-            "challenge": challenge,
-            "created_at": datetime.utcnow()
-        }
+        _store_bio_challenge(db, user_id, challenge, "biometric_register")
 
         # user.id must be base64url-encoded for WebAuthn
         user_id_b64 = base64.urlsafe_b64encode(str(user_id).encode()).decode()
@@ -814,12 +831,9 @@ async def biometric_register_verify(
             raise HTTPException(status_code=400, detail="Missing credentialId")
         
         # Verify challenge exists
-        stored_challenge = _biometric_challenges.get(str(user_id))
+        stored_challenge = _get_bio_challenge(db, user_id, "biometric_register")
         if not stored_challenge:
             raise HTTPException(status_code=400, detail="No pending challenge")
-        
-        # Clear challenge
-        del _biometric_challenges[str(user_id)]
         
 # Store the credential (base64url string bytes)
         public_key = attestation_object.encode('utf-8') if attestation_object else b"placeholder_key"
