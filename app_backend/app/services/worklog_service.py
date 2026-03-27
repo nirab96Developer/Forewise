@@ -144,6 +144,16 @@ class WorklogService:
         if not worklog_dict.get('work_hours') and worklog_dict.get('total_hours'):
             worklog_dict['work_hours'] = worklog_dict['total_hours']
         
+        # Always compute total_hours, net_hours, paid_hours
+        wh = float(worklog_dict.get('work_hours') or 0)
+        bh = float(worklog_dict.get('break_hours') or 0)
+        if wh > 0 and not worklog_dict.get('total_hours'):
+            worklog_dict['total_hours'] = round(wh + bh, 2)
+        if wh > 0 and not worklog_dict.get('net_hours'):
+            worklog_dict['net_hours'] = round(wh, 2)
+        if wh > 0 and not worklog_dict.get('paid_hours'):
+            worklog_dict['paid_hours'] = round(wh, 2)
+        
         # Persist equipment_scanned if sent
         if 'equipment_scanned' in worklog_dict:
             pass  # model has this column, keep it
