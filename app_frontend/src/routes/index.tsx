@@ -192,7 +192,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
               WORK ORDERS - Only individual pages (list is in project context)
           ============================================ */}
         {/* /work-orders list removed - access through project */}
-        <Route path="/work-orders" element={<Navigate to="/projects" replace />} />
+        <Route path="/work-orders" element={<Guarded permission={PERMISSIONS.WORK_ORDERS_VIEW}><WorkOrders /></Guarded>} />
         <Route path="/work-orders/new" element={<Guarded permission={PERMISSIONS.WORK_ORDERS_CREATE}><NewWorkOrder /></Guarded>} />
         <Route path="/work-orders/:id" element={<Guarded permission={PERMISSIONS.WORK_ORDERS_VIEW}><WorkOrderDetail /></Guarded>} />
         <Route path="/work-orders/:id/edit" element={<Guarded permission={PERMISSIONS.WORK_ORDERS_UPDATE}><EditWorkOrder /></Guarded>} />

@@ -80,11 +80,11 @@ const AdminDashboard: React.FC = () => {
 {/* PRIMARY KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <KPI icon={<Briefcase className="w-5 h-5" />} label="הזמנות פתוחות" value={k.open_work_orders}
-            accent="border-r-4 border-r-blue-500 bg-white" fg="text-blue-600" to="/order-coordination" />
+            accent="border-r-4 border-r-blue-500 bg-white" fg="text-blue-600" to="/work-orders" />
           <KPI icon={<AlertTriangle className="w-5 h-5" />} label="תקועות מעל 48 שעות" value={k.stuck_orders}
             accent={k.stuck_orders > 0 ? "border-r-4 border-r-red-600 bg-red-50" : "border-r-4 border-r-gray-200 bg-white"}
             fg={k.stuck_orders > 0 ? "text-red-600" : "text-gray-400"}
-            pulse={k.stuck_orders > 0} to="/order-coordination" />
+            pulse={k.stuck_orders > 0} to="/work-orders" />
           <KPI icon={<Clock className="w-5 h-5" />} label="דיווחים ממתינים" value={k.pending_worklogs}
             accent={k.pending_worklogs > 0 ? "border-r-4 border-r-amber-500 bg-amber-50" : "border-r-4 border-r-gray-200 bg-white"}
             fg={k.pending_worklogs > 0 ? "text-amber-600" : "text-gray-400"} to="/accountant-inbox" />
