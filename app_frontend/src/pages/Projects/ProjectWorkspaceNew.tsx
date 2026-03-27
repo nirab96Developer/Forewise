@@ -732,7 +732,7 @@ const MapTab: React.FC<{ project: Project; userRole?: string }> = ({ project, us
 
 // טאב הזמנות - נתונים אמיתיים
 // helpers shared by OrdersTab + WorkOrderDetail 
-const APPROVED_STATUSES = ['APPROVED', 'APPROVED_AND_SENT', 'COORDINATOR_APPROVED', 'ACTIVE', 'IN_PROGRESS'];
+const APPROVED_STATUSES = ['APPROVED', 'APPROVED_AND_SENT', 'COORDINATOR_APPROVED', 'ACTIVE', 'IN_PROGRESS', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'];
 
 function woStatusBadge(status: string): { label: string; cls: string } {
   const s = (status || '').toUpperCase();

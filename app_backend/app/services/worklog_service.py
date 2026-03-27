@@ -70,6 +70,22 @@ class WorklogService:
             if not wo:
                 raise ValidationException(f"Work order {data.work_order_id} not found")
         
+        # Auto-inherit equipment from work order if not provided
+        if wo and not data.equipment_id and wo.equipment_id:
+            data.equipment_id = wo.equipment_id
+
+        # Warn if no equipment scan exists for this WO
+        if wo:
+            from sqlalchemy import text as sa_text
+            scan_exists = db.execute(sa_text(
+                "SELECT 1 FROM equipment_scans WHERE work_order_id = :woid LIMIT 1"
+            ), {"woid": wo.id}).fetchone()
+            if not scan_exists:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Worklog created for WO {wo.id} without prior equipment scan"
+                )
+
         # Derive missing fields from work_order
         user_id = data.user_id or current_user_id
         project_id = data.project_id or (wo.project_id if wo else None)

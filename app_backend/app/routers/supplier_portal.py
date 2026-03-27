@@ -78,7 +78,8 @@ class SupplierPortalResponse(BaseModel):
 
 class SupplierAcceptRequest(BaseModel):
     """בקשת אישור הזמנה על ידי ספק"""
-    equipment_id: Optional[int] = Field(None, description="מזהה כלי שנבחר")
+    equipment_id: Optional[int] = Field(None, description="supplier_equipment.id or equipment.id")
+    supplier_equipment_id: Optional[int] = Field(None, description="supplier_equipment.id (explicit)")
     license_plate: Optional[str] = Field(None, description="מספר רישוי הכלי", max_length=20)
     notes: Optional[str] = Field(None, description="הערות הספק", max_length=500)
 
@@ -341,71 +342,68 @@ def accept_work_order(
             detail=error_message
         )
 
-# Tool-match enforcement 
-    if request.equipment_id:
-        chosen_eq = db.query(Equipment).filter(Equipment.id == request.equipment_id).first()
-        if chosen_eq:
-            if not request.license_plate and chosen_eq.license_plate:
-                request.license_plate = chosen_eq.license_plate
-            if chosen_eq.supplier_id and chosen_eq.supplier_id != work_order.supplier_id:
-                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו שייך לספק הנוכחי")
-            if chosen_eq.status and chosen_eq.status not in ('available', 'active'):
-                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו פנוי כרגע")
-        else:
-            chosen_se = db.query(SupplierEquipment).filter(SupplierEquipment.id == request.equipment_id).first()
-            if not chosen_se:
-                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו קיים במערכת")
-            if chosen_se.supplier_id != work_order.supplier_id:
-                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו שייך לספק הנוכחי")
-            if chosen_se.status and chosen_se.status != 'available':
-                raise HTTPException(status_code=400, detail="הכלי שנבחר אינו פנוי כרגע")
-# 
-    
     try:
-        # Update work order status
-        work_order.status = "SUPPLIER_ACCEPTED_PENDING_COORDINATOR"  # Supplier accepted, awaiting coordinator approval
+        # ── Resolve equipment from request ──────────────────────────
+        se_id = request.supplier_equipment_id or request.equipment_id
+        effective_plate = (request.license_plate or "").strip() or None
+        resolved_equipment_id = None
+
+        if se_id:
+            # Step 1: try as Equipment.id first
+            direct_eq = db.query(Equipment).filter(Equipment.id == se_id).first()
+            if direct_eq and direct_eq.supplier_id == work_order.supplier_id:
+                resolved_equipment_id = direct_eq.id
+                effective_plate = effective_plate or direct_eq.license_plate
+            else:
+                # Step 2: treat as SupplierEquipment.id
+                se = db.query(SupplierEquipment).filter(SupplierEquipment.id == se_id).first()
+                if se:
+                    if se.supplier_id != work_order.supplier_id:
+                        raise HTTPException(status_code=400, detail="הכלי שנבחר אינו שייך לספק הנוכחי")
+                    effective_plate = effective_plate or se.license_plate
+                    se.status = 'busy'
+                elif not direct_eq:
+                    raise HTTPException(status_code=400, detail="הכלי שנבחר אינו קיים במערכת")
+
+        # Step 3: resolve equipment_id from license plate
+        if effective_plate and not resolved_equipment_id:
+            matched = db.query(Equipment).filter(
+                Equipment.license_plate == effective_plate
+            ).first()
+            if matched:
+                resolved_equipment_id = matched.id
+            else:
+                # Auto-create equipment entry from supplier_equipment data
+                from app.models.equipment import Equipment as Eq
+                new_eq = Eq(
+                    name=work_order.equipment_type or "כלי ספק",
+                    license_plate=effective_plate,
+                    supplier_id=work_order.supplier_id,
+                    equipment_type=work_order.equipment_type,
+                    status="active",
+                    is_active=True,
+                    requested_equipment_model_id=work_order.requested_equipment_model_id if hasattr(work_order, 'requested_equipment_model_id') else None,
+                )
+                db.add(new_eq)
+                db.flush()
+                resolved_equipment_id = new_eq.id
+                logger.info(f"WO {work_order.id}: auto-created equipment id={new_eq.id} for plate={effective_plate}")
+
+        # ── Update work order ───────────────────────────────────────
+        work_order.status = "SUPPLIER_ACCEPTED_PENDING_COORDINATOR"
         work_order.supplier_response_at = datetime.utcnow()
         work_order.response_received_at = datetime.utcnow()
-        
-        # Link equipment to work order
-        if request.equipment_id:
-            # Direct Equipment link (available-equipment returns Equipment.id)
-            direct_eq = db.query(Equipment).filter(Equipment.id == request.equipment_id).first()
-            if direct_eq:
-                work_order.equipment_id = direct_eq.id
-                effective_plate = direct_eq.license_plate or request.license_plate
-            else:
-                # Fallback: SupplierEquipment lookup
-                se = db.query(SupplierEquipment).filter(SupplierEquipment.id == request.equipment_id).first()
-                if not se:
-                    raise HTTPException(status_code=400, detail=f"הציוד שנבחר אינו קיים במערכת")
-                se.status = 'busy'
-                if request.license_plate and request.license_plate != se.license_plate:
-                    se.license_plate = request.license_plate
-                effective_plate = se.license_plate or request.license_plate
-            if effective_plate:
-                matched_equipment = db.query(Equipment).filter(
-                    Equipment.license_plate == effective_plate
-                ).first()
-                if matched_equipment:
-                    work_order.equipment_id = matched_equipment.id
+        work_order.equipment_id = resolved_equipment_id
+        work_order.equipment_license_plate = effective_plate
 
-                    logging.getLogger(__name__).info(
-                        f"WO {work_order.id}: linked equipment_id={matched_equipment.id} "
-                        f"(license_plate={effective_plate})"
-                    )
-                else:
-
-                    logging.getLogger(__name__).warning(
-                        f"WO {work_order.id}: supplier_equipment.license_plate={effective_plate} "
-                        f"has no match in equipment table — equipment_id left NULL"
-                    )
+        logger.info(
+            f"WO {work_order.id}: supplier accepted — equipment_id={resolved_equipment_id}, "
+            f"plate={effective_plate}, supplier={work_order.supplier_id}"
+        )
         
-        # Store notes in constraint_notes (reusing field)
         if request.notes:
             work_order.constraint_notes = f"הערות ספק: {request.notes}"
         
-        # Increment version
         if work_order.version is not None:
             work_order.version += 1
         
