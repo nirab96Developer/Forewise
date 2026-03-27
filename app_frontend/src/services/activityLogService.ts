@@ -50,7 +50,7 @@ class ActivityLogService {
       const { per_page, ...rest } = filters;
       const params: Record<string, unknown> = { ...rest };
       if (per_page != null) params.page_size = per_page;
-      const response = await api.get('/activity-logs', { params });
+      const response = await api.get('/activity-logs/', { params });
       // אם ה-API מחזיר List ישירות
       if (Array.isArray(response.data)) {
         return {
@@ -80,7 +80,7 @@ class ActivityLogService {
    */
   async getActivitiesByEntity(entityType: string, entityId: number): Promise<ActivityLog[]> {
     try {
-      const response = await api.get('/activity-logs', {
+      const response = await api.get('/activity-logs/', {
         params: {
           entity_type: entityType,
           entity_id: entityId

@@ -62,7 +62,7 @@ const FairRotation: React.FC = () => {
     setLoading(true);
     try {
       const [rotationsRes, suppliersRes] = await Promise.all([
-        api.get('/supplier-rotations'),
+        api.get('/supplier-rotations/'),
         api.get('/suppliers')
       ]);
       // Handle both array and {items: [...]} response formats
@@ -128,7 +128,7 @@ const FairRotation: React.FC = () => {
       if (editingRotation) {
         await api.put(`/supplier-rotations/${editingRotation.id}`, payload);
       } else {
-        await api.post('/supplier-rotations', payload);
+        await api.post('/supplier-rotations/', payload);
       }
       setShowModal(false);
       loadData();

@@ -100,7 +100,7 @@ const Support: React.FC = () => {
     setLoading(true);
     try {
       const params = isAdmin ? {} : { user_id: currentUser.current.id };
-      const res = await api.get('/support-tickets', { params });
+      const res = await api.get('/support-tickets/', { params });
       const items: Ticket[] = Array.isArray(res.data)
         ? res.data
         : res.data?.items || res.data?.tickets || [];

@@ -42,7 +42,7 @@ const SupplierModal: React.FC<Props> = ({ onClose, onSaved }) => {
       const res = await api.post('/suppliers', { code, name:form.name, tax_id:form.tax_id||undefined, address:form.address||undefined, contact_name:form.contact_name||undefined, phone:form.phone||undefined, email:form.email||undefined, region_id:form.region_id?Number(form.region_id):undefined, active_area_ids:selectedAreas });
       const sid = res.data?.id;
       if (sid && selectedAreas.length>0) {
-        await Promise.allSettled(selectedAreas.map(aId => api.post('/supplier-rotations', { supplier_id:sid, area_id:aId, region_id:form.region_id?Number(form.region_id):undefined, rotation_position:99, is_active:true, is_available:true })));
+        await Promise.allSettled(selectedAreas.map(aId => api.post('/supplier-rotations/', { supplier_id:sid, area_id:aId, region_id:form.region_id?Number(form.region_id):undefined, rotation_position:99, is_active:true, is_available:true })));
       }
       onSaved(); onClose();
     } catch (e:any) { setError(e?.response?.data?.detail||'שגיאה בשמירה'); }
