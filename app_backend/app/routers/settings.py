@@ -28,8 +28,7 @@ def get_work_hours(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ) -> Dict[str, Any]:
-    """Return work-hours settings from DB table work_hour_settings."""
-    require_permission(current_user, "system.settings")
+    """Return work-hours settings — read access for all authenticated users."""
     row = db.execute(text("SELECT * FROM work_hour_settings LIMIT 1")).fetchone()
     if row is None:
         return {
