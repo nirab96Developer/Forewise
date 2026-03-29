@@ -360,9 +360,9 @@ def restore_work_order(
 @router.post("/{work_order_id}/approve", response_model=WorkOrderResponse)
 def approve_work_order(
     work_order_id: int,
-    request: WorkOrderApproveRequest,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)]
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    request: Optional[WorkOrderApproveRequest] = None,
 ):
     """
     Approve work order
@@ -374,7 +374,7 @@ def approve_work_order(
     require_permission(current_user, "work_orders.approve")
     
     try:
-        work_order = work_order_service.approve(db, work_order_id, request, current_user_id=current_user.id)
+        work_order = work_order_service.approve(db, work_order_id, request or WorkOrderApproveRequest(), current_user_id=current_user.id)
         notify_work_order_approved(db, work_order)
         
         # Send Email 4 — work order approved to all stakeholders
