@@ -264,8 +264,8 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
               SETTINGS - ADMIN Only
           ============================================ */}
         <Route path="/settings" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><SystemSettings /></Guarded>} />
-        <Route path="/settings/budgets" element={<Guarded permission={PERMISSIONS.BUDGETS_VIEW}><Budgets /></Guarded>} />
-        <Route path="/settings/budgets/:id" element={<Guarded permission={PERMISSIONS.BUDGETS_VIEW}><BudgetDetail /></Guarded>} />
+        <Route path="/settings/budgets" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><Budgets /></Guarded>} />
+        <Route path="/settings/budgets/:id" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><BudgetDetail /></Guarded>} />
         {/* Equipment catalog merged into SupplierSettings */}
         <Route path="/settings/equipment-catalog" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
         <Route path="/settings/equipment-rates" element={<Navigate to="/settings/suppliers?tab=pricing" replace />} />
@@ -275,8 +275,8 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/settings/constraint-reasons" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><ConstraintReasons /></Guarded>} />
         <Route path="/settings/fair-rotation" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><FairRotation /></Guarded>} />
         <Route path="/settings/work-hours" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><WorkHours /></Guarded>} />
-        <Route path="/settings/suppliers" element={<Guarded permission={PERMISSIONS.SUPPLIERS_VIEW}><SupplierSettings /></Guarded>} />
-        <Route path="/settings/suppliers/:id" element={<Guarded permission={PERMISSIONS.SUPPLIERS_VIEW}><SupplierSettings /></Guarded>} />
+        <Route path="/settings/suppliers" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><SupplierSettings /></Guarded>} />
+        <Route path="/settings/suppliers/:id" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><SupplierSettings /></Guarded>} />
 
         {/* Settings - Organization (מרחבים/אזורים/פרויקטים) */}
         <Route path="/settings/organization/projects" element={<Guarded permission={PERMISSIONS.PROJECTS_VIEW}><ProjectsManagement /></Guarded>} />
