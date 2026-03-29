@@ -55,15 +55,11 @@ jobs:
             npm run build
             cd ..
 
-            # 5. Update SW cache version
-            VERSION=$(date +%Y%m%d%H%M)
-            sed -i "s/forewise-v[0-9.]*/forewise-v$VERSION/g" app_frontend/public/sw.js
-
-            # 6. Restart backend
+            # 5. Restart backend
             echo ">> Restarting backend..."
             systemctl restart forewise.service
 
-            # 7. Verify deployment (retry up to 30 seconds)
+            # 6. Verify deployment (retry up to 30 seconds)
             echo ">> Waiting for backend to start..."
             for i in 1 2 3 4 5 6; do
               sleep 5
@@ -78,7 +74,7 @@ jobs:
             systemctl is-active forewise.service || { echo "DEPLOY FAILED: service not active"; exit 1; }
             echo "$HEALTH" | grep -q '"status":"ok"' || { echo "DEPLOY FAILED: health check failed"; exit 1; }
 
-            # 8. Reload nginx
+            # 7. Reload nginx
             systemctl reload nginx
 
             echo "=== Forewise Deploy Complete ==="
