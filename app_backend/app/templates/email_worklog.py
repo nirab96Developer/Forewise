@@ -14,13 +14,7 @@ def _load_logo_base64():
 
 _LOGO_B64 = _load_logo_base64()
 
-LOGO_SVG = f'<img src="data:image/png;base64,{_LOGO_B64}" alt="Forewise" width="120" height="auto" style="max-width:120px;height:auto;" />' if _LOGO_B64 else '''<svg width="70" height="70" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M56 38 Q70 26 84 38" stroke="#4BAEE8" stroke-width="4" stroke-linecap="round" fill="none"/>
-<path d="M44 52 Q70 35 96 52" stroke="#3BAE9A" stroke-width="4" stroke-linecap="round" fill="none"/>
-<path d="M28 70 Q44 54 70 60 Q96 54 112 70 Q109 75 104 73 Q88 64 70 67 Q52 64 36 73 Q31 75 28 70Z" fill="#6B8C3A"/>
-<line x1="70" y1="67" x2="70" y2="92" stroke="#8B5E3C" stroke-width="5" stroke-linecap="round"/>
-<circle cx="70" cy="98" r="4" fill="#8B5E3C" opacity="0.55"/>
-</svg>'''
+LOGO_SVG = '''<img src="https://forewise.co/logo-forewise-transparent.png" alt="Forewise" width="80" height="80" style="max-width:80px;height:auto;display:block;margin:0 auto;" />'''
 
 BRAND_NAME = '''<div style="margin-top:8px;font-size:13px;font-weight:900;color:#1a6b3c;letter-spacing:0.25em;text-transform:uppercase;font-family:Arial,sans-serif;">FOREWISE</div>
 <div style="font-size:10px;color:#6b8c6b;font-family:Arial,sans-serif;">מערכת לניהול פרויקטים ויערות</div>'''
