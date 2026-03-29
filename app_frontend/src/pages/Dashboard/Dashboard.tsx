@@ -16,7 +16,7 @@ import AdminDashboard from "./AdminDashboard";
 import FieldWorkerDashboard from "./FieldWorkerDashboard";
 import ViewerDashboard from "./ViewerDashboard";
 import SupplierManagerDashboard from "./SupplierManagerDashboard";
-import WorkManagerDashboard from "./WorkManagerDashboard";
+import ActivityLogNew from "../ActivityLog/ActivityLogNew";
 
 // Dashboard Component - דשבורד מותאם לפי תפקיד
 const Dashboard: React.FC = () => {
@@ -42,7 +42,7 @@ const Dashboard: React.FC = () => {
     
 // ניהול תפעול וכספים
     case UserRole.WORK_MANAGER:
-      return <WorkManagerDashboard />;
+      return <ActivityLogNew />;
       
     case UserRole.ORDER_COORDINATOR:
       return <OrderCoordinatorDashboard />;
