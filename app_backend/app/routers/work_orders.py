@@ -400,6 +400,23 @@ def approve_work_order(
                     lat = float(loc.latitude)
                     lng = float(loc.longitude)
 
+            # Get area/region names via direct query
+            area_name = ''
+            region_name = ''
+            if project and project.area_id:
+                ar = db.execute(sa_text("SELECT a.name, r.name FROM areas a LEFT JOIN regions r ON a.region_id=r.id WHERE a.id=:aid"),
+                               {"aid": project.area_id}).first()
+                if ar:
+                    area_name = ar[0] or ''
+                    region_name = ar[1] or ''
+
+            # Get the actual work manager who created the WO (not the coordinator approving)
+            creator_name = ''
+            if work_order.created_by_id:
+                cr = db.execute(sa_text("SELECT full_name FROM users WHERE id=:uid"), {"uid": work_order.created_by_id}).first()
+                if cr:
+                    creator_name = cr[0] or ''
+
             common = dict(
                 order_number=work_order.order_number or work_order.id,
                 project_name=project.name if project else '',
@@ -410,9 +427,9 @@ def approve_work_order(
                 work_start=str(work_order.work_start_date or ''),
                 work_end=str(work_order.work_end_date or ''),
                 estimated_hours=work_order.estimated_hours or 0,
-                area_name=getattr(project, 'area', None) and project.area.name if project else '',
-                region_name=getattr(project, 'region', None) and project.region.name if project else '',
-                worker_name=current_user.full_name or current_user.username or '',
+                area_name=area_name,
+                region_name=region_name,
+                worker_name=creator_name,
                 lat=lat,
                 lng=lng,
             )
