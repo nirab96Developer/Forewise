@@ -212,7 +212,7 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
     dividerAfter: ["dashboard", "reports"],
   },
   [UserRole.WORK_MANAGER]: {
-    items: ["dashboard", "projects", "workLogs"],
+    items: ["dashboard", "projects"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.ORDER_COORDINATOR]: {

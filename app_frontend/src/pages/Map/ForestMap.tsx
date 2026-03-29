@@ -20,7 +20,6 @@ const ForestMap = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [layerData, setLayerData] = useState<any>(null);
-  const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [myProjectIds, setMyProjectIds] = useState(new Set());
@@ -29,14 +28,17 @@ const ForestMap = () => {
   const userAreaId = userData.area_id;
   const userRegionId = userData.region_id;
   const userRole = userData.role || userData.role_code || '';
+  const [selectedRegion, setSelectedRegion] = useState<number | null>(
+    userRole === 'REGION_MANAGER' && userRegionId ? userRegionId : null
+  );
   const isWorkManager = userRole === 'WORK_MANAGER' || userRole === 'FIELD_WORKER';
   const isAreaManager = userRole === 'AREA_MANAGER';
   const isRegionManager = userRole === 'REGION_MANAGER';
   void(userRole); // available for future role-based map filtering
 
-  // WORK_MANAGER sees only their projects — hide region/area layers
+  // Role-based default layers
   const [layerVis, setLayerVis] = useState<Record<string, boolean>>({
-    regions: !isWorkManager,
+    regions: !isWorkManager && !isAreaManager,
     areas: !isWorkManager,
     forests: true,
     projects: true,
@@ -71,8 +73,17 @@ const ForestMap = () => {
   if (layerVis.regions && !selectedRegion && layerData?.regions?.features) {
     layerData.regions.features.forEach((f: any) => {
       const rid = f.properties.id;
+      // Region Manager: show only their region
+      if (isRegionManager && userRegionId && rid !== userRegionId) return;
       const c = REGION_COLORS[rid] || { fill: '#6b7280', stroke: '#4b5563' };
-      mapPolygons.push({ id: rid, name: c.name, geometry: f.geometry, fillColor: c.fill, strokeColor: c.stroke, fillOpacity: 0.12, strokeWeight: 2, onClick: () => { setSelectedRegion(rid); setSidebarOpen(false); } });
+      const isMyRegion = rid === userRegionId;
+      mapPolygons.push({
+        id: rid, name: c.name, geometry: f.geometry,
+        fillColor: c.fill, strokeColor: c.stroke,
+        fillOpacity: isMyRegion ? 0.18 : 0.12,
+        strokeWeight: isMyRegion ? 3 : 2,
+        onClick: () => { setSelectedRegion(rid); setSidebarOpen(false); },
+      });
     });
   }
 
@@ -227,7 +238,12 @@ const ForestMap = () => {
 {key:'projects',label:'נקודות פרויקטים',icon:''},
 {key:'myProjects',label:'שלי בלבד',icon:''},
             ]
-              .filter(l => isWorkManager ? !['regions','areas'].includes(l.key) : true)
+              .filter(l => {
+                if (isWorkManager) return !['regions','areas'].includes(l.key);
+                if (isAreaManager) return !['regions','myProjects'].includes(l.key);
+                if (isRegionManager) return l.key !== 'myProjects';
+                return true;
+              })
               .map(l => (
               <button key={l.key} onClick={() => toggleLayer(l.key)}
                 className={`w-full flex items-center gap-3 px-4.5 py-2.5 rounded-lg text-sm touch-manipulation ${layerVis[l.key] ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-gray-50 text-gray-400 border border-gray-200'}`}>
@@ -238,7 +254,7 @@ const ForestMap = () => {
           </div>
         </div>
 
-        {!isWorkManager && (
+        {!isWorkManager && !isAreaManager && !isRegionManager && (
           <div className="p-4 border-b">
             <h3 className="text-xs font-bold text-gray-500 mb-2">מרחבים</h3>
             <button onClick={() => { setSelectedRegion(null); setSidebarOpen(false); }}
