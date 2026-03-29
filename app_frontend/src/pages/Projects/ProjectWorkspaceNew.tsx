@@ -1027,7 +1027,7 @@ const OrdersTab: React.FC<{
   isWorkManager?: boolean;
   onSwitchToWorklogs?: () => void;
   onAfterScan?: () => void;
-}> = ({ projectCode: _projectCode, projectId, projectName, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs, onAfterScan }) => {
+}> = ({ projectCode, projectId: _projectId, projectName, orders, isWorkManager, onSwitchToWorklogs: _onSwitchToWorklogs, onAfterScan }) => {
   const navigate = useNavigate();
 
   // localScans: orderId equipment number (persists within the session until reload)
@@ -1057,7 +1057,7 @@ const OrdersTab: React.FC<{
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-bold">הזמנות עבודה</h2>
         <button
-          onClick={() => navigate(`/work-orders/new?project=${projectId}`)}
+          onClick={() => navigate(`/projects/${projectCode}/workspace/work-orders/new`)}
           className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-1"
         >
           <Plus className="w-4 h-4" />
