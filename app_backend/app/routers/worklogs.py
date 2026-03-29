@@ -593,10 +593,12 @@ def _send_approval_pdf_impl(db: Session, ctx: dict):
             project = db.query(Project).filter(Project.id == ctx['project_id']).first()
             if project:
                 worklog_data['project_name'] = project.name
-                if project.region:
-                    worklog_data['region_name'] = project.region.name
-                if project.area:
-                    worklog_data['area_name'] = project.area.name
+                if project.area_id:
+                    ar = db.execute(text("SELECT a.name, r.name FROM areas a LEFT JOIN regions r ON a.region_id=r.id WHERE a.id=:aid"),
+                                   {"aid": project.area_id}).first()
+                    if ar:
+                        worklog_data['area_name'] = ar[0] or ''
+                        worklog_data['region_name'] = ar[1] or ''
 
         if ctx.get('work_order_id'):
             work_order = db.query(WorkOrder).filter(WorkOrder.id == ctx['work_order_id']).first()
