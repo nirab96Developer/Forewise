@@ -98,7 +98,7 @@ const WorkOrders: React.FC = () => {
               </div>
             </div>
             {[UserRole.ADMIN, UserRole.AREA_MANAGER, UserRole.WORK_MANAGER].includes(_role) && (
-              <Link to="/work-orders/new"
+              <Link to="/projects"
                 className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium shadow-sm transition-colors min-h-[44px]">
                 <Plus className="w-4 h-4" /> הזמנה חדשה
               </Link>
