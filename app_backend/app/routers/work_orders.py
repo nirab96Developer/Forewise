@@ -1004,6 +1004,11 @@ def scan_equipment(
     if not wo:
         raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
 
+    # Block scan if WO not yet approved by coordinator
+    scannable = {'APPROVED_AND_SENT', 'IN_PROGRESS', 'ACTIVE'}
+    if (wo.status or '').upper() not in scannable:
+        raise HTTPException(status_code=400, detail="לא ניתן לסרוק כלי — ההזמנה טרם אושרה ע״י מתאם הזמנות")
+
     expected_plate = wo.equipment_license_plate
     if not expected_plate and wo.equipment_id:
         eq = db.query(Equipment).filter(Equipment.id == wo.equipment_id).first()
