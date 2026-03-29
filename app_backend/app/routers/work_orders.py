@@ -383,55 +383,39 @@ def approve_work_order(
             from app.core.email import send_email
             from sqlalchemy import text as sa_text
             
-            project = work_order.project
-            supplier = work_order.supplier
+            # All data via direct SQL — no lazy relationships
+            proj_row = db.execute(sa_text("""
+                SELECT p.name, p.code, p.area_id, a.name, r.name
+                FROM projects p
+                LEFT JOIN areas a ON p.area_id=a.id
+                LEFT JOIN regions r ON a.region_id=r.id
+                WHERE p.id=:pid
+            """), {"pid": work_order.project_id}).first() if work_order.project_id else None
+
+            supplier_row = db.execute(sa_text("SELECT name FROM suppliers WHERE id=:sid"),
+                                     {"sid": work_order.supplier_id}).first() if work_order.supplier_id else None
+
             eq = db.execute(sa_text("SELECT equipment_type, license_plate FROM equipment WHERE id=:eid"),
                            {"eid": work_order.equipment_id}).first() if work_order.equipment_id else None
-            
-            lat = None
-            lng = None
-            if project and project.location_id:
-                loc = (
-                    db.query(Location)
-                    .filter(Location.id == project.location_id)
-                    .first()
-                )
-                if loc and loc.latitude is not None and loc.longitude is not None:
-                    lat = float(loc.latitude)
-                    lng = float(loc.longitude)
 
-            # Get area/region names via direct query
-            area_name = ''
-            region_name = ''
-            if project and project.area_id:
-                ar = db.execute(sa_text("SELECT a.name, r.name FROM areas a LEFT JOIN regions r ON a.region_id=r.id WHERE a.id=:aid"),
-                               {"aid": project.area_id}).first()
-                if ar:
-                    area_name = ar[0] or ''
-                    region_name = ar[1] or ''
-
-            # Get the actual work manager who created the WO (not the coordinator approving)
-            creator_name = ''
-            if work_order.created_by_id:
-                cr = db.execute(sa_text("SELECT full_name FROM users WHERE id=:uid"), {"uid": work_order.created_by_id}).first()
-                if cr:
-                    creator_name = cr[0] or ''
+            creator_row = db.execute(sa_text("SELECT full_name FROM users WHERE id=:uid"),
+                                    {"uid": work_order.created_by_id}).first() if work_order.created_by_id else None
 
             common = dict(
                 order_number=work_order.order_number or work_order.id,
-                project_name=project.name if project else '',
-                project_code=project.code if project else '',
-                supplier_name=supplier.name if supplier else '',
+                project_name=proj_row[0] if proj_row else '',
+                project_code=proj_row[1] if proj_row else '',
+                supplier_name=supplier_row[0] if supplier_row else '',
                 equipment_type=eq[0] if eq else (work_order.equipment_type or ''),
                 license_plate=eq[1] if eq else '',
                 work_start=str(work_order.work_start_date or ''),
                 work_end=str(work_order.work_end_date or ''),
                 estimated_hours=work_order.estimated_hours or 0,
-                area_name=area_name,
-                region_name=region_name,
-                worker_name=creator_name,
-                lat=lat,
-                lng=lng,
+                area_name=proj_row[3] if proj_row and proj_row[3] else '',
+                region_name=proj_row[4] if proj_row and proj_row[4] else '',
+                worker_name=creator_row[0] if creator_row else '',
+                lat=None,
+                lng=None,
             )
             
             recipients = db.execute(sa_text("""
