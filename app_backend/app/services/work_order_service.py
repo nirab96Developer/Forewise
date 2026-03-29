@@ -76,6 +76,22 @@ class WorkOrderService:
         if not wo_dict.get("estimated_hours") or float(wo_dict.get("estimated_hours", 0)) <= 0:
             raise HTTPException(status_code=400, detail="חובה לציין כמות שעות מוערכת (> 0)")
 
+        # Validate project is active and has budget
+        if wo_dict.get("project_id"):
+            from app.models.project import Project
+            proj = db.query(Project).filter(Project.id == wo_dict["project_id"]).first()
+            if proj:
+                if not proj.is_active:
+                    raise HTTPException(status_code=400, detail="לא ניתן ליצור הזמנה בפרויקט לא פעיל")
+                from app.models.budget import Budget
+                budget = db.query(Budget).filter(
+                    Budget.project_id == proj.id,
+                    Budget.is_active == True,
+                    Budget.deleted_at.is_(None),
+                ).first()
+                if not budget or float(budget.total_amount or 0) <= 0:
+                    raise HTTPException(status_code=400, detail="לא ניתן ליצור הזמנה — לפרויקט אין תקציב מוגדר")
+
         #  Auto-resolve requested_equipment_model_id from equipment_type name 
         if not wo_dict.get("requested_equipment_model_id"):
             equipment_type_name = (wo_dict.get("equipment_type") or "").strip()

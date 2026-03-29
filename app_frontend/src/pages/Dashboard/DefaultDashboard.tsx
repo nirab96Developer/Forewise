@@ -304,7 +304,7 @@ const DefaultDashboard: React.FC = () => {
                 <QuickActionButton 
                   icon={<Briefcase className="w-5 h-5" />} 
                   label="הזמנת עבודה חדשה" 
-                  onClick={() => navigate('/work-orders/new')}
+                  onClick={() => navigate('/projects')}
                 />
                 <QuickActionButton 
                   icon={<CalendarDays className="w-5 h-5" />} 

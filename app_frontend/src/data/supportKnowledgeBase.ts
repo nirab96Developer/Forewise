@@ -176,7 +176,7 @@ icon: '',
       },
     ],
     relatedLinks: [
-      { title: 'הזמנת עבודה חדשה', path: '/work-orders/new' },
+      { title: 'הזמנת עבודה חדשה', path: '/projects' },
       { title: 'ההזמנות שלי', path: '/work-orders' },
     ],
   },
