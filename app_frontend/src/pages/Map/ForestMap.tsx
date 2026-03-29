@@ -154,7 +154,7 @@ const ForestMap = () => {
 
   // Auto-center based on user role
   let mapCenter: [number, number] = [31.5, 35.0];
-  let mapZoom = 8;
+  let mapZoom = isAreaManager ? 11 : isRegionManager ? 10 : isWorkManager ? 11 : 8;
 
   const myPoints = mapPoints.filter(p => myProjectIds.has(p.id));
 
@@ -323,7 +323,7 @@ const ForestMap = () => {
           mapType="street"
           center={mapCenter}
           zoom={mapZoom}
-          fitBounds={true}
+          fitBounds={false}
         />
       </div>
     </div>
