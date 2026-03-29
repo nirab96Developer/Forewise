@@ -48,6 +48,7 @@ interface InvoiceFull {
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   PENDING:  { label: 'ממתין לתשלום', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
   APPROVED: { label: 'מאושר',         color: 'bg-green-100  text-green-800  border-green-300'  },
+  SENT:     { label: 'נשלח לספק',     color: 'bg-blue-100   text-blue-800   border-blue-300'   },
   PAID:     { label: 'שולם',          color: 'bg-blue-100   text-blue-800   border-blue-300'   },
   DRAFT:    { label: 'טיוטה',         color: 'bg-gray-100   text-gray-700   border-gray-300'   },
   CANCELLED:{ label: 'בוטל',          color: 'bg-red-100    text-red-700    border-red-300'    },
@@ -319,7 +320,7 @@ showToast('החשבונית נשלחה לספק במייל ', 'success');
               <span className="font-medium text-kkl-text">{fmtILS(invoice.subtotal)}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">מע"מ (17%)</span>
+              <span className="text-gray-600">מע"מ (18%)</span>
               <span className="font-medium text-kkl-text">{fmtILS(invoice.tax_amount)}</span>
             </div>
             <div className="h-px bg-kkl-border my-2" />

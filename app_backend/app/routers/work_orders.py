@@ -54,6 +54,13 @@ class RemoveEquipmentResponse(BaseModel):
     work_order: WorkOrderResponse
 
 
+class WorkOrderAllocationPreviewRequest(BaseModel):
+    project_id: int
+    equipment_type: str
+    allocation_method: str = "FAIR_ROTATION"
+    supplier_id: Optional[int] = None
+
+
 def _enrich_hours(work_order, db: Session) -> dict:
     """Compute used/remaining hours from non-rejected worklogs."""
     from sqlalchemy import text
@@ -78,9 +85,18 @@ def _enrich_hours(work_order, db: Session) -> dict:
         return {}
 
 
+def _require_order_coordinator_or_admin(current_user: User) -> None:
+    role_code = getattr(getattr(current_user, "role", None), "code", None) or getattr(current_user, "role_code", None)
+    if role_code not in ("ADMIN", "SUPER_ADMIN", "ORDER_COORDINATOR"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="פעולה זו מותרת רק למתאם הזמנות או מנהל מערכת",
+        )
+
+
 def _to_response(work_order, db: Session) -> dict:
     """Serialize WorkOrder ORM object + inject computed hours + equipment license plate."""
-    from pydantic import TypeAdapter
+    from sqlalchemy import text as sa_text
     d = WorkOrderResponse.model_validate(work_order).model_dump()
     d.update(_enrich_hours(work_order, db))
     # Inject equipment license_plate if not already set
@@ -159,6 +175,32 @@ def get_work_order_statistics(
         return stats
 
     except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="שגיאת שרת"
+        )
+
+
+@router.post("/preview-allocation")
+def preview_work_order_allocation(
+    data: WorkOrderAllocationPreviewRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Preview which supplier the backend would choose for a work order."""
+    require_permission(current_user, "work_orders.create")
+
+    try:
+        return work_order_service.preview_supplier_selection(
+            db=db,
+            project_id=data.project_id,
+            equipment_type=data.equipment_type,
+            allocation_method=data.allocation_method,
+            supplier_id=data.supplier_id,
+        )
+    except ValidationException as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -372,6 +414,7 @@ def approve_work_order(
     Permissions: work_orders.approve
     """
     require_permission(current_user, "work_orders.approve")
+    _require_order_coordinator_or_admin(current_user)
     
     try:
         work_order = work_order_service.approve(db, work_order_id, request or WorkOrderApproveRequest(), current_user_id=current_user.id)
@@ -461,6 +504,7 @@ def reject_work_order(
     Permissions: work_orders.approve (same as approve)
     """
     require_permission(current_user, "work_orders.approve")
+    _require_order_coordinator_or_admin(current_user)
     
     try:
         work_order = work_order_service.reject(db, work_order_id, request, current_user_id=current_user.id)
@@ -658,6 +702,7 @@ def send_work_order_to_supplier(
     Only ORDER_COORDINATOR and ADMIN may distribute work orders.
     """
     require_permission(current_user, "work_orders.distribute")
+    _require_order_coordinator_or_admin(current_user)
 
     try:
         result = work_order_service.send_to_supplier(db, work_order_id, current_user.id)
@@ -703,6 +748,7 @@ def move_to_next_supplier(
     Permissions: work_orders.coordinate
     """
     require_permission(current_user, "work_orders.update")
+    _require_order_coordinator_or_admin(current_user)
     
     try:
         work_order = work_order_service.move_to_next_supplier(db, work_order_id, current_user.id)
@@ -730,6 +776,7 @@ def resend_to_supplier(
     Permissions: work_orders.coordinate
     """
     require_permission(current_user, "work_orders.update")
+    _require_order_coordinator_or_admin(current_user)
     
     try:
         work_order = work_order_service.resend_to_supplier(db, work_order_id, current_user.id)
@@ -843,8 +890,10 @@ def remove_equipment_from_project(
                     """
                 SELECT u.id FROM users u JOIN roles r ON u.role_id=r.id
                 WHERE r.code IN ('ORDER_COORDINATOR','ADMIN','ACCOUNTANT') AND u.is_active=true
+                  AND (:region_id IS NULL OR r.code IN ('ADMIN','ACCOUNTANT') OR u.region_id = :region_id)
             """
-                )
+                ),
+                {"region_id": getattr(getattr(work_order, "project", None), "region_id", None)},
             ).fetchall()
             wo_num = work_order.order_number or work_order.id
             for row in coordinators:
@@ -988,7 +1037,7 @@ def scan_equipment(
     if not wo:
         raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
 
-    # Block scan if WO not yet approved by coordinator
+    # Block scan if WO not yet approved for execution
     scannable = {'APPROVED_AND_SENT', 'IN_PROGRESS', 'ACTIVE'}
     if (wo.status or '').upper() not in scannable:
         raise HTTPException(status_code=400, detail="לא ניתן לסרוק כלי — ההזמנה טרם אושרה ע״י מתאם הזמנות")

@@ -1,6 +1,6 @@
 
 // src/pages/WorkOrders/OrderCoordination.tsx
-// מסך תיאום הזמנות - Order Coordination
+// מסך תיאום הזמנות
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -13,6 +13,7 @@ import workOrderService, { WorkOrder } from "../../services/workOrderService";
 import api from "../../services/api";
 import authService from "../../services/authService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { normalizeRole, UserRole } from "../../utils/permissions";
 
 interface CoordinationOrder extends Omit<WorkOrder, 'status'> {
   status: string;
@@ -54,7 +55,9 @@ const OrderCoordination: React.FC = () => {
 
   // Check if current user is admin
   const currentUserData = authService.getCurrentUser();
-  const isAdmin = currentUserData?.roles?.some((r: string) => ['admin', 'ADMIN', 'system_admin'].includes(r)) ?? false;
+  const currentRole = normalizeRole(currentUserData?.role || '');
+  const isAdmin = currentRole === UserRole.ADMIN || (currentUserData?.roles?.some((r: string) => ['admin', 'ADMIN', 'system_admin'].includes(r)) ?? false);
+  const canCoordinate = isAdmin || currentRole === UserRole.ORDER_COORDINATOR;
 
   // Stats
   const [stats, setStats] = useState({
@@ -107,7 +110,7 @@ const OrderCoordination: React.FC = () => {
       try {
         const invResp = await api.get('/work-orders', { params: { status: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', page_size: 50 } });
         const invItems = invResp.data?.items || invResp.data || [];
-        // Map work orders to invitation-like structure for coordinator-approve flow
+        // Map work orders to invitation-like structure for coordinator approval flow
         setInvitations(invItems.map((o: any) => ({ id: o.id, work_order_id: o.id, status: 'ACCEPTED' })));
       } catch {}
 
@@ -160,7 +163,7 @@ const OrderCoordination: React.FC = () => {
     }
   };
 
-  // Coordinator approve — uses dedicated endpoint
+  // Final approval by order coordinator/admin
   const handleCoordinatorApprove = async (orderId: number) => {
     try {
       setProcessing(orderId);
@@ -279,7 +282,7 @@ const OrderCoordination: React.FC = () => {
   const STATUS_CONFIG: Record<string, { text: string; color: string; dot: string }> = {
     'PENDING':                            { text: 'ממתין לשליחה',    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',  dot: 'bg-yellow-500' },
     'DISTRIBUTING':                        { text: 'בהפצה לספק',     color: 'bg-blue-100 text-blue-800 border-blue-200',        dot: 'bg-blue-500'   },
-'SUPPLIER_ACCEPTED_PENDING_COORDINATOR':{ text: 'ספק אישר ', color: 'bg-purple-100 text-purple-800 border-purple-200', dot: 'bg-purple-500' },
+'SUPPLIER_ACCEPTED_PENDING_COORDINATOR':{ text: 'ספק אישר — ממתין לאישור מתאם', color: 'bg-purple-100 text-purple-800 border-purple-200', dot: 'bg-purple-500' },
     'APPROVED_AND_SENT':                  { text: 'אושר ונשלח',     color: 'bg-green-100 text-green-800 border-green-200',     dot: 'bg-green-500'  },
   };
 
@@ -321,6 +324,18 @@ const OrderCoordination: React.FC = () => {
     return <UnifiedLoader size="full" message="טוען תיאומים..." />;
   }
 
+  if (!canCoordinate) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6" dir="rtl">
+        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 max-w-md text-center">
+          <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <h2 className="text-lg font-bold text-gray-900 mb-2">אין גישה למסך זה</h2>
+          <p className="text-sm text-gray-600">המסך מיועד למתאם הזמנות או למנהל מערכת בלבד.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pt-6 pb-10 px-3 md:px-6 " dir="rtl">
       <div className="max-w-6xl mx-auto">
@@ -332,7 +347,7 @@ const OrderCoordination: React.FC = () => {
               <ClipboardList className="w-6 h-6 text-green-600" />
               <h1 className="text-2xl font-bold text-gray-900">תיאום הזמנות</h1>
             </div>
-            <p className="text-sm text-gray-500 mt-0.5 mr-8">ניהול ותיאום הזמנות עבודה עם ספקים — סבב הוגן ואילוצים</p>
+            <p className="text-sm text-gray-500 mt-0.5 mr-8">ניהול ותיאום הזמנות עבודה מול ספקים — סבב הוגן ואילוצים</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
             {/* Bulk delete button - admin only, shown when items selected */}
@@ -362,7 +377,7 @@ const OrderCoordination: React.FC = () => {
             { key: 'all',       label: 'סה"כ',             count: orders.length, color: 'border-gray-400',   icon: <ClipboardList className="w-5 h-5 text-gray-400" /> },
             { key: 'PENDING',   label: 'ממתינות לשליחה',    count: stats.pending, color: 'border-yellow-400', icon: <Clock className="w-5 h-5 text-yellow-500" /> },
             { key: 'DISTRIBUTING', label: 'בהפצה לספקים',   count: stats.distributing, color: 'border-blue-400', icon: <Send className="w-5 h-5 text-blue-500" /> },
-            { key: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין לך', count: stats.accepted, color: 'border-purple-400', icon: <CheckCircle className="w-5 h-5 text-purple-500" /> },
+            { key: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין לאישור מתאם', count: stats.accepted, color: 'border-purple-400', icon: <CheckCircle className="w-5 h-5 text-purple-500" /> },
           ].map(stat => (
             <button
               key={stat.key}

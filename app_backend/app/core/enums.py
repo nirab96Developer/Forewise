@@ -66,7 +66,7 @@ WO_TRANSITIONS: Dict[str, FrozenSet[str]] = {
 WO_LABELS: Dict[str, str] = {
     WorkOrderStatus.PENDING: "ממתין",
     WorkOrderStatus.DISTRIBUTING: "בהפצה לספקים",
-    WorkOrderStatus.SUPPLIER_ACCEPTED_PENDING_COORDINATOR: "ספק אישר - ממתין למתאם",
+    WorkOrderStatus.SUPPLIER_ACCEPTED_PENDING_COORDINATOR: "ספק אישר - ממתין לאישור",
     WorkOrderStatus.APPROVED_AND_SENT: "אושר ונשלח",
     WorkOrderStatus.COMPLETED: "הושלם",
     WorkOrderStatus.REJECTED: "נדחה",

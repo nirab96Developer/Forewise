@@ -1348,6 +1348,11 @@ async def get_coordinator_queue(
     """Order coordinator work order queue with filters."""
     base_filter = "wo.deleted_at IS NULL AND wo.is_active = true"
     params: dict = {}
+    role_code = getattr(getattr(current_user, "role", None), "code", None) or ""
+
+    if role_code == "ORDER_COORDINATOR" and getattr(current_user, "region_id", None):
+        base_filter += " AND p.region_id = :coord_region_id"
+        params["coord_region_id"] = current_user.region_id
 
     if status_filter:
         base_filter += " AND UPPER(wo.status) = :sf"
@@ -1399,13 +1404,17 @@ async def get_coordinator_queue(
             "license_plate": r[9], "supplier_history": history,
         })
 
-    pending = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE UPPER(wo.status)='PENDING' AND wo.deleted_at IS NULL AND wo.is_active=true")).scalar() or 0
-    distributing = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE UPPER(wo.status)='DISTRIBUTING' AND wo.deleted_at IS NULL AND wo.is_active=true")).scalar() or 0
-    supplier_accepted = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE UPPER(wo.status)='SUPPLIER_ACCEPTED_PENDING_COORDINATOR' AND wo.deleted_at IS NULL AND wo.is_active=true")).scalar() or 0
-    expired = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE UPPER(wo.status)='EXPIRED' AND wo.deleted_at IS NULL AND wo.is_active=true")).scalar() or 0
-    forced = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE wo.is_forced_selection=true AND wo.deleted_at IS NULL AND wo.is_active=true AND UPPER(wo.status) NOT IN ('COMPLETED','CANCELLED','REJECTED')")).scalar() or 0
+    kpi_filter = "wo.deleted_at IS NULL AND wo.is_active=true"
+    if role_code == "ORDER_COORDINATOR" and getattr(current_user, "region_id", None):
+        kpi_filter += " AND p.region_id = :coord_region_id"
 
-    project_rows = db.execute(text("SELECT DISTINCT p.id, p.name FROM projects p JOIN work_orders wo ON wo.project_id=p.id WHERE wo.deleted_at IS NULL ORDER BY p.name")).fetchall()
+    pending = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo LEFT JOIN projects p ON p.id = wo.project_id WHERE {kpi_filter} AND UPPER(wo.status)='PENDING'"), params).scalar() or 0
+    distributing = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo LEFT JOIN projects p ON p.id = wo.project_id WHERE {kpi_filter} AND UPPER(wo.status)='DISTRIBUTING'"), params).scalar() or 0
+    supplier_accepted = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo LEFT JOIN projects p ON p.id = wo.project_id WHERE {kpi_filter} AND UPPER(wo.status)='SUPPLIER_ACCEPTED_PENDING_COORDINATOR'"), params).scalar() or 0
+    expired = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo LEFT JOIN projects p ON p.id = wo.project_id WHERE {kpi_filter} AND UPPER(wo.status)='EXPIRED'"), params).scalar() or 0
+    forced = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo LEFT JOIN projects p ON p.id = wo.project_id WHERE {kpi_filter} AND wo.is_forced_selection=true AND UPPER(wo.status) NOT IN ('COMPLETED','CANCELLED','REJECTED')"), params).scalar() or 0
+
+    project_rows = db.execute(text(f"SELECT DISTINCT p.id, p.name FROM projects p JOIN work_orders wo ON wo.project_id=p.id WHERE {kpi_filter} ORDER BY p.name"), params).fetchall()
     status_options = [
         {"value": "PENDING", "label": "ממתין לשליחה"},
         {"value": "DISTRIBUTING", "label": "בהפצה"},

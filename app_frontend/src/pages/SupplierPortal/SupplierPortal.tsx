@@ -67,6 +67,18 @@ interface SupplierOrder {
   already_responded: boolean;
 }
 
+interface AvailableEquipmentOption {
+  id: number;
+  name: string | null;
+  license_plate: string | null;
+  equipment_type: string | null;
+  type_id: number | null;
+  hourly_rate: number | null;
+  is_available: boolean;
+  is_blocked: boolean;
+  blocked_by: string | null;
+}
+
 const SupplierPortal: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const [searchParams] = useSearchParams();
@@ -82,7 +94,7 @@ const SupplierPortal: React.FC = () => {
   const [actionComplete, setActionComplete] = useState<'accepted' | 'rejected' | null>(null);
   const [licensePlate, setLicensePlate] = useState('');
   const [selectedEquipmentId, setSelectedEquipmentId] = useState<number | null>(null);
-  const [availableEquipment, setAvailableEquipment] = useState<any[]>([]);
+  const [availableEquipment, setAvailableEquipment] = useState<AvailableEquipmentOption[]>([]);
   const [loadingEquipment, setLoadingEquipment] = useState(false);
   const [notes, setNotes] = useState('');
   const [rejectReason, setRejectReason] = useState('');
@@ -548,9 +560,10 @@ const SupplierPortal: React.FC = () => {
                 >
                   <option value="">— בחר כלי —</option>
                   {availableEquipment.map(eq => (
-                    <option key={eq.id} value={eq.id}>
-                      {eq.model_name || 'כלי'} | לוחית: {eq.license_plate || 'לא רשומה'}
-{eq.hourly_rate ? ` | ${eq.hourly_rate}/שעה` : ''}
+                    <option key={eq.id} value={eq.id} disabled={!eq.is_available}>
+                      {(eq.name || eq.equipment_type || 'כלי')} | לוחית: {eq.license_plate || 'לא רשומה'}
+                      {eq.hourly_rate != null ? ` | ${eq.hourly_rate.toFixed(2)}/שעה` : ''}
+                      {!eq.is_available && eq.blocked_by ? ` | תפוס בפרויקט: ${eq.blocked_by}` : ''}
                     </option>
                   ))}
                 </select>
@@ -558,6 +571,11 @@ const SupplierPortal: React.FC = () => {
               {selectedEquipmentId && (
                 <p className="text-xs text-emerald-700 mt-1">
 לוחית רישוי: {availableEquipment.find(e=>e.id===selectedEquipmentId)?.license_plate || '—'}
+                </p>
+              )}
+              {availableEquipment.some(eq => !eq.is_available) && (
+                <p className="text-xs text-amber-700 mt-2">
+                  כלים תפוסים מסומנים ברשימה ואי אפשר לבחור בהם.
                 </p>
               )}
             </div>

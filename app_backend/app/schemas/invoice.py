@@ -15,6 +15,7 @@ class InvoiceStatus(str, Enum):
     DRAFT = "DRAFT"
     PENDING = "PENDING"
     APPROVED = "APPROVED"
+    SENT = "SENT"
     PAID = "PAID"
     CANCELLED = "CANCELLED"
 

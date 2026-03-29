@@ -74,19 +74,8 @@ const ProjectsClean: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filterStatus, myProjectsOnly]);
 
-  // מיפוי סטטוסים בעברית + צבעים
-  // A project is "בתכנון" if it's active but has no budget allocated
-  const getEffectiveStatus = (project: Project): string => {
-    const base = (project.status || 'active').toLowerCase();
-    if (base === 'active') {
-      const budget = (project as any).allocated_budget ?? (project as any).total_budget ?? 0;
-      if (!budget || Number(budget) === 0) return 'planning';
-    }
-    return base;
-  };
-
   const getStatusConfig = (project: Project) => {
-    const effective = getEffectiveStatus(project);
+    const effective = (project.status || 'planning').toLowerCase();
     const configs: Record<string, { text: string; bg: string; textColor: string }> = {
       'active':    { text: 'פעיל',   bg: 'bg-green-100', textColor: 'text-green-800'  },
       'planning':  { text: 'בתכנון', bg: 'bg-blue-100',  textColor: 'text-blue-800'   },
@@ -103,7 +92,7 @@ const ProjectsClean: React.FC = () => {
       project.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.code?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const effective = getEffectiveStatus(project);
+    const effective = (project.status || 'planning').toLowerCase();
     const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'active'    && effective === 'active') ||
       (filterStatus === 'planning'  && effective === 'planning') ||
@@ -256,7 +245,7 @@ const ProjectsClean: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredProjects.map((project) => {
               const statusConfig = getStatusConfig(project);
-              const effectiveStatus = getEffectiveStatus(project);
+              const effectiveStatus = (project.status || 'planning').toLowerCase();
               const isActive = effectiveStatus === 'active';
               const isPlanning = effectiveStatus === 'planning';
               return (

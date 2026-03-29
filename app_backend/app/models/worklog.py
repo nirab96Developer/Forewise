@@ -239,7 +239,7 @@ class Worklog(Base):
     )
     
     vat_rate: Mapped[Decimal] = mapped_column(
-        Numeric(5, 2), nullable=False, default=0.17,
+        Numeric(5, 2), nullable=False, default=0.18,
         comment="שיעור מע\"מ"
     )
     

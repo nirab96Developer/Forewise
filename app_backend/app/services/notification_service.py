@@ -92,13 +92,14 @@ def notify(
         return None
 
 
-def _find_users_by_role(db: Session, role_code: str, area_id: Optional[int] = None, region_id: Optional[int] = None) -> List[User]:
-    """Find active users with a given role, optionally filtered by area/region."""
+def _find_users_by_role(db: Session, role_code, area_id: Optional[int] = None, region_id: Optional[int] = None) -> List[User]:
+    """Find active users with one or more roles, optionally filtered by area/region."""
     from app.models.role import Role
+    role_codes = [role_code] if isinstance(role_code, str) else list(role_code)
     q = (
         db.query(User)
         .join(Role, Role.id == User.role_id)
-        .filter(Role.code == role_code, User.is_active == True)
+        .filter(Role.code.in_(role_codes), User.is_active == True)
     )
     if area_id is not None:
         q = q.filter(User.area_id == area_id)
@@ -113,21 +114,21 @@ def _find_users_by_role(db: Session, role_code: str, area_id: Optional[int] = No
 
 def notify_work_order_created(db: Session, work_order):
     """
-הזמנה חדשה נוצרה התראה ל-ORDER_COORDINATOR של האזור.
+הזמנה חדשה נוצרה התראה ל-ORDER_COORDINATOR של המרחב.
     """
     try:
         from app.models.project import Project
-        area_id = None
+        region_id = None
         try:
             if work_order.project:
-                area_id = work_order.project.area_id
+                region_id = work_order.project.region_id
         except Exception:
             pass
-        if area_id is None and work_order.project_id:
+        if region_id is None and work_order.project_id:
             proj = db.query(Project).filter(Project.id == work_order.project_id).first()
             if proj:
-                area_id = proj.area_id
-        coordinators = _find_users_by_role(db, "ORDER_COORDINATOR", area_id=area_id)
+                region_id = proj.region_id
+        coordinators = _find_users_by_role(db, "ORDER_COORDINATOR", region_id=region_id)
         wo_num = getattr(work_order, 'order_number', work_order.id)
         for coord in coordinators:
             notify(
@@ -149,19 +150,19 @@ def notify_supplier_accepted(db: Session, work_order):
     """
     try:
         from app.models.project import Project
-        area_id = None
-        # Try to get area_id from project (handle lazy-load / None)
+        region_id = None
+        # Try to get region_id from project (handle lazy-load / None)
         try:
             if work_order.project:
-                area_id = work_order.project.area_id
+                region_id = work_order.project.region_id
         except Exception:
             pass
-        if area_id is None and work_order.project_id:
+        if region_id is None and work_order.project_id:
             proj = db.query(Project).filter(Project.id == work_order.project_id).first()
             if proj:
-                area_id = proj.area_id
+                region_id = proj.region_id
 
-        coordinators = _find_users_by_role(db, "ORDER_COORDINATOR", area_id=area_id)
+        coordinators = _find_users_by_role(db, "ORDER_COORDINATOR", region_id=region_id)
         wo_num = getattr(work_order, 'order_number', work_order.id)
         try:
             supplier_name = work_order.supplier.name if work_order.supplier else "ספק"

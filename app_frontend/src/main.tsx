@@ -2,6 +2,7 @@ import React from "react"
 import ReactDOM from "react-dom/client" 
 import { BrowserRouter } from "react-router-dom" 
 import * as Sentry from "@sentry/react";
+import { registerSW } from "virtual:pwa-register";
 import App from "./App" 
 import { AuthProvider } from "./contexts/AuthContext"
 import "./index.css"  
@@ -80,7 +81,6 @@ if ("serviceWorker" in navigator) {
     window.location.hostname === "localhost" ||
     window.location.hostname === "127.0.0.1";
 
-  // Never keep an active SW on Vite dev localhost.
   if (!isProd || isLocalhost) {
     navigator.serviceWorker.getRegistrations().then((regs) => {
       regs.forEach((reg) => reg.unregister());
@@ -89,32 +89,17 @@ if ("serviceWorker" in navigator) {
       keys.forEach((key) => caches.delete(key));
     });
   } else {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").then((reg) => {
-        // Check for updates every 5 minutes
-        setInterval(() => reg.update(), 5 * 60 * 1000);
-
-        reg.addEventListener("updatefound", () => {
-          const newWorker = reg.installing;
-          if (newWorker) {
-            newWorker.addEventListener("statechange", () => {
-              if (newWorker.state === "activated") {
-                window.location.reload();
-              }
-            });
-          }
-        });
-      }).catch((err) => {
-        console.error("Service worker registration failed:", err);
-      });
-    });
-
-    // SW update messages handled silently (no banner)
-    navigator.serviceWorker.addEventListener("message", (event) => {
-      if (event.data?.type === "APP_UPDATED") {
-        // Auto-reload silently on update
+    registerSW({
+      immediate: true,
+      onNeedRefresh() {
         window.location.reload();
-      }
+      },
+      onOfflineReady() {
+        console.info("Forewise PWA ready for offline use");
+      },
+      onRegisterError(error: unknown) {
+        console.error("PWA registration failed:", error);
+      },
     });
   }
 }

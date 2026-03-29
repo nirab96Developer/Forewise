@@ -437,9 +437,10 @@ def create_invoice_from_worklogs(
                 INSERT INTO invoice_items
                   (invoice_id, worklog_id, description, quantity, unit_price, total_price,
                    discount_percent, discount_amount, subtotal, tax_rate, tax_amount,
-                   line_number, is_active, created_at, updated_at)
+                   total, line_number, is_active, created_at, updated_at)
                 VALUES (:invoice_id, :worklog_id, :desc, 1, :unit, :total,
                    0, 0, :total, 0.18, :tax,
+                   :total,
                    :line_num, true, NOW(), NOW())
             """), {
                 "invoice_id": invoice.id,
@@ -451,7 +452,7 @@ def create_invoice_from_worklogs(
                 "line_num": idx + 1,
             })
         # Update worklog status
-        w.status = 'invoiced'
+        w.status = 'INVOICED'
         w.updated_at = datetime.utcnow()
 
     db.commit()
@@ -477,7 +478,7 @@ def get_invoice_items(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Return invoice items enriched with supplier/project names."""
-    require_permission(current_user, "invoices.view")
+    require_permission(current_user, "invoices.read")
 
     # Check invoice exists
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.deleted_at.is_(None)).first()
@@ -627,7 +628,7 @@ def get_uninvoiced_suppliers_endpoint(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """ספקים עם דיווחים מאושרים שלא שויכו לחשבונית"""
-    require_permission(current_user, "invoices.view")
+    require_permission(current_user, "invoices.read")
     from app.services.invoice_service import get_uninvoiced_suppliers
     return get_uninvoiced_suppliers(project_id, month, year, db)
 
@@ -639,7 +640,7 @@ def get_invoice_pdf(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """Generate and return Invoice PDF (A4, RTL, weasyprint)."""
-    require_permission(current_user, "invoices.view")
+    require_permission(current_user, "invoices.read")
 
     from fastapi.responses import Response
     from app.services.pdf_documents import generate_invoice_pdf

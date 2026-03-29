@@ -2,9 +2,15 @@
 """Security utilities - passwords and tokens only"""
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
+import bcrypt
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.config import settings
+
+if not hasattr(bcrypt, "__about__") and hasattr(bcrypt, "__version__"):
+    class _BcryptAbout:
+        __version__ = bcrypt.__version__
+    bcrypt.__about__ = _BcryptAbout()
 
 # Configuration
 SECRET_KEY = settings.SECRET_KEY

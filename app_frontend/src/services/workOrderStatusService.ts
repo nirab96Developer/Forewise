@@ -22,7 +22,7 @@ export interface WorkOrderStatusInfo {
 const STATUS_MAP: Record<string, WorkOrderStatusInfo> = {
 PENDING: { status: 'PENDING', label: 'ממתין', color: 'bg-yellow-100 text-yellow-800', icon: '' },
 DISTRIBUTING: { status: 'DISTRIBUTING', label: 'בהפצה לספקים', color: 'bg-yellow-100 text-yellow-800', icon: '' },
-SUPPLIER_ACCEPTED_PENDING_COORDINATOR: { status: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין למתאם', color: 'bg-blue-100 text-blue-800', icon: '' },
+SUPPLIER_ACCEPTED_PENDING_COORDINATOR: { status: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין לאישור מתאם', color: 'bg-blue-100 text-blue-800', icon: '' },
 APPROVED_AND_SENT:{ status: 'APPROVED_AND_SENT', label: 'אושר ונשלח', color: 'bg-green-100 text-green-800', icon: '' },
 COMPLETED: { status: 'COMPLETED', label: 'הושלם', color: 'bg-gray-100 text-gray-800', icon: '' },
 REJECTED: { status: 'REJECTED', label: 'נדחה', color: 'bg-red-100 text-red-800', icon: '' },

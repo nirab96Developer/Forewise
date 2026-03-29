@@ -5,7 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Eye, Edit, Calendar, Clock, User, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import workLogService, { WorkLog, WorkLogFilters } from '../../services/workLogService';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
-import { useOffline } from '../../hooks/useOffline';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 
 const WorkLogs: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -15,7 +15,7 @@ const WorkLogs: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [error, setError] = useState<string | null>(null);
-  const { isOnline, pendingCount } = useOffline();
+  const { isOnline, pendingCount } = useOfflineSync();
 
   let userData: any = {};
   try { userData = JSON.parse(localStorage.getItem('user') || '{}'); } catch {}

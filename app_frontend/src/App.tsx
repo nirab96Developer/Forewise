@@ -1,7 +1,7 @@
 
 // src/App.tsx
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { Bug } from "lucide-react";
 
 // שירותים
@@ -17,35 +17,10 @@ import { FullScreenLoader } from "./components/common/UnifiedLoader";
 import { debugLogger } from "./utils/debug";
 import { useIsMobile } from "./hooks/useIsMobile";
 import PWAInstallBanner from "./components/PWAInstallBanner";
-import api from "./services/api";
-import { getSyncQueue, markSynced } from "./services/offlineStorage";
-import { useToast } from "./components/common/Toast";
+import { useOfflineSync } from "./hooks/useOfflineSync";
 
-/** When connectivity returns, flush pending `fw_sync_queue` items. */
 const OfflineSyncOnReconnect: React.FC = () => {
-  const { showToast } = useToast();
-
-  useEffect(() => {
-    const onOnline = async () => {
-      const pending = getSyncQueue().filter((i) => i.status === "pending");
-      let synced = 0;
-      for (const item of pending) {
-        try {
-          await api.post(item.endpoint, item.payload);
-          markSynced(item.id);
-          synced++;
-        } catch {
-          /* leave in queue for next online event */
-        }
-      }
-      if (synced > 0) {
-showToast(` ${synced} פעולות סונכרנו`, "success");
-      }
-    };
-    window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
-  }, [showToast]);
-
+  useOfflineSync();
   return null;
 };
 
@@ -55,6 +30,7 @@ const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(authService.isAuthenticated());
   const [errorCount, setErrorCount] = useState(0);
   const isMobile = useIsMobile();
+  const { isOnline } = useOfflineSync();
   
   // הוסף class למובייל ב-body
   useEffect(() => {
@@ -127,7 +103,19 @@ const App: React.FC = () => {
   const isForgotPassword = location.pathname === "/forgot-password";
   const isResetPassword = location.pathname === "/reset-password";
   const isOtpPage = location.pathname === "/otp";
+  const isOfflineFallbackPage = location.pathname === "/offline";
   const isPublicPage = isLoginPage || isSupplierPortal || isChangePassword || isWelcomeSplash || isForgotPassword || isResetPassword || isOtpPage;
+  const needsLiveConnectionPage = isLoginPage || isForgotPassword || isResetPassword || isOtpPage;
+
+  if (!isOnline && needsLiveConnectionPage && !isOfflineFallbackPage) {
+    return (
+      <ToastProvider>
+        <OfflineSyncOnReconnect />
+        <OfflineBanner />
+        <Navigate to="/offline" replace />
+      </ToastProvider>
+    );
+  }
 
   return (
     <ToastProvider>

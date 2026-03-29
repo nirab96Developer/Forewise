@@ -1,6 +1,5 @@
 // hooks/useOfflineSync.ts
-// Replaces the old useOffline hook for offline-first features.
-// Uses IndexedDB via offlineStorage, shows toast on reconnect, auto-syncs.
+// Shared offline sync state backed by IndexedDB.
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -14,6 +13,38 @@ import api from '../services/api';
 import { showToast } from '../components/common/Toast';
 
 export type { OfflineItem };
+
+type OfflineSyncSnapshot = {
+  isOnline: boolean;
+  pendingCount: number;
+  isSyncing: boolean;
+};
+
+let sharedState: OfflineSyncSnapshot = {
+  isOnline: navigator.onLine,
+  pendingCount: 0,
+  isSyncing: false,
+};
+
+let listenersAttached = false;
+let initialCountLoaded = false;
+let syncInFlight: Promise<number> | null = null;
+const subscribers = new Set<(state: OfflineSyncSnapshot) => void>();
+
+function emitState() {
+  const snapshot = { ...sharedState };
+  subscribers.forEach((notify) => notify(snapshot));
+}
+
+function updateState(partial: Partial<OfflineSyncSnapshot>) {
+  sharedState = { ...sharedState, ...partial };
+  emitState();
+}
+
+async function refreshSharedCount() {
+  const items = await getPendingItems();
+  updateState({ pendingCount: items.length });
+}
 
 async function syncItem(item: OfflineItem): Promise<void> {
   const headers = { 'X-Offline-Sync': 'true' };
@@ -30,89 +61,119 @@ async function syncItem(item: OfflineItem): Promise<void> {
   }
 }
 
-export function useOfflineSync() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [isSyncing, setIsSyncing] = useState(false);
+async function syncPendingItems(options?: { showSummaryToast?: boolean; showReconnectToast?: boolean }): Promise<number> {
+  if (!sharedState.isOnline) {
+    return 0;
+  }
+  if (syncInFlight) {
+    return syncInFlight;
+  }
 
-  const refreshCount = useCallback(async () => {
-    const items = await getPendingItems();
-    setPendingCount(items.length);
-  }, []);
-
-  // Listen to network changes and custom queue events
-  useEffect(() => {
-    refreshCount();
-
-    const handleOnline = async () => {
-      setIsOnline(true);
-showToast(' החיבור חזר', 'success', 4000);
-      // auto-sync in background
-      const pending = await getPendingItems();
-      if (pending.length === 0) return;
-      setIsSyncing(true);
-      let successCount = 0;
-      for (const item of pending) {
-        try {
-          await syncItem(item);
-          await removePendingItem(item.id);
-          successCount++;
-        } catch {
-          await markItemFailed(item.id);
-        }
-      }
-      setIsSyncing(false);
-      await refreshCount();
-      if (successCount > 0) {
-showToast(` ${successCount} פריטים סונכרנו בהצלחה`, 'success', 5000);
-      }
-    };
-
-    const handleOffline = () => setIsOnline(false);
-    const handleQueueChange = () => refreshCount();
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('offline-queue-changed', handleQueueChange);
-
-    // Refresh count every 10s
-    const interval = setInterval(refreshCount, 10_000);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('offline-queue-changed', handleQueueChange);
-      clearInterval(interval);
-    };
-  }, [refreshCount]);
-
-  const syncAll = useCallback(async () => {
-    if (!isOnline) {
-      showToast('אין חיבור לאינטרנט', 'warning');
-      return;
-    }
+  syncInFlight = (async () => {
     const pending = await getPendingItems();
     if (pending.length === 0) {
-      showToast('אין פריטים לסנכרון', 'info');
-      return;
+      await refreshSharedCount();
+      return 0;
     }
-    setIsSyncing(true);
-    let ok = 0;
+
+    updateState({ isSyncing: true });
+
+    if (options?.showReconnectToast) {
+      showToast('החיבור חזר', 'success', 4000);
+    }
+
+    let successCount = 0;
     for (const item of pending) {
       try {
         await syncItem(item);
         await removePendingItem(item.id);
-        ok++;
+        successCount++;
       } catch {
         await markItemFailed(item.id);
       }
     }
-    setIsSyncing(false);
-    await refreshCount();
-showToast(ok > 0 ? ` ${ok} פריטים סונכרנו` : ' חלק מהפריטים נכשלו', ok > 0 ? 'success' : 'warning');
-  }, [isOnline, refreshCount]);
+
+    updateState({ isSyncing: false });
+    await refreshSharedCount();
+
+    if (options?.showSummaryToast) {
+      if (successCount > 0) {
+        showToast(`${successCount} פריטים סונכרנו בהצלחה`, 'success', 5000);
+      } else {
+        showToast('חלק מהפריטים לא סונכרנו', 'warning');
+      }
+    }
+
+    return successCount;
+  })();
+
+  try {
+    return await syncInFlight;
+  } finally {
+    syncInFlight = null;
+    updateState({ isSyncing: false });
+  }
+}
+
+function ensureOfflineListeners() {
+  if (listenersAttached) return;
+  listenersAttached = true;
+
+  const handleOnline = async () => {
+    updateState({ isOnline: true });
+    await syncPendingItems({ showSummaryToast: true, showReconnectToast: true });
+  };
+
+  const handleOffline = () => updateState({ isOnline: false });
+  const handleQueueChange = () => {
+    refreshSharedCount();
+  };
+
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+  window.addEventListener('offline-queue-changed', handleQueueChange);
+}
+
+export function useOfflineSync() {
+  const [state, setState] = useState<OfflineSyncSnapshot>(sharedState);
+
+  const refreshCount = useCallback(async () => {
+    await refreshSharedCount();
+  }, []);
+
+  useEffect(() => {
+    ensureOfflineListeners();
+    subscribers.add(setState);
+    setState(sharedState);
+    if (!initialCountLoaded) {
+      initialCountLoaded = true;
+      refreshSharedCount();
+    }
+    return () => {
+      subscribers.delete(setState);
+    };
+  }, []);
+
+  const syncAll = useCallback(async () => {
+    if (!sharedState.isOnline) {
+      showToast('אין חיבור לאינטרנט', 'warning');
+      return;
+    }
+    if (sharedState.pendingCount === 0) {
+      showToast('אין פריטים לסנכרון', 'info');
+      return;
+    }
+    await syncPendingItems({ showSummaryToast: true, showReconnectToast: false });
+  }, []);
 
   const loadAllItems = useCallback(() => getAllPendingItems(), []);
 
-  return { isOnline, pendingCount, isSyncing, syncAll, refreshCount, loadAllItems };
+  return {
+    isOnline: state.isOnline,
+    pendingCount: state.pendingCount,
+    isSyncing: state.isSyncing,
+    syncAll,
+    refreshCount,
+    loadAllItems,
+  };
 }

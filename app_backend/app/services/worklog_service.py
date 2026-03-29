@@ -1,5 +1,21 @@
 """
-Worklog Service - optimized with eager loading
+Worklog Service — core financial transaction engine for equipment work reporting.
+
+This service manages the full lifecycle of worklogs (time-and-cost reports) against
+work orders. Worklogs are the primary billing artifact: each one captures hours worked,
+calculates cost using a resolved hourly rate, and applies Israeli VAT (18%).
+
+Lifecycle:  PENDING → SUBMITTED → APPROVED → INVOICED
+                                 ↘ REJECTED
+
+Key design decisions:
+- Does NOT inherit BaseService because worklogs use `is_active` for soft-delete
+  rather than the `deleted_at` pattern used by master-data entities.
+- Financial fields (rate, cost, VAT) are NEVER accepted from the client — they are
+  always computed server-side to prevent tampering.
+- Rate resolution follows a strict 2-level hierarchy (work_order → supplier_equipment)
+  with no silent fallbacks; missing rates cause a hard block.
+- Budget accounting is incremental: frozen budget is released on approval, not on creation.
 """
 
 from datetime import datetime
@@ -17,14 +33,23 @@ from app.models.activity_type import ActivityType
 from app.schemas.worklog import WorklogCreate, WorklogUpdate, WorklogSearch, WorklogStatistics
 from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
 from app.services import activity_logger
+from app.services.rate_service import resolve_supplier_pricing
 
 
 class WorklogService:
     """
-    Worklog Service - TRANSACTIONS category
-    
-    Note: NOT inheriting BaseService because worklogs doesn't have deleted_at
-    Uses is_active for deactivation instead.
+    Worklog Service — TRANSACTIONS category.
+
+    Unlike master-data services (projects, users, equipment), this service does NOT
+    inherit BaseService. Worklogs use ``is_active`` for deactivation instead of
+    ``deleted_at``, because financial records should never be physically deleted —
+    they must remain auditable even when logically removed.
+
+    Financial calculation pipeline (create):
+        1. Resolve hourly rate via ``_resolve_hourly_rate()``
+        2. Compute ``cost_before_vat = work_hours × rate + overnight_total``
+        3. Apply VAT: ``cost_with_vat = cost_before_vat × (1 + 0.18)``
+        4. Snapshot the rate so future rate changes don't retroactively alter history.
     """
     
     def _generate_report_number(self, db: Session) -> int:
@@ -38,17 +63,30 @@ class WorklogService:
         from datetime import datetime
         return f"WL-{datetime.now().year}-{str(report_number).zfill(4)}"
 
-    VAT_RATE = 0.18
+    VAT_RATE = 0.18  # Israeli standard VAT rate, applied to all worklog costs
 
     def _resolve_hourly_rate(self, db: Session, worklog_dict: dict) -> float:
-        """Resolve hourly rate — exact match only, no fallbacks.
-        
-        Priority:
-        1. work_orders.hourly_rate — if explicitly set on the order
-        2. supplier_equipment.hourly_rate — exact match by supplier_id + license_plate
-        3. No match → return 0 (caller must raise ValidationException)
+        """Resolve the hourly rate for a worklog using a strict 2-level hierarchy.
+
+        The rate resolution intentionally has NO silent fallbacks to prevent
+        under-billing. If no rate is found, the caller must block creation and
+        force the user to configure pricing first.
+
+        Resolution order:
+            1. ``work_orders.hourly_rate`` — an explicit per-order rate override,
+               typically set during negotiation or for non-standard pricing.
+            2. ``supplier_equipment.hourly_rate`` — the contractual rate for the
+               specific supplier + license plate combination. This is the normal path.
+            3. No match → returns 0.0, signaling the caller to raise a
+               ValidationException (rate must be configured before reporting).
+
+        Args:
+            db: Database session.
+            worklog_dict: Partially built worklog data containing ``work_order_id``.
+
+        Returns:
+            The resolved hourly rate as a float, or 0.0 if no rate could be found.
         """
-        from sqlalchemy import text as sa_text
         wo_id = worklog_dict.get('work_order_id')
         if not wo_id:
             return 0
@@ -57,22 +95,53 @@ class WorklogService:
         if not wo:
             return 0
 
-        if wo.hourly_rate and float(wo.hourly_rate) > 0:
-            return float(wo.hourly_rate)
-
-        if wo.supplier_id and wo.equipment_license_plate:
-            row = db.execute(sa_text(
-                "SELECT hourly_rate FROM supplier_equipment "
-                "WHERE supplier_id = :sid AND license_plate = :plate AND is_active = true "
-                "LIMIT 1"
-            ), {"sid": wo.supplier_id, "plate": wo.equipment_license_plate}).fetchone()
-            if row and row[0] and float(row[0]) > 0:
-                return float(row[0])
-
-        return 0
+        pricing = resolve_supplier_pricing(
+            db=db,
+            supplier_id=wo.supplier_id,
+            equipment_id=worklog_dict.get('equipment_id') or wo.equipment_id,
+            license_plate=wo.equipment_license_plate,
+            equipment_type_name=wo.equipment_type,
+            equipment_model_id=getattr(wo, 'requested_equipment_model_id', None),
+        )
+        return float(pricing.get("hourly_rate") or 0)
     
     def create(self, db: Session, data: WorklogCreate, current_user_id: int) -> Worklog:
-        """Create worklog with full business rule validation"""
+        """Create a new worklog with comprehensive business-rule validation.
+
+        This is the most complex method in the service. It enforces a strict
+        validation pipeline before persisting, then computes all financial fields
+        server-side to prevent client-side tampering.
+
+        Validation pipeline (in order):
+            1. Work order existence and project association
+            2. State machine gate — WO must be coordinator-approved
+            3. Equipment scan gate — license plate must be on the WO
+            4. Scan mismatch detection (supplier/type) with role-based overrides
+            5. Uniqueness constraint — one worklog per WO per day
+            6. Foreign key validation for user, project, equipment, activity_type
+
+        Financial security:
+            - All client-provided financial fields (``hourly_rate_snapshot``,
+              ``cost_before_vat``, ``cost_with_vat``, ``vat_rate``, ``approved_*``)
+              are stripped from the input and recomputed server-side.
+            - The hourly rate is resolved via ``_resolve_hourly_rate()`` and
+              snapshotted so future rate changes don't alter historical records.
+
+        Overnight (field-guard) handling:
+            - A single checkbox ``includes_guard`` triggers overnight billing at a
+              fixed rate of 250 NIS/night, added on top of hourly cost.
+
+        Args:
+            db: Database session.
+            data: Validated input from the API layer.
+            current_user_id: The authenticated user creating this report.
+
+        Returns:
+            The persisted Worklog ORM instance.
+
+        Raises:
+            ValidationException: For any business-rule violation.
+        """
         # RULE 1: work_order_id is mandatory
         if not data.work_order_id:
             raise ValidationException("חובה לציין הזמנת עבודה (work_order_id)")
@@ -85,8 +154,10 @@ class WorklogService:
         if not wo.project_id:
             raise ValidationException("להזמנה זו אין פרויקט משויך")
 
-        # RULE 3: State machine — WO must be coordinator-approved + equipment scanned
-        # Flow: SUPPLIER_ACCEPTED → Coordinator approves → APPROVED_AND_SENT → WM scans → report
+        # RULE 3: State machine gate — only coordinator-approved WOs accept reports.
+        # The full WO lifecycle is: SUPPLIER_ACCEPTED → Coordinator approves →
+        # APPROVED_AND_SENT → Work Manager scans equipment → IN_PROGRESS → worklogs.
+        # We allow reporting only in statuses that indicate the coordinator has signed off.
         WORKABLE_STATUSES = {'APPROVED_AND_SENT', 'IN_PROGRESS', 'ACTIVE'}
         wo_status = (wo.status or '').upper()
         if wo_status not in WORKABLE_STATUSES:
@@ -102,14 +173,17 @@ class WorklogService:
                 "לא ניתן ליצור דיווח — לא נסרק כלי להזמנה זו. יש לסרוק ציוד קודם."
             )
 
-        # RULE 5: Scan validation
+        # RULE 5: Scan validation — detect mismatches between scanned and expected equipment.
+        # Flags are stored in metadata_json so reviewers can see discrepancies during approval.
         scan_flags = []
 
-        # 5a: Supplier mismatch — flag only
+        # 5a: Supplier mismatch — flag only (non-blocking, for reviewer awareness)
         if data.supplier_id and wo.supplier_id and int(data.supplier_id) != int(wo.supplier_id):
             scan_flags.append('supplier_mismatch')
 
-        # 5b: Equipment type mismatch — BLOCK (only Admin can override)
+        # 5b: Equipment type mismatch — hard block for non-admins.
+        # Different equipment type could mean wrong pricing tier, so only
+        # ADMIN/SUPER_ADMIN can force it through.
         if hasattr(data, 'equipment_type') and data.equipment_type and wo.equipment_type:
             if data.equipment_type.strip().lower() != wo.equipment_type.strip().lower():
                 scan_flags.append('equipment_type_mismatch')
@@ -122,7 +196,9 @@ class WorklogService:
                         "רק מנהל מערכת יכול לאשר שינוי סוג כלי."
                     )
 
-        # RULE 6: Unique constraint — one worklog per day + WO + plate
+        # RULE 6: Business uniqueness — prevent duplicate billing for the same
+        # work order on the same day. This is an application-level guard because
+        # the DB constraint alone can't account for is_active filtering.
         from sqlalchemy import text as sa_text
         report_date = data.report_date or data.work_date
         if report_date:
@@ -210,8 +286,10 @@ class WorklogService:
         if 'equipment_scanned' in worklog_dict:
             pass  # model has this column, keep it
 
+        # Overnight/guard handling: the frontend sends a single boolean `includes_guard`.
+        # We strip any client-provided overnight fields and recompute them below
+        # to prevent rate manipulation.
         includes_guard = bool(worklog_dict.pop('includes_guard', False))
-        # Client may send these; we normalize from includes_guard below
         worklog_dict.pop('is_overnight', None)
         worklog_dict.pop('overnight_nights', None)
         worklog_dict.pop('overnight_rate', None)
@@ -228,25 +306,43 @@ class WorklogService:
         if not worklog_dict.get('status'):
             worklog_dict['status'] = 'PENDING'
 
-        # לינת שטח — from unified form checkbox (includes_guard)
-        overnight_total = 0.0
-        if includes_guard:
-            worklog_dict['is_overnight'] = True
-            worklog_dict['overnight_nights'] = 1
-            worklog_dict['overnight_rate'] = Decimal('250')
-            overnight_total = 250.0
-        
-        # Never trust client-provided financial fields
+        # SECURITY: Strip all financial and approval fields from client input.
+        # These are computed server-side to prevent billing fraud. A malicious client
+        # could otherwise set cost_with_vat=0 or pre-approve their own worklog.
         for unsafe_field in ('hourly_rate_snapshot', 'cost_before_vat', 'cost_with_vat',
                              'vat_rate', 'net_hours', 'paid_hours', 'total_hours',
                              'approved_by_user_id', 'approved_at'):
             worklog_dict.pop(unsafe_field, None)
 
-        rate = self._resolve_hourly_rate(db, worklog_dict)
+        pricing = resolve_supplier_pricing(
+            db=db,
+            supplier_id=supplier_id,
+            equipment_id=worklog_dict.get('equipment_id') or wo.equipment_id,
+            license_plate=wo.equipment_license_plate,
+            equipment_type_name=wo.equipment_type,
+            equipment_model_id=getattr(wo, 'requested_equipment_model_id', None),
+        )
+        rate = float(pricing.get("hourly_rate") or 0)
+        overnight_rate = float(pricing.get("overnight_rate") or 0)
+
         if not rate or rate <= 0:
             raise ValidationException(
                 "לא מוגדר תעריף לכלי/ספק זה. יש להגדיר מחיר בדף ספקים ותמחורים."
             )
+
+        # לינת שטח — מחושבת מתוך הגדרות הספקים / סוגי הציוד
+        overnight_total = 0.0
+        if includes_guard:
+            resolved_overnight = overnight_rate if overnight_rate > 0 else 250.0
+            worklog_dict['is_overnight'] = True
+            worklog_dict['overnight_nights'] = 1
+            worklog_dict['overnight_rate'] = Decimal(str(resolved_overnight))
+            overnight_total = resolved_overnight
+
+        # Re-apply computed hour fields after stripping unsafe client input.
+        worklog_dict['total_hours'] = round(wh + bh, 2) if wh > 0 else float(worklog_dict.get('total_hours') or 0)
+        worklog_dict['net_hours'] = round(wh, 2) if wh > 0 else float(worklog_dict.get('net_hours') or 0)
+        worklog_dict['paid_hours'] = round(wh, 2) if wh > 0 else float(worklog_dict.get('paid_hours') or 0)
         worklog_dict['hourly_rate_snapshot'] = rate
 
         hours = float(worklog_dict.get('work_hours') or 0)

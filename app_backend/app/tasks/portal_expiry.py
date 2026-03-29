@@ -251,12 +251,14 @@ def _notify_coordinator(db, work_order, message):
         from app.models.role import Role
         from sqlalchemy import text
 
+        region_id = getattr(getattr(work_order, "project", None), "region_id", None)
         coordinators = db.execute(text("""
             SELECT u.id FROM users u
             JOIN roles r ON u.role_id = r.id
             WHERE r.code IN ('ORDER_COORDINATOR', 'ADMIN')
+              AND (:region_id IS NULL OR r.code = 'ADMIN' OR u.region_id = :region_id)
               AND u.is_active = true
-        """)).fetchall()
+        """), {"region_id": region_id}).fetchall()
 
         ns = NotificationService()
         for row in coordinators:

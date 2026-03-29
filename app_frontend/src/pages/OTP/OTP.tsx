@@ -37,7 +37,9 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
   const username = location.state?.username || localStorage.getItem('otp_username') || '';
   const userIdFromState = location.state?.userId || parseInt(localStorage.getItem('otp_user_id') || '0');
   const otpToken = location.state?.otpToken || localStorage.getItem('otp_token');
+  const otpAlreadySent = Boolean(location.state?.otpAlreadySent) || localStorage.getItem('otp_sent_via_login') === 'true';
   const isFirstLogin = location.state?.isFirstLogin || false;
+  const deliveryTarget = userEmail || username || 'המשתמש שלך';
 
   // קבלת userId מה-state
   useEffect(() => {
@@ -82,9 +84,9 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
   // Send OTP when user chooses OTP method (or if no biometric available)
   useEffect(() => {
     if (authMethod !== 'otp') return;
-    if (hasSentOTP.current || otpToken) return;
+    if (hasSentOTP.current || otpToken || otpAlreadySent) return;
     if (!userEmail || !userEmail.includes('@')) {
-      setError('כתובת מייל לא תקינה. אנא חזור להתחברות.');
+      setError('קוד האימות נשלח במהלך ההתחברות. אם לא התקבל, ניתן לבקש שליחה מחדש.');
       return;
     }
     
@@ -172,7 +174,11 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         return;
       }
 
-      const result = await otpService.verifyOTP(effectiveUserId, finalCode, userEmail);
+      const result = await otpService.verifyOTP(
+        effectiveUserId,
+        finalCode,
+        userEmail || username || String(effectiveUserId)
+      );
       
       if (result.access_token) {
         // Extract user data from result
@@ -195,10 +201,17 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         const userObject = {
           id: userData.id?.toString() || effectiveUserId.toString(),
           name: userData.full_name || userData.username || username || 'משתמש',
+          first_name: userData.first_name || (userData.full_name || userData.username || username || 'משתמש').split(' ')[0],
+          full_name: userData.full_name || userData.username || username || 'משתמש',
           email: userData.email || userEmail,
           role: roleCode,
+          role_code: roleCode,
           roles: [roleCode],
-          permissions: permissions
+          permissions: permissions,
+          region_id: userData.region_id,
+          area_id: userData.area_id,
+          department_id: userData.department_id,
+          last_login: userData.last_login || null,
         };
 
 // שמירה מפורשת ב-localStorage — תמיד, ללא תנאי 
@@ -224,6 +237,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         localStorage.removeItem('otp_username');
         localStorage.removeItem('otp_user_id');
         localStorage.removeItem('otp_token');
+        localStorage.removeItem('otp_sent_via_login');
         
         // Wait for animation (max 500ms, not 1500)
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -235,6 +249,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         setGlobalLoading(false);
         
         // עדכון הסטטוס של ההתחברות
+        window.dispatchEvent(new Event('auth-change'));
         window.dispatchEvent(new Event('storage'));
 
         if (result.user?.must_change_password) {
@@ -272,7 +287,8 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         setError('לא נמצא מזהה משתמש');
         return;
       }
-      await otpService.resendOTP(userId);
+      await otpService.resendOTP(userId, userEmail || username || String(userId));
+      localStorage.removeItem('otp_sent_via_login');
       setTimeLeft(300);
       setCanResend(false);
       setOtpCode(['', '', '', '', '', '']);
@@ -315,6 +331,7 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         localStorage.removeItem('otp_username');
         localStorage.removeItem('otp_user_id');
         localStorage.removeItem('otp_token');
+        localStorage.removeItem('otp_sent_via_login');
 
         window.dispatchEvent(new Event('storage'));
         hasNavigated.current = true;
@@ -411,11 +428,11 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         <>
         <div className="text-center mb-6">
           <p className="text-gray-600 text-lg">
-            שלחנו קוד אימות לכתובת המייל שלך
+            שלחנו קוד אימות לצורך התחברות מאובטחת
           </p>
           <div className="flex items-center justify-center mt-3 text-base text-green-700 font-medium bg-green-50 rounded-lg py-2 px-4 inline-flex">
             <Mail className="w-5 h-5 mr-2" />
-            {userEmail}
+            {deliveryTarget}
           </div>
         </div>
 

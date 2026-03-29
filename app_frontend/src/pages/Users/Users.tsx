@@ -7,7 +7,7 @@ import UnifiedLoader from "../../components/common/UnifiedLoader";
 const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'מנהל מערכת', REGION_MANAGER: 'מנהל מרחב', AREA_MANAGER: 'מנהל אזור',
   WORK_MANAGER: 'מנהל עבודה', ORDER_COORDINATOR: 'מתאם הזמנות', ACCOUNTANT: 'חשבונאי',
-  SUPPLIER_MANAGER: 'מנהל ספקים', FIELD_WORKER: 'עובד שטח', VIEWER: 'צופה', USER: 'משתמש',
+  SUPPLIER_MANAGER: 'מנהל מערכת', FIELD_WORKER: 'מנהל עבודה', VIEWER: 'מנהל מרחב', USER: 'מנהל עבודה',
 };
 
 function formatDate(ts: string | null | undefined) {

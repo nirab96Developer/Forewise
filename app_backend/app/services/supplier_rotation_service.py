@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from app.models.supplier import Supplier
@@ -215,14 +215,16 @@ class SupplierRotationService:
         Checks per supplier:
         1. Active in area/region (active_area_ids / active_region_ids contains id)
         2. Supplier is active (is_active = True)
-        3. Has equipment of requested type (supplier_equipment matching model)
+        3. Has configured equipment of requested type (source of truth: Supplier Settings)
         4. Equipment has a license plate
         5. Equipment status = 'available'
 
         Selects the supplier with fewest total_assignments.
         Returns { supplier_id, fallback_level, notify_coordinator }.
         """
-        from app.models.supplier_equipment import SupplierEquipment
+        from app.models.equipment import Equipment
+        from app.models.equipment_model import EquipmentModel
+        from app.models.equipment_category import EquipmentCategory
 
         def _find_in_scope(scope_filter) -> Optional[Supplier]:
             query = db.query(Supplier).filter(
@@ -234,17 +236,24 @@ class SupplierRotationService:
 
             valid = []
             for supplier in query.all():
-                eq_query = db.query(SupplierEquipment).filter(
-                    SupplierEquipment.supplier_id == supplier.id,
-                    SupplierEquipment.is_active == True,
-                    SupplierEquipment.license_plate != None,
-                    SupplierEquipment.license_plate != '',
-                    SupplierEquipment.status == 'available',
+                eq_query = db.query(Equipment).filter(
+                    Equipment.supplier_id == supplier.id,
+                    Equipment.is_active == True,
+                    Equipment.license_plate != None,
+                    Equipment.license_plate != '',
+                    Equipment.status == 'available',
                 )
                 if equipment_model_id:
-                    eq_query = eq_query.filter(
-                        SupplierEquipment.equipment_model_id == equipment_model_id
-                    )
+                    model = db.query(EquipmentModel).filter(EquipmentModel.id == equipment_model_id).first()
+                    if model:
+                        category = db.query(EquipmentCategory).filter(EquipmentCategory.id == model.category_id).first()
+                        type_filters = []
+                        if category and category.name:
+                            type_filters.append(Equipment.equipment_type.ilike(category.name))
+                        if category and category.id:
+                            type_filters.append(Equipment.category_id == category.id)
+                        if type_filters:
+                            eq_query = eq_query.filter(or_(*type_filters))
                 if eq_query.first():
                     valid.append(supplier)
 

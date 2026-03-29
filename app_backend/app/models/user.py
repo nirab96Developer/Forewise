@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from app.models.area import Area
     from app.models.session import Session
     from app.models.otp_token import OTPToken
+    from app.models.device_token import DeviceToken
+    from app.models.biometric_credential import BiometricCredential
 
 
 class User(BaseModel):
@@ -62,15 +64,16 @@ class User(BaseModel):
     metadata_json: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
 
     # Relationships
-    role: Mapped[Optional["Role"]] = relationship("Role", foreign_keys=[role_id], lazy="joined")
+    role: Mapped[Optional["Role"]] = relationship("Role", foreign_keys=[role_id], lazy="joined", back_populates="users")
     department: Mapped[Optional["Department"]] = relationship("Department", foreign_keys=[department_id], lazy="select")
     region: Mapped[Optional["Region"]] = relationship("Region", foreign_keys=[region_id], lazy="select")
     area: Mapped[Optional["Area"]] = relationship("Area", foreign_keys=[area_id], lazy="select")
-    manager: Mapped[Optional["User"]] = relationship("User", remote_side=[id], foreign_keys=[manager_id], lazy="select")
-    subordinates: Mapped[List["User"]] = relationship("User", foreign_keys=[manager_id], lazy="select")
-    sessions: Mapped[List["Session"]] = relationship("Session", cascade="all, delete-orphan", lazy="select")
+    manager: Mapped[Optional["User"]] = relationship("User", remote_side=[id], foreign_keys=[manager_id], lazy="select", back_populates="subordinates")
+    subordinates: Mapped[List["User"]] = relationship("User", foreign_keys=[manager_id], lazy="select", back_populates="manager")
+    sessions: Mapped[List["Session"]] = relationship("Session", cascade="all, delete-orphan", lazy="select", back_populates="user")
     otp_tokens: Mapped[List["OTPToken"]] = relationship("OTPToken", cascade="all, delete-orphan", lazy="select")
     device_tokens: Mapped[List["DeviceToken"]] = relationship("DeviceToken", cascade="all, delete-orphan", lazy="select")
+    biometric_credentials: Mapped[List["BiometricCredential"]] = relationship("BiometricCredential", cascade="all, delete-orphan", lazy="select", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"

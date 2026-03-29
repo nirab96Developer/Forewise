@@ -41,7 +41,11 @@ const STATUS_LABEL: Record<string, { label: string; color: string; icon: React.R
   REJECTED:    { label: 'נדחה',           color: 'bg-red-100 text-red-800 border-red-300',        icon: <XCircle className="w-3.5 h-3.5" /> },
 };
 const normStatus = (s: string | null | undefined) => (s || '').toUpperCase();
-const getStatus = (s: string | null) => STATUS_LABEL[normStatus(s)] || STATUS_LABEL.SUBMITTED;
+const getStatus = (s: string | null) => STATUS_LABEL[normStatus(s)] || {
+  label: s || 'לא ידוע',
+  color: 'bg-gray-100 text-gray-700 border-gray-300',
+  icon: <Clock className="w-3.5 h-3.5" />,
+};
 
 function openExportPdf(title: string, headers: string[], rows: string[][]) {
   const esc = (s: string) =>
@@ -73,8 +77,8 @@ const MonthlyInvoiceButton: React.FC = () => {
 
   const loadData = async () => {
     const [pRes, sRes] = await Promise.all([
-      api.get('/projects?limit=200').catch(() => ({ data: { items: [] } })),
-      api.get('/suppliers?limit=200').catch(() => ({ data: { items: [] } })),
+      api.get('/projects', { params: { page_size: 200 } }).catch(() => ({ data: { items: [] } })),
+      api.get('/suppliers', { params: { page_size: 200 } }).catch(() => ({ data: { items: [] } })),
     ]);
     setProjects(pRes.data?.items || pRes.data || []);
     setSuppliers(sRes.data?.items || sRes.data || []);
@@ -153,7 +157,7 @@ setMsg(` ${e?.response?.data?.detail || 'שגיאה'}`);
                   {suppliers.map((s:any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
-{msg && <p className={`text-sm ${msg.startsWith('') ? 'text-green-600' : 'text-red-600'}`}>{msg}</p>}
+{msg && <p className={`text-sm ${msg.includes('שגיאה') ? 'text-red-600' : 'text-green-600'}`}>{msg}</p>}
             </div>
             <div className="flex gap-2 px-5 py-4 border-t border-gray-100">
               <button onClick={handleGenerate} disabled={saving}
@@ -206,15 +210,23 @@ const AccountantInbox: React.FC = () => {
 
       const [res, pRes, sRes] = await Promise.all([
         api.get('/worklogs', { params }),
-        api.get('/projects', { params: { limit: 200 } }).catch(() => ({ data: { items: [] } })),
-        api.get('/suppliers', { params: { limit: 200 } }).catch(() => ({ data: { items: [] } })),
+        Promise.resolve({ data: { items: [] } }),
+        Promise.resolve({ data: { items: [] } }),
       ]);
       const items: WorklogRow[] = res.data?.items || res.data || [];
 
       const pItems = pRes.data?.items || pRes.data || [];
       const sItems = sRes.data?.items || sRes.data || [];
-      setProjectOptions(pItems.map((p: any) => ({ id: p.id, name: p.name || `פרויקט ${p.id}` })));
-      setSupplierOptions(sItems.map((s: any) => ({ id: s.id, name: s.name || `ספק ${s.id}` })));
+      const projectOptionsMap = new Map<number, string>();
+      const supplierOptionsMap = new Map<number, string>();
+
+      items.forEach((w) => {
+        if (w.project_id && w.project_name) projectOptionsMap.set(w.project_id, w.project_name);
+        if (w.supplier_id && w.supplier_name) supplierOptionsMap.set(w.supplier_id, w.supplier_name);
+      });
+
+      setProjectOptions(Array.from(projectOptionsMap.entries()).map(([id, name]) => ({ id, name })));
+      setSupplierOptions(Array.from(supplierOptionsMap.entries()).map(([id, name]) => ({ id, name })));
 
       const projectMap: Record<number, { name: string; code: string }> = {};
       pItems.forEach((p: any) => { projectMap[p.id] = { name: p.name, code: p.code }; });

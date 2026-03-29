@@ -234,7 +234,7 @@ class WorkOrderService {
   getStatusText(status: string): string {
     const map: Record<string, string> = {
       PENDING: 'ממתין', DISTRIBUTING: 'בהפצה לספקים',
-      SUPPLIER_ACCEPTED_PENDING_COORDINATOR: 'ספק אישר — ממתין למתאם',
+      SUPPLIER_ACCEPTED_PENDING_COORDINATOR: 'ספק אישר — ממתין לאישור מתאם',
       APPROVED_AND_SENT: 'אושר ונשלח', COMPLETED: 'הושלם',
       REJECTED: 'נדחה', CANCELLED: 'בוטל', EXPIRED: 'פג תוקף', STOPPED: 'הופסק',
     };

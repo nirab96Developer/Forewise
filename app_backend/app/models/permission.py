@@ -28,7 +28,7 @@ class Permission(BaseModel):
     metadata_json: Mapped[Optional[str]] = mapped_column(Unicode, nullable=True)
 
     # Relationships
-    roles: Mapped[List["Role"]] = relationship("Role", secondary="role_permissions", lazy="select")
+    roles: Mapped[List["Role"]] = relationship("Role", secondary="role_permissions", lazy="select", back_populates="permissions")
 
     @validates("code")
     def validate_code(self, _key: str, code: str) -> str:

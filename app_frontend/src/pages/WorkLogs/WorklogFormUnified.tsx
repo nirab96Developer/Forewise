@@ -20,6 +20,12 @@ interface WorkOrder {
   status: string;
 }
 
+interface ActivityOption {
+  id: number;
+  code?: string;
+  name: string;
+}
+
 // סוגי פעילות לדיווח לא תקן
 const ACTIVITY_TYPES = [
   { value: 'work', label: 'עבודה', percent: 100, color: 'bg-green-100 text-green-800' },
@@ -56,6 +62,7 @@ const WorklogFormUnified: React.FC = () => {
   
   const [projects, setProjects] = useState<Project[]>([]);
   const [_workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
+  const [activityOptions, setActivityOptions] = useState<ActivityOption[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [scannedEquipment, setScannedEquipment] = useState<{id: number; code: string; name: string} | null>(null);
   
@@ -142,6 +149,20 @@ const WorklogFormUnified: React.FC = () => {
     loadProjects();
   }, [projectIdParam, projectCodeParam]);
 
+  useEffect(() => {
+    const loadActivityCodes = async () => {
+      try {
+        const response = await api.get('/worklogs/activity-codes');
+        const options = Array.isArray(response.data) ? response.data : [];
+        setActivityOptions(options);
+      } catch (err) {
+        console.error('Error loading activity codes:', err);
+        setActivityOptions([]);
+      }
+    };
+    loadActivityCodes();
+  }, []);
+
   // Load work orders when project selected
   useEffect(() => {
     if (!selectedProject) {
@@ -152,7 +173,7 @@ const WorklogFormUnified: React.FC = () => {
     const loadWorkOrders = async () => {
       try {
         const response = await api.get('/work-orders', {
-          params: { project_id: selectedProject.id, status: 'active' }
+          params: { project_id: selectedProject.id }
         });
         setWorkOrders(response.data?.items || response.data || []);
       } catch (err) {
@@ -260,16 +281,12 @@ const WorklogFormUnified: React.FC = () => {
       non_standard_reason: isNonStandard ? (formData.non_standard_reason || null) : null,
       non_standard_notes: isNonStandard ? (formData.non_standard_notes || null) : null,
       work_hours: totals.totalBillable,
-      total_hours: totals.totalPresence,
       break_hours: totals.restHours,
-      activity_type: formData.activity,
+      activity_type_id: formData.activity ? Number(formData.activity) : undefined,
       description: formData.description,
       notes: formData.notes,
       equipment_scanned: !!equipmentIdParam,
       includes_guard: overnight,
-      is_overnight: overnight,
-      overnight_nights: overnight ? 1 : 0,
-      overnight_rate: overnight ? 250 : 0,
       segments: isNonStandard ? segments.map(s => ({
         type: s.type,
         start_time: s.start_time,
@@ -483,13 +500,11 @@ showToast(' הדיווח נשמר במכשיר — יועלה כשיחזור ח�
                 required
               >
                 <option value="">בחר פעילות</option>
-                <option value="planting">נטיעה</option>
-                <option value="clearing">ניקוי</option>
-                <option value="maintenance">תחזוקה</option>
-                <option value="pruning">גיזום</option>
-                <option value="transport">הסעה</option>
-                <option value="supervision">פיקוח</option>
-                <option value="other">אחר</option>
+                {activityOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -637,7 +652,7 @@ showToast(' הדיווח נשמר במכשיר — יועלה כשיחזור ח�
                 <Moon className="w-5 h-5 text-indigo-600" />
                 <div>
                   <span className="text-sm font-medium text-indigo-900">לינת שטח</span>
-<p className="text-xs text-indigo-600">מסומן: לילה אחד × תעריף לינה (250) כפי שנשלח לשרת</p>
+<p className="text-xs text-indigo-600">העלות תחושב בשרת לפי הגדרות הספקים והציוד</p>
                 </div>
               </div>
             </label>

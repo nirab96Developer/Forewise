@@ -1384,10 +1384,12 @@ def list_devices(
 # ============================================================
 
 import os as _os
+from datetime import timezone as _timezone
+from urllib.parse import urlparse as _urlparse
 
-# In-memory challenge store (replace with Redis in production)
-_wn_reg_challenges: dict = {} # user_id challenge bytes
-_wn_login_challenges: dict = {} # username (challenge bytes, credential_ids)
+# Legacy in-memory stores kept for fallback/debug only.
+_wn_reg_challenges: dict = {}
+_wn_login_challenges: dict = {}
 
 try:
     import webauthn as _wn
@@ -1407,6 +1409,103 @@ except Exception as _e:
     _WN_OK = False
 
 
+def _webauthn_rp_id_and_origin(http_request: Request) -> tuple[str, str]:
+    forwarded_host = http_request.headers.get("x-forwarded-host")
+    origin_header = http_request.headers.get("origin")
+    host_header = forwarded_host or http_request.headers.get("host", "forewise.co")
+    rp_id = host_header.split(":")[0]
+    scheme = http_request.headers.get("x-forwarded-proto") or http_request.url.scheme or "https"
+    origin = f"{scheme}://{host_header}"
+
+    if origin_header:
+        parsed = _urlparse(origin_header)
+        if parsed.hostname:
+            rp_id = parsed.hostname
+        if parsed.scheme:
+            scheme = parsed.scheme
+        if parsed.netloc:
+            origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    if rp_id in {"localhost", "127.0.0.1"}:
+        scheme = "http"
+        if not origin_header:
+            origin = f"http://{host_header}"
+    return rp_id, origin
+
+
+def _credential_id_to_bytes(value) -> bytes:
+    if isinstance(value, bytes):
+        return value
+    if not value:
+        return b""
+    if isinstance(value, str):
+        try:
+            return bytes.fromhex(value)
+        except ValueError:
+            try:
+                padding = "=" * (-len(value) % 4)
+                return base64.urlsafe_b64decode(value + padding)
+            except Exception:
+                return value.encode()
+    return str(value).encode()
+
+
+def _challenge_bytes_to_text(challenge: bytes) -> str:
+    return base64.urlsafe_b64encode(challenge).decode().rstrip("=")
+
+
+def _challenge_text_to_bytes(value: str) -> bytes:
+    padding = "=" * (-len(value) % 4)
+    return base64.urlsafe_b64decode(value + padding)
+
+
+def _store_webauthn_challenge(db: Session, user_id: int, purpose: str, challenge: bytes) -> None:
+    db.query(OTPToken).filter(
+        OTPToken.user_id == user_id,
+        OTPToken.purpose == purpose,
+        OTPToken.is_active == True,
+        OTPToken.is_used == False,
+    ).update(
+        {
+            OTPToken.is_active: False,
+            OTPToken.is_used: True,
+            OTPToken.used_at: datetime.now(),
+        },
+        synchronize_session=False,
+    )
+    challenge_text = _challenge_bytes_to_text(challenge)
+    db.add(OTPToken(
+        user_id=user_id,
+        token="WEBAUTHN",
+        token_hash=challenge_text,
+        code_hash=challenge_text,
+        purpose=purpose,
+        expires_at=datetime.now() + timedelta(minutes=10),
+        is_used=False,
+        is_active=True,
+        attempts=0,
+        version=1,
+    ))
+    db.commit()
+
+
+def _consume_webauthn_challenge(db: Session, user_id: int, purpose: str) -> Optional[bytes]:
+    challenge_row = db.query(OTPToken).filter(
+        OTPToken.user_id == user_id,
+        OTPToken.purpose == purpose,
+        OTPToken.is_active == True,
+        OTPToken.is_used == False,
+        OTPToken.expires_at > datetime.now(),
+    ).order_by(OTPToken.id.desc()).first()
+    if not challenge_row or not challenge_row.token_hash:
+        return None
+    challenge_row.is_active = False
+    challenge_row.is_used = True
+    challenge_row.used_at = datetime.now()
+    db.commit()
+    return _challenge_text_to_bytes(challenge_row.token_hash)
+
+
 @router.post("/webauthn/register/begin")
 async def webauthn_register_begin(
     http_request: Request,
@@ -1420,7 +1519,7 @@ async def webauthn_register_begin(
     if not _WN_OK:
         raise HTTPException(status_code=501, detail="WebAuthn library not available on server")
 
-    rp_id = http_request.headers.get("host", "forewise.co").split(":")[0]
+    rp_id, _origin = _webauthn_rp_id_and_origin(http_request)
 
     # List credentials already registered for this user (to exclude)
     existing = db.query(BiometricCredential).filter(
@@ -1429,7 +1528,7 @@ async def webauthn_register_begin(
     ).all()
     exclude_creds = [
         PublicKeyCredentialDescriptor(
-            id=c.credential_id.encode() if isinstance(c.credential_id, str) else c.credential_id,
+            id=_credential_id_to_bytes(c.credential_id),
             type=PublicKeyCredentialType.PUBLIC_KEY,
         )
         for c in existing
@@ -1451,8 +1550,8 @@ async def webauthn_register_begin(
         timeout=60000,
     )
 
-    # Store challenge for verification
-    _wn_reg_challenges[str(current_user.id)] = options.challenge
+    # Store challenge in DB so it survives across multiple workers/processes
+    _store_webauthn_challenge(db, current_user.id, "webauthn_register", options.challenge)
 
     return _wn.options_to_json(options)
 
@@ -1468,17 +1567,14 @@ async def webauthn_register_complete(
     if not _WN_OK:
         raise HTTPException(status_code=501, detail="WebAuthn library not available on server")
 
-    expected_challenge = _wn_reg_challenges.pop(str(current_user.id), None)
+    expected_challenge = _consume_webauthn_challenge(db, current_user.id, "webauthn_register")
     if not expected_challenge:
         raise HTTPException(status_code=400, detail="No pending registration challenge")
 
-    rp_id = http_request.headers.get("host", "forewise.co").split(":")[0]
-    origin = f"https://{rp_id}"
+    rp_id, origin = _webauthn_rp_id_and_origin(http_request)
 
     try:
-        credential_json = _wn.helpers.structs.RegistrationCredential.parse_raw(
-            __import__("json").dumps(body)
-        )
+        credential_json = _wn.helpers.parse_registration_credential_json(body)
         verification = _wn.verify_registration_response(
             credential=credential_json,
             expected_challenge=expected_challenge,
@@ -1540,13 +1636,13 @@ async def webauthn_login_begin(
 
     allow_creds = [
         PublicKeyCredentialDescriptor(
-            id=bytes.fromhex(c.credential_id),
+            id=_credential_id_to_bytes(c.credential_id),
             type=PublicKeyCredentialType.PUBLIC_KEY,
         )
         for c in creds
     ]
 
-    rp_id = http_request.headers.get("host", "forewise.co").split(":")[0]
+    rp_id, _origin = _webauthn_rp_id_and_origin(http_request)
 
     options = _wn.generate_authentication_options(
         rp_id=rp_id,
@@ -1555,12 +1651,7 @@ async def webauthn_login_begin(
         timeout=60000,
     )
 
-    _wn_login_challenges[username] = {
-        "challenge": options.challenge,
-        "user_id": user.id,
-        "creds": {c.credential_id: c for c in creds},
-        "rp_id": rp_id,
-    }
+    _store_webauthn_challenge(db, user.id, "webauthn_login", options.challenge)
 
     return _wn.options_to_json(options)
 
@@ -1579,29 +1670,37 @@ async def webauthn_login_complete(
     if not username:
         raise HTTPException(status_code=400, detail="username required")
 
-    state = _wn_login_challenges.pop(username, None)
-    if not state:
+    user = db.query(User).options(
+        selectinload(User.role).selectinload(Role.permissions)
+    ).filter(
+        (User.username == username) | (User.email == username),
+        User.is_active == True,
+    ).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="משתמש לא נמצא")
+
+    expected_challenge = _consume_webauthn_challenge(db, user.id, "webauthn_login")
+    if not expected_challenge:
         raise HTTPException(status_code=400, detail="No pending authentication challenge")
 
-    rp_id   = state["rp_id"]
-    origin  = f"https://{rp_id}"
+    rp_id = _webauthn_rp_id_and_origin(http_request)[0]
+    _resolved_rp_id, origin = _webauthn_rp_id_and_origin(http_request)
 
     try:
-        credential_json = _wn.helpers.structs.AuthenticationCredential.parse_raw(
-            __import__("json").dumps(body.get("credential", body))
-        )
+        credential_json = _wn.helpers.parse_authentication_credential_json(body.get("credential", body))
         # Find the stored credential
         cred_id_hex = credential_json.raw_id.hex() if hasattr(credential_json.raw_id, 'hex') else credential_json.id
-        stored_cred = state["creds"].get(cred_id_hex)
-        if not stored_cred:
-            # try id
-            stored_cred = state["creds"].get(credential_json.id)
+        stored_cred = db.query(BiometricCredential).filter(
+            BiometricCredential.user_id == user.id,
+            BiometricCredential.is_active == True,
+            BiometricCredential.credential_id.in_([cred_id_hex, credential_json.id]),
+        ).first()
         if not stored_cred:
             raise HTTPException(status_code=400, detail="Credential not recognised")
 
         verification = _wn.verify_authentication_response(
             credential=credential_json,
-            expected_challenge=state["challenge"],
+            expected_challenge=expected_challenge,
             expected_rp_id=rp_id,
             expected_origin=origin,
             credential_public_key=stored_cred.public_key,
@@ -1619,17 +1718,14 @@ async def webauthn_login_complete(
     stored_cred.last_used_at = datetime.utcnow()
     db.commit()
 
-    # Load user and build tokens
-    user = db.query(User).options(
-        selectinload(User.role).selectinload(Role.permissions)
-    ).filter(User.id == state["user_id"]).first()
-
     access_token = create_access_token(
-        subject=str(user.id),
-        email=user.email,
-        role=user.role.code if user.role else "USER",
+        data={
+            "sub": str(user.id),
+            "email": user.email,
+            "role": user.role.code if user.role else "USER",
+        }
     )
-    refresh_token = create_refresh_token(subject=str(user.id))
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     user_payload = {
         "id": user.id,
@@ -1639,6 +1735,11 @@ async def webauthn_login_complete(
         "name": user.full_name,
         "role": {"code": user.role.code, "name": user.role.name} if user.role else None,
         "role_code": user.role.code if user.role else None,
+        "roles": [user.role.code] if user.role else [],
+        "permissions": [p.code for p in user.role.permissions] if user.role and user.role.permissions else [],
+        "region_id": getattr(user, "region_id", None),
+        "area_id": getattr(user, "area_id", None),
+        "department_id": getattr(user, "department_id", None),
         "last_login": user.last_login.isoformat() if user.last_login else None,
     }
 

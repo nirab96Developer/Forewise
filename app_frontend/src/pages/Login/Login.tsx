@@ -104,10 +104,16 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
         
         // בדיקה אם נדרש 2FA
         if (data.requires_2fa) {
+          const inferredEmail = actualUsername.includes('@') ? actualUsername.trim() : '';
+
           // שמירת נתוני OTP
-          localStorage.setItem('otp_token', data.otp_token);
+          if (data.otp_token) localStorage.setItem('otp_token', data.otp_token);
+          else localStorage.removeItem('otp_token');
           localStorage.setItem('otp_user_id', data.user_id.toString());
           localStorage.setItem('otp_username', actualUsername);
+          if (inferredEmail) localStorage.setItem('otp_email', inferredEmail);
+          else localStorage.removeItem('otp_email');
+          localStorage.setItem('otp_sent_via_login', 'true');
           
           // שמירת זכור אותי אם נבחר
           if (rememberMe) {
@@ -125,9 +131,11 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
           navigate('/otp', { 
             replace: true,
             state: { 
+              email: inferredEmail,
               username: actualUsername,
               userId: data.user_id,
               otpToken: data.otp_token,
+              otpAlreadySent: true,
               isFirstLogin: data.is_first_login || false,
             }
           });
@@ -146,7 +154,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
           
           // ספקים לא יכולים להתחבר לאפליקציה - הם משתמשים בפורטל החיצוני
           if (roleCode === 'SUPPLIER') {
-            setError('ספקים אינם יכולים להתחבר למערכת זו. אנא השתמש בלינק שקיבלת מהמתאם לפורטל הספקים.');
+            setError('ספקים אינם יכולים להתחבר למערכת זו. אנא השתמש בלינק שקיבלת ממתאם ההזמנות לפורטל הספקים.');
             setIsLoading(false);
             setGlobalLoading(false);
             return;

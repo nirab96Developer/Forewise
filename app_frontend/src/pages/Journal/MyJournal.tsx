@@ -836,8 +836,8 @@ Excel
                               wo.data.status === 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR' ? 'bg-blue-100 text-blue-700' :
                               'bg-gray-100 text-gray-600'
                             }`}>
-{wo.data.status === 'APPROVED_AND_SENT' ? ' אושר — ניתן לדווח' :
-wo.data.status === 'PENDING' ? ' ממתין לתיאום' :
+{wo.data.status === 'APPROVED_AND_SENT' ? ' אושר ונשלח' :
+wo.data.status === 'PENDING' ? ' ממתין' :
 wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
                                workOrderService.getStatusText(wo.data.status)}
                             </span>

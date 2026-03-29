@@ -72,12 +72,19 @@ def get_active_suppliers(
         count_sql = sa_text("""
             SELECT COUNT(DISTINCT s.id)
             FROM suppliers s
-            JOIN supplier_equipment se ON se.supplier_id = s.id
-            JOIN equipment_models em ON em.id = se.equipment_model_id
-            JOIN equipment_categories ec ON ec.id = em.category_id
-            WHERE (em.category_id = :cat_id
-                   OR ec.name IN (SELECT name FROM equipment_types WHERE id = :cat_id))
+            JOIN equipment e ON e.supplier_id = s.id
+            LEFT JOIN equipment_types et ON et.id = e.type_id
+            WHERE (
+                e.type_id = :cat_id
+                OR LOWER(COALESCE(e.equipment_type, '')) = LOWER(COALESCE(et.name, ''))
+                OR LOWER(COALESCE(e.equipment_type, '')) IN (
+                    SELECT LOWER(name) FROM equipment_types WHERE id = :cat_id
+                )
+            )
               AND s.is_active = TRUE AND s.deleted_at IS NULL
+              AND e.is_active = TRUE
+              AND e.license_plate IS NOT NULL
+              AND e.license_plate != ''
         """)
         total = db.execute(count_sql, {"cat_id": cat_id}).scalar() or 0
 
@@ -86,12 +93,19 @@ def get_active_suppliers(
                    s.contact_email, s.supplier_type, s.rating, s.is_active,
                    s.region_id, s.area_id, s.total_jobs, s.priority_score
             FROM suppliers s
-            JOIN supplier_equipment se ON se.supplier_id = s.id
-            JOIN equipment_models em ON em.id = se.equipment_model_id
-            JOIN equipment_categories ec ON ec.id = em.category_id
-            WHERE (em.category_id = :cat_id
-                   OR ec.name IN (SELECT name FROM equipment_types WHERE id = :cat_id))
+            JOIN equipment e ON e.supplier_id = s.id
+            LEFT JOIN equipment_types et ON et.id = e.type_id
+            WHERE (
+                e.type_id = :cat_id
+                OR LOWER(COALESCE(e.equipment_type, '')) = LOWER(COALESCE(et.name, ''))
+                OR LOWER(COALESCE(e.equipment_type, '')) IN (
+                    SELECT LOWER(name) FROM equipment_types WHERE id = :cat_id
+                )
+            )
               AND s.is_active = TRUE AND s.deleted_at IS NULL
+              AND e.is_active = TRUE
+              AND e.license_plate IS NOT NULL
+              AND e.license_plate != ''
             ORDER BY s.name
             LIMIT :limit OFFSET :offset
         """)

@@ -24,7 +24,7 @@ class InvoiceItemCreate(InvoiceItemBase):
     discount_percent: Decimal = Field(Decimal('0'), ge=0, le=100)
     discount_amount: Decimal = Field(Decimal('0'), ge=0)
     subtotal: Decimal = Field(..., ge=0)
-    tax_rate: Decimal = Field(Decimal('0.17'), ge=0, le=1)
+    tax_rate: Decimal = Field(Decimal('0.18'), ge=0, le=1)
     tax_amount: Decimal = Field(..., ge=0)
     total: Decimal = Field(..., ge=0)
     notes: Optional[str] = None

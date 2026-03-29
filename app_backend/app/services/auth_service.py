@@ -274,6 +274,8 @@ class AuthService:
             payload = decode_token(refresh_token)
         except Exception:
             raise ValueError("Refresh token invalid or expired")
+        if not payload:
+            raise ValueError("Refresh token invalid or expired")
         user_id = int(payload.get("sub", 0))
         user = self._load_user(db, user_id)
         if not user:

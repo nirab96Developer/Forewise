@@ -30,6 +30,42 @@ function bufToB64url(buf: ArrayBuffer): string {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
+function detectDeviceName(): string {
+  const ua = navigator.userAgent || '';
+  if (/iphone/i.test(ua)) return 'iPhone';
+  if (/ipad/i.test(ua)) return 'iPad';
+  if (/android/i.test(ua)) return 'Android Device';
+  if (/macintosh|mac os x/i.test(ua)) return 'Mac';
+  if (/windows/i.test(ua)) return 'Windows PC';
+  return 'Current Device';
+}
+
+function parseRegistrationOptions(options: any): PublicKeyCredentialCreationOptions {
+  return {
+    ...options,
+    challenge: b64urlToBuffer(String(options.challenge)),
+    user: {
+      ...options.user,
+      id: b64urlToBuffer(String(options.user.id)),
+    },
+    excludeCredentials: (options.excludeCredentials ?? []).map((cred: any) => ({
+      ...cred,
+      id: b64urlToBuffer(String(cred.id)),
+    })),
+  };
+}
+
+function parseAuthenticationOptions(options: any): PublicKeyCredentialRequestOptions {
+  return {
+    ...options,
+    challenge: b64urlToBuffer(String(options.challenge)),
+    allowCredentials: (options.allowCredentials ?? []).map((cred: any) => ({
+      ...cred,
+      id: b64urlToBuffer(String(cred.id)),
+    })),
+  };
+}
+
 
 /** Serialise a PublicKeyCredential to plain JSON for sending to server */
 function _credentialToJSON(cred: PublicKeyCredential): Record<string, unknown> {
@@ -94,50 +130,17 @@ class BiometricService {
     const token = localStorage.getItem('access_token');
     if (!token) throw new Error('יש להתחבר תחילה');
 
-    // Step 1 — get challenge from server
-    const beginRes = await fetch('/api/v1/auth/biometric/register', {
+    const beginRes = await fetch('/api/v1/auth/webauthn/register/begin', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!beginRes.ok) {
       const err = await beginRes.json().catch(() => ({}));
       throw new Error(err.detail || 'שגיאה בהתחלת רישום ביומטרי');
     }
     const options = await beginRes.json();
-
-    if (!options.challenge || !options.user?.id) {
-      throw new Error('תשובה לא תקינה מהשרת — חסר challenge או user.id');
-    }
-
-    const challengeBuf = b64urlToBuffer(String(options.challenge));
-    const userIdBuf = b64urlToBuffer(String(options.user.id));
-
-    const publicKey: PublicKeyCredentialCreationOptions = {
-      challenge: challengeBuf,
-      rp: options.rp || { name: 'Forewise', id: window.location.hostname },
-      user: {
-        id: userIdBuf,
-        name: options.user.name || 'user',
-        displayName: options.user.displayName || options.user.name || 'User',
-      },
-      pubKeyCredParams: options.pubKeyCredParams || [
-        { alg: -7, type: 'public-key' },
-        { alg: -257, type: 'public-key' },
-      ],
-      timeout: options.timeout || 60000,
-      attestation: 'none',
-      authenticatorSelection: {
-        authenticatorAttachment: 'platform',
-        userVerification: 'required',
-        residentKey: 'preferred',
-        requireResidentKey: false,
-      },
-      excludeCredentials: (options.excludeCredentials ?? []).map((c: any) => ({
-        ...c,
-        id: b64urlToBuffer(String(c.id)),
-      })),
-    };
+    if (!options.challenge || !options.user?.id) throw new Error('תשובה לא תקינה מהשרת');
+    const publicKey = parseRegistrationOptions(options);
 
     // Step 2 — platform authenticator dialog (Face ID / Touch ID / Windows Hello)
     let credential: PublicKeyCredential;
@@ -151,16 +154,15 @@ class BiometricService {
     if (!credential) throw new Error('יצירת credential נכשלה');
 
     // Step 3 — save credential on server
-    const completeRes = await fetch('/api/v1/auth/biometric/verify', {
+    const completeRes = await fetch('/api/v1/auth/webauthn/register/complete', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        credentialId: credential.id,
-        attestationObject: bufToB64url((credential.response as AuthenticatorAttestationResponse).attestationObject),
-        clientDataJSON: bufToB64url(credential.response.clientDataJSON),
+        ..._credentialToJSON(credential),
+        device_name: detectDeviceName(),
       }),
     });
     if (!completeRes.ok) {
@@ -182,8 +184,7 @@ class BiometricService {
       throw new Error('יש להפעיל תחילה התחברות ביומטרית מדף הברוכים הבאים');
     }
 
-    // Step 1 — get challenge from server
-    const beginRes = await fetch('/api/v1/auth/biometric/challenge', {
+    const beginRes = await fetch('/api/v1/auth/webauthn/login/begin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
@@ -198,16 +199,7 @@ class BiometricService {
       throw new Error(err.detail || 'שגיאה בהתחלת אימות');
     }
     const options = await beginRes.json();
-
-    // Explicit conversion — same rule: rp.id stays string, only binary fields become ArrayBuffer.
-    const publicKey: PublicKeyCredentialRequestOptions = {
-      ...options,
-      challenge: b64urlToBuffer(options.challenge),
-      allowCredentials: (options.allowCredentials ?? []).map((c: any) => ({
-        ...c,
-        id: b64urlToBuffer(c.id),
-      })),
-    };
+    const publicKey = parseAuthenticationOptions(options);
 
     // Step 2 — platform authenticator dialog
     let assertion: PublicKeyCredential;
@@ -220,15 +212,12 @@ class BiometricService {
     if (!assertion) throw new Error('אימות נכשל');
 
     // Step 3 — verify on server
-    const completeRes = await fetch('/api/v1/auth/biometric/authenticate', {
+    const completeRes = await fetch('/api/v1/auth/webauthn/login/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        credentialId: assertion.id,
         username,
-        authenticatorData: bufToB64url((assertion.response as AuthenticatorAssertionResponse).authenticatorData),
-        signature: bufToB64url((assertion.response as AuthenticatorAssertionResponse).signature),
-        clientDataJSON: bufToB64url(assertion.response.clientDataJSON),
+        credential: _credentialToJSON(assertion),
       }),
     });
     if (!completeRes.ok) {

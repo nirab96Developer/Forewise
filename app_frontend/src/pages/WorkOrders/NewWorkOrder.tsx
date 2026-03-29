@@ -11,6 +11,7 @@ import workOrderService, { WorkOrderCreate } from '../../services/workOrderServi
 import projectService from '../../services/projectService';
 import supplierService from '../../services/supplierService';
 import equipmentService from '../../services/equipmentService';
+import equipmentTypeService from '../../services/equipmentTypeService';
 import api from '../../services/api';
 import { saveOfflineWorkOrder } from '../../utils/offlineStorage';
 import { showToast } from '../../components/common/Toast';
@@ -44,6 +45,10 @@ interface EquipmentCategory {
   id: number;
   name: string;
   code: string;
+  hourly_rate?: number;
+  default_hourly_rate?: number;
+  overnight_rate?: number;
+  night_guard?: boolean;
 }
 
 // Section Title Component
@@ -88,26 +93,40 @@ const NewWorkOrder: React.FC = () => {
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [_touched, setTouched] = useState<Record<string, boolean>>({});
-  const [overnightGuardRate, setOvernightGuardRate] = useState<number>(250); // fetched from API
+  const [pricingPreview, setPricingPreview] = useState<{
+    hourlyRate: number;
+    rateSourceName?: string;
+    totalCost: number;
+    totalWithVat: number;
+  } | null>(null);
+  const [allocationPreview, setAllocationPreview] = useState<{
+    supplierId?: number | null;
+    supplierName?: string | null;
+    allocationMethod?: string;
+    fallbackLevel?: string;
+    notifyCoordinator?: boolean;
+  } | null>(null);
 
   // Billable hours = 9h/day net (shift is 10.5h total, but 1.5h break is excluded from billing)
   const BILLABLE_HOURS_PER_DAY = 9;
-  const DEFAULT_HOURLY_RATE = 150;
-  const OVERNIGHT_NIGHT_RATE = 250;
   const workDaysNumber = formData.work_days === '' ? null : Number(formData.work_days);
   const quantityNumber = formData.quantity === '' ? null : Number(formData.quantity);
   const totalHours = workDaysNumber && workDaysNumber > 0 ? workDaysNumber * BILLABLE_HOURS_PER_DAY : 0;
-  const rateForEstimate =
-    formData.hourly_rate === '' || formData.hourly_rate === null || Number.isNaN(Number(formData.hourly_rate))
-      ? DEFAULT_HOURLY_RATE
-      : Number(formData.hourly_rate);
+  const selectedEquipmentType = selectedCategoryId
+    ? equipmentCategories.find(cat => cat.id === selectedCategoryId) || null
+    : null;
+  const rateForEstimate = pricingPreview?.hourlyRate ?? 0;
+  const overnightGuardRate = selectedEquipmentType?.overnight_rate ?? 0;
   const overnightNightsComputed =
     formData.has_overnight && workDaysNumber && workDaysNumber > 0
       ? Math.max(0, workDaysNumber - 1)
       : 0;
   const hoursCostEstimate = totalHours * rateForEstimate;
-  const overnightCostEstimate = overnightNightsComputed * OVERNIGHT_NIGHT_RATE;
+  const overnightCostEstimate = overnightNightsComputed * overnightGuardRate;
   const totalAmountEstimate = hoursCostEstimate + overnightCostEstimate;
+  const totalAmountWithVatEstimate = pricingPreview
+    ? pricingPreview.totalWithVat + overnightCostEstimate * 1.18
+    : totalAmountEstimate * 1.18;
   
   // Calculate end date
   const endDate = formData.start_date && workDaysNumber && workDaysNumber > 0 ? (() => {
@@ -153,6 +172,90 @@ const NewWorkOrder: React.FC = () => {
       });
   }, [selectedCategoryId, formData.allocation_method]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPricingPreview = async () => {
+      if (!selectedCategoryId || !selectedProject?.id || totalHours <= 0) {
+        setPricingPreview(null);
+        return;
+      }
+
+      try {
+        const supplierId =
+          formData.allocation_method === 'supplier_selection' && formData.supplier_id
+            ? Number(formData.supplier_id)
+            : undefined;
+        const result = await equipmentTypeService.computeCost({
+          work_type: 'fieldwork',
+          hours: totalHours,
+          equipment_type_id: selectedCategoryId,
+          supplier_id: supplierId,
+          project_id: selectedProject.id,
+        });
+        if (cancelled) return;
+        setPricingPreview({
+          hourlyRate: Number(result.hourly_rate || 0),
+          rateSourceName: result.rate_source_name,
+          totalCost: Number(result.total_cost || 0),
+          totalWithVat: Number(result.total_cost_with_vat || 0),
+        });
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading pricing preview:', err);
+          setPricingPreview(null);
+        }
+      }
+    };
+
+    loadPricingPreview();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCategoryId, selectedProject?.id, totalHours, formData.allocation_method, formData.supplier_id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAllocationPreview = async () => {
+      if (!selectedProject?.id || !formData.tool_type) {
+        setAllocationPreview(null);
+        return;
+      }
+
+      try {
+        const supplierId =
+          formData.allocation_method === 'supplier_selection' && formData.supplier_id
+            ? Number(formData.supplier_id)
+            : undefined;
+        const response = await api.post('/work-orders/preview-allocation', {
+          project_id: selectedProject.id,
+          equipment_type: formData.tool_type,
+          allocation_method: formData.allocation_method === 'fair_rotation' ? 'FAIR_ROTATION' : 'MANUAL',
+          supplier_id: supplierId,
+        });
+        if (cancelled) return;
+        setAllocationPreview({
+          supplierId: response.data?.supplier_id,
+          supplierName: response.data?.supplier_name,
+          allocationMethod: response.data?.allocation_method,
+          fallbackLevel: response.data?.fallback_level,
+          notifyCoordinator: response.data?.notify_coordinator,
+        });
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading allocation preview:', err);
+          setAllocationPreview(null);
+        }
+      }
+    };
+
+    loadAllocationPreview();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProject?.id, formData.tool_type, formData.allocation_method, formData.supplier_id]);
+
   const loadData = async () => {
     setLoadingData(true);
     setError(null);
@@ -192,16 +295,6 @@ const NewWorkOrder: React.FC = () => {
       setError('שגיאה בטעינת נתונים');
     }
     
-    // Fetch overnight guard rate from work_hour_settings
-    try {
-      const whRes = await api.get('/settings/work-hours').catch(() => null);
-      if (whRes?.data?.overnight_guard_rate !== undefined) {
-        setOvernightGuardRate(Number(whRes.data.overnight_guard_rate) || 250);
-      }
-    } catch {
-      // keep default 250
-    }
-
     // Always stop loading
     setLoadingData(false);
   };
@@ -324,13 +417,10 @@ const NewWorkOrder: React.FC = () => {
       work_end_date: endDate,
       priority: 'medium',
       estimated_hours: totalHours,
-      hourly_rate: rateForEstimate,
       days: workDaysNumber ?? undefined,
       has_overnight: formData.has_overnight,
       overnight_nights: overnightNightsComputed,
       allocation_method: formData.allocation_method === 'fair_rotation' ? 'FAIR_ROTATION' : 'MANUAL',
-      total_amount: totalAmountEstimate,
-      frozen_amount: totalAmountEstimate,
       is_forced_selection: formData.allocation_method === 'supplier_selection',
       constraint_reason_id: formData.allocation_method === 'supplier_selection' && formData.constraint_reason_id
         ? parseInt(formData.constraint_reason_id.toString())
@@ -350,7 +440,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
       }
 
       await workOrderService.createWorkOrder(workOrderData);
-showToast('ההזמנה נשלחה בהצלחה למתאם ההזמנות ', 'success');
+showToast('ההזמנה נשלחה בהצלחה לאישור מתאם ההזמנות', 'success');
       // Navigate back to project workspace (if came from a project)
       if (projectCode) {
         navigate(`/projects/${projectCode}`);
@@ -544,6 +634,11 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
 שמירה: {formData.guard_days} לילות × {overnightGuardRate} = {(formData.guard_days * overnightGuardRate).toLocaleString('he-IL')}
                     </p>
                   )}
+                  {pricingPreview?.rateSourceName && rateForEstimate > 0 && (
+                    <p className="text-xs text-kkl-green mt-1 leading-tight max-w-full break-words">
+                      תעריף: {rateForEstimate.toLocaleString('he-IL')} לשעה · מקור: {pricingPreview.rateSourceName}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -658,7 +753,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                           </span>
                         </div>
                         <p className="text-xs text-indigo-500 mt-1">
-תעריף לפי הגדרות מערכת ({overnightGuardRate}/לילה)
+תעריף לפי הגדרות ספקים ({overnightGuardRate}/לילה)
                         </p>
                       </div>
                     )}
@@ -792,6 +887,25 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                 )}
               </div>
             )}
+
+            {formData.allocation_method === 'fair_rotation' && allocationPreview && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-2">
+                <div className="flex items-start gap-2 text-sm text-blue-800">
+                  <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium">תצוגת בחירת ספק לפי השרת</p>
+                    {allocationPreview.supplierName ? (
+                      <p className="mt-1">
+                        הספק הבא בתור כרגע הוא <strong>{allocationPreview.supplierName}</strong>
+                        {allocationPreview.fallbackLevel === 'region' ? ' (נבחר ברמת מרחב)' : ''}
+                      </p>
+                    ) : (
+                      <p className="mt-1">לא נמצא כרגע ספק זמין שמתאים להזמנה זו.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* === בלוק 4: הערות נוספות (אופציונלי) === */}
@@ -819,6 +933,27 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
           )}
 
           {/* === כפתורים === */}
+          {totalAmountEstimate > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-5">
+              <SectionTitle icon={<Info className="w-5 h-5" />}>
+                תחזית עלות
+              </SectionTitle>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div className="bg-kkl-green-light rounded-lg p-4 border border-kkl-green/20">
+                  <div className="text-gray-500 mb-1">עלות עבודה</div>
+                  <div className="text-xl font-bold text-kkl-green">{hoursCostEstimate.toLocaleString('he-IL')}</div>
+                </div>
+                <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                  <div className="text-gray-500 mb-1">עלות שמירה</div>
+                  <div className="text-xl font-bold text-indigo-700">{overnightCostEstimate.toLocaleString('he-IL')}</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="text-gray-500 mb-1">סה"כ כולל מע"מ</div>
+                  <div className="text-xl font-bold text-kkl-text">{Math.round(totalAmountWithVatEstimate).toLocaleString('he-IL')}</div>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-4 border-t border-kkl-border">
             <button
               type="button"

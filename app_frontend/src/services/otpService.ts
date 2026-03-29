@@ -44,12 +44,12 @@ class OTPService {
   /**
    * אימות OTP
    */
-  async verifyOTP(userId: number, code: string, email: string): Promise<OTPVerifyResponse> {
+  async verifyOTP(userId: number, code: string, email?: string): Promise<OTPVerifyResponse> {
     try {
       const response = await api.post('/auth/verify-otp', {
         user_id: userId,
         code: code,
-        email: email
+        email: email || String(userId)
       });
       return response.data;
     } catch (error) {
@@ -61,11 +61,12 @@ class OTPService {
   /**
    * שליחה חוזרת של OTP
    */
-  async resendOTP(userId: number): Promise<OTPSendResponse> {
+  async resendOTP(userId: number, email?: string): Promise<OTPSendResponse> {
     try {
       const response = await api.post('/auth/resend-otp', {
         user_id: userId,
-        code: '' // לא נדרש לשליחה חוזרת
+        code: '', // לא נדרש לשליחה חוזרת
+        email: email || String(userId)
       });
       return response.data;
     } catch (error) {

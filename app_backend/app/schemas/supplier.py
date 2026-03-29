@@ -2,6 +2,7 @@
 Supplier schemas
 """
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
@@ -95,9 +96,12 @@ class SupplierStatistics(BaseModel):
 
 
 class SupplierEquipmentBase(BaseModel):
+    equipment_category_id: Optional[int] = None
     equipment_model_id: Optional[int] = None
     license_plate: Optional[str] = None
     status: Optional[str] = "available"
+    quantity_available: Optional[int] = 1
+    hourly_rate: Optional[Decimal] = Field(None, ge=0)
     is_active: Optional[bool] = True
 
 

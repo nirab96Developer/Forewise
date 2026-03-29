@@ -139,7 +139,7 @@ async def simulate_days_cost(
         "total_hours": float(total_hours),
         "hourly_rate": result["hourly_rate"],
         "subtotal": result["total_cost"],
-        "vat_rate": 0.17,
+        "vat_rate": 0.18,
         "vat_amount": result["total_cost_with_vat"] - result["total_cost"],
         "total_with_vat": result["total_cost_with_vat"],
         "rate_source": result["rate_source"],

@@ -39,12 +39,7 @@ const Invoices: React.FC = () => {
           ? (invoicesRaw as any).items
           : [];
 
-        // Map invoices to ensure work_order_id is always a number
-        const mappedInvoices: Invoice[] = invoicesData.map(inv => ({
-          ...inv,
-          work_order_id: inv.work_order_id ?? 0
-        }));
-        setInvoices(mappedInvoices);
+        setInvoices(invoicesData);
         setSummary(summaryData);
         setIsLoading(false);
       } catch (err) {
@@ -199,7 +194,7 @@ const Invoices: React.FC = () => {
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-2">אין חשבוניות עדיין</h3>
               <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-                חשבוניות יופיעו כאן לאחר אישור הזמנות עבודה על ידי ספקים
+                חשבוניות יופיעו כאן לאחר אישור דיווחי עבודה ויצירת חיוב במערכת
               </p>
               <div className="flex items-center justify-center gap-3">
                 <button 

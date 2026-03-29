@@ -704,6 +704,10 @@ def toggle_equipment_active(
     if not eq:
         raise HTTPException(status_code=404, detail="ציוד לא נמצא")
     eq.is_active = not eq.is_active
+    try:
+        equipment_service._sync_supplier_equipment_shadow(db, eq)
+    except Exception:
+        pass
     db.commit()
     return {"id": equipment_id, "is_active": eq.is_active}
 

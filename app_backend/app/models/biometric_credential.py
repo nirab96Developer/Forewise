@@ -21,7 +21,7 @@ class BiometricCredential(Base):
     last_used_at = Column(DateTime, nullable=True)
 
     # Relationship
-    user = relationship("User", backref="biometric_credentials")
+    user = relationship("User", back_populates="biometric_credentials")
 
     def __repr__(self):
         return f"<BiometricCredential {self.credential_id[:20]}... for user {self.user_id}>"

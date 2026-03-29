@@ -14,6 +14,7 @@ from app.models.equipment_category import EquipmentCategory
 from app.models.supplier import Supplier
 from app.models.location import Location
 from app.models.equipment_assignment import EquipmentAssignment
+from app.models.supplier_equipment import SupplierEquipment
 from app.schemas.equipment import (
     EquipmentCreate,
     EquipmentUpdate,
@@ -37,6 +38,85 @@ class EquipmentService(BaseService[Equipment]):
     
     def __init__(self):
         super().__init__(Equipment)
+
+    def _resolve_supplier_equipment_mapping(
+        self,
+        db: Session,
+        type_id: Optional[int] = None,
+        equipment_type_name: Optional[str] = None,
+    ) -> tuple[Optional[int], Optional[int]]:
+        """
+        Resolve supplier_equipment-compatible category/model from equipment type.
+
+        Returns: (equipment_category_id, equipment_model_id)
+        """
+        from app.models.equipment_model import EquipmentModel
+
+        type_obj = None
+        if type_id:
+            type_obj = db.query(EquipmentType).filter(EquipmentType.id == type_id).first()
+
+        category = None
+        if type_obj and getattr(type_obj, "category_id", None):
+            category = db.query(EquipmentCategory).filter(
+                EquipmentCategory.id == type_obj.category_id
+            ).first()
+
+        type_name = equipment_type_name or (type_obj.name if type_obj else None)
+        if not category and type_name:
+            category = db.query(EquipmentCategory).filter(
+                func.lower(EquipmentCategory.name) == func.lower(type_name)
+            ).first()
+
+        if not category:
+            return None, None
+
+        model = (
+            db.query(EquipmentModel)
+            .filter(
+                EquipmentModel.category_id == category.id,
+                EquipmentModel.is_active == True,
+            )
+            .order_by(EquipmentModel.id.asc())
+            .first()
+        )
+        return category.id, model.id if model else None
+
+    def _sync_supplier_equipment_shadow(self, db: Session, equipment: Equipment) -> None:
+        """
+        Keep supplier_equipment aligned with equipment rows managed from Supplier Settings.
+
+        This preserves compatibility for legacy backend flows that still read
+        supplier_equipment while the UI source of truth is the equipment table.
+        """
+        if not equipment.supplier_id or not equipment.license_plate:
+            return
+
+        category_id, model_id = self._resolve_supplier_equipment_mapping(
+            db,
+            type_id=equipment.type_id,
+            equipment_type_name=equipment.equipment_type,
+        )
+
+        row = db.query(SupplierEquipment).filter(
+            SupplierEquipment.supplier_id == equipment.supplier_id,
+            func.upper(SupplierEquipment.license_plate) == equipment.license_plate.upper(),
+        ).first()
+
+        if not row:
+            row = SupplierEquipment(
+                supplier_id=equipment.supplier_id,
+                license_plate=equipment.license_plate,
+            )
+            db.add(row)
+
+        row.equipment_category_id = category_id
+        if model_id:
+            row.equipment_model_id = model_id
+        row.status = equipment.status or row.status or "available"
+        row.hourly_rate = equipment.hourly_rate
+        row.quantity_available = 1 if equipment.is_active else 0
+        row.is_active = bool(equipment.is_active)
 
     def _base_query(self, db: Session, include_deleted: bool = False):
         """Override base query to add eager loading and avoid N+1."""
@@ -135,6 +215,8 @@ class EquipmentService(BaseService[Equipment]):
         equipment = Equipment(**equipment_dict)
         
         db.add(equipment)
+        db.flush()
+        self._sync_supplier_equipment_shadow(db, equipment)
         db.commit()
         db.refresh(equipment)
         
@@ -230,6 +312,7 @@ class EquipmentService(BaseService[Equipment]):
         if equipment.version is not None:
             equipment.version += 1
         
+        self._sync_supplier_equipment_shadow(db, equipment)
         db.commit()
         db.refresh(equipment)
         

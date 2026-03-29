@@ -45,7 +45,7 @@ class Session(BaseModel):
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationships
-    user: Mapped["User"] = relationship("User")
+    user: Mapped["User"] = relationship("User", back_populates="sessions")
 
     def __repr__(self):
         return f"<Session(id={self.id}, user_id={self.user_id}, session_id='{self.session_id[:20]}...')>"

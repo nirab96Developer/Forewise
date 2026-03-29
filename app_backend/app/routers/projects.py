@@ -20,6 +20,44 @@ router = APIRouter(prefix="/projects", tags=["Projects"])
 service = ProjectService()
 
 
+def _effective_project_status(
+    project_data: dict,
+    *,
+    has_work_manager: bool = False,
+    has_area_manager: bool = False,
+    has_accountant: bool = False,
+) -> str:
+    """
+    Backend source-of-truth for project status shown to the UI.
+
+    A project is considered ACTIVE only when:
+    - DB status/is_active do not indicate otherwise
+    - region, area and location exist
+    - a work manager is assigned
+    - area manager exists for the area
+    - accountant exists for the area
+    - allocated budget is greater than zero
+    """
+    base_status = str(project_data.get("status") or "active").lower()
+    if base_status in {"completed", "cancelled", "on_hold", "planned", "planning"}:
+        return "planning" if base_status in {"planned", "planning"} else base_status
+
+    if project_data.get("is_active") is False:
+        return "on_hold"
+
+    budget = float(project_data.get("allocated_budget") or 0)
+    required_ok = all([
+        project_data.get("region_id"),
+        project_data.get("area_id"),
+        project_data.get("location_id"),
+        has_work_manager,
+        has_area_manager,
+        has_accountant,
+        budget > 0,
+    ])
+    return "active" if required_ok else "planning"
+
+
 @router.get("", response_model=ProjectList)
 def list_projects(
     search: Annotated[ProjectSearch, Depends()],
@@ -33,9 +71,14 @@ def list_projects(
 # Role-based scope filtering 
     role_code = current_user.role.code if current_user.role else ""
 
-    if role_code in ("ADMIN", "ORDER_COORDINATOR"):
+    if role_code == "ADMIN":
         # Full access — no extra filtering
         pass
+
+    elif role_code == "ORDER_COORDINATOR":
+        # Restrict to own region
+        if search.region_id is None and current_user.region_id:
+            search.region_id = current_user.region_id
 
     elif role_code == "REGION_MANAGER":
         # Restrict to own region (unless caller already narrowed further)
@@ -85,8 +128,65 @@ def list_projects(
             "WHERE project_id = ANY(:ids) AND is_active=true AND deleted_at IS NULL"
         ), {"ids": ids}).fetchall()
         budget_map = {r[0]: float(r[1]) for r in budget_rows}
+
+        wm_rows = db.execute(sa_text("""
+            SELECT pa.project_id, u.id, u.full_name
+            FROM project_assignments pa
+            JOIN users u ON u.id = pa.user_id
+            JOIN roles r ON r.id = u.role_id
+            WHERE pa.project_id = ANY(:ids)
+              AND pa.is_active = TRUE
+              AND u.is_active = TRUE
+              AND r.code = 'WORK_MANAGER'
+        """), {"ids": ids}).fetchall()
+        wm_map = {}
+        for row in wm_rows:
+            wm_map.setdefault(row[0], {"id": row[1], "full_name": row[2]})
+
+        area_ids = list({p.area_id for p in items if p.area_id})
+        accountant_map = {}
+        area_manager_map = {}
+        if area_ids:
+            accountant_rows = db.execute(sa_text("""
+                SELECT u.area_id, u.id, u.full_name
+                FROM users u
+                JOIN roles r ON r.id = u.role_id
+                WHERE r.code = 'ACCOUNTANT'
+                  AND u.area_id = ANY(:aids)
+                  AND u.is_active = TRUE
+            """), {"aids": area_ids}).fetchall()
+            for row in accountant_rows:
+                accountant_map.setdefault(row[0], {"id": row[1], "full_name": row[2]})
+
+            area_manager_rows = db.execute(sa_text("""
+                SELECT u.area_id, u.id, u.full_name
+                FROM users u
+                JOIN roles r ON r.id = u.role_id
+                WHERE r.code = 'AREA_MANAGER'
+                  AND u.area_id = ANY(:aids)
+                  AND u.is_active = TRUE
+            """), {"aids": area_ids}).fetchall()
+            for row in area_manager_rows:
+                area_manager_map.setdefault(row[0], {"id": row[1], "full_name": row[2]})
+
         for p in items:
             p.__dict__['allocated_budget'] = budget_map.get(p.id, 0.0)
+            p.__dict__['manager'] = wm_map.get(p.id)
+            p.__dict__['accountant'] = accountant_map.get(p.area_id)
+            p.__dict__['area_manager'] = area_manager_map.get(p.area_id)
+            p.__dict__['status'] = _effective_project_status(
+                {
+                    "status": p.status,
+                    "is_active": p.is_active,
+                    "region_id": p.region_id,
+                    "area_id": p.area_id,
+                    "location_id": p.location_id,
+                    "allocated_budget": p.__dict__.get('allocated_budget'),
+                },
+                has_work_manager=bool(p.__dict__.get('manager')),
+                has_area_manager=bool(p.__dict__.get('area_manager')),
+                has_accountant=bool(p.__dict__.get('accountant')),
+            )
 
     return ProjectList(items=items, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
@@ -258,8 +358,89 @@ def get_by_code_alias(
     if item.id in coords:
         result["latitude"] = coords[item.id]["latitude"]
         result["longitude"] = coords[item.id]["longitude"]
+
+    result["status"] = _effective_project_status(
+        result,
+        has_work_manager=bool(result.get("manager")),
+        has_area_manager=bool(result.get("area_manager")),
+        has_accountant=bool(result.get("accountant")),
+    )
     
     return result
+
+
+@router.get("/code/{code}/workspace-summary")
+def get_workspace_summary(
+    code: str,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Get server-side summary numbers for Project Workspace."""
+    require_permission(current_user, "projects.read")
+
+    item = service.get_by_code(db, code)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Project '{code}' not found")
+
+    from sqlalchemy import text as sa_text
+
+    budget = db.query(Budget).filter(
+        Budget.project_id == item.id,
+        Budget.is_active == True,
+        Budget.deleted_at.is_(None),
+    ).first()
+
+    budget_total = float(budget.total_amount or 0) if budget else 0.0
+    budget_spent = float(budget.spent_amount or 0) if budget else 0.0
+    budget_committed = float(budget.committed_amount or 0) if budget else 0.0
+    budget_available = budget_total - budget_spent - budget_committed
+    budget_used_percent = round((budget_spent / budget_total) * 100) if budget_total > 0 else 0
+
+    orders_row = db.execute(sa_text("""
+        SELECT
+            COUNT(*) FILTER (
+                WHERE deleted_at IS NULL
+                  AND is_active = TRUE
+                  AND status NOT IN ('COMPLETED', 'REJECTED', 'CANCELLED', 'EXPIRED', 'STOPPED')
+            ) AS active_orders,
+            COUNT(*) FILTER (
+                WHERE deleted_at IS NULL
+                  AND is_active = TRUE
+                  AND status = 'PENDING'
+            ) AS pending_orders
+        FROM work_orders
+        WHERE project_id = :pid
+    """), {"pid": item.id}).first()
+
+    worklogs_row = db.execute(sa_text("""
+        SELECT
+            COUNT(*) FILTER (
+                WHERE is_active = TRUE
+                  AND UPPER(status) IN ('PENDING', 'SUBMITTED')
+            ) AS open_reports,
+            COUNT(*) FILTER (
+                WHERE is_active = TRUE
+                  AND UPPER(status) = 'PENDING'
+            ) AS pending_reports
+        FROM worklogs
+        WHERE project_id = :pid
+    """), {"pid": item.id}).first()
+
+    return {
+        "project_id": item.id,
+        "project_code": item.code,
+        "stats": {
+            "budgetTotal": budget_total,
+            "budgetSpent": budget_spent,
+            "budgetCommitted": budget_committed,
+            "budgetAvailable": budget_available,
+            "budgetUsedPercent": budget_used_percent,
+            "activeOrders": int(orders_row.active_orders or 0) if orders_row else 0,
+            "pendingOrders": int(orders_row.pending_orders or 0) if orders_row else 0,
+            "openReports": int(worklogs_row.open_reports or 0) if worklogs_row else 0,
+            "pendingReports": int(worklogs_row.pending_reports or 0) if worklogs_row else 0,
+        }
+    }
 
 
 @router.get("/{item_id}", response_model=ProjectResponse)

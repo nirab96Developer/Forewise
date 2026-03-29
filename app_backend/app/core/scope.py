@@ -18,9 +18,9 @@ from app.core.exceptions import ForbiddenException
 log = logging.getLogger(__name__)
 
 GLOBAL_ROLES = frozenset({"ADMIN"})
-REGIONAL_ROLES = frozenset({"REGION_MANAGER"})
+REGIONAL_ROLES = frozenset({"REGION_MANAGER", "ORDER_COORDINATOR"})
 AREA_ROLES = frozenset({"AREA_MANAGER", "ACCOUNTANT"})
-FIELD_ROLES = frozenset({"WORK_MANAGER", "ORDER_COORDINATOR"})
+FIELD_ROLES = frozenset({"WORK_MANAGER"})
 
 
 def _role_code(user) -> str:
@@ -36,7 +36,7 @@ def enforce_scope_for_project(user, project, db: Session = None):
     - REGION_MANAGER: project must be in user's region
     - AREA_MANAGER / ACCOUNTANT: project must be in user's area
     - WORK_MANAGER: project must be in user's area
-    - ORDER_COORDINATOR: project must be in user's area
+    - ORDER_COORDINATOR: project must be in user's region
     """
     role = _role_code(user).upper()
     if role in GLOBAL_ROLES:

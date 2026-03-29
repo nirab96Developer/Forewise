@@ -12,15 +12,15 @@ let ScanEquipmentModal: React.FC<any> = () => null;
 try { ScanEquipmentModal = require('../../components/equipment/ScanEquipmentModal').default; } catch {}
 
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  'PENDING': { label: 'ממתין לאישור', color: '#854d0e', bg: '#fef9c3' },
+  'PENDING': { label: 'ממתין', color: '#854d0e', bg: '#fef9c3' },
   'DISTRIBUTING': { label: 'בהפצה לספקים', color: '#854d0e', bg: '#fef9c3' },
-  'APPROVED': { label: 'מאושר', color: '#166534', bg: '#dcfce7' },
+  'APPROVED': { label: 'אושר ונשלח', color: '#166534', bg: '#dcfce7' },
   'APPROVED_AND_SENT': { label: 'אושר ונשלח', color: '#166534', bg: '#dcfce7' },
-  'COORDINATOR_APPROVED': { label: 'מתאם אישר', color: '#166534', bg: '#dcfce7' },
-  'ACTIVE': { label: 'פעיל', color: '#166534', bg: '#dcfce7' },
+  'COORDINATOR_APPROVED': { label: 'אושר ונשלח', color: '#166534', bg: '#dcfce7' },
+  'ACTIVE': { label: 'אושר ונשלח', color: '#166534', bg: '#dcfce7' },
   'IN_PROGRESS': { label: 'בביצוע', color: '#1e40af', bg: '#dbeafe' },
-  'PENDING_SUPPLIER': { label: 'ממתין לספק', color: '#9a3412', bg: '#fed7aa' },
-  'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': { label: 'ספק אישר — ממתין למתאם', color: '#1e40af', bg: '#dbeafe' },
+  'PENDING_SUPPLIER': { label: 'בהפצה לספקים', color: '#9a3412', bg: '#fed7aa' },
+  'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': { label: 'ספק אישר — ממתין לאישור מתאם', color: '#1e40af', bg: '#dbeafe' },
   'COMPLETED': { label: 'הושלם', color: '#374151', bg: '#e5e7eb' },
   'REJECTED': { label: 'נדחה', color: '#991b1b', bg: '#fee2e2' },
   'CANCELLED': { label: 'בוטל', color: '#991b1b', bg: '#fee2e2' },

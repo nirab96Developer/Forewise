@@ -20,6 +20,7 @@ const OTP = lazy(() => import("../pages/OTP/OTP"));
 const ChangePassword = lazy(() => import("../pages/Auth/ChangePassword"));
 const WelcomeSplash = lazy(() => import("../pages/Auth/WelcomeSplash"));
 const PendingSync = lazy(() => import("../pages/PendingSync/PendingSync"));
+const OfflineFallback = lazy(() => import("../pages/Offline/OfflineFallback"));
 const BudgetTransfers = lazy(() => import("../pages/Budget/BudgetTransfers"));
 const SupplierPortal = lazy(() => import("../pages/SupplierPortal/SupplierPortal"));
 
@@ -141,6 +142,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/otp" element={<OTP setGlobalLoading={setGlobalLoading} />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/welcome" element={<WelcomeSplash />} />
+        <Route path="/offline" element={<OfflineFallback />} />
         <Route path="/pending-sync" element={<PendingSync />} />
         <Route path="/budget-transfers" element={<Guarded permission={PERMISSIONS.BUDGETS_VIEW}><BudgetTransfers /></Guarded>} />
         {/* Supplier Portal - External landing page (no auth required) */}

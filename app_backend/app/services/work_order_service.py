@@ -7,14 +7,70 @@ from typing import List, Optional
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.exceptions import ValidationException
 from app.models.work_order import WorkOrder
 from app.models.supplier import Supplier
 from app.models.project import Project
 from app.schemas.work_order import WorkOrderCreate, WorkOrderUpdate, WorkOrderResponse
+from app.services.rate_service import resolve_supplier_pricing
 
 
 class WorkOrderService:
     """Service for work order operations."""
+
+    def _resolve_requested_equipment_model_id(
+        self,
+        db: Session,
+        equipment_type_name: Optional[str] = None,
+        equipment_type_id: Optional[int] = None,
+    ) -> Optional[int]:
+        """Resolve a default equipment model from equipment type / category naming."""
+        from app.models.equipment_model import EquipmentModel
+        from app.models.equipment_category import EquipmentCategory
+        from app.models.equipment_type import EquipmentType
+
+        lookup_name = equipment_type_name
+        if equipment_type_id and not lookup_name:
+            et = db.query(EquipmentType).filter(EquipmentType.id == equipment_type_id).first()
+            lookup_name = et.name if et else None
+
+        if not lookup_name:
+            return None
+
+        category = (
+            db.query(EquipmentCategory)
+            .filter(EquipmentCategory.name.ilike(lookup_name.strip()))
+            .first()
+        )
+        if not category:
+            return None
+
+        model = (
+            db.query(EquipmentModel)
+            .filter(
+                EquipmentModel.category_id == category.id,
+                EquipmentModel.is_active == True,
+            )
+            .order_by(EquipmentModel.id.asc())
+            .first()
+        )
+        return model.id if model else None
+
+    def _resolve_work_order_pricing(self, db: Session, wo_dict: dict) -> dict:
+        """Resolve estimated pricing from the supplier settings source of truth."""
+        pricing = resolve_supplier_pricing(
+            db=db,
+            supplier_id=wo_dict.get("supplier_id"),
+            equipment_type_name=wo_dict.get("equipment_type"),
+            equipment_model_id=wo_dict.get("requested_equipment_model_id"),
+        )
+        hourly_rate = float(pricing.get("hourly_rate") or 0)
+        overnight_rate = float(pricing.get("overnight_rate") or 0)
+        return {
+            "hourly_rate": hourly_rate,
+            "overnight_rate": overnight_rate,
+            "source": pricing.get("source") or "none",
+        }
 
     def get_work_order(self, db: Session, work_order_id: int) -> Optional[WorkOrder]:
         """Get work order by ID with relationships."""
@@ -71,6 +127,10 @@ class WorkOrderService:
                    if v is not None and k not in ("order_number",)}
         # Normalize status to UPPERCASE
         wo_dict['status'] = (wo_dict.get('status') or 'PENDING').upper()
+        # Financial values are derived server-side from supplier settings.
+        wo_dict.pop('hourly_rate', None)
+        wo_dict.pop('total_amount', None)
+        wo_dict.pop('frozen_amount', None)
 
         # Validate estimated_hours > 0
         if not wo_dict.get("estimated_hours") or float(wo_dict.get("estimated_hours", 0)) <= 0:
@@ -101,33 +161,28 @@ class WorkOrderService:
                     detail="חובה לציין סוג כלי (equipment_type)"
                 )
 
-            # Step 1: find category by name (case-insensitive, try exact then ILIKE)
-            cat_row = db.execute(sa_text(
-                "SELECT id FROM equipment_categories WHERE LOWER(name) = LOWER(:n) AND deleted_at IS NULL LIMIT 1"
-            ), {"n": equipment_type_name}).fetchone()
-
-            if not cat_row:
-                cat_row = db.execute(sa_text(
-                    "SELECT id FROM equipment_categories WHERE name ILIKE :n AND deleted_at IS NULL LIMIT 1"
-                ), {"n": f"%{equipment_type_name}%"}).fetchone()
-
-            if not cat_row:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"סוג כלי '{equipment_type_name}' לא נמצא במערכת. ודא שהשם תואם לקטגוריות הקיימות."
-                )
-            cat_id = cat_row[0]
-
-            # Step 2: find default model for that category
-            model_row = db.execute(sa_text(
-                "SELECT id FROM equipment_models WHERE category_id = :c AND deleted_at IS NULL ORDER BY id LIMIT 1"
-            ), {"c": cat_id}).fetchone()
-            if not model_row:
+            model_id = self._resolve_requested_equipment_model_id(
+                db,
+                equipment_type_name=equipment_type_name,
+            )
+            if not model_id:
                 raise HTTPException(
                     status_code=400,
                     detail=f"לא נמצא דגם ציוד לקטגוריה: '{equipment_type_name}'"
                 )
-            wo_dict["requested_equipment_model_id"] = model_row[0]
+            wo_dict["requested_equipment_model_id"] = model_id
+
+        pricing_info = self._resolve_work_order_pricing(db, wo_dict)
+        wo_dict["hourly_rate"] = pricing_info["hourly_rate"] if pricing_info["hourly_rate"] > 0 else None
+
+        overnight_nights = int(wo_dict.get('overnight_nights') or wo_dict.get('guard_days') or 0)
+        if wo_dict.get("estimated_hours") and pricing_info["hourly_rate"] > 0:
+            estimated_cost = (
+                float(wo_dict.get("estimated_hours") or 0) * pricing_info["hourly_rate"]
+                + overnight_nights * pricing_info["overnight_rate"]
+            )
+            wo_dict["total_amount"] = estimated_cost
+            wo_dict["frozen_amount"] = estimated_cost
 
         #  Budget validation: block if project budget insufficient 
         project_id = wo_dict.get("project_id")
@@ -135,7 +190,6 @@ class WorkOrderService:
         if project_id and estimated_hours:
             try:
                 from app.models.budget import Budget
-                from decimal import Decimal as _Decimal
 
                 budget = (
                     db.query(Budget)
@@ -147,20 +201,9 @@ class WorkOrderService:
                     .first()
                 )
                 if budget is not None:
-                    hourly_rate = float(wo_dict.get('hourly_rate') or 0)
-                    if not hourly_rate and wo_dict.get('requested_equipment_model_id'):
-                        rate_row = db.execute(sa_text(
-                            """SELECT et.default_hourly_rate
-                               FROM equipment_categories ec
-                               JOIN equipment_models em ON em.category_id = ec.id
-                               JOIN equipment_types et ON et.name = ec.name
-                               WHERE em.id = :mid LIMIT 1"""
-                        ), {"mid": wo_dict.get("requested_equipment_model_id")}).fetchone()
-                        if rate_row and rate_row[0]:
-                            hourly_rate = float(rate_row[0])
-
-                    overnight_nights = int(wo_dict.get('overnight_nights') or wo_dict.get('guard_days') or 0)
-                    estimated_cost = float(estimated_hours) * hourly_rate + overnight_nights * 250
+                    hourly_rate = pricing_info["hourly_rate"]
+                    overnight_rate = pricing_info["overnight_rate"]
+                    estimated_cost = float(estimated_hours) * hourly_rate + overnight_nights * overnight_rate
 
                     if estimated_cost > 0:
                         total = float(budget.total_amount or 0)
@@ -211,7 +254,7 @@ class WorkOrderService:
                     subject=f"הזמנתך #{order_label} נשלחה למתאם לאישור",
                     body=(
                         f"שלום {creator.full_name or creator.username or ''},\n\n"
-                        f"הזמנת עבודה #{order_label} נוצרה בהצלחה ונשלחה למתאם ההזמנות לאישור.\n"
+                        f"הזמנת עבודה #{order_label} נוצרה בהצלחה ונשלחה לאישור.\n"
                         f"סוג ציוד: {wo_dict.get('equipment_type', '')}\n"
                         f"שעות מוערכות: {wo_dict.get('estimated_hours', '')}\n\n"
                         f"תקבל/י עדכון כשההזמנה תאושר.\n\n"
@@ -229,20 +272,11 @@ class WorkOrderService:
                 estimated_hours = float(wo_dict.get('estimated_hours') or 0)
                 guard_days = int(wo_dict.get('guard_days') or 0)
                 
-                # Get rate from equipment type or work order
-                rate = float(wo_dict.get('hourly_rate') or 0)
-                if not rate and wo_dict.get('requested_equipment_model_id'):
-                    rate_row = db.execute(sa_text("""
-                        SELECT et.default_hourly_rate FROM equipment_categories ec
-                        JOIN equipment_models em ON em.category_id = ec.id
-                        JOIN equipment_types et ON et.name = ec.name
-                        WHERE em.id = :mid LIMIT 1
-                    """), {"mid": wo_dict['requested_equipment_model_id']}).fetchone()
-                    if rate_row and rate_row[0]:
-                        rate = float(rate_row[0])
-                
                 if estimated_hours > 0:
-                    freeze_amount = estimated_hours * rate + guard_days * 250
+                    freeze_amount = (
+                        estimated_hours * pricing_info["hourly_rate"]
+                        + guard_days * pricing_info["overnight_rate"]
+                    )
                     if freeze_amount > 0:
                         freeze_budget_for_work_order(project_id, db_work_order.id, freeze_amount, db)
         except ValueError as ve:
@@ -470,6 +504,63 @@ class WorkOrderService:
 
         return result.get("supplier_id")
 
+    def preview_supplier_selection(
+        self,
+        db: Session,
+        project_id: int,
+        equipment_type: str,
+        allocation_method: str = "FAIR_ROTATION",
+        supplier_id: Optional[int] = None,
+    ) -> dict:
+        """Preview backend supplier decision for a potential work order."""
+        from app.models.supplier import Supplier as SupplierModel
+
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise ValidationException("פרויקט לא נמצא")
+
+        model_id = self._resolve_requested_equipment_model_id(
+            db,
+            equipment_type_name=equipment_type,
+        )
+        if not model_id:
+            raise ValidationException("לא נמצא דגם ציוד מתאים לסוג הכלי שנבחר")
+
+        chosen_supplier_id = supplier_id
+        fallback_level = "manual" if supplier_id else "none"
+        notify_coordinator = False
+
+        if (allocation_method or "").upper() == "FAIR_ROTATION":
+            from app.services.supplier_rotation_service import supplier_rotation_service
+
+            result = supplier_rotation_service.select_supplier_with_checks(
+                db=db,
+                area_id=project.area_id,
+                region_id=project.region_id,
+                equipment_model_id=model_id,
+            )
+            chosen_supplier_id = result.get("supplier_id")
+            fallback_level = result.get("fallback_level", "none")
+            notify_coordinator = result.get("notify_coordinator", False)
+
+        chosen_supplier = None
+        if chosen_supplier_id:
+            chosen_supplier = (
+                db.query(SupplierModel)
+                .filter(SupplierModel.id == chosen_supplier_id)
+                .first()
+            )
+
+        return {
+            "supplier_id": chosen_supplier_id,
+            "supplier_name": chosen_supplier.name if chosen_supplier else None,
+            "allocation_method": (allocation_method or "FAIR_ROTATION").upper(),
+            "fallback_level": fallback_level,
+            "notify_coordinator": notify_coordinator,
+            "project_id": project_id,
+            "equipment_type": equipment_type,
+        }
+
     def handle_supplier_response(
         self, db: Session, portal_token: str, response: str, reason: Optional[str] = None
     ) -> Optional[WorkOrder]:
@@ -529,8 +620,9 @@ class WorkOrderService:
         if not reason or not reason.strip():
             raise HTTPException(status_code=400, detail="חובה לציין סיבת אילוץ ספק")
 
-        from app.models.supplier_equipment import SupplierEquipment
+        from app.models.equipment import Equipment
         from app.models.equipment_model import EquipmentModel
+        from app.models.equipment_category import EquipmentCategory
 
         work_order = self.get_work_order(db, work_order_id)
         if not work_order:
@@ -551,38 +643,42 @@ class WorkOrderService:
             if model:
                 required_category_id = model.category_id
 
-        # Available equipment of the right type (supplier_equipment inventory)
-        se_q = db.query(SupplierEquipment).filter(
-            SupplierEquipment.supplier_id == supplier_id,
-            SupplierEquipment.is_active == True,
+        # Available equipment of the right type (source of truth: supplier settings / equipment)
+        se_q = db.query(Equipment).filter(
+            Equipment.supplier_id == supplier_id,
+            Equipment.is_active == True,
+            Equipment.license_plate.isnot(None),
+            Equipment.license_plate != "",
             or_(
-                SupplierEquipment.status == "available",
-                SupplierEquipment.status.is_(None),
+                Equipment.status == "available",
+                Equipment.status.is_(None),
             ),
         )
         if required_category_id is not None or work_order.requested_equipment_model_id:
             type_clause = []
             if required_category_id is not None:
                 type_clause.append(
-                    SupplierEquipment.equipment_category_id == required_category_id
+                    Equipment.category_id == required_category_id
                 )
             if work_order.requested_equipment_model_id:
-                type_clause.append(
-                    SupplierEquipment.equipment_model_id
-                    == work_order.requested_equipment_model_id
+                model = (
+                    db.query(EquipmentModel)
+                    .filter(EquipmentModel.id == work_order.requested_equipment_model_id)
+                    .first()
                 )
+                if model:
+                    category = (
+                        db.query(EquipmentCategory)
+                        .filter(EquipmentCategory.id == model.category_id)
+                        .first()
+                    )
+                    if category and category.name:
+                        type_clause.append(Equipment.equipment_type.ilike(category.name))
             if type_clause:
                 if len(type_clause) == 1:
                     se_q = se_q.filter(type_clause[0])
                 else:
                     se_q = se_q.filter(or_(*type_clause))
-        # Must have at least one unit available when quantity is tracked
-        se_q = se_q.filter(
-            or_(
-                SupplierEquipment.quantity_available.is_(None),
-                SupplierEquipment.quantity_available > 0,
-            )
-        )
 
         if not se_q.first():
             raise HTTPException(
@@ -923,7 +1019,7 @@ class WorkOrderService:
         return wo
 
     def approve(self, db, wo_id, request=None, current_user=None, current_user_id=None, notes=None):
-        """Approve a work order by coordinator — blocks self-approval."""
+        """Approve a work order by coordinator/admin — blocks self-approval."""
         from app.models.work_order import WorkOrder
         import datetime, logging
         log = logging.getLogger(__name__)

@@ -101,6 +101,7 @@ export enum UserRole {
   WORK_MANAGER = "WORK_MANAGER",
   ORDER_COORDINATOR = "ORDER_COORDINATOR",
   ACCOUNTANT = "ACCOUNTANT",
+  // Legacy / compatibility only
   FIELD_WORKER = "FIELD_WORKER",
   SUPPLIER = "SUPPLIER",
   SUPPLIER_MANAGER = "SUPPLIER_MANAGER",
@@ -187,9 +188,9 @@ export const ROLE_NAME_MAP: Record<string, UserRole> = {
   "מנהל עבודה": UserRole.WORK_MANAGER,
   "מתאם הזמנות": UserRole.ORDER_COORDINATOR,
   "מנהלת חשבונות": UserRole.ACCOUNTANT,
-  "עובד שטח": UserRole.FIELD_WORKER,
+  "עובד שטח": UserRole.WORK_MANAGER,
   "ספק": UserRole.SUPPLIER,
-  "צופה": UserRole.VIEWER,
+  "צופה": UserRole.REGION_MANAGER,
   
   // אנגלית
   "admin": UserRole.ADMIN,
@@ -204,19 +205,19 @@ export const ROLE_NAME_MAP: Record<string, UserRole> = {
   "ORDER_COORDINATOR": UserRole.ORDER_COORDINATOR,
   "accountant": UserRole.ACCOUNTANT,
   "ACCOUNTANT": UserRole.ACCOUNTANT,
-  "field_worker": UserRole.FIELD_WORKER,
-  "FIELD_WORKER": UserRole.FIELD_WORKER,
+  "field_worker": UserRole.WORK_MANAGER,
+  "FIELD_WORKER": UserRole.WORK_MANAGER,
   "supplier": UserRole.SUPPLIER,
   "SUPPLIER": UserRole.SUPPLIER,
-  "viewer": UserRole.VIEWER,
-  "VIEWER": UserRole.VIEWER,
-  "user": UserRole.FIELD_WORKER,
-  "USER": UserRole.FIELD_WORKER,
+  "viewer": UserRole.REGION_MANAGER,
+  "VIEWER": UserRole.REGION_MANAGER,
+  "user": UserRole.WORK_MANAGER,
+  "USER": UserRole.WORK_MANAGER,
 };
 
 export function normalizeRole(role: string): UserRole {
-  if (!role) return UserRole.VIEWER;
-  return ROLE_NAME_MAP[role] || UserRole.VIEWER;
+  if (!role) return UserRole.WORK_MANAGER;
+  return ROLE_NAME_MAP[role] || UserRole.WORK_MANAGER;
 }
 
 // ============================================================
@@ -254,11 +255,11 @@ export function getRoleDisplayName(role: string): string {
     [UserRole.WORK_MANAGER]: "מנהל עבודה",
     [UserRole.ORDER_COORDINATOR]: "מתאם הזמנות",
     [UserRole.ACCOUNTANT]: "מנהלת חשבונות",
-    [UserRole.SUPPLIER_MANAGER]: "מנהל ספקים",
-    [UserRole.FIELD_WORKER]: "עובד שטח",
+    [UserRole.SUPPLIER_MANAGER]: "מנהל מערכת",
+    [UserRole.FIELD_WORKER]: "מנהל עבודה",
     [UserRole.SUPPLIER]: "ספק",
-    [UserRole.VIEWER]: "צופה",
-    [UserRole.USER]: "משתמש"
+    [UserRole.VIEWER]: "מנהל מרחב",
+    [UserRole.USER]: "מנהל עבודה"
   };
   return names[r] || "משתמש";
 }
@@ -270,13 +271,13 @@ export function getRoleDescription(role: string): string {
     [UserRole.REGION_MANAGER]: "בקרה ותקציב - צפייה בלבד",
     [UserRole.AREA_MANAGER]: "תפעול יומיומי, אישור דיווחים",
     [UserRole.WORK_MANAGER]: "יצירת הזמנות, אישור דיווחים",
-    [UserRole.ORDER_COORDINATOR]: "תיאום בין פרויקטים לספקים",
+    [UserRole.ORDER_COORDINATOR]: "תיאום, הפצה ואישור הזמנות עבודה",
     [UserRole.ACCOUNTANT]: "כספים וחשבוניות בלבד",
-    [UserRole.SUPPLIER_MANAGER]: "ניהול ספקים",
-    [UserRole.FIELD_WORKER]: "דיווח שעות וסריקת ציוד",
+    [UserRole.SUPPLIER_MANAGER]: "ניהול מערכת",
+    [UserRole.FIELD_WORKER]: "עבודה שוטפת בפרויקטים",
     [UserRole.SUPPLIER]: "פורטל ספקים בלבד",
-    [UserRole.VIEWER]: "צפייה בלבד",
-    [UserRole.USER]: "משתמש רגיל"
+    [UserRole.VIEWER]: "בקרה ברמת מרחב",
+    [UserRole.USER]: "עבודה שוטפת בפרויקטים"
   };
   return desc[r] || "";
 }

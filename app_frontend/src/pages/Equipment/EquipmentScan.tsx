@@ -287,7 +287,7 @@ showToast(' האימות נשמר — יסונכרן כשיחזור חיבור',
               }`}
             >
               <Camera className="w-4 h-4" />
-              סריקת QR
+              סריקה מהירה
             </button>
           </div>
         )}
@@ -338,8 +338,8 @@ showToast(' האימות נשמר — יסונכרן כשיחזור חיבור',
         {mode === 'camera' && !equipment && (
           <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
             <div className="text-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">סריקת QR (אופציונלי)</h2>
-              <p className="text-gray-500 text-sm mt-1">כוון את המצלמה אל קוד ה-QR שעל הציוד</p>
+              <h2 className="text-xl font-bold text-gray-900">סריקה מהירה (אופציונלי)</h2>
+              <p className="text-gray-500 text-sm mt-1">כוון את המצלמה אל סימון הזיהוי שעל הציוד</p>
             </div>
 
             <div className="relative rounded-xl overflow-hidden bg-black" style={{ minHeight: 300 }}>

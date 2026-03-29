@@ -149,8 +149,19 @@ const ProjectWorkspaceNew: React.FC = () => {
       const logs = logsResponse.work_logs || logsResponse.items || [];
       setWorklogs(logs);
 
-      // Calculate stats
-      const activeOrders = orders.filter(o => ['PENDING', 'APPROVED', 'APPROVED_AND_SENT', 'IN_PROGRESS', 'ACTIVE', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(o.status?.toUpperCase())).length;
+      try {
+        const summaryResponse = await api.get(`/projects/code/${projectData.code}/workspace-summary`);
+        const summaryStats = summaryResponse.data?.stats;
+        if (summaryStats) {
+          setStats(summaryStats);
+          return;
+        }
+      } catch (summaryErr) {
+        console.error('Error loading workspace summary:', summaryErr);
+      }
+
+      // Fallback: local calculation if summary endpoint fails
+      const activeOrders = orders.filter(o => ['PENDING', 'DISTRIBUTING', 'APPROVED', 'APPROVED_AND_SENT', 'IN_PROGRESS', 'ACTIVE', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(o.status?.toUpperCase())).length;
       const pendingOrders = orders.filter(o => o.status?.toUpperCase() === 'PENDING').length;
       const openReports = logs.filter(l => ['PENDING', 'SUBMITTED'].includes((l.status || '').toUpperCase())).length;
       const pendingReports = logs.filter(l => (l.status || '').toUpperCase() === 'PENDING').length;
@@ -349,7 +360,19 @@ const OverviewTab: React.FC<{ project: Project; stats: ProjectStats; currentUser
         <StatCard
           icon={<CheckCircle2 className="w-4 h-4 text-purple-600" />}
           label="סטטוס"
-          value={project.status === 'active' ? 'פעיל' : 'לא פעיל'}
+          value={
+            (project.status || '').toLowerCase() === 'active'
+              ? 'פעיל'
+              : (project.status || '').toLowerCase() === 'planning'
+                ? 'בתכנון'
+                : (project.status || '').toLowerCase() === 'completed'
+                  ? 'הושלם'
+                  : (project.status || '').toLowerCase() === 'on_hold'
+                    ? 'מושהה'
+                    : (project.status || '').toLowerCase() === 'cancelled'
+                      ? 'בוטל'
+                      : 'בתכנון'
+          }
           subtitle=""
           bgColor="bg-purple-50"
         />

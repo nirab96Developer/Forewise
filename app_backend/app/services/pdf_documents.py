@@ -210,7 +210,7 @@ def generate_invoice_pdf(invoice_id: int, db: Session) -> bytes:
     proj_row = None
     if inv.project_id:
         proj_row = db.execute(text("""
-            SELECT p.name, p.project_code, a.name, r.name
+            SELECT p.name, p.code, a.name, r.name
             FROM projects p LEFT JOIN areas a ON p.area_id=a.id
             LEFT JOIN regions r ON a.region_id=r.id WHERE p.id=:pid
         """), {"pid": inv.project_id}).first()

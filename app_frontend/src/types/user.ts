@@ -25,10 +25,10 @@ export interface User {
     | "manager"         // מנהל
     | "area_manager"    // מנהל אזורי
     | "project_manager" // מנהל פרויקטים
-    | "field_worker"    // עובד שטח
+    | "field_worker"    // מנהל עבודה (legacy)
     | "equipment_manager" // מנהל ציוד
     | "finance"         // כספים
-    | "viewer";         // צופה בלבד
+    | "viewer";         // מנהל מרחב (legacy)
   
   export interface Permission {
     resource: string;
@@ -85,12 +85,12 @@ export interface User {
     switch (role) {
       case "admin": return "מנהל מערכת";
       case "manager": return "מנהל";
-      case "area_manager": return "מנהל אזורי";
+      case "area_manager": return "מנהל אזור";
       case "project_manager": return "מנהל פרויקטים";
-      case "field_worker": return "עובד שטח";
+      case "field_worker": return "מנהל עבודה";
       case "equipment_manager": return "מנהל ציוד";
       case "finance": return "כספים";
-      case "viewer": return "צופה בלבד";
+      case "viewer": return "מנהל מרחב";
       default: return role;
     }
   }

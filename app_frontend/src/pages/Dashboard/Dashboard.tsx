@@ -9,14 +9,11 @@ import { Navigate } from "react-router-dom";
 // דשבורדים לפי תפקיד
 import DefaultDashboard from "./DefaultDashboard";
 import AccountantDashboard from "./AccountantDashboard";
-import OrderCoordinatorDashboard from "./OrderCoordinatorDashboard";
 import AreaManagerDashboard from "./AreaManagerDashboard";
 import RegionManagerDashboard from "./RegionManagerDashboard";
 import AdminDashboard from "./AdminDashboard";
-import FieldWorkerDashboard from "./FieldWorkerDashboard";
-import ViewerDashboard from "./ViewerDashboard";
-import SupplierManagerDashboard from "./SupplierManagerDashboard";
 import WorkManagerDashboard from "./WorkManagerDashboard";
+import OrderCoordinatorDashboard from "./OrderCoordinatorDashboard";
 
 // Dashboard Component - דשבורד מותאם לפי תפקיד
 const Dashboard: React.FC = () => {
@@ -52,11 +49,11 @@ const Dashboard: React.FC = () => {
     
 // ניהול ספקים
     case UserRole.SUPPLIER_MANAGER:
-      return <SupplierManagerDashboard />;
+      return <AdminDashboard />;
     
 // שטח וספקים
     case UserRole.FIELD_WORKER:
-      return <FieldWorkerDashboard />;
+      return <WorkManagerDashboard />;
       
     case UserRole.SUPPLIER:
       // ספקים לא אמורים להתחבר לאפליקציה!
@@ -70,7 +67,7 @@ const Dashboard: React.FC = () => {
     
 // צפייה בלבד
     case UserRole.VIEWER:
-      return <ViewerDashboard />;
+      return <RegionManagerDashboard />;
       
     default:
       // משתמש לא מזוהה מקבל דשבורד כללי

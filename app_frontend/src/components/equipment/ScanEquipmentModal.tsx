@@ -157,7 +157,7 @@ const ScanEquipmentModal: React.FC<ScanEquipmentModalProps> = ({
             }`}
           >
             <Camera className="w-4 h-4" />
-            סריקת QR
+            סריקה מהירה
           </button>
           <button
             onClick={() => setMode('manual')}
@@ -174,7 +174,7 @@ const ScanEquipmentModal: React.FC<ScanEquipmentModalProps> = ({
         <div className="p-5">
           {mode === 'camera' && (
             <div>
-              <p className="text-sm text-gray-500 text-center mb-3">כוון את המצלמה אל קוד ה-QR על הציוד</p>
+              <p className="text-sm text-gray-500 text-center mb-3">כוון את המצלמה אל סימון הזיהוי שעל הציוד</p>
               <div className="relative rounded-xl overflow-hidden bg-black" style={{ minHeight: 260 }}>
                 <div id="scan-modal-qr-reader" ref={scannerRef} className="w-full" />
                 {!cameraActive && !error && (

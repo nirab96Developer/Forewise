@@ -116,6 +116,28 @@ def get_work_order_by_token(db: Session, portal_token: str) -> Optional[WorkOrde
     )
 
 
+def _get_blocking_work_order(db: Session, equipment_id: int, current_work_order_id: int) -> Optional[WorkOrder]:
+    """Return another active work order already holding this equipment."""
+    return (
+        db.query(WorkOrder)
+        .filter(
+            WorkOrder.id != current_work_order_id,
+            WorkOrder.equipment_id == equipment_id,
+            WorkOrder.deleted_at.is_(None),
+            WorkOrder.is_active == True,
+            WorkOrder.status.isnot(None),
+            WorkOrder.status.notin_([
+                "COMPLETED",
+                "CANCELLED",
+                "REJECTED",
+                "STOPPED",
+                "EXPIRED",
+            ]),
+        )
+        .first()
+    )
+
+
 def check_token_valid(work_order: WorkOrder) -> tuple[bool, str]:
     """Check if portal token is still valid"""
     now = datetime.utcnow()
@@ -241,12 +263,13 @@ def get_available_equipment(
 
     # Determine the required category_id from the requested model
     required_category_id = None
+    requested_model = None
     if work_order.requested_equipment_model_id:
-        model = db.query(EquipmentModel).filter(
+        requested_model = db.query(EquipmentModel).filter(
             EquipmentModel.id == work_order.requested_equipment_model_id
         ).first()
-        if model:
-            required_category_id = model.category_id
+        if requested_model:
+            required_category_id = requested_model.category_id
 
     supplier_id = work_order.supplier_id
 
@@ -257,7 +280,7 @@ def get_available_equipment(
         sa_text(
             """
         SELECT e.id, e.name, e.license_plate, e.equipment_type, e.type_id,
-               e.status, e.is_active,
+               e.hourly_rate, e.status, e.is_active,
                blk.project_name AS blocked_project_name
         FROM equipment e
         LEFT JOIN (
@@ -293,7 +316,7 @@ def get_available_equipment(
 
     equipment_list = []
     for row in eq_rows:
-        blocked_name = row[7]
+        blocked_name = row[8]
         is_blocked = blocked_name is not None
         equipment_list.append(
             {
@@ -302,6 +325,7 @@ def get_available_equipment(
                 "license_plate": row[2],
                 "equipment_type": row[3],
                 "type_id": row[4],
+                "hourly_rate": float(row[5]) if row[5] is not None else None,
                 "is_available": not is_blocked,
                 "is_blocked": is_blocked,
                 "blocked_by": blocked_name if is_blocked else None,
@@ -343,6 +367,15 @@ def accept_work_order(
         )
 
     try:
+        requested_model = None
+        required_category_id = None
+        if work_order.requested_equipment_model_id:
+            requested_model = db.query(EquipmentModel).filter(
+                EquipmentModel.id == work_order.requested_equipment_model_id
+            ).first()
+            if requested_model:
+                required_category_id = requested_model.category_id
+
         # ── Resolve equipment from request ──────────────────────────
         se_id = request.supplier_equipment_id or request.equipment_id
         effective_plate = (request.license_plate or "").strip() or None
@@ -352,6 +385,14 @@ def accept_work_order(
             # Step 1: try as Equipment.id first
             direct_eq = db.query(Equipment).filter(Equipment.id == se_id).first()
             if direct_eq and direct_eq.supplier_id == work_order.supplier_id:
+                if required_category_id is not None and direct_eq.category_id != required_category_id:
+                    raise HTTPException(status_code=400, detail="הכלי שנבחר אינו תואם לסוג שהוזמן")
+                blocking_wo = _get_blocking_work_order(db, direct_eq.id, work_order.id)
+                if blocking_wo:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"הכלי שנבחר כבר משויך להזמנה פעילה אחרת (#{blocking_wo.order_number or blocking_wo.id})",
+                    )
                 resolved_equipment_id = direct_eq.id
                 effective_plate = effective_plate or direct_eq.license_plate
             else:
@@ -368,9 +409,19 @@ def accept_work_order(
         # Step 3: resolve equipment_id from license plate
         if effective_plate and not resolved_equipment_id:
             matched = db.query(Equipment).filter(
-                Equipment.license_plate == effective_plate
+                Equipment.license_plate == effective_plate,
+                Equipment.supplier_id == work_order.supplier_id,
+                Equipment.is_active == True,
             ).first()
             if matched:
+                if required_category_id is not None and matched.category_id != required_category_id:
+                    raise HTTPException(status_code=400, detail="הכלי שנבחר אינו תואם לסוג שהוזמן")
+                blocking_wo = _get_blocking_work_order(db, matched.id, work_order.id)
+                if blocking_wo:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"הכלי שנבחר כבר משויך להזמנה פעילה אחרת (#{blocking_wo.order_number or blocking_wo.id})",
+                    )
                 resolved_equipment_id = matched.id
             else:
                 # Auto-create equipment entry from supplier_equipment data
@@ -380,9 +431,10 @@ def accept_work_order(
                     license_plate=effective_plate,
                     supplier_id=work_order.supplier_id,
                     equipment_type=work_order.equipment_type,
-                    status="active",
+                    type_id=requested_model.id if requested_model else None,
+                    category_id=required_category_id,
+                    status="available",
                     is_active=True,
-                    requested_equipment_model_id=work_order.requested_equipment_model_id if hasattr(work_order, 'requested_equipment_model_id') else None,
                 )
                 db.add(new_eq)
                 db.flush()
@@ -551,16 +603,17 @@ def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: st
     try:
         from app.services.notification_service import notify_supplier_accepted, notify
         from app.models.user import User
+        region_id = getattr(getattr(work_order, "project", None), "region_id", None)
 
         action_text = "אושרה" if action == "accepted" else "נדחתה"
         supplier_name = work_order.supplier.name if work_order.supplier else "לא ידוע"
         wo_num = work_order.order_number or work_order.id
 
-# DB notification ORDER_COORDINATORs in the area (supplier accepted)
+        # Notify coordinators on supplier acceptance
         if action == "accepted":
             notify_supplier_accepted(db, work_order)
         else:
-# supplier rejected notify WORK_MANAGER who created + all ORDER_COORDINATORs
+            # Supplier rejected: notify creator and coordinators
             reject_msg = f"הזמנה #{wo_num} נדחתה על ידי {supplier_name}. הזמנה מועברת לספק הבא בסבב."
             creator_id = getattr(work_order, 'created_by', None) or getattr(work_order, 'created_by_id', None)
             if creator_id:
@@ -574,12 +627,13 @@ def _send_notification_to_manager(db: Session, work_order: WorkOrder, action: st
                     priority="high",
                     action_url=f"/work-orders/{work_order.id}",
                 )
-            # Notify all coordinators immediately
+            # Notify coordinators immediately
             from sqlalchemy import text
             coordinators = db.execute(text("""
                 SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
                 WHERE r.code IN ('ORDER_COORDINATOR', 'ADMIN') AND u.is_active = true
-            """)).fetchall()
+                  AND (:region_id IS NULL OR r.code = 'ADMIN' OR u.region_id = :region_id)
+            """), {"region_id": region_id}).fetchall()
             for row in coordinators:
                 if row[0] != creator_id:
                     notify(
@@ -695,7 +749,7 @@ Hierarchy: area region REJECTED.
             if next_rotation:
                 pass
         
-# Step 3: No suppliers at all REJECTED + notify coordinator
+        # Step 3: No suppliers at all -> REJECTED + notify coordinator
         if not next_rotation:
             eq_type_name = work_order.equipment_type or f"type_id={eq_type_id}"
             work_order.status = "REJECTED"
@@ -704,10 +758,12 @@ Hierarchy: area region REJECTED.
             try:
                 from app.services.notification_service import notify
                 from sqlalchemy import text
+                region_id = getattr(getattr(work_order, "project", None), "region_id", None)
                 coordinators = db.execute(text("""
                     SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
                     WHERE r.code IN ('ORDER_COORDINATOR', 'ADMIN') AND u.is_active = true
-                """)).fetchall()
+                      AND (:region_id IS NULL OR r.code = 'ADMIN' OR u.region_id = :region_id)
+                """), {"region_id": region_id}).fetchall()
                 wo_num = work_order.order_number or work_order.id
                 for row in coordinators:
                     notify(

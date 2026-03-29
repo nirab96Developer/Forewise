@@ -107,7 +107,7 @@ const EquipmentModal: React.FC<Props> = ({ onClose, onSaved }) => {
               <label className="block text-xs font-semibold text-gray-600 mb-1">מספר רישוי <span className="text-red-500">*</span></label>
               <input value={form.license_plate} onChange={e=>f('license_plate',e.target.value)} placeholder="12-345-67"
                 className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm font-mono text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" />
-              <div className="text-[10px] text-gray-400 mt-1">משמש לסריקת QR בשטח</div>
+              <div className="text-[10px] text-gray-400 mt-1">משמש לאימות כלי בשטח</div>
             </div>
           </div>
 

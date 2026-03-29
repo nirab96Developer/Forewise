@@ -87,7 +87,7 @@ class WorklogResponse(WorklogBase):
     hourly_rate_snapshot: Optional[Decimal] = None
     cost_before_vat: Optional[Decimal] = None
     cost_with_vat: Optional[Decimal] = None
-    vat_rate: Decimal = Decimal('0.17')
+    vat_rate: Decimal = Decimal('0.18')
     
     # Approval
     approved_by_user_id: Optional[int] = None

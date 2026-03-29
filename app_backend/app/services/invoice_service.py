@@ -103,7 +103,7 @@ class InvoiceService(BaseService[Invoice]):
         
         total = invoice_dict.get('total_amount', Decimal(0))
         if invoice_dict.get('subtotal') is None:
-            vat_rate = Decimal('0.17')
+            vat_rate = Decimal('0.18')
             invoice_dict['subtotal'] = (total / (1 + vat_rate)).quantize(Decimal('0.01'))
             invoice_dict['tax_amount'] = total - invoice_dict['subtotal']
         
@@ -233,11 +233,11 @@ class InvoiceService(BaseService[Invoice]):
     def send_to_supplier(self, db, invoice_id: int, user_id: int):
         """Mark invoice as sent to supplier."""
         invoice = self.get_by_id_or_404(db, invoice_id)
-        invoice.status = 'sent'
+        invoice.status = 'SENT'
         db.commit()
         db.refresh(invoice)
         try:
-            _audit.log_activity(db, user_id=current_user_id, action="invoice_created", entity_type="invoice", entity_id=invoice.id)
+            _audit(db, user_id, 'invoices', invoice.id, 'SENT', {'status': 'SENT'})
         except Exception:
             pass
         return invoice
@@ -439,7 +439,7 @@ def generate_monthly_invoice(
     # If no cost_before_vat, fallback to hours * rate
     if subtotal == 0:
         subtotal = sum(float(wl.work_hours or 0) * float(wl.hourly_rate_snapshot or 100) for wl in worklogs)
-    vat_pct = float(worklogs[0].vat_rate or 0.17) if worklogs else 0.17
+    vat_pct = float(worklogs[0].vat_rate or 0.18) if worklogs else 0.18
     tax_amount = round(subtotal * vat_pct, 2)
     total_amount = round(subtotal + tax_amount, 2)
 

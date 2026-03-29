@@ -216,15 +216,15 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
     dividerAfter: ["dashboard"],
   },
   [UserRole.ORDER_COORDINATOR]: {
-    items: ["dashboard", "orderCoordination"],
-    dividerAfter: ["dashboard"],
+    items: ["dashboard", "projectsArea", "orderCoordination", "budgets", "reports", "map"],
+    dividerAfter: ["dashboard", "orderCoordination"],
   },
   [UserRole.ACCOUNTANT]: {
     items: ["dashboard", "accountantInbox", "invoices", "budgets", "reports"],
     dividerAfter: ["dashboard", "invoices"],
   },
   [UserRole.SUPPLIER_MANAGER]: {
-    items: ["dashboard", "settings"],
+    items: ["dashboard", "projects", "workOrders", "accountantInbox", "invoices", "reports", "map", "support", "settings"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.FIELD_WORKER]: {
@@ -236,7 +236,7 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
     dividerAfter: [],
   },
   [UserRole.VIEWER]: {
-    items: ["dashboard", "projects", "reports"],
+    items: ["dashboard", "projectsRegion", "budgets", "reports", "map"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.USER]: {
@@ -251,7 +251,6 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
 export const ALL_MENU_ITEMS: MenuItem[] = [
   MENU_ITEM_POOL.dashboard,
   MENU_ITEM_POOL.projects,
-  MENU_ITEM_POOL.orderCoordination,
   MENU_ITEM_POOL.suppliers,
   MENU_ITEM_POOL.invoices,
   MENU_ITEM_POOL.reports,
@@ -270,7 +269,7 @@ export const ALL_MENU_ITEMS: MenuItem[] = [
  */
 export function getMenuItemsForRole(userRole: string): MenuItem[] {
   const role = normalizeRole(userRole);
-  const config = ROLE_MENU_CONFIG[role] || ROLE_MENU_CONFIG[UserRole.VIEWER];
+  const config = ROLE_MENU_CONFIG[role] || ROLE_MENU_CONFIG[UserRole.WORK_MANAGER];
   const dividerSet = new Set(config.dividerAfter || []);
 
   const result: MenuItem[] = [];
@@ -370,15 +369,14 @@ export const DASHBOARD_CONFIG: Record<UserRole, DashboardConfig> = {
   },
   [UserRole.ORDER_COORDINATOR]: {
     title: "לוח בקרה - מתאם הזמנות",
-    subtitle: "תיאום ספקים",
-    showCalendar: false,
+    subtitle: "תיאום, הפצה ואישור הזמנות",
+    showCalendar: true,
     showQuickActions: true,
     showStats: true,
-    primaryWidget: "coordination-queue",
-    widgets: ["awaiting-response", "expired-orders", "supplier-status"],
+    primaryWidget: "area-overview",
+    widgets: ["stats", "pending-approvals", "projects", "equipment-requests"],
     quickActions: [
-      { id: "coordination", label: "תיאום הזמנות", path: "/order-coordination", icon: "RefreshCcw", permission: PERMISSIONS.WORK_ORDERS_COORDINATE },
-      { id: "suppliers", label: "ספקים", path: "/suppliers", icon: "Truck", permission: PERMISSIONS.SUPPLIERS_VIEW },
+      { id: "projects", label: "פרויקטים", path: "/projects", icon: "Building2", permission: PERMISSIONS.PROJECTS_VIEW },
     ],
   },
   [UserRole.ACCOUNTANT]: {
@@ -396,8 +394,8 @@ export const DASHBOARD_CONFIG: Record<UserRole, DashboardConfig> = {
     ],
   },
   [UserRole.SUPPLIER_MANAGER]: {
-    title: "לוח בקרה - מנהל ספקים",
-    subtitle: "ניהול ספקים",
+    title: "לוח בקרה - מנהל מערכת",
+    subtitle: "ניהול ספקים וציוד",
     showCalendar: false,
     showQuickActions: true,
     showStats: true,
@@ -408,8 +406,8 @@ export const DASHBOARD_CONFIG: Record<UserRole, DashboardConfig> = {
     ],
   },
   [UserRole.FIELD_WORKER]: {
-    title: "לוח בקרה - עובד שטח",
-    subtitle: "דיווח שעות",
+    title: "לוח בקרה - מנהל עבודה",
+    subtitle: "עבודה שוטפת בפרויקטים",
     showCalendar: false,
     showQuickActions: true,
     showStats: false,
@@ -417,7 +415,7 @@ export const DASHBOARD_CONFIG: Record<UserRole, DashboardConfig> = {
     widgets: ["my-worklogs", "worklog-status"],
     quickActions: [
       { id: "projects", label: "פרויקטים", path: "/projects", icon: "Building2", permission: PERMISSIONS.PROJECTS_VIEW },
-      { id: "scan", label: "סריקת ציוד", path: "/equipment/scan", icon: "Search", permission: PERMISSIONS.EQUIPMENT_SCAN },
+      { id: "scan", label: "אימות כלי", path: "/equipment/scan", icon: "Search", permission: PERMISSIONS.EQUIPMENT_SCAN },
       { id: "report", label: "דיווח שעות", path: "/projects", icon: "Clock", permission: PERMISSIONS.WORKLOGS_CREATE },
     ],
   },
@@ -432,8 +430,8 @@ export const DASHBOARD_CONFIG: Record<UserRole, DashboardConfig> = {
     quickActions: [],
   },
   [UserRole.VIEWER]: {
-    title: "לוח בקרה",
-    subtitle: "צפייה בלבד",
+    title: "לוח בקרה - מנהל מרחב",
+    subtitle: "תמונת מצב רחבה",
     showCalendar: false,
     showQuickActions: false,
     showStats: true,
@@ -442,8 +440,8 @@ export const DASHBOARD_CONFIG: Record<UserRole, DashboardConfig> = {
     quickActions: [],
   },
   [UserRole.USER]: {
-    title: "לוח בקרה",
-    subtitle: "דיווח שעות",
+    title: "לוח בקרה - מנהל עבודה",
+    subtitle: "עבודה שוטפת בפרויקטים",
     showCalendar: false,
     showQuickActions: true,
     showStats: false,
@@ -457,7 +455,7 @@ export const DASHBOARD_CONFIG: Record<UserRole, DashboardConfig> = {
 
 export function getDashboardConfig(userRole: string): DashboardConfig {
   const role = normalizeRole(userRole);
-  return DASHBOARD_CONFIG[role] || DASHBOARD_CONFIG[UserRole.VIEWER];
+  return DASHBOARD_CONFIG[role] || DASHBOARD_CONFIG[UserRole.WORK_MANAGER];
 }
 
 // ============================================================

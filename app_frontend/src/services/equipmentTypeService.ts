@@ -39,7 +39,7 @@ class EquipmentTypeService {
   }
 
   async computeCost(request: ComputeCostRequest): Promise<ComputeCostResponse> {
-    const response = await api.post('/equipment-types/compute-cost', request);
+    const response = await api.post('/pricing/compute-cost', request);
     return response.data;
   }
 }

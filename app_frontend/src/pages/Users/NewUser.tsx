@@ -86,7 +86,7 @@ const NewUser: React.FC = () => {
   // Dynamic form rules based on selected role
   const selectedRole = roles.find(r => r.id === Number(formData.role_id));
   const roleCode = selectedRole?.code || '';
-  const GLOBAL_ROLES = ['ADMIN', 'ORDER_COORDINATOR'];
+  const GLOBAL_ROLES = ['ADMIN', 'REGION_MANAGER'];
   const isGlobalRole = GLOBAL_ROLES.includes(roleCode);
   const needsRegion = !isGlobalRole && !!roleCode;
   const needsArea = ['AREA_MANAGER', 'WORK_MANAGER'].includes(roleCode);
@@ -100,6 +100,10 @@ const NewUser: React.FC = () => {
     AREA_MANAGER: 'מחלקת הנהלה',
     WORK_MANAGER: 'מחלקת מנהלי עבודה',
     ACCOUNTANT: 'מחלקת חשבונות',
+    SUPPLIER_MANAGER: 'מחלקת הנהלה',
+    FIELD_WORKER: 'מחלקת מנהלי עבודה',
+    VIEWER: 'מחלקת הנהלה',
+    USER: 'מחלקת מנהלי עבודה',
   };
   useEffect(() => {
     if (roleCode && departments.length > 0) {

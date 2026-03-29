@@ -36,7 +36,7 @@ interface QueueData {
 const STATUS_CFG: Record<string, { label: string; cls: string; actionLabel?: string }> = {
   PENDING:        { label: "ממתין לשליחה", cls: "bg-yellow-100 text-yellow-800", actionLabel: "שלח לספק" },
   DISTRIBUTING:   { label: "בהפצה", cls: "bg-blue-100 text-blue-800", actionLabel: "ספק הבא" },
-  SUPPLIER_ACCEPTED_PENDING_COORDINATOR: { label: "ספק אישר", cls: "bg-emerald-100 text-emerald-800", actionLabel: "אשר סופית" },
+  SUPPLIER_ACCEPTED_PENDING_COORDINATOR: { label: "ספק אישר — ממתין לאישור מתאם", cls: "bg-emerald-100 text-emerald-800", actionLabel: "אשר סופית" },
   APPROVED_AND_SENT: { label: "אושר ונשלח", cls: "bg-green-100 text-green-800" },
   EXPIRED:        { label: "פג תוקף", cls: "bg-red-100 text-red-700", actionLabel: "שלח שוב" },
   STOPPED:        { label: "הופסק", cls: "bg-gray-100 text-gray-600" },

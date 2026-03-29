@@ -11,10 +11,10 @@ import UnifiedLoader from '../../components/common/UnifiedLoader';
 import { getUserRole, normalizeRole, UserRole } from '../../utils/permissions';
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  PENDING:                                { label: 'ממתין לתיאום',     bg: 'bg-amber-50',  text: 'text-amber-700',  dot: 'bg-amber-400' },
+  PENDING:                                { label: 'ממתין',            bg: 'bg-amber-50',  text: 'text-amber-700',  dot: 'bg-amber-400' },
   DISTRIBUTING:                           { label: 'בהפצה לספקים',    bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-400' },
-  SUPPLIER_ACCEPTED_PENDING_COORDINATOR:  { label: 'ספק אישר — ממתין למתאם', bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
-  APPROVED_AND_SENT:                      { label: 'מאושר — ניתן לדווח', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
+  SUPPLIER_ACCEPTED_PENDING_COORDINATOR:  { label: 'ספק אישר — ממתין לאישור מתאם', bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
+  APPROVED_AND_SENT:                      { label: 'אושר ונשלח',      bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
   COMPLETED:                              { label: 'הושלם',           bg: 'bg-gray-100',  text: 'text-gray-600',   dot: 'bg-gray-400' },
   REJECTED:                               { label: 'נדחה',            bg: 'bg-red-50',    text: 'text-red-700',    dot: 'bg-red-500' },
   CANCELLED:                              { label: 'בוטל',            bg: 'bg-red-50',    text: 'text-red-600',    dot: 'bg-red-400' },

@@ -1,23 +1,180 @@
 """
 Rate Service — מקור תעריף אחד רשמי.
 
-עדיפות:
-  1. supplier_equipment.hourly_rate  (ספציפי לספק-ציוד)
-  2. equipment.hourly_rate            (ספציפי לציוד)
-  3. equipment_types.hourly_rate      (ברירת מחדל לסוג ציוד)
+מקור האמת הוא מודול הספקים:
+- ציוד ספקים (`equipment` עם `supplier_id`)
+- סוגי ציוד (`equipment_types`)
 
-overnight_rate — עדיפות:
-  1. equipment_types.overnight_rate
-  2. 0 (לא מוגדר)
+כל חישוב מחיר במערכת אמור להישען על הנתונים שמנוהלים שם.
 """
 from __future__ import annotations
 
 import logging
 from typing import Optional, Dict, Any
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
+
+def _get_equipment_type_by_name_or_model(
+    db: Session,
+    equipment_type_id: Optional[int] = None,
+    equipment_type_name: Optional[str] = None,
+    equipment_model_id: Optional[int] = None,
+):
+    from app.models.equipment_type import EquipmentType
+
+    if equipment_type_id:
+        et = db.query(EquipmentType).filter(EquipmentType.id == equipment_type_id).first()
+        if et:
+            return et
+
+    if equipment_type_name:
+        et = (
+            db.query(EquipmentType)
+            .filter(EquipmentType.name.ilike(equipment_type_name.strip()))
+            .first()
+        )
+        if et:
+            return et
+
+    if equipment_model_id:
+        try:
+            from app.models.equipment_model import EquipmentModel
+            from app.models.equipment_category import EquipmentCategory
+
+            row = (
+                db.query(EquipmentType)
+                .join(EquipmentCategory, EquipmentCategory.id == EquipmentType.category_id)
+                .join(EquipmentModel, EquipmentModel.category_id == EquipmentCategory.id)
+                .filter(EquipmentModel.id == equipment_model_id)
+                .first()
+            )
+            if row:
+                return row
+        except Exception as exc:
+            logger.debug(f"equipment_model -> equipment_type lookup failed: {exc}")
+
+    return None
+
+
+def resolve_supplier_pricing(
+    db: Session,
+    supplier_id: Optional[int] = None,
+    equipment_id: Optional[int] = None,
+    license_plate: Optional[str] = None,
+    equipment_type_id: Optional[int] = None,
+    equipment_type_name: Optional[str] = None,
+    equipment_model_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    Resolve pricing from the supplier settings source of truth.
+
+    Priority:
+      1. Exact supplier equipment (`equipment`) match
+      2. Supplier equipment by requested type/name
+      3. Equipment type default (`equipment_types`)
+    """
+    from app.models.equipment import Equipment
+
+    equipment_type = _get_equipment_type_by_name_or_model(
+        db,
+        equipment_type_id=equipment_type_id,
+        equipment_type_name=equipment_type_name,
+        equipment_model_id=equipment_model_id,
+    )
+
+    hourly: float = 0.0
+    overnight: float = 0.0
+    source: str = "none"
+    source_name: str = "לא הוגדר"
+    matched_equipment_id: Optional[int] = None
+
+    exact_equipment = None
+    if equipment_id:
+        exact_equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
+    elif supplier_id and license_plate:
+        exact_equipment = (
+            db.query(Equipment)
+            .filter(
+                Equipment.supplier_id == supplier_id,
+                Equipment.license_plate == license_plate,
+                Equipment.is_active == True,
+            )
+            .first()
+        )
+
+    if exact_equipment:
+        matched_equipment_id = exact_equipment.id
+        if exact_equipment.hourly_rate and float(exact_equipment.hourly_rate) > 0:
+            hourly = float(exact_equipment.hourly_rate)
+            source = "supplier_equipment"
+            source_name = exact_equipment.license_plate or exact_equipment.name or "ציוד ספק"
+        if exact_equipment.overnight_rate and float(exact_equipment.overnight_rate) > 0:
+            overnight = float(exact_equipment.overnight_rate)
+        if not hourly and exact_equipment.type_id:
+            equipment_type = _get_equipment_type_by_name_or_model(db, equipment_type_id=exact_equipment.type_id)
+
+    if not hourly and supplier_id:
+        supplier_equipment_query = db.query(Equipment).filter(
+            Equipment.supplier_id == supplier_id,
+            Equipment.is_active == True,
+            Equipment.license_plate.isnot(None),
+            Equipment.license_plate != "",
+        )
+
+        type_filters = []
+        if equipment_type_id:
+            type_filters.append(Equipment.type_id == equipment_type_id)
+        if equipment_type_name:
+            type_filters.append(Equipment.equipment_type.ilike(equipment_type_name.strip()))
+        if equipment_type and equipment_type.id:
+            type_filters.append(Equipment.type_id == equipment_type.id)
+            type_filters.append(Equipment.equipment_type.ilike(equipment_type.name))
+        if type_filters:
+            supplier_equipment_query = supplier_equipment_query.filter(or_(*type_filters))
+
+        supplier_equipment = (
+            supplier_equipment_query
+            .order_by(Equipment.hourly_rate.desc().nullslast(), Equipment.id.asc())
+            .first()
+        )
+
+        if supplier_equipment:
+            matched_equipment_id = supplier_equipment.id
+            if supplier_equipment.hourly_rate and float(supplier_equipment.hourly_rate) > 0:
+                hourly = float(supplier_equipment.hourly_rate)
+                source = "supplier_equipment"
+                source_name = supplier_equipment.license_plate or supplier_equipment.name or "ציוד ספק"
+            if supplier_equipment.overnight_rate and float(supplier_equipment.overnight_rate) > 0:
+                overnight = float(supplier_equipment.overnight_rate)
+            if not equipment_type and supplier_equipment.type_id:
+                equipment_type = _get_equipment_type_by_name_or_model(
+                    db,
+                    equipment_type_id=supplier_equipment.type_id,
+                )
+
+    if equipment_type:
+        if not hourly:
+            type_rate = getattr(equipment_type, "hourly_rate", None) or getattr(equipment_type, "default_hourly_rate", None)
+            if type_rate and float(type_rate) > 0:
+                hourly = float(type_rate)
+                source = "equipment_type"
+                source_name = equipment_type.name or "סוג ציוד"
+        if not overnight:
+            overnight_rate = getattr(equipment_type, "overnight_rate", None)
+            if overnight_rate and float(overnight_rate) > 0:
+                overnight = float(overnight_rate)
+
+    return {
+        "hourly_rate": hourly,
+        "overnight_rate": overnight,
+        "source": source,
+        "source_name": source_name,
+        "equipment_id": matched_equipment_id,
+    }
 
 
 def get_equipment_rate(
@@ -28,59 +185,20 @@ def get_equipment_rate(
     """
     Returns: {"hourly_rate": float, "overnight_rate": float, "source": str}
     """
-    from app.models.equipment import Equipment
-    from app.models.equipment_type import EquipmentType
-
-    hourly: float = 0.0
-    overnight: float = 0.0
-    source: str = "none"
-
-    # 1. supplier_equipment
-    if supplier_id:
-        try:
-            from app.models.supplier_equipment import SupplierEquipment
-            se = (
-                db.query(SupplierEquipment)
-                .filter(
-                    SupplierEquipment.equipment_id == equipment_id,
-                    SupplierEquipment.supplier_id == supplier_id,
-                    SupplierEquipment.is_active == True,
-                )
-                .first()
-            )
-            if se and se.hourly_rate and float(se.hourly_rate) > 0:
-                hourly = float(se.hourly_rate)
-                source = "supplier_equipment"
-        except Exception as e:
-            logger.debug(f"supplier_equipment rate lookup failed: {e}")
-
-    # 2. equipment.hourly_rate
-    eq = db.query(Equipment).filter(Equipment.id == equipment_id).first()
-    if not eq:
-        return {"hourly_rate": hourly, "overnight_rate": overnight, "source": source}
-
-    if not hourly and eq.hourly_rate and float(eq.hourly_rate) > 0:
-        hourly = float(eq.hourly_rate)
-        source = "equipment"
-
-    # 3. equipment_types fallback
-    if eq.equipment_type_id:
-        try:
-            et = db.query(EquipmentType).filter(EquipmentType.id == eq.equipment_type_id).first()
-            if et:
-                if not hourly and et.hourly_rate and float(et.hourly_rate) > 0:
-                    hourly = float(et.hourly_rate)
-                    source = "equipment_type"
-                if et.overnight_rate and float(et.overnight_rate) > 0:
-                    overnight = float(et.overnight_rate)
-        except Exception as e:
-            logger.debug(f"equipment_type rate lookup failed: {e}")
-
+    result = resolve_supplier_pricing(
+        db=db,
+        supplier_id=supplier_id,
+        equipment_id=equipment_id,
+    )
     logger.debug(
         f"get_equipment_rate equipment_id={equipment_id} supplier_id={supplier_id} "
-f" hourly={hourly} overnight={overnight} source={source}"
+        f"hourly={result['hourly_rate']} overnight={result['overnight_rate']} source={result['source']}"
     )
-    return {"hourly_rate": hourly, "overnight_rate": overnight, "source": source}
+    return {
+        "hourly_rate": result["hourly_rate"],
+        "overnight_rate": result["overnight_rate"],
+        "source": result["source"],
+    }
 
 
 def get_equipment_rate_by_work_order(work_order_id: int, db: Session) -> Dict[str, Any]:
@@ -89,16 +207,24 @@ def get_equipment_rate_by_work_order(work_order_id: int, db: Session) -> Dict[st
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if not wo:
         return {"hourly_rate": 0.0, "overnight_rate": 0.0, "source": "none"}
-    return get_equipment_rate(
-        equipment_id=wo.equipment_id,
-        supplier_id=wo.supplier_id,
+    result = resolve_supplier_pricing(
         db=db,
+        supplier_id=wo.supplier_id,
+        equipment_id=wo.equipment_id,
+        license_plate=wo.equipment_license_plate,
+        equipment_type_name=wo.equipment_type,
+        equipment_model_id=getattr(wo, "requested_equipment_model_id", None),
     )
+    return {
+        "hourly_rate": result["hourly_rate"],
+        "overnight_rate": result["overnight_rate"],
+        "source": result["source"],
+    }
 
 
 # Legacy class API (backwards-compatible) 
 
-VAT_RATE = 0.17
+VAT_RATE = 0.18
 
 
 class _ResolvedRate:

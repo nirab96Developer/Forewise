@@ -78,7 +78,7 @@ def log_work_order_sent_to_coordinator(
     work_order_id: int,
     user_id: int
 ):
-    """Log: הזמנה נשלחה למתאם ספקים"""
+    """Log: הזמנה נשלחה לאישור והפצה"""
     _log(
         db=db,
         activity_type="work_order",
@@ -86,7 +86,7 @@ def log_work_order_sent_to_coordinator(
         user_id=user_id,
         entity_type="work_order",
         entity_id=work_order_id,
-        details={"description_he": "הזמנה נשלחה למתאם ספקים"}
+        details={"description_he": "הזמנה נשלחה לאישור והפצה"}
     )
 
 
