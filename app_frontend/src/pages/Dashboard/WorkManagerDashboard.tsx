@@ -54,8 +54,15 @@ const WorkManagerDashboard: React.FC = () => {
   if (loading) return <UnifiedLoader size="full" />;
   if (!data) return <div className="p-8 text-center text-gray-500">שגיאה בטעינת נתונים</div>;
 
-  const k = data.kpis;
-  const aw = data.active_work;
+  const k = data.kpis || {
+    hours_today: (data as any).hours_this_week ?? 0,
+    open_work_orders: (data as any).active_work_orders ?? 0,
+    draft_reports: (data as any).pending_worklogs ?? 0,
+    submitted_reports: (data as any).submitted_worklogs ?? 0,
+    approved_reports: 0,
+  };
+  const _awRaw = data.active_work || (data as any).active_work;
+  const aw = Array.isArray(_awRaw) ? null : (_awRaw || null);
 
   return (
     <div className="min-h-full bg-gray-50" dir="rtl">
@@ -75,8 +82,8 @@ const WorkManagerDashboard: React.FC = () => {
             <div className="flex items-center gap-4 mb-4">
               <div className="flex-1">
                 <div className="flex justify-between text-xs mb-1 opacity-80">
-                  <span>{aw.used_hours.toFixed(1)} שעות בוצעו</span>
-                  <span>{aw.estimated_hours} שעות מתוכנן</span>
+                  <span>{(aw.used_hours ?? 0).toFixed(1)} שעות בוצעו</span>
+                  <span>{aw.estimated_hours ?? 0} שעות מתוכנן</span>
                 </div>
                 <div className="w-full bg-white/20 rounded-full h-3">
                   <div className="h-3 rounded-full bg-white transition-all"
@@ -84,7 +91,7 @@ const WorkManagerDashboard: React.FC = () => {
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-extrabold">{aw.remaining_hours.toFixed(1)}</p>
+                <p className="text-3xl font-extrabold">{(aw.remaining_hours ?? 0).toFixed(1)}</p>
                 <p className="text-[10px] opacity-70">שעות נותרו</p>
               </div>
             </div>
@@ -108,16 +115,16 @@ const WorkManagerDashboard: React.FC = () => {
 
 {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <MiniKPI icon={<Clock className="w-5 h-5 text-blue-500" />} label="שעות היום" value={k.hours_today.toFixed(1)} />
-          <MiniKPI icon={<Briefcase className="w-5 h-5 text-green-500" />} label="הזמנות פתוחות" value={String(k.open_work_orders)} />
-          <MiniKPI icon={<FileText className="w-5 h-5 text-amber-500" />} label="טיוטות" value={String(k.draft_reports)} alert={k.draft_reports > 0} />
-          <MiniKPI icon={<CheckCircle className="w-5 h-5 text-emerald-500" />} label="אושרו" value={String(k.approved_reports)} />
+          <MiniKPI icon={<Clock className="w-5 h-5 text-blue-500" />} label="שעות השבוע" value={Number(k.hours_today ?? 0).toFixed(1)} />
+          <MiniKPI icon={<Briefcase className="w-5 h-5 text-green-500" />} label="הזמנות פתוחות" value={String(k.open_work_orders ?? 0)} />
+          <MiniKPI icon={<FileText className="w-5 h-5 text-amber-500" />} label="ממתינים" value={String(k.draft_reports ?? 0)} alert={(k.draft_reports ?? 0) > 0} />
+          <MiniKPI icon={<CheckCircle className="w-5 h-5 text-emerald-500" />} label="אושרו" value={String(k.approved_reports ?? 0)} />
         </div>
 
 {/* Alerts */}
-        {data.alerts.length > 0 && (
+        {(data.alerts?.length ?? 0) > 0 && (
           <div className="space-y-2">
-            {data.alerts.map((a, i) => {
+            {(data.alerts || []).map((a, i) => {
               const isErr = a.type === "error";
               const Icon = isErr ? ShieldAlert : a.type === "warning" ? AlertTriangle : Info;
               return (
@@ -169,9 +176,9 @@ const WorkManagerDashboard: React.FC = () => {
                 הכל <ChevronLeft className="w-3 h-3" />
               </button>
             </div>
-            {data.work_orders.length === 0 ? (
+            {(data.work_orders?.length ?? 0) === 0 ? (
               <div className="bg-white rounded-xl shadow-sm p-6 text-center text-sm text-gray-400">אין הזמנות פתוחות</div>
-            ) : data.work_orders.map(wo => {
+            ) : (data.work_orders || []).map(wo => {
               const st = WO_STATUS[wo.status] || { label: wo.status, cls: "bg-gray-100 text-gray-600" };
               const isReady = wo.status === "APPROVED_AND_SENT";
               return (
@@ -205,7 +212,7 @@ const WorkManagerDashboard: React.FC = () => {
             <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
               <Wrench className="w-4 h-4" /> ציוד שנסרק היום
             </h3>
-            {data.equipment_scans.length === 0 ? (
+            {(data.equipment_scans?.length ?? 0) === 0 ? (
               <div className="text-center py-6">
                 <QrCode className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                 <p className="text-xs text-gray-400">לא נסרק ציוד היום</p>
@@ -216,7 +223,7 @@ const WorkManagerDashboard: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {data.equipment_scans.map(eq => (
+                {(data.equipment_scans || []).map(eq => (
                   <div key={eq.equipment_id} className="flex items-center gap-2.5 p-2.5 bg-green-50 rounded-lg border border-green-200">
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
