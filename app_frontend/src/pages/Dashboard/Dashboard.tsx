@@ -13,10 +13,10 @@ import OrderCoordinatorDashboard from "./OrderCoordinatorDashboard";
 import AreaManagerDashboard from "./AreaManagerDashboard";
 import RegionManagerDashboard from "./RegionManagerDashboard";
 import AdminDashboard from "./AdminDashboard";
-// FieldWorkerDashboard — replaced by ActivityLogNew
+import FieldWorkerDashboard from "./FieldWorkerDashboard";
 import ViewerDashboard from "./ViewerDashboard";
 import SupplierManagerDashboard from "./SupplierManagerDashboard";
-import ActivityLogNew from "../ActivityLog/ActivityLogNew";
+import WorkManagerDashboard from "./WorkManagerDashboard";
 
 // Dashboard Component - דשבורד מותאם לפי תפקיד
 const Dashboard: React.FC = () => {
@@ -42,7 +42,7 @@ const Dashboard: React.FC = () => {
     
 // ניהול תפעול וכספים
     case UserRole.WORK_MANAGER:
-      return <ActivityLogNew />;
+      return <WorkManagerDashboard />;
       
     case UserRole.ORDER_COORDINATOR:
       return <OrderCoordinatorDashboard />;
@@ -56,7 +56,7 @@ const Dashboard: React.FC = () => {
     
 // שטח וספקים
     case UserRole.FIELD_WORKER:
-      return <ActivityLogNew />;
+      return <FieldWorkerDashboard />;
       
     case UserRole.SUPPLIER:
       // ספקים לא אמורים להתחבר לאפליקציה!

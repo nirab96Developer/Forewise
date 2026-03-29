@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Clock, Briefcase, FileText, AlertTriangle, Plus, QrCode,
-  ChevronLeft, ShieldAlert, Info, Play, CheckCircle, Wrench,
+  Clock, Briefcase, FileText, AlertTriangle, QrCode,
+  ChevronLeft, ShieldAlert, Info, CheckCircle, Wrench,
   ClipboardList, Send
 } from "lucide-react";
 import api from "../../services/api";
@@ -61,57 +61,34 @@ const WorkManagerDashboard: React.FC = () => {
     submitted_reports: (data as any).submitted_worklogs ?? 0,
     approved_reports: 0,
   };
-  const _awRaw = data.active_work || (data as any).active_work;
-  const aw = Array.isArray(_awRaw) ? null : (_awRaw || null);
+  // active_work not used in current layout
+
+  const greeting = new Date().getHours() < 12 ? 'בוקר טוב' : new Date().getHours() < 17 ? 'צהריים טובים' : 'ערב טוב';
 
   return (
     <div className="min-h-full bg-gray-50" dir="rtl">
       <div className="p-3 sm:p-5 space-y-4 max-w-screen-lg mx-auto">
 
-{/* Active Work (Hero) */}
-        {aw && (
-          <div className="bg-gradient-to-l from-green-600 to-green-700 rounded-2xl p-4 sm:p-5 text-white shadow-lg">
-            <div className="flex items-center gap-2 mb-3">
-              <Play className="w-5 h-5" />
-              <span className="text-sm font-bold opacity-90">עבודה פעילה</span>
+        {/* Header */}
+        <div className="bg-gradient-to-l from-green-700 to-green-800 rounded-2xl p-5 sm:p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-200 text-sm mb-1">{greeting}</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2.5">
+                <Wrench className="w-6 h-6 text-green-300" />
+                ניהול עבודה
+              </h1>
+              <p className="text-green-200 text-sm mt-1">
+                {(k.open_work_orders ?? 0) > 0 ? `${k.open_work_orders} הזמנות פתוחות` : 'אין הזמנות פתוחות'}
+                {(k.draft_reports ?? 0) > 0 ? ` · ${k.draft_reports} דיווחים ממתינים` : ''}
+              </p>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold mb-1">#{aw.order_number} {aw.title}</h2>
-            <p className="text-sm opacity-80 mb-3">{aw.project_name}{aw.supplier_name ? ` · ${aw.supplier_name}` : ""}</p>
-
-            {/* Progress */}
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex-1">
-                <div className="flex justify-between text-xs mb-1 opacity-80">
-                  <span>{(aw.used_hours ?? 0).toFixed(1)} שעות בוצעו</span>
-                  <span>{aw.estimated_hours ?? 0} שעות מתוכנן</span>
-                </div>
-                <div className="w-full bg-white/20 rounded-full h-3">
-                  <div className="h-3 rounded-full bg-white transition-all"
-                    style={{ width: `${Math.min(100, aw.estimated_hours > 0 ? (aw.used_hours / aw.estimated_hours) * 100 : 0)}%` }} />
-                </div>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-extrabold">{(aw.remaining_hours ?? 0).toFixed(1)}</p>
-                <p className="text-[10px] opacity-70">שעות נותרו</p>
-              </div>
-            </div>
-
-            {aw.license_plate && (
-              <p className="text-xs opacity-70 mb-3">ציוד: {aw.license_plate} {aw.equipment_code ? `(${aw.equipment_code})` : ""}</p>
-            )}
-
-            <div className="flex gap-2">
-              <button onClick={() => navigate(`/work-logs/new?work_order_id=${aw.work_order_id}`)}
-                className="flex-1 flex items-center justify-center gap-2 min-h-[48px] bg-white text-green-700 font-bold text-sm rounded-xl hover:bg-green-50 transition-colors">
-                <ClipboardList className="w-4 h-4" /> דיווח שעות
-              </button>
-              <button onClick={() => navigate(`/work-orders/${aw.work_order_id}`)}
-                className="flex items-center justify-center gap-2 min-h-[48px] px-4 bg-white/20 text-white font-bold text-sm rounded-xl hover:bg-white/30 transition-colors">
-                פרטים
-              </button>
-            </div>
+            <button onClick={() => window.location.reload()}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold bg-white/15 hover:bg-white/25 text-white rounded-xl backdrop-blur-sm transition-colors">
+              <Send className="w-3.5 h-3.5" /> רענן
+            </button>
           </div>
-        )}
+        </div>
 
 {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -145,20 +122,20 @@ const WorkManagerDashboard: React.FC = () => {
 
 {/* Quick Actions */}
         <div className="grid grid-cols-3 gap-2">
-          <button onClick={() => navigate("/equipment/scan")}
-            className="flex flex-col items-center gap-1.5 min-h-[72px] bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md active:scale-[0.97] transition-all justify-center">
-            <QrCode className="w-6 h-6 text-blue-600" />
-            <span className="text-xs font-bold text-gray-700">סריקת QR</span>
-          </button>
-          <button onClick={() => navigate("/work-logs/new")}
-            className="flex flex-col items-center gap-1.5 min-h-[72px] bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md active:scale-[0.97] transition-all justify-center">
-            <Plus className="w-6 h-6 text-green-600" />
-            <span className="text-xs font-bold text-gray-700">דיווח חדש</span>
-          </button>
           <button onClick={() => navigate("/projects")}
             className="flex flex-col items-center gap-1.5 min-h-[72px] bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md active:scale-[0.97] transition-all justify-center">
+            <Briefcase className="w-6 h-6 text-green-600" />
+            <span className="text-xs font-bold text-gray-700">פרויקטים</span>
+          </button>
+          <button onClick={() => navigate("/work-logs")}
+            className="flex flex-col items-center gap-1.5 min-h-[72px] bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md active:scale-[0.97] transition-all justify-center">
+            <ClipboardList className="w-6 h-6 text-blue-600" />
+            <span className="text-xs font-bold text-gray-700">הדיווחים שלי</span>
+          </button>
+          <button onClick={() => navigate("/activity-log")}
+            className="flex flex-col items-center gap-1.5 min-h-[72px] bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md active:scale-[0.97] transition-all justify-center">
             <FileText className="w-6 h-6 text-gray-500" />
-            <span className="text-xs font-bold text-gray-700">היסטוריה</span>
+            <span className="text-xs font-bold text-gray-700">יומן פעילות</span>
           </button>
         </div>
 
