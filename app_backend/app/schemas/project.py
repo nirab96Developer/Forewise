@@ -38,11 +38,17 @@ class ProjectBase(BaseModel):
 
 class ProjectCreate(ProjectBase):
     """Create"""
-    manager_id: int = Field(..., description="מנהל פרויקט")
-    region_id: int = Field(..., description="אזור")
-    area_id: int = Field(..., description="אזור משני")
-    location_id: int = Field(..., description="מיקום")
+    manager_id: Optional[int] = Field(None, description="מנהל פרויקט")
+    region_id: Optional[int] = Field(None, description="מרחב")
+    area_id: Optional[int] = Field(None, description="אזור")
+    location_id: Optional[int] = Field(None, description="מיקום")
     budget_id: Optional[int] = None
+    latitude: Optional[float] = Field(None, description="קו רוחב")
+    longitude: Optional[float] = Field(None, description="קו אורך")
+    allocated_budget: Optional[float] = None
+    planned_start_date: Optional[str] = None
+    planned_end_date: Optional[str] = None
+    status: Optional[str] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -57,6 +63,13 @@ class ProjectUpdate(BaseModel):
     budget_id: Optional[int] = None
     is_active: Optional[bool] = None
     version: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    allocated_budget: Optional[float] = None
+    planned_start_date: Optional[str] = None
+    planned_end_date: Optional[str] = None
+    status: Optional[str] = None
+    model_config = ConfigDict(extra='ignore')
 
 
 class LocationBrief(BaseModel):
@@ -148,7 +161,7 @@ class ProjectSearch(BaseModel):
     is_active: Optional[bool] = None
     include_deleted: bool = Field(False)
     page: int = Field(1, ge=1)
-    page_size: int = Field(50, ge=1, le=200)
+    page_size: int = Field(50, ge=1, le=1000)
     sort_by: str = Field("name")
     sort_desc: bool = Field(False)
 

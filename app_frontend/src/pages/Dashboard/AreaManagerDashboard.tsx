@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Briefcase, Clock, FileText, DollarSign, FolderOpen,
+  Briefcase, Clock, FileText, FolderOpen,
   AlertTriangle, ChevronLeft, Info, ShieldAlert, Plus,
-  CheckCircle, ClipboardList
+  CheckCircle, ClipboardList, RefreshCw
 } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
@@ -30,17 +30,7 @@ interface AreaData {
 const fmtCurrency = (n: number) =>
 n >= 1e6 ? `${(n/1e6).toFixed(1)}M ` : n >= 1e3 ? `${(n/1e3).toFixed(0)}K ` : `${n.toLocaleString("he-IL", {maximumFractionDigits:0})}`;
 
-const WO_STATUS: Record<string, { label: string; cls: string }> = {
-  PENDING: { label: "ממתין", cls: "bg-yellow-100 text-yellow-800" },
-  DISTRIBUTING: { label: "בהפצה", cls: "bg-blue-100 text-blue-800" },
-  SUPPLIER_ACCEPTED_PENDING_COORDINATOR: { label: "ספק אישר", cls: "bg-blue-100 text-blue-800" },
-  APPROVED_AND_SENT: { label: "אושר", cls: "bg-green-100 text-green-800" },
-  COMPLETED: { label: "הושלם", cls: "bg-gray-100 text-gray-700" },
-  REJECTED: { label: "נדחה", cls: "bg-red-100 text-red-700" },
-  CANCELLED: { label: "בוטל", cls: "bg-red-100 text-red-700" },
-  EXPIRED: { label: "פג תוקף", cls: "bg-gray-100 text-gray-600" },
-  STOPPED: { label: "הופסק", cls: "bg-red-100 text-red-700" },
-};
+// WO statuses removed — Area Manager doesn't manage work orders
 
 const AreaManagerDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -65,30 +55,29 @@ const AreaManagerDashboard: React.FC = () => {
       <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-screen-2xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <FolderOpen className="w-6 h-6 text-green-600" />
+        <div className="bg-gradient-to-l from-green-700 to-green-800 rounded-2xl p-5 sm:p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">אזור {data.area_name}</h1>
-              <p className="text-xs text-gray-500">{k.total_projects} פרויקטים</p>
+              <p className="text-green-200 text-sm mb-1">{new Date().getHours() < 12 ? 'בוקר טוב' : new Date().getHours() < 17 ? 'צהריים טובים' : 'ערב טוב'}</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2.5">
+                <FolderOpen className="w-6 h-6 text-green-300" />
+                אזור {data.area_name}
+              </h1>
+              <p className="text-green-200 text-sm mt-1">{k.total_projects} פרויקטים פעילים</p>
             </div>
+            <button onClick={() => window.location.reload()}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold bg-white/15 hover:bg-white/25 text-white rounded-xl backdrop-blur-sm transition-colors">
+              <RefreshCw className="w-3.5 h-3.5" /> רענן
+            </button>
           </div>
-          <button onClick={() => navigate("/work-orders/new")}
-            className="flex items-center gap-2 px-4 min-h-[44px] bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors">
-            <Plus className="w-4 h-4" /> הזמנת עבודה
-          </button>
         </div>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <KPI icon={<Briefcase className="w-5 h-5" />} label="הזמנות פתוחות" value={k.open_work_orders}
-            accent={k.open_work_orders > 0 ? "border-r-blue-500 bg-blue-50" : "border-r-gray-200 bg-white"}
-            fg={k.open_work_orders > 0 ? "text-blue-600" : "text-gray-400"} to="/work-orders" />
-          <KPI icon={<AlertTriangle className="w-5 h-5" />} label="תקועות >48שע" value={k.stuck_work_orders || 0}
-            accent={(k.stuck_work_orders || 0) > 0 ? "border-r-red-600 bg-red-50" : "border-r-gray-200 bg-white"}
-            fg={(k.stuck_work_orders || 0) > 0 ? "text-red-600" : "text-gray-400"}
-            pulse={(k.stuck_work_orders || 0) > 0} to="/work-orders" />
-          <KPI icon={<Clock className="w-5 h-5" />} label="ממתינים לאישורי" value={k.submitted_for_approval}
+          <KPI icon={<FolderOpen className="w-5 h-5" />} label="פרויקטים" value={k.total_projects}
+            accent={k.total_projects > 0 ? "border-r-green-500 bg-green-50" : "border-r-gray-200 bg-white"}
+            fg={k.total_projects > 0 ? "text-green-600" : "text-gray-400"} to="/projects" />
+          <KPI icon={<Clock className="w-5 h-5" />} label="דיווחים ממתינים" value={k.submitted_for_approval}
             accent={k.submitted_for_approval > 0 ? "border-r-amber-500 bg-amber-50" : "border-r-gray-200 bg-white"}
             fg={k.submitted_for_approval > 0 ? "text-amber-600" : "text-gray-400"} to="/accountant-inbox" pulse={k.submitted_for_approval > 0} />
           <KPI icon={<FileText className="w-5 h-5" />} label="חשבוניות טיוטה" value={k.draft_invoices}
@@ -127,7 +116,7 @@ const AreaManagerDashboard: React.FC = () => {
           {/* Budget */}
           <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 lg:col-span-2">
             <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <DollarSign className="w-4 h-4" /> תקציב אזורי
+              <span className="w-4 h-4 font-bold leading-none inline-flex items-center justify-center">₪</span> תקציב אזורי
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
               <div><p className="text-[11px] text-gray-500">סה״כ</p><p className="text-base sm:text-lg font-bold">{fmtCurrency(b.total)}</p></div>
@@ -150,10 +139,9 @@ const AreaManagerDashboard: React.FC = () => {
             </h3>
             <div className="space-y-2">
               {[
-                { label: "הזמנת עבודה חדשה", path: "/work-orders/new", icon: <ClipboardList className="w-[18px] h-[18px]" />, cls: "bg-blue-600 text-white hover:bg-blue-700" },
-                { label: "פרויקט חדש", path: "/projects/new", icon: <FolderOpen className="w-[18px] h-[18px]" />, cls: "bg-green-50 text-green-700 hover:bg-green-100" },
-                { label: "אישור דיווחים", path: "/work-logs", icon: <CheckCircle className="w-[18px] h-[18px]" />, cls: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
-                { label: "חשבוניות", path: "/invoices", icon: <FileText className="w-[18px] h-[18px]" />, cls: "bg-gray-50 text-gray-700 hover:bg-gray-100" },
+                { label: "הקמת פרויקט", path: "/settings/organization/projects/new", icon: <FolderOpen className="w-[18px] h-[18px]" />, cls: "bg-green-600 text-white hover:bg-green-700" },
+                { label: "דיווחים באזור", path: "/work-logs", icon: <ClipboardList className="w-[18px] h-[18px]" />, cls: "bg-blue-50 text-blue-700 hover:bg-blue-100" },
+                { label: "תקציבים", path: "/settings/budgets", icon: <Briefcase className="w-[18px] h-[18px]" />, cls: "bg-amber-50 text-amber-700 hover:bg-amber-100" },
               ].map(a => (
                 <button key={a.path} onClick={() => navigate(a.path)}
                   className={`w-full flex items-center gap-2.5 px-3 min-h-[44px] text-sm font-medium rounded-lg transition-colors ${a.cls}`}>
@@ -164,43 +152,10 @@ const AreaManagerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Work Orders + Pending Approvals */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Pending Approvals */}
+        <div className="grid grid-cols-1 gap-4">
 
-          {/* Work Orders */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                <Briefcase className="w-4 h-4" /> הזמנות עבודה
-              </h3>
-              <button onClick={() => navigate("/work-orders")}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-0.5 min-h-[44px] px-2">
-                הכל <ChevronLeft className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="divide-y divide-gray-100 max-h-[340px] overflow-y-auto">
-              {data.work_orders.length === 0 ? (
-                <div className="p-6 text-center text-sm text-gray-400">אין הזמנות</div>
-              ) : data.work_orders.map(wo => {
-                const st = WO_STATUS[wo.status] || { label: wo.status, cls: "bg-gray-100 text-gray-600" };
-                return (
-                  <div key={wo.id} onClick={() => navigate(`/work-orders/${wo.id}`)}
-                    className="px-4 py-3 hover:bg-blue-50/40 cursor-pointer transition-colors">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-gray-800">#{wo.order_number} {wo.title}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${st.cls}`}>{st.label}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span>{wo.project_name}</span>
-                      {wo.supplier_name && <span>· {wo.supplier_name}</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Pending Approvals */}
+          {/* דיווחים ממתינים */}
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">

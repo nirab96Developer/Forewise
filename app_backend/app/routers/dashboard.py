@@ -239,6 +239,8 @@ async def get_admin_overview(
     current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Admin dashboard overview — aggregates KPIs, financial, alerts, charts, events."""
+    if not current_user.role or current_user.role.code not in ("ADMIN", "SUPER_ADMIN"):
+        raise HTTPException(status_code=403, detail="Admin access required")
     from datetime import timedelta
     now = datetime.now()
     week_ago = now - timedelta(days=7)
@@ -1124,4 +1126,472 @@ async def get_work_manager_summary(
         "pending_worklogs_fill": int(pending_worklogs_fill),
         "submitted_worklogs": int(submitted_worklogs),
         "area_manager": area_manager,
+    }
+
+
+# ============================================
+# WORK MANAGER OVERVIEW — alias for frontend
+# ============================================
+@router.get("/work-manager-overview")
+async def get_work_manager_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Alias — frontend calls this name."""
+    return await get_work_manager_summary(db=db, current_user=current_user)
+
+
+# ============================================
+# REGION MANAGER DASHBOARD
+# ============================================
+@router.get("/region-overview")
+async def get_region_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Region Manager dashboard — scoped to the user's region."""
+    from app.models import Worklog
+    rid = current_user.region_id
+    region_name = current_user.region.name if current_user.region else "מרחב"
+    now = datetime.now()
+
+    projects_q = db.query(Project).filter(Project.region_id == rid, Project.deleted_at.is_(None))
+    project_ids = [p.id for p in projects_q.all()]
+
+    total_budget = db.execute(text(
+        "SELECT COALESCE(SUM(total_amount),0) FROM budgets WHERE region_id=:rid AND is_active=true AND deleted_at IS NULL"
+    ), {"rid": rid}).scalar() or 0
+    total_spent = db.execute(text(
+        "SELECT COALESCE(SUM(spent_amount),0) FROM budgets WHERE region_id=:rid AND is_active=true AND deleted_at IS NULL"
+    ), {"rid": rid}).scalar() or 0
+    total_committed = db.execute(text(
+        "SELECT COALESCE(SUM(committed_amount),0) FROM budgets WHERE region_id=:rid AND is_active=true AND deleted_at IS NULL"
+    ), {"rid": rid}).scalar() or 0
+
+    open_wo = 0
+    if project_ids:
+        id_list = ",".join(str(i) for i in project_ids)
+        open_wo = db.execute(text(f"""
+            SELECT COUNT(*) FROM work_orders
+            WHERE project_id IN ({id_list})
+              AND status IN ('PENDING','DISTRIBUTING','APPROVED_AND_SENT','SUPPLIER_ACCEPTED_PENDING_COORDINATOR')
+              AND deleted_at IS NULL
+        """)).scalar() or 0
+
+    overrun = db.execute(text(
+        "SELECT COUNT(*) FROM budgets WHERE region_id=:rid AND is_active=true AND deleted_at IS NULL AND spent_amount > total_amount AND total_amount > 0"
+    ), {"rid": rid}).scalar() or 0
+
+    util_pct = round(float(total_spent) / float(total_budget) * 100, 1) if float(total_budget) > 0 else 0
+
+    areas = []
+    area_rows = db.query(Area).filter(Area.region_id == rid, Area.deleted_at.is_(None)).all()
+    for a in area_rows:
+        a_projects = db.execute(text(
+            "SELECT COUNT(*) FROM projects WHERE area_id=:aid AND deleted_at IS NULL"
+        ), {"aid": a.id}).scalar() or 0
+        a_budget = db.execute(text(
+            "SELECT COALESCE(SUM(total_amount),0), COALESCE(SUM(spent_amount),0) FROM budgets WHERE area_id=:aid AND is_active=true AND deleted_at IS NULL"
+        ), {"aid": a.id}).first()
+        a_total = float(a_budget[0]) if a_budget else 0
+        a_spent = float(a_budget[1]) if a_budget else 0
+        a_util = round(a_spent / a_total * 100, 1) if a_total > 0 else 0
+
+        a_open_wo = 0
+        a_pending_wl = 0
+        a_pids = [p.id for p in db.query(Project).filter(Project.area_id == a.id, Project.deleted_at.is_(None)).all()]
+        if a_pids:
+            id_list = ",".join(str(i) for i in a_pids)
+            a_open_wo = db.execute(text(f"SELECT COUNT(*) FROM work_orders WHERE project_id IN ({id_list}) AND status IN ('PENDING','DISTRIBUTING','APPROVED_AND_SENT') AND deleted_at IS NULL")).scalar() or 0
+            a_pending_wl = db.execute(text(f"SELECT COUNT(*) FROM worklogs WHERE project_id IN ({id_list}) AND UPPER(status)='SUBMITTED' AND is_active=true")).scalar() or 0
+
+        mgr_name = None
+        if a.manager_id:
+            mgr = db.query(User).filter(User.id == a.manager_id).first()
+            mgr_name = mgr.full_name if mgr else None
+
+        areas.append({
+            "id": a.id, "name": a.name, "manager_name": mgr_name,
+            "projects": a_projects, "budget_total": a_total,
+            "utilization_pct": a_util, "open_work_orders": a_open_wo,
+            "pending_worklogs": a_pending_wl,
+        })
+
+    wo_trend = []
+    for d in range(13, -1, -1):
+        day = (now - timedelta(days=d)).date()
+        if project_ids:
+            id_list = ",".join(str(i) for i in project_ids)
+            cnt = db.execute(text(f"SELECT COUNT(*) FROM work_orders WHERE project_id IN ({id_list}) AND DATE(created_at)=:day AND deleted_at IS NULL"), {"day": str(day)}).scalar() or 0
+        else:
+            cnt = 0
+        wo_trend.append({"date": str(day), "count": cnt})
+
+    alerts = []
+    if overrun > 0:
+        alerts.append({"type": "error", "message": f"{overrun} תקציבים בחריגה", "link": "/settings/budgets"})
+
+    return {
+        "region_name": region_name,
+        "kpis": {
+            "total_budget": float(total_budget), "total_spent": float(total_spent),
+            "total_committed": float(total_committed), "utilization_pct": util_pct,
+            "open_work_orders": open_wo, "overrun_areas": overrun,
+        },
+        "areas": areas,
+        "wo_trend": wo_trend,
+        "alerts": alerts,
+    }
+
+
+# ============================================
+# AREA MANAGER DASHBOARD
+# ============================================
+@router.get("/area-overview")
+async def get_area_overview(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Area Manager dashboard — scoped to the user's area."""
+    from app.models import Worklog
+    aid = current_user.area_id
+    area_name = current_user.area.name if current_user.area else "אזור"
+    now = datetime.now()
+
+    projects = db.query(Project).filter(Project.area_id == aid, Project.deleted_at.is_(None)).all()
+    project_ids = [p.id for p in projects]
+
+    open_wo = 0
+    stuck_wo = 0
+    pending_approval = 0
+    draft_inv = 0
+    if project_ids:
+        id_list = ",".join(str(i) for i in project_ids)
+        open_wo = db.execute(text(f"SELECT COUNT(*) FROM work_orders WHERE project_id IN ({id_list}) AND status IN ('PENDING','DISTRIBUTING','APPROVED_AND_SENT','SUPPLIER_ACCEPTED_PENDING_COORDINATOR') AND deleted_at IS NULL")).scalar() or 0
+        stuck_wo = db.execute(text(f"SELECT COUNT(*) FROM work_orders WHERE project_id IN ({id_list}) AND status IN ('DISTRIBUTING','SUPPLIER_ACCEPTED_PENDING_COORDINATOR') AND updated_at < :cutoff AND deleted_at IS NULL"), {"cutoff": now - timedelta(hours=48)}).scalar() or 0
+        pending_approval = db.execute(text(f"SELECT COUNT(*) FROM worklogs WHERE project_id IN ({id_list}) AND UPPER(status)='SUBMITTED' AND is_active=true")).scalar() or 0
+        draft_inv = db.execute(text(f"SELECT COUNT(*) FROM invoices WHERE project_id IN ({id_list}) AND UPPER(status)='DRAFT' AND is_active=true")).scalar() or 0
+
+    budget_row = db.execute(text(
+        "SELECT COALESCE(SUM(total_amount),0), COALESCE(SUM(spent_amount),0), COALESCE(SUM(committed_amount),0) FROM budgets WHERE area_id=:aid AND is_active=true AND deleted_at IS NULL"
+    ), {"aid": aid}).first()
+    b_total = float(budget_row[0]) if budget_row else 0
+    b_spent = float(budget_row[1]) if budget_row else 0
+    b_committed = float(budget_row[2]) if budget_row else 0
+    b_remaining = b_total - b_spent - b_committed
+    b_util = round(b_spent / b_total * 100, 1) if b_total > 0 else 0
+
+    wo_list = []
+    if project_ids:
+        id_list = ",".join(str(i) for i in project_ids)
+        rows = db.execute(text(f"""
+            SELECT wo.id, wo.order_number, wo.title, wo.status, p.name as project_name,
+                   s.name as supplier_name
+            FROM work_orders wo
+            LEFT JOIN projects p ON p.id = wo.project_id
+            LEFT JOIN suppliers s ON s.id = wo.supplier_id
+            WHERE wo.project_id IN ({id_list})
+              AND wo.status IN ('PENDING','DISTRIBUTING','APPROVED_AND_SENT','SUPPLIER_ACCEPTED_PENDING_COORDINATOR','ACTIVE')
+              AND wo.deleted_at IS NULL
+            ORDER BY wo.created_at DESC LIMIT 10
+        """)).fetchall()
+        for r in rows:
+            wo_list.append({"id": r[0], "order_number": r[1], "title": r[2], "status": r[3], "project_name": r[4], "supplier_name": r[5]})
+
+    pending_list = []
+    if project_ids:
+        id_list = ",".join(str(i) for i in project_ids)
+        rows = db.execute(text(f"""
+            SELECT wl.id, wl.report_number, wl.report_date, wl.work_hours,
+                   wl.cost_with_vat, wl.is_overnight, u.full_name as reporter
+            FROM worklogs wl
+            LEFT JOIN users u ON u.id = wl.user_id
+            WHERE wl.project_id IN ({id_list})
+              AND UPPER(wl.status) = 'SUBMITTED' AND wl.is_active = true
+            ORDER BY wl.created_at DESC LIMIT 10
+        """)).fetchall()
+        for r in rows:
+            pending_list.append({"id": r[0], "report_number": r[1], "report_date": str(r[2]) if r[2] else None, "work_hours": float(r[3] or 0), "cost_with_vat": float(r[4] or 0), "is_overnight": bool(r[5]), "reporter": r[6]})
+
+    alerts = []
+    if stuck_wo > 0:
+        alerts.append({"type": "warning", "message": f"{stuck_wo} הזמנות תקועות מעל 48 שעות", "link": "/work-orders"})
+
+    return {
+        "area_name": area_name,
+        "kpis": {
+            "open_work_orders": open_wo, "stuck_work_orders": stuck_wo,
+            "submitted_for_approval": pending_approval, "draft_invoices": draft_inv,
+            "total_projects": len(project_ids),
+        },
+        "budget": {
+            "total": b_total, "spent": b_spent, "committed": b_committed,
+            "remaining": b_remaining, "utilization_pct": b_util,
+        },
+        "work_orders": wo_list,
+        "pending_approvals": pending_list,
+        "alerts": alerts,
+    }
+
+
+# ============================================
+# ORDER COORDINATOR QUEUE
+# ============================================
+@router.get("/coordinator-queue")
+async def get_coordinator_queue(
+    status_filter: str = "",
+    project_id: str = "",
+    search: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Order coordinator work order queue with filters."""
+    base_filter = "wo.deleted_at IS NULL AND wo.is_active = true"
+    params: dict = {}
+
+    if status_filter:
+        base_filter += " AND UPPER(wo.status) = :sf"
+        params["sf"] = status_filter.upper()
+    if project_id:
+        base_filter += " AND wo.project_id = :pid"
+        params["pid"] = int(project_id)
+    if search:
+        base_filter += " AND (wo.order_number ILIKE :q OR wo.title ILIKE :q)"
+        params["q"] = f"%{search}%"
+
+    rows = db.execute(text(f"""
+        SELECT wo.id, wo.order_number, wo.title, wo.status, wo.priority,
+               p.name as project_name, s.name as supplier_name,
+               wo.created_at, wo.updated_at, wo.equipment_license_plate
+        FROM work_orders wo
+        LEFT JOIN projects p ON p.id = wo.project_id
+        LEFT JOIN suppliers s ON s.id = wo.supplier_id
+        WHERE {base_filter}
+        ORDER BY
+            CASE WHEN UPPER(wo.status) IN ('PENDING','EXPIRED') THEN 0 ELSE 1 END,
+            wo.created_at DESC
+        LIMIT 50
+    """), params).fetchall()
+
+    work_orders = []
+    for r in rows:
+        wo_id = r[0]
+        history = []
+        hist_rows = db.execute(text("""
+            SELECT si.status, si.responded_at, si.response_notes, s.name as supplier_name
+            FROM supplier_invitations si
+            LEFT JOIN suppliers s ON s.id = si.supplier_id
+            WHERE si.work_order_id = :wid
+            ORDER BY si.created_at DESC
+        """), {"wid": wo_id}).fetchall()
+        for h in hist_rows:
+            history.append({
+                "supplier_name": h[3], "status": h[0],
+                "responded_at": str(h[1]) if h[1] else None,
+                "decline_reason": h[2],
+            })
+
+        work_orders.append({
+            "id": wo_id, "order_number": r[1], "title": r[2],
+            "status": r[3], "priority": r[4], "project_name": r[5],
+            "supplier_name": r[6], "created_at": str(r[7]) if r[7] else None,
+            "updated_at": str(r[8]) if r[8] else None,
+            "license_plate": r[9], "supplier_history": history,
+        })
+
+    pending = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE UPPER(wo.status)='PENDING' AND wo.deleted_at IS NULL AND wo.is_active=true")).scalar() or 0
+    distributing = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE UPPER(wo.status)='DISTRIBUTING' AND wo.deleted_at IS NULL AND wo.is_active=true")).scalar() or 0
+    supplier_accepted = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE UPPER(wo.status)='SUPPLIER_ACCEPTED_PENDING_COORDINATOR' AND wo.deleted_at IS NULL AND wo.is_active=true")).scalar() or 0
+    expired = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE UPPER(wo.status)='EXPIRED' AND wo.deleted_at IS NULL AND wo.is_active=true")).scalar() or 0
+    forced = db.execute(text(f"SELECT COUNT(*) FROM work_orders wo WHERE wo.is_forced_selection=true AND wo.deleted_at IS NULL AND wo.is_active=true AND UPPER(wo.status) NOT IN ('COMPLETED','CANCELLED','REJECTED')")).scalar() or 0
+
+    project_rows = db.execute(text("SELECT DISTINCT p.id, p.name FROM projects p JOIN work_orders wo ON wo.project_id=p.id WHERE wo.deleted_at IS NULL ORDER BY p.name")).fetchall()
+    status_options = [
+        {"value": "PENDING", "label": "ממתין לשליחה"},
+        {"value": "DISTRIBUTING", "label": "בהפצה"},
+        {"value": "SUPPLIER_ACCEPTED_PENDING_COORDINATOR", "label": "ספק אישר"},
+        {"value": "APPROVED_AND_SENT", "label": "אושר ונשלח"},
+        {"value": "EXPIRED", "label": "פג תוקף"},
+        {"value": "REJECTED", "label": "נדחה"},
+    ]
+
+    alerts = []
+    if expired > 0:
+        alerts.append({"type": "warning", "message": f"{expired} הזמנות פגות תוקף"})
+    if forced > 0:
+        alerts.append({"type": "info", "message": f"{forced} הזמנות באילוץ ספק"})
+
+    return {
+        "work_orders": work_orders,
+        "kpis": {
+            "pending": pending, "distributing": distributing,
+            "supplier_accepted": supplier_accepted, "expired": expired,
+            "forced_cases": forced,
+        },
+        "alerts": alerts,
+        "filter_options": {
+            "projects": [{"id": r[0], "name": r[1]} for r in project_rows],
+            "statuses": status_options,
+        },
+    }
+
+
+# ============================================
+# ACCOUNTANT OVERVIEW
+# ============================================
+@router.get("/accountant-overview")
+async def get_accountant_overview(
+    status_filter: str = "SUBMITTED",
+    project_id: str = "",
+    supplier_id: str = "",
+    search: str = "",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Accountant dashboard — worklogs for review, KPIs, filters."""
+    from app.models import Worklog
+    now = datetime.now()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    pending_reports = db.execute(text("SELECT COUNT(*) FROM worklogs WHERE UPPER(status)='SUBMITTED' AND is_active=true")).scalar() or 0
+    approved_today = db.execute(text("SELECT COUNT(*) FROM worklogs WHERE UPPER(status)='APPROVED' AND is_active=true AND approved_at >= :td"), {"td": today_start}).scalar() or 0
+    monthly_approved = db.execute(text("SELECT COALESCE(SUM(cost_with_vat),0) FROM worklogs WHERE UPPER(status)='APPROVED' AND is_active=true AND approved_at >= :ms"), {"ms": month_start}).scalar() or 0
+    pending_amount = db.execute(text("SELECT COALESCE(SUM(cost_with_vat),0) FROM worklogs WHERE UPPER(status)='SUBMITTED' AND is_active=true")).scalar() or 0
+    draft_invoices = db.execute(text("SELECT COUNT(*) FROM invoices WHERE UPPER(status)='DRAFT' AND is_active=true")).scalar() or 0
+    anomalies = db.execute(text("SELECT COUNT(*) FROM worklogs WHERE UPPER(status)='SUBMITTED' AND is_active=true AND (hourly_rate_snapshot IS NULL OR hourly_rate_snapshot <= 0 OR work_hours > 12)")).scalar() or 0
+
+    base_filter = "wl.is_active = true"
+    params: dict = {}
+    if status_filter:
+        base_filter += " AND UPPER(wl.status) = :sf"
+        params["sf"] = status_filter.upper()
+    if project_id:
+        base_filter += " AND wl.project_id = :pid"
+        params["pid"] = int(project_id)
+    if supplier_id:
+        base_filter += " AND wl.supplier_id = :sid"
+        params["sid"] = int(supplier_id)
+    if search:
+        base_filter += " AND (CAST(wl.report_number AS TEXT) ILIKE :q OR u.full_name ILIKE :q)"
+        params["q"] = f"%{search}%"
+
+    rows = db.execute(text(f"""
+        SELECT wl.id, wl.report_number, wl.report_date, wl.work_hours, wl.cost_with_vat,
+               wl.status, wl.is_overnight, wl.hourly_rate_snapshot,
+               p.name as project_name, s.name as supplier_name, u.full_name as reporter_name
+        FROM worklogs wl
+        LEFT JOIN projects p ON p.id = wl.project_id
+        LEFT JOIN suppliers s ON s.id = wl.supplier_id
+        LEFT JOIN users u ON u.id = wl.user_id
+        WHERE {base_filter}
+        ORDER BY wl.created_at DESC LIMIT 50
+    """), params).fetchall()
+
+    worklogs = []
+    for r in rows:
+        flags = []
+        if not r[7] or float(r[7]) <= 0:
+            flags.append("no_rate")
+        if r[3] and float(r[3]) > 12:
+            flags.append("high_hours")
+        if r[3] and float(r[3]) < 1:
+            flags.append("low_hours")
+        worklogs.append({
+            "id": r[0], "report_number": r[1], "report_date": str(r[2]) if r[2] else None,
+            "work_hours": float(r[3] or 0), "cost_with_vat": float(r[4] or 0),
+            "status": r[5], "is_overnight": bool(r[6]),
+            "project_name": r[8], "supplier_name": r[9], "reporter_name": r[10],
+            "flags": flags,
+        })
+
+    project_options = db.execute(text("SELECT DISTINCT p.id, p.name FROM projects p JOIN worklogs wl ON wl.project_id=p.id WHERE wl.is_active=true ORDER BY p.name")).fetchall()
+    supplier_options = db.execute(text("SELECT DISTINCT s.id, s.name FROM suppliers s JOIN worklogs wl ON wl.supplier_id=s.id WHERE wl.is_active=true ORDER BY s.name")).fetchall()
+
+    return {
+        "kpis": {
+            "pending_reports": pending_reports, "approved_today": approved_today,
+            "monthly_approved": float(monthly_approved), "pending_amount": float(pending_amount),
+            "draft_invoices": draft_invoices, "anomalies": anomalies,
+        },
+        "worklogs": worklogs,
+        "filter_options": {
+            "projects": [{"id": r[0], "name": r[1]} for r in project_options],
+            "suppliers": [{"id": r[0], "name": r[1]} for r in supplier_options],
+            "statuses": ["SUBMITTED", "APPROVED", "REJECTED", "PENDING", "DRAFT"],
+        },
+    }
+
+
+@router.get("/worklog-detail/{worklog_id}")
+async def get_worklog_detail(
+    worklog_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """Detailed worklog view for accountant modal."""
+    row = db.execute(text("""
+        SELECT wl.id, wl.report_number, wl.report_date, wl.report_type, wl.status,
+               wl.work_hours, wl.break_hours, wl.net_hours, wl.total_hours,
+               wl.hourly_rate_snapshot, wl.rate_source_name, wl.cost_before_vat, wl.cost_with_vat,
+               wl.is_overnight, wl.overnight_nights, wl.overnight_rate, wl.overnight_total,
+               wl.equipment_scanned, wl.equipment_type, wl.notes,
+               wl.approved_at, wl.vat_rate,
+               p.name as project_name, s.name as supplier_name, u.full_name as reporter_name,
+               ap.full_name as approver_name,
+               e.license_plate, e.name as equipment_name, e.code as equipment_code,
+               wo.order_number as work_order_number
+        FROM worklogs wl
+        LEFT JOIN projects p ON p.id = wl.project_id
+        LEFT JOIN suppliers s ON s.id = wl.supplier_id
+        LEFT JOIN users u ON u.id = wl.user_id
+        LEFT JOIN users ap ON ap.id = wl.approved_by_user_id
+        LEFT JOIN equipment e ON e.id = wl.equipment_id
+        LEFT JOIN work_orders wo ON wo.id = wl.work_order_id
+        WHERE wl.id = :wid
+    """), {"wid": worklog_id}).first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Worklog not found")
+
+    warnings = []
+    if not row[9] or float(row[9]) <= 0:
+        warnings.append("לא נמצא תעריף תקין — ייתכן שהעלות אינה מדויקת")
+    if row[5] and float(row[5]) > 10:
+        warnings.append(f"שעות עבודה חריגות ({float(row[5]):.1f} שעות)")
+
+    audit_trail = []
+    audit_rows = db.execute(text("""
+        SELECT al.description, al.created_at, u.full_name
+        FROM activity_logs al
+        LEFT JOIN users u ON u.id = al.user_id
+        WHERE al.entity_type = 'worklog' AND al.entity_id = :wid
+        ORDER BY al.created_at DESC LIMIT 20
+    """), {"wid": worklog_id}).fetchall()
+    for ar in audit_rows:
+        audit_trail.append({"description": ar[0], "created_at": str(ar[1]) if ar[1] else None, "user_name": ar[2]})
+
+    inv_row = db.execute(text("""
+        SELECT i.invoice_number, i.status FROM invoice_items ii
+        JOIN invoices i ON i.id = ii.invoice_id
+        WHERE ii.worklog_id = :wid LIMIT 1
+    """), {"wid": worklog_id}).first()
+    invoice = {"invoice_number": inv_row[0], "status": inv_row[1]} if inv_row else None
+
+    return {
+        "id": row[0], "report_number": row[1], "report_date": str(row[2]) if row[2] else None,
+        "report_type": row[3], "status": row[4],
+        "work_hours": float(row[5] or 0), "break_hours": float(row[6] or 0),
+        "net_hours": float(row[7] or row[5] or 0), "total_hours": float(row[8] or 0),
+        "hourly_rate": float(row[9] or 0), "rate_source_name": row[10],
+        "cost_before_vat": float(row[11] or 0), "cost_with_vat": float(row[12] or 0),
+        "is_overnight": bool(row[13]), "overnight_nights": int(row[14] or 0),
+        "overnight_rate": float(row[15] or 0), "overnight_total": float(row[16] or 0),
+        "equipment_scanned": bool(row[17]), "equipment_type": row[18], "notes": row[19],
+        "approved_at": str(row[20]) if row[20] else None, "vat_rate": float(row[21] or 0.18),
+        "project_name": row[22], "supplier_name": row[23], "reporter_name": row[24],
+        "approver_name": row[25],
+        "license_plate": row[26], "equipment_name": row[27], "equipment_code": row[28],
+        "work_order_number": row[29],
+        "warnings": warnings, "audit_trail": audit_trail, "invoice": invoice,
     }

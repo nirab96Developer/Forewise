@@ -169,8 +169,25 @@ async def get_support_tickets(
     # Order by most recent first
     offset = (page - 1) * limit if page > 1 else skip
     tickets = query.order_by(SupportTicket.created_at.desc()).offset(offset).limit(limit).all()
-    
-    return tickets
+
+    result = []
+    for t in tickets:
+        user = db.query(User).filter(User.id == t.user_id).first()
+        result.append({
+            "id": t.id,
+            "ticket_number": t.ticket_number,
+            "title": t.title,
+            "description": t.description,
+            "status": t.status,
+            "priority": t.priority,
+            "category": t.category,
+            "user_id": t.user_id,
+            "user_name": user.full_name if user else "משתמש",
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+            "updated_at": t.updated_at.isoformat() if t.updated_at else None,
+        })
+
+    return result
 
 
 @router.get("/{ticket_id}")

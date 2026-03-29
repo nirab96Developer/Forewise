@@ -27,8 +27,12 @@ const ForestMap = () => {
   let userData: any = {};
   try { userData = JSON.parse(localStorage.getItem('user') || '{}'); } catch { /* corrupted storage */ }
   const userAreaId = userData.area_id;
+  const userRegionId = userData.region_id;
   const userRole = userData.role || userData.role_code || '';
   const isWorkManager = userRole === 'WORK_MANAGER' || userRole === 'FIELD_WORKER';
+  const isAreaManager = userRole === 'AREA_MANAGER';
+  const isRegionManager = userRole === 'REGION_MANAGER';
+  void(userRole); // available for future role-based map filtering
 
   // WORK_MANAGER sees only their projects — hide region/area layers
   const [layerVis, setLayerVis] = useState<Record<string, boolean>>({
@@ -75,8 +79,20 @@ const ForestMap = () => {
   if (layerVis.areas && layerData?.areas?.features) {
     layerData.areas.features.forEach((f: any, idx: any) => {
       if (selectedRegion && f.properties.region_id !== selectedRegion) return;
-      const color = AREA_COLORS[idx % AREA_COLORS.length];
-      mapPolygons.push({ id: f.properties.id, name: f.properties.name, geometry: f.geometry, fillColor: color, strokeColor: color, fillOpacity: f.properties.id === userAreaId ? 0.20 : 0.06, strokeWeight: f.properties.id === userAreaId ? 3 : 1.5 });
+      // Area Manager or Region Manager: filter to relevant areas
+      if (isAreaManager && userAreaId && f.properties.id !== userAreaId) return;
+      if (isRegionManager && userRegionId && f.properties.region_id !== userRegionId) return;
+      const isMyArea = f.properties.id === userAreaId;
+      const color = isMyArea ? '#16a34a' : AREA_COLORS[idx % AREA_COLORS.length];
+      mapPolygons.push({
+        id: f.properties.id,
+        name: f.properties.name,
+        geometry: f.geometry,
+        fillColor: color,
+        strokeColor: isMyArea ? '#15803d' : color,
+        fillOpacity: isMyArea ? 0.25 : 0.08,
+        strokeWeight: isMyArea ? 3.5 : 1.5,
+      });
     });
   }
 
@@ -99,6 +115,8 @@ const ForestMap = () => {
   if (layerVis.projects && layerData?.projects) {
     let projs = layerData.projects;
     if (layerVis.myProjects && myProjectIds.size > 0) projs = projs.filter((p: any) => myProjectIds.has(p.id));
+    if (isAreaManager && userAreaId) projs = projs.filter((p: any) => p.area_id === userAreaId);
+    if (isRegionManager && userRegionId) projs = projs.filter((p: any) => p.region_id === userRegionId);
     if (selectedRegion) projs = projs.filter((p: any) => p.region_id === selectedRegion);
     mapPoints = projs.filter((p: any) => p.lat && p.lng).map((p: any) => ({
       id: p.id, name: p.name, code: p.code, lat: p.lat, lng: p.lng,
@@ -123,12 +141,36 @@ const ForestMap = () => {
   const toggleLayer = (key: string) => setLayerVis((prev: any) => ({ ...prev, [key]: !prev[key] }));
   const goBackToMenu = () => navigate('/');
 
-  // Auto-center on user's projects (WORK_MANAGER) or region selection
+  // Auto-center based on user role
   let mapCenter: [number, number] = [31.5, 35.0];
   let mapZoom = 8;
 
   const myPoints = mapPoints.filter(p => myProjectIds.has(p.id));
-  const focusPoints = isWorkManager && myPoints.length > 0 ? myPoints : mapPoints;
+
+  // Determine which points to focus on
+  let focusPoints = mapPoints;
+  if (isWorkManager && myPoints.length > 0) {
+    focusPoints = myPoints;
+  } else if (isAreaManager && userAreaId) {
+    // Focus on projects in user's area
+    const areaProjects = mapPoints.filter(p => {
+      const proj = (layerData?.projects || []).find((pr: any) => pr.id === p.id);
+      return proj && proj.area_id === userAreaId;
+    });
+    if (areaProjects.length > 0) focusPoints = areaProjects;
+  } else if (isRegionManager && userRegionId) {
+    const regionProjects = mapPoints.filter(p => {
+      const proj = (layerData?.projects || []).find((pr: any) => pr.id === p.id);
+      return proj && proj.region_id === userRegionId;
+    });
+    if (regionProjects.length > 0) focusPoints = regionProjects;
+  } else if (selectedRegion) {
+    const regionProjects = mapPoints.filter(p => {
+      const proj = (layerData?.projects || []).find((pr: any) => pr.id === p.id);
+      return proj && proj.region_id === selectedRegion;
+    });
+    if (regionProjects.length > 0) focusPoints = regionProjects;
+  }
 
   if (focusPoints.length > 0) {
     const lats = focusPoints.map(p => p.lat);
@@ -136,20 +178,8 @@ const ForestMap = () => {
     const minLat = Math.min(...lats), maxLat = Math.max(...lats);
     const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
     mapCenter = [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
-    // Calculate zoom based on spread
-    const latSpread = maxLat - minLat;
-    const lngSpread = maxLng - minLng;
-    const spread = Math.max(latSpread, lngSpread);
+    const spread = Math.max(maxLat - minLat, maxLng - minLng);
     mapZoom = spread < 0.05 ? 13 : spread < 0.15 ? 12 : spread < 0.4 ? 11 : spread < 1.0 ? 10 : spread < 2.0 ? 9 : 8;
-  } else if (selectedRegion) {
-    // Center on selected region
-    const regionProjects = (layerData?.projects || []).filter((p: any) => p.region_id === selectedRegion && p.lat && p.lng);
-    if (regionProjects.length > 0) {
-      const lats = regionProjects.map((p: any) => p.lat);
-      const lngs = regionProjects.map((p: any) => p.lng);
-      mapCenter = [(Math.min(...lats) + Math.max(...lats)) / 2, (Math.min(...lngs) + Math.max(...lngs)) / 2];
-      mapZoom = 10;
-    }
   }
 
   return (
@@ -274,7 +304,7 @@ const ForestMap = () => {
           points={mapPoints}
           polygons={mapPolygons}
           maskPolygon={maskPoly}
-          mapType="satellite"
+          mapType="street"
           center={mapCenter}
           zoom={mapZoom}
           fitBounds={true}

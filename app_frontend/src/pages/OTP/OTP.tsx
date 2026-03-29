@@ -342,13 +342,21 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-green-50 flex items-center justify-center p-4 animate-fadeIn">
       <div className="w-full max-w-lg animate-slideUp">
         {/* לוגו */}
-        <div className="text-center mb-6">
-          <div className="w-20 h-20 mx-auto mb-4 hover:scale-105 transition-transform duration-300">
-            <img
-              src="/logo-forewise-transparent.png"
-              alt="Forewise Logo"
-              className="w-full h-full object-contain drop-shadow-xl"
-            />
+        <div className="flex flex-col items-center mb-6 hover:scale-105 transition-transform duration-300">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="80" height="67">
+            <defs>
+              <linearGradient id="otp_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#1565c0'}}/><stop offset="100%" style={{stopColor:'#0097a7'}}/></linearGradient>
+              <linearGradient id="otp_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#0097a7'}}/><stop offset="50%" style={{stopColor:'#2e7d32'}}/><stop offset="100%" style={{stopColor:'#66bb6a'}}/></linearGradient>
+              <linearGradient id="otp_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#2e7d32'}}/><stop offset="40%" style={{stopColor:'#66bb6a'}}/><stop offset="100%" style={{stopColor:'#8B5e3c'}}/></linearGradient>
+            </defs>
+            <path d="M46 20 Q60 9 74 20" stroke="url(#otp_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+            <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#otp_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+            <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#otp_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+            <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
+            <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
+          </svg>
+          <div style={{fontFamily:"'Montserrat',sans-serif", fontWeight:800, fontSize:'20px', letterSpacing:'4px', color:'#1F6F43', marginTop:'6px'}}>
+            FOREWISE
           </div>
         </div>
         

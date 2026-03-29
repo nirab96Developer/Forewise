@@ -7,7 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowRight, FileText, Loader2, AlertCircle,
   Printer, Mail, ReceiptText, Building2, Calendar,
-  DollarSign, Truck, CreditCard
+  Truck, CreditCard
 } from 'lucide-react';
 import api from '../../services/api';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
@@ -114,7 +114,7 @@ showToast('החשבונית נשלחה לספק במייל ', 'success');
   };
 
   const handlePrint = () => {
-    window.print();
+    window.open(`/api/v1/invoices/${id}/pdf`, '_blank');
   };
 
   if (loading) return <UnifiedLoader size="full" />;
@@ -236,7 +236,7 @@ showToast('החשבונית נשלחה לספק במייל ', 'success');
             {/* Status / Balance */}
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 bg-kkl-green-light rounded-lg flex items-center justify-center flex-shrink-0">
-                <DollarSign className="w-4 h-4 text-kkl-green" />
+                <span className="w-4 h-4 text-kkl-green font-bold leading-none inline-flex items-center justify-center">₪</span>
               </div>
               <div>
                 <p className="text-xs text-gray-500 mb-0.5">יתרה לתשלום</p>

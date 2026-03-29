@@ -128,6 +128,8 @@ class EquipmentUpdate(BaseModel):
     hourly_rate: Optional[Decimal] = Field(None, ge=0)
     daily_rate: Optional[Decimal] = Field(None, ge=0)
     storage_hourly_rate: Optional[Decimal] = Field(None, ge=0)
+    overnight_rate: Optional[Decimal] = Field(None, ge=0)
+    night_guard: Optional[bool] = None
     
     # Maintenance
     last_maintenance: Optional[date] = None

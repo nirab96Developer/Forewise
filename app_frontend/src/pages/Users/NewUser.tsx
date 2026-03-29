@@ -25,6 +25,7 @@ const NewUser: React.FC = () => {
     department_id: '',
     region_id: '',
     area_id: '',
+    manager_id: '',
     is_active: true,
     two_factor_enabled: false,
   });
@@ -82,6 +83,45 @@ const NewUser: React.FC = () => {
   };
 
 // Filter projects by selected area region all
+  // Dynamic form rules based on selected role
+  const selectedRole = roles.find(r => r.id === Number(formData.role_id));
+  const roleCode = selectedRole?.code || '';
+  const GLOBAL_ROLES = ['ADMIN', 'ORDER_COORDINATOR'];
+  const isGlobalRole = GLOBAL_ROLES.includes(roleCode);
+  const needsRegion = !isGlobalRole && !!roleCode;
+  const needsArea = ['AREA_MANAGER', 'WORK_MANAGER'].includes(roleCode);
+  const needsManager = roleCode === 'WORK_MANAGER';
+
+  // Auto-assign department by role
+  const ROLE_DEPT_MAP: Record<string, string> = {
+    ADMIN: 'מחלקת הנהלה',
+    ORDER_COORDINATOR: 'מחלקת הנהלה',
+    REGION_MANAGER: 'מחלקת הנהלה',
+    AREA_MANAGER: 'מחלקת הנהלה',
+    WORK_MANAGER: 'מחלקת מנהלי עבודה',
+    ACCOUNTANT: 'מחלקת חשבונות',
+  };
+  useEffect(() => {
+    if (roleCode && departments.length > 0) {
+      const deptName = ROLE_DEPT_MAP[roleCode];
+      if (deptName) {
+        const dept = departments.find(d => d.name === deptName);
+        if (dept) setFormData(prev => ({ ...prev, department_id: String(dept.id) }));
+      }
+    }
+  }, [roleCode, departments.length]);
+
+  // Load managers for dropdown
+  const [managers, setManagers] = useState<{id: number; full_name: string}[]>([]);
+  useEffect(() => {
+    if (needsManager) {
+      api.get('/users', { params: { page_size: 100 } }).then(r => {
+        const items = r.data?.items || r.data || [];
+        setManagers(items.filter((u: any) => u.is_active));
+      }).catch(() => {});
+    }
+  }, [needsManager]);
+
   const filteredProjects = projects.filter(p => {
     if (formData.area_id) return p.area_id === Number(formData.area_id);
     if (formData.region_id) return p.region_id === Number(formData.region_id);
@@ -125,6 +165,7 @@ const NewUser: React.FC = () => {
         department_id: formData.department_id ? Number(formData.department_id) : undefined,
         region_id: formData.region_id ? Number(formData.region_id) : undefined,
         area_id: formData.area_id ? Number(formData.area_id) : undefined,
+        manager_id: formData.manager_id ? Number(formData.manager_id) : undefined,
         is_active: formData.is_active,
         two_factor_enabled: formData.two_factor_enabled,
         project_ids: selectedProjectIds,
@@ -199,18 +240,19 @@ const NewUser: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <label className={labelCls}><User className="inline w-3.5 h-3.5 ml-1" />שם מלא *</label>
-                <input type="text" value={formData.full_name}
-                  onChange={e => setFormData({ ...formData, full_name: e.target.value })}
-                  className={inputCls} required />
-              </div>
-
-              <div>
-                <label className={labelCls}><Phone className="inline w-3.5 h-3.5 ml-1" />טלפון</label>
-                <input type="tel" value={formData.phone}
-                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  className={inputCls} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}><User className="inline w-3.5 h-3.5 ml-1" />שם מלא *</label>
+                  <input type="text" value={formData.full_name}
+                    onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                    className={inputCls} required />
+                </div>
+                <div>
+                  <label className={labelCls}><Phone className="inline w-3.5 h-3.5 ml-1" />טלפון</label>
+                  <input type="tel" value={formData.phone}
+                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    className={inputCls} />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -235,40 +277,55 @@ const NewUser: React.FC = () => {
                     onChange={e => setFormData({ ...formData, role_id: e.target.value })}
                     className={inputCls}>
                     <option value="">בחר תפקיד</option>
-                    {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    {roles.filter(r => r.code !== 'SUPPLIER').map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className={labelCls}>מחלקה</label>
-                  <select value={formData.department_id}
-                    onChange={e => setFormData({ ...formData, department_id: e.target.value })}
-                    className={inputCls}>
-                    <option value="">בחר מחלקה</option>
-                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
+                  <input type="text" readOnly
+                    value={departments.find(d => d.id === Number(formData.department_id))?.name || 'ייקבע אוטומטית לפי תפקיד'}
+                    className={`${inputCls} bg-gray-50 text-gray-500`} />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Region + Area — dynamic by role */}
+              {!isGlobalRole && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>מרחב {needsRegion ? '*' : ''}</label>
+                    <select value={formData.region_id}
+                      onChange={e => setFormData({ ...formData, region_id: e.target.value, area_id: '' })}
+                      className={inputCls}>
+                      <option value="">בחר מרחב</option>
+                      {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  </div>
+                  {needsArea && (
+                    <div>
+                      <label className={labelCls}>אזור *</label>
+                      <select value={formData.area_id}
+                        onChange={e => setFormData({ ...formData, area_id: e.target.value })}
+                        className={inputCls} disabled={!formData.region_id}>
+                        <option value="">בחר אזור</option>
+                        {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Manager — only for Work Manager */}
+              {needsManager && (
                 <div>
-                  <label className={labelCls}>מרחב</label>
-                  <select value={formData.region_id}
-                    onChange={e => setFormData({ ...formData, region_id: e.target.value, area_id: '' })}
+                  <label className={labelCls}>מנהל ישיר</label>
+                  <select value={formData.manager_id}
+                    onChange={e => setFormData({ ...formData, manager_id: e.target.value })}
                     className={inputCls}>
-                    <option value="">בחר מרחב</option>
-                    {regions.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    <option value="">בחר מנהל ישיר</option>
+                    {managers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
                   </select>
                 </div>
-                <div>
-                  <label className={labelCls}>אזור</label>
-                  <select value={formData.area_id}
-                    onChange={e => setFormData({ ...formData, area_id: e.target.value })}
-                    className={inputCls} disabled={!formData.region_id}>
-                    <option value="">בחר אזור</option>
-                    {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                </div>
-              </div>
+              )}
 
               <div className="space-y-2 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer">

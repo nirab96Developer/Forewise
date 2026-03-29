@@ -47,13 +47,13 @@ const STATUS_LABEL: Record<TicketStatus, string> = {
 const STATUS_COLOR: Record<TicketStatus, string> = {
   open: 'bg-red-100 text-red-700',
   in_progress: 'bg-yellow-100 text-yellow-700',
-  resolved: 'bg-green-100 text-green-700',
+  resolved: 'bg-gray-100 text-gray-500',
 };
 
 const STATUS_DOT: Record<TicketStatus, string> = {
   open: 'bg-red-500',
   in_progress: 'bg-yellow-400',
-  resolved: 'bg-green-500',
+  resolved: 'bg-gray-300',
 };
 
 const fmtDate = (iso: string) => {
@@ -213,11 +213,16 @@ showToast(newStatus === 'resolved' ? ' הקריאה סומנה כטופלה' : '
                 אין קריאות תמיכה
               </div>
             ) : (
-              tickets.map(ticket => (
+              tickets.map(ticket => {
+                const isResolved = ticket.status === 'resolved';
+                return (
                 <button
                   key={ticket.id}
                   onClick={() => openTicket(ticket)}
-                  className={`w-full text-right px-4 py-3.5 hover:bg-gray-50 transition-colors ${selected?.id === ticket.id ? 'bg-green-50 border-r-4 border-r-green-600' : ''}`}
+                  className={`w-full text-right px-4 py-3.5 hover:bg-gray-50 transition-colors ${
+                    selected?.id === ticket.id ? 'bg-green-50 border-r-4 border-r-green-600' :
+                    isResolved ? 'opacity-60' : ''
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${STATUS_DOT[ticket.status as TicketStatus] || 'bg-gray-400'}`} />
@@ -228,7 +233,7 @@ showToast(newStatus === 'resolved' ? ' הקריאה סומנה כטופלה' : '
                           {new Date(ticket.updated_at).toLocaleDateString('he-IL')}
                         </span>
                       </div>
-                      <p className="font-medium text-gray-900 text-sm truncate">{ticket.title}</p>
+                      <p className={`font-medium text-sm truncate ${isResolved ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{ticket.title}</p>
                       <p className="text-xs text-gray-500 truncate mt-0.5">{ticket.description}</p>
                       <div className="flex items-center justify-between mt-1.5">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[ticket.status as TicketStatus] || 'bg-gray-100 text-gray-600'}`}>
@@ -245,7 +250,8 @@ showToast(newStatus === 'resolved' ? ' הקריאה סומנה כטופלה' : '
                     <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 mt-2" />
                   </div>
                 </button>
-              ))
+                );
+              })
             )}
           </div>
         </div>

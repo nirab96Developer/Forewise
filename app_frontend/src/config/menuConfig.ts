@@ -12,7 +12,7 @@ import {
   Truck,
   ScanLine,
   FileText,
-  Wallet,
+  Banknote,
   ClipboardCheck,
   BookOpen,
   LucideIcon
@@ -145,10 +145,17 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
   },
   budgets: {
     id: "budgets",
-    icon: Wallet,
+    icon: Banknote,
     label: "תקציבים",
     path: "/settings/budgets",
     permission: PERMISSIONS.BUDGETS_VIEW,
+  },
+  support: {
+    id: "support",
+    icon: ClipboardList,
+    label: "קריאות תמיכה",
+    path: "/support",
+    permission: PERMISSIONS.DASHBOARD_VIEW,
   },
   settings: {
     id: "settings",
@@ -193,52 +200,47 @@ const MENU_ITEM_POOL: Record<string, MenuItem> = {
 // ============================================================
 const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: string[] }> = {
   [UserRole.ADMIN]: {
-    items: [
-      "dashboard", "projects", "workOrders", "orderCoordination",
-      "suppliers", "equipment",
-      "invoices", "budgets", "reports",
-      "map", "activityLog", "settings"
-    ],
-    dividerAfter: ["dashboard", "orderCoordination", "reports", "settings"],
+    items: ["dashboard", "projects", "workOrders", "orderCoordination", "reports", "map", "support", "settings"],
+    dividerAfter: ["dashboard", "orderCoordination", "map"],
   },
   [UserRole.REGION_MANAGER]: {
-    items: ["dashboard", "projectsRegion", "budgets", "reports", "map", "journalSystem"],
+    items: ["dashboard", "projectsRegion", "budgets", "reports", "map"],
     dividerAfter: ["dashboard", "reports"],
   },
   [UserRole.AREA_MANAGER]: {
-    items: ["dashboard", "projectsArea", "workOrders", "workLogs", "budgets", "reports", "map", "journalSystem"],
-    dividerAfter: ["dashboard", "workLogs", "reports"],
+    items: ["dashboard", "projectsArea", "budgets", "reports", "map"],
+    dividerAfter: ["dashboard", "reports"],
   },
   [UserRole.WORK_MANAGER]: {
-    items: ["dashboard", "projects", "workOrders", "equipmentScan", "workLogs", "journalWorkManager"],
+    items: ["dashboard", "projects", "workOrders", "equipmentScan", "workLogs"],
     dividerAfter: ["dashboard", "workLogs"],
   },
   [UserRole.ORDER_COORDINATOR]: {
-    items: ["dashboard", "orderCoordination", "workOrders", "journal"],
-    dividerAfter: ["dashboard", "workOrders"],
+    items: ["dashboard", "orderCoordination"],
+    dividerAfter: ["dashboard"],
   },
   [UserRole.ACCOUNTANT]: {
-    items: ["dashboard", "accountantInbox", "invoices", "budgets", "reports", "journalAccountant"],
-    dividerAfter: ["dashboard", "invoices", "reports"],
+    items: ["dashboard", "accountantInbox", "invoices", "budgets", "reports"],
+    dividerAfter: ["dashboard", "invoices"],
   },
   [UserRole.SUPPLIER_MANAGER]: {
-    items: ["dashboard", "settings", "journal"],
-    dividerAfter: ["dashboard", "settings"],
+    items: ["dashboard", "settings"],
+    dividerAfter: ["dashboard"],
   },
   [UserRole.FIELD_WORKER]: {
-    items: ["dashboard", "projects", "journal"],
+    items: ["dashboard", "projects"],
     dividerAfter: ["dashboard"],
   },
   [UserRole.SUPPLIER]: {
-    items: [],  // Supplier uses /supplier-portal, no sidebar
+    items: [],
     dividerAfter: [],
   },
   [UserRole.VIEWER]: {
-    items: ["dashboard", "projects", "reports", "journal"],
-    dividerAfter: ["dashboard", "reports"],
+    items: ["dashboard", "projects", "reports"],
+    dividerAfter: ["dashboard"],
   },
   [UserRole.USER]: {
-    items: ["dashboard", "projects", "journal"],
+    items: ["dashboard", "projects"],
     dividerAfter: ["dashboard"],
   },
 };

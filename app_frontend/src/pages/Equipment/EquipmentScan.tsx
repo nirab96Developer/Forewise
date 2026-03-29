@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search, Truck, User, Building2, CheckCircle, AlertCircle,
-  Loader2, X, ArrowLeft, Clock, DollarSign, Camera, Keyboard,
+  Loader2, X, ArrowLeft, Clock, Camera, Keyboard,
   ShieldCheck, AlertTriangle
 } from 'lucide-react';
 import api from '../../services/api';
@@ -443,7 +443,7 @@ showToast(' האימות נשמר — יסונכרן כשיחזור חיבור',
                 {equipment.hourly_rate != null && equipment.hourly_rate > 0 && (
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-green-600" />
+                      <span className="w-5 h-5 text-green-600 font-bold leading-none inline-flex items-center justify-center">₪</span>
                     </div>
                     <div className="flex-1">
                       <div className="text-xs text-green-700">תעריף שעתי</div>

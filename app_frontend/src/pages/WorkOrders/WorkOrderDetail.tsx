@@ -151,11 +151,11 @@ const WorkOrderDetail: React.FC = () => {
               </button>
             )}
             <button
-              onClick={() => window.print()}
+              onClick={() => window.open(`/api/v1/work-orders/${workOrder.id}/pdf`, '_blank')}
               className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm"
             >
               <Printer className="w-4 h-4" />
-              הדפסה / PDF
+              הורד PDF
             </button>
             {canEdit && (
               <button

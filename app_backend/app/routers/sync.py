@@ -132,79 +132,72 @@ async def create_worklog(
     db: Session,
     current_user: User
 ) -> SyncResult:
-    """Create a new worklog"""
-    try:
-        required_fields = ["work_order_id", "work_date", "hours_worked"]
-        for field in required_fields:
-            if field not in operation.data:
-                raise ValueError(f"Missing required field: {field}")
+    """Create a new worklog — routed through WorklogService for full validation"""
+    from app.services.worklog_service import WorklogService
+    from app.schemas.worklog import WorklogCreate
 
-        from sqlalchemy import func as sa_func
-        max_num = db.query(sa_func.max(Worklog.report_number)).scalar() or 0
-        report_number = max_num + 1
+    required_fields = ["work_order_id", "work_date", "hours_worked"]
+    for field in required_fields:
+        if field not in operation.data:
+            raise ValueError(f"Missing required field: {field}")
 
-        worklog = Worklog(
-            work_order_id=operation.data["work_order_id"],
-            report_date=operation.data.get("work_date"),
-            work_hours=operation.data.get("hours_worked"),
-            user_id=current_user.id,
-            report_number=report_number,
-            report_type=operation.data.get("report_type", "standard"),
-        )
-        
-        db.add(worklog)
-        db.commit()
-        db.refresh(worklog)
-        
-        return SyncResult(
-            operation_type=operation.operation_type,
-            entity_type=operation.entity_type,
-            entity_id=worklog.id,
-            success=True,
-            server_timestamp=datetime.utcnow(),
-            client_id=operation.client_id
-        )
-        
-    except Exception as e:
-        db.rollback()
-        raise e
+    create_data = WorklogCreate(
+        work_order_id=operation.data["work_order_id"],
+        report_date=operation.data.get("work_date"),
+        work_hours=operation.data.get("hours_worked"),
+        report_type=operation.data.get("report_type", "standard"),
+        break_hours=operation.data.get("break_hours", 0),
+        equipment_scanned=operation.data.get("equipment_scanned"),
+        activity_description=operation.data.get("description"),
+        notes=operation.data.get("notes"),
+    )
+
+    service = WorklogService()
+    worklog = service.create(db, create_data, current_user.id)
+
+    return SyncResult(
+        operation_type=operation.operation_type,
+        entity_type=operation.entity_type,
+        entity_id=worklog.id,
+        success=True,
+        server_timestamp=datetime.utcnow(),
+        client_id=operation.client_id
+    )
 
 async def update_worklog(
     operation: SyncOperation,
     db: Session,
     current_user: User
 ) -> SyncResult:
-    """Update an existing worklog"""
-    try:
-        worklog = db.query(Worklog).filter(Worklog.id == operation.entity_id).first()
-        if not worklog:
-            raise ValueError(f"Worklog {operation.entity_id} not found")
-        
-        # Check for conflicts (modified since last sync)
-        if worklog.updated_at and operation.timestamp < worklog.updated_at:
-            raise ValueError(f"Conflict: Worklog {operation.entity_id} was modified after client sync")
-        
-        # Update fields
-        for field, value in operation.data.items():
-            if hasattr(worklog, field):
-                setattr(worklog, field, value)
-        
-        worklog.updated_at = datetime.utcnow()
-        
-        db.commit()
-        
-        return SyncResult(
-            operation_type=operation.operation_type,
-            entity_type=operation.entity_type,
-            entity_id=worklog.id,
-            success=True,
-            server_timestamp=datetime.utcnow(),
-            client_id=operation.client_id
-        )
-        
-    except Exception as e:
-        db.rollback()
-        raise e
+    """Update an existing worklog — safe allowlist only"""
+    from app.services.worklog_service import WorklogService
+    from app.schemas.worklog import WorklogUpdate
+
+    worklog = db.query(Worklog).filter(Worklog.id == operation.entity_id).first()
+    if not worklog:
+        raise ValueError(f"Worklog {operation.entity_id} not found")
+
+    if worklog.updated_at and operation.timestamp < worklog.updated_at:
+        raise ValueError(f"Conflict: Worklog {operation.entity_id} was modified after client sync")
+
+    update_data = WorklogUpdate(
+        work_hours=operation.data.get("work_hours") or operation.data.get("hours_worked"),
+        break_hours=operation.data.get("break_hours"),
+        activity_description=operation.data.get("description") or operation.data.get("activity_description"),
+        notes=operation.data.get("notes"),
+    )
+
+    service = WorklogService()
+    worklog = service.update(db, worklog.id, update_data, current_user.id)
+
+    return SyncResult(
+        operation_type=operation.operation_type,
+        entity_type=operation.entity_type,
+        entity_id=worklog.id,
+        success=True,
+        server_timestamp=datetime.utcnow(),
+        client_id=operation.client_id
+    )
 
 async def create_work_order(
     operation: SyncOperation,

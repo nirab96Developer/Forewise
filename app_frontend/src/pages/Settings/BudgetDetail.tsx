@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { DollarSign, ChevronLeft, Truck, Clock } from "lucide-react";
+import { ChevronLeft, Truck, Clock, Wallet } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
 
@@ -41,7 +41,7 @@ const BudgetDetail: React.FC = () => {
   if (!budget) return <div className="p-8 text-center text-gray-500">תקציב לא נמצא</div>;
 
   const tabs = [
-    { id: 'overview', label: 'פירוט', icon: DollarSign },
+    { id: 'overview', label: 'פירוט', icon: Wallet },
     { id: 'committed', label: `התחייבויות (${committed?.total || 0})`, icon: Truck },
     { id: 'spent', label: `ביצוע (${spent?.total || 0})`, icon: Clock },
   ];
@@ -52,7 +52,7 @@ const BudgetDetail: React.FC = () => {
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate('/settings/budgets')} className="p-2 hover:bg-gray-200 rounded-lg"><ChevronLeft className="w-5 h-5" /></button>
-          <DollarSign className="w-8 h-8 text-orange-600" />
+          <span className="w-8 h-8 text-orange-600 font-bold leading-none inline-flex items-center justify-center">₪</span>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900">{budget.name}</h1>
             <div className="flex gap-3 mt-1">

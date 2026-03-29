@@ -24,7 +24,7 @@ const ProjectsClean: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   // Auto-enable "my projects only" for WORK_MANAGER — they should only see their assigned projects
   const _userRole = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}').role || ''; } catch { return ''; } })();
-  const [myProjectsOnly, setMyProjectsOnly] = useState(_userRole === 'WORK_MANAGER' || _userRole === 'FIELD_WORKER');
+  const [myProjectsOnly] = useState(_userRole === 'WORK_MANAGER' || _userRole === 'FIELD_WORKER');
   const [error, setError] = useState<string | null>(null);
 
   // AbortController ref — cancels in-flight request when a newer one starts
@@ -134,9 +134,23 @@ const ProjectsClean: React.FC = () => {
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">פרויקטים</h1>
-            <p className="text-gray-600 mt-2">ניהול וסקירת פרויקטים פעילים</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {_userRole === 'AREA_MANAGER' ? 'פרויקטים באזור שלי' : 'פרויקטים'}
+            </h1>
+            <p className="text-gray-600 mt-2">
+              {_userRole === 'AREA_MANAGER' ? 'ניהול והקמת פרויקטים באזור' : 'ניהול וסקירת פרויקטים פעילים'}
+            </p>
           </div>
+          <div className="flex items-center gap-2">
+          {_userRole === 'AREA_MANAGER' && (
+            <button
+              onClick={() => navigate('/settings/organization/projects/new')}
+              className="inline-flex items-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 px-4 py-2 text-sm font-medium text-white transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              הקמת פרויקט
+            </button>
+          )}
           <button
             onClick={async () => {
               try {
@@ -155,6 +169,7 @@ const ProjectsClean: React.FC = () => {
           >
 ייצוא Excel
           </button>
+          </div>
         </div>
 
         {/* Search and Filter Bar */}
@@ -174,19 +189,7 @@ const ProjectsClean: React.FC = () => {
             </div>
             
             <div className="flex gap-3 items-center">
-              {_userRole !== 'WORK_MANAGER' && _userRole !== 'FIELD_WORKER' && (
-                <button
-                  onClick={() => setMyProjectsOnly(!myProjectsOnly)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-medium transition-colors ${
-                    myProjectsOnly 
-                      ? 'bg-green-100 border-green-400 text-green-700' 
-                      : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <User className="w-4 h-4" />
-                  שלי
-                </button>
-              )}
+              {/* "שלי" filter removed — all users see their scoped projects */}
 
               {_userRole !== 'WORK_MANAGER' && _userRole !== 'FIELD_WORKER' && (
                 <select
@@ -201,15 +204,7 @@ const ProjectsClean: React.FC = () => {
                 </select>
               )}
 
-              {!['WORK_MANAGER', 'FIELD_WORKER'].includes(_userRole) && (
-                <Link
-                  to="/projects/new"
-                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                >
-                  <Plus className="w-5 h-5" />
-                  פרויקט חדש
-                </Link>
-              )}
+              {/* "פרויקט חדש" — only in Settings for Admin */}
             </div>
           </div>
         </div>
@@ -247,7 +242,7 @@ const ProjectsClean: React.FC = () => {
                 ? 'נסה לחפש במונחים אחרים או לשנות את הסינון'
                 : 'התחל ביצירת פרויקט חדש'}
             </p>
-            {!searchTerm && filterStatus === 'all' && (
+            {!searchTerm && filterStatus === 'all' && false && (
               <Link
                 to="/projects/new"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium"
@@ -351,42 +346,7 @@ const ProjectsClean: React.FC = () => {
           </div>
         )}
 
-        {/* Stats Summary */}
-        {filteredProjects.length > 0 && (
-          <div className="mt-8 bg-white rounded-lg border border-gray-200 p-6">
-            <div className={`grid gap-6 ${['WORK_MANAGER','FIELD_WORKER'].includes(_userRole) ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{filteredProjects.length}</p>
-                <p className="text-sm text-gray-600 mt-1">סה"כ פרויקטים</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  {filteredProjects.filter(p => getEffectiveStatus(p) === 'active').length}
-                </p>
-                <p className="text-sm text-gray-600 mt-1">פרויקטים פעילים</p>
-              </div>
-              {!['WORK_MANAGER','FIELD_WORKER'].includes(_userRole) && (
-                <>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">
-                      {filteredProjects.filter(p => (p.status || '').toLowerCase() === 'completed').length}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">פרויקטים שהושלמו</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-orange-600">
-                      {Math.round(
-                        filteredProjects.reduce((sum, p) => sum + (p.progress_percentage || 0), 0) /
-                        (filteredProjects.length || 1)
-                      )}%
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">התקדמות ממוצעת</p>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Stats Summary removed */}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 // יצירת מרחב חדש עם תקציב
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Map, Save, DollarSign, User } from 'lucide-react';
+import { ArrowRight, Map, Save, User } from 'lucide-react';
 import api from '../../services/api';
 
 interface User {
@@ -134,7 +134,7 @@ const NewRegion: React.FC = () => {
             {/* Budget - Highlighted */}
             <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
               <label className="flex items-center gap-2 text-sm font-semibold text-emerald-700 mb-2">
-                <DollarSign className="w-4 h-4" />
+                <span className="w-4 h-4 font-bold leading-none inline-flex items-center justify-center">₪</span>
 תקציב כולל למרחב ()
               </label>
               <input

@@ -20,15 +20,27 @@ import {
   ChevronUp,
   Calendar,
   MapPin,
-  DollarSign,
-  Building,
+    Building,
   AlertTriangle,
   Timer
 } from "lucide-react";
 import api from "../../services/api";
 
-// Forewise Logo
-import forewiseLogo from "/logo-forewise-transparent.png";
+// Forewise Logo — inline SVG (no external image dependency)
+const ForewiseLogo: React.FC<{ size?: number }> = ({ size = 56 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width={size} height={size * 0.83}>
+    <defs>
+      <linearGradient id="sp_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#0097a7"/></linearGradient>
+      <linearGradient id="sp_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#0097a7"/><stop offset="50%" stopColor="#2e7d32"/><stop offset="100%" stopColor="#66bb6a"/></linearGradient>
+      <linearGradient id="sp_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2e7d32"/><stop offset="40%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#8B5e3c"/></linearGradient>
+    </defs>
+    <path d="M46 20 Q60 9 74 20" stroke="url(#sp_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+    <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#sp_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+    <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#sp_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
+    <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
+    <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
+  </svg>
+);
 
 interface SupplierOrder {
   order_number: number;
@@ -242,7 +254,7 @@ const SupplierPortal: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center" dir="rtl">
         <div className="bg-white rounded-2xl shadow-xl p-8 flex items-center gap-4">
-          <div className="relative">
+          <div className="relative overflow-visible" style={{ padding: 4 }}>
           <div className="w-10 h-10 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}} />
           <div className="absolute inset-0 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="20" height="17">
@@ -287,7 +299,7 @@ const SupplierPortal: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center p-4" dir="rtl">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center">
           {/* Logo */}
-          <img src={forewiseLogo} alt="Forewise Logo" className="w-20 h-20 mx-auto mb-4 object-contain" />
+          <div className="mx-auto mb-4"><ForewiseLogo size={80} /></div>
           
           <div className={`w-20 h-20 ${actionComplete === 'accepted' ? 'bg-emerald-100' : 'bg-red-100'} rounded-full flex items-center justify-center mx-auto mb-6`}>
             {actionComplete === 'accepted' ? (
@@ -338,7 +350,7 @@ const SupplierPortal: React.FC = () => {
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={forewiseLogo} alt="Forewise Logo" className="w-14 h-14 object-contain" />
+              <ForewiseLogo size={56} />
               <div>
                 <h1 className="text-xl font-bold text-slate-800">הזמנת עבודה</h1>
                 <p className="text-sm text-slate-500">Forewise - ניהול יערות</p>
@@ -477,7 +489,7 @@ const SupplierPortal: React.FC = () => {
                 </div>
                 
                 <div className="flex items-start gap-3">
-                  <DollarSign className="w-5 h-5 text-slate-400 mt-0.5" />
+                  <span className="w-5 h-5 text-slate-400 mt-0.5 font-bold leading-none inline-flex items-center justify-center">₪</span>
                   <div>
                     <div className="text-sm text-slate-500">תעריף לשעה</div>
                     <div className="font-medium text-slate-800">

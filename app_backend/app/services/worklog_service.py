@@ -38,13 +38,15 @@ class WorklogService:
         from datetime import datetime
         return f"WL-{datetime.now().year}-{str(report_number).zfill(4)}"
 
+    VAT_RATE = 0.18
+
     def _resolve_hourly_rate(self, db: Session, worklog_dict: dict) -> float:
-        """Resolve hourly rate from supplier pricing (source of truth).
+        """Resolve hourly rate — exact match only, no fallbacks.
         
         Priority:
         1. work_orders.hourly_rate — if explicitly set on the order
-        2. supplier_equipment.hourly_rate — per-supplier pricing from settings page
-        3. None → raise error (no valid pricing)
+        2. supplier_equipment.hourly_rate — exact match by supplier_id + license_plate
+        3. No match → return 0 (caller must raise ValidationException)
         """
         from sqlalchemy import text as sa_text
         wo_id = worklog_dict.get('work_order_id')
@@ -55,11 +57,9 @@ class WorklogService:
         if not wo:
             return 0
 
-        # Priority 1: explicit rate on the work order
         if wo.hourly_rate and float(wo.hourly_rate) > 0:
             return float(wo.hourly_rate)
 
-        # Priority 2: supplier_equipment rate (matched by supplier + license plate)
         if wo.supplier_id and wo.equipment_license_plate:
             row = db.execute(sa_text(
                 "SELECT hourly_rate FROM supplier_equipment "
@@ -69,48 +69,79 @@ class WorklogService:
             if row and row[0] and float(row[0]) > 0:
                 return float(row[0])
 
-        # Priority 2b: supplier_equipment rate (any active for this supplier)
-        if wo.supplier_id:
-            row = db.execute(sa_text(
-                "SELECT hourly_rate FROM supplier_equipment "
-                "WHERE supplier_id = :sid AND is_active = true AND hourly_rate > 0 "
-                "ORDER BY hourly_rate DESC LIMIT 1"
-            ), {"sid": wo.supplier_id}).fetchone()
-            if row and row[0]:
-                return float(row[0])
-
-        # No valid pricing found
         return 0
     
     def create(self, db: Session, data: WorklogCreate, current_user_id: int) -> Worklog:
-        """Create worklog with FK validation"""
-        # Validate FK: work_order (optional — can create standalone worklog)
-        wo = None
-        if data.work_order_id:
-            wo = db.query(WorkOrder).filter_by(id=data.work_order_id).first()
-            if not wo:
-                raise ValidationException(f"Work order {data.work_order_id} not found")
-        
-        # Auto-inherit equipment from work order if not provided
-        if wo and not data.equipment_id and wo.equipment_id:
-            data.equipment_id = wo.equipment_id
+        """Create worklog with full business rule validation"""
+        # RULE 1: work_order_id is mandatory
+        if not data.work_order_id:
+            raise ValidationException("חובה לציין הזמנת עבודה (work_order_id)")
 
-        # Warn if no equipment scan exists for this WO
-        if wo:
-            from sqlalchemy import text as sa_text
-            scan_exists = db.execute(sa_text(
-                "SELECT 1 FROM equipment_scans WHERE work_order_id = :woid LIMIT 1"
-            ), {"woid": wo.id}).fetchone()
-            if not scan_exists:
-                import logging
-                logging.getLogger(__name__).warning(
-                    f"Worklog created for WO {wo.id} without prior equipment scan"
+        wo = db.query(WorkOrder).filter_by(id=data.work_order_id).first()
+        if not wo:
+            raise ValidationException(f"Work order {data.work_order_id} not found")
+
+        # RULE 2: project_id must exist (workspace enforcement)
+        if not wo.project_id:
+            raise ValidationException("להזמנה זו אין פרויקט משויך")
+
+        # RULE 3: State machine — WO must be coordinator-approved + equipment scanned
+        # Flow: SUPPLIER_ACCEPTED → Coordinator approves → APPROVED_AND_SENT → WM scans → report
+        WORKABLE_STATUSES = {'APPROVED_AND_SENT', 'IN_PROGRESS', 'ACTIVE'}
+        wo_status = (wo.status or '').upper()
+        if wo_status not in WORKABLE_STATUSES:
+            if wo_status == 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR':
+                raise ValidationException("הזמנה ממתינה לאישור מתאם — לא ניתן לדווח לפני אישור סופי.")
+            raise ValidationException(
+                f"לא ניתן לדווח על הזמנה בסטטוס '{wo.status}'. ההזמנה חייבת להיות מאושרת ע\"י המתאם."
+            )
+
+        # RULE 4: Equipment must be scanned (license_plate on WO)
+        if not wo.equipment_license_plate:
+            raise ValidationException(
+                "לא ניתן ליצור דיווח — לא נסרק כלי להזמנה זו. יש לסרוק ציוד קודם."
+            )
+
+        # RULE 5: Scan validation
+        scan_flags = []
+
+        # 5a: Supplier mismatch — flag only
+        if data.supplier_id and wo.supplier_id and int(data.supplier_id) != int(wo.supplier_id):
+            scan_flags.append('supplier_mismatch')
+
+        # 5b: Equipment type mismatch — BLOCK (only Admin can override)
+        if hasattr(data, 'equipment_type') and data.equipment_type and wo.equipment_type:
+            if data.equipment_type.strip().lower() != wo.equipment_type.strip().lower():
+                scan_flags.append('equipment_type_mismatch')
+                # Check if current user is Admin
+                current_user_obj = db.query(User).filter_by(id=current_user_id).first()
+                is_admin = current_user_obj and current_user_obj.role and current_user_obj.role.code in ('ADMIN', 'SUPER_ADMIN')
+                if not is_admin:
+                    raise ValidationException(
+                        f"סוג הכלי שנסרק ({data.equipment_type}) שונה מסוג הכלי בהזמנה ({wo.equipment_type}). "
+                        "רק מנהל מערכת יכול לאשר שינוי סוג כלי."
+                    )
+
+        # RULE 6: Unique constraint — one worklog per day + WO + plate
+        from sqlalchemy import text as sa_text
+        report_date = data.report_date or data.work_date
+        if report_date:
+            dup = db.execute(sa_text(
+                "SELECT id FROM worklogs WHERE work_order_id = :woid AND report_date = :rd AND is_active = true LIMIT 1"
+            ), {"woid": wo.id, "rd": str(report_date)}).first()
+            if dup:
+                raise ValidationException(
+                    f"כבר קיים דיווח עבור הזמנה #{wo.order_number or wo.id} בתאריך {report_date}"
                 )
+
+        # Auto-inherit equipment from work order
+        if not data.equipment_id and wo.equipment_id:
+            data.equipment_id = wo.equipment_id
 
         # Derive missing fields from work_order
         user_id = data.user_id or current_user_id
-        project_id = data.project_id or (wo.project_id if wo else None)
-        supplier_id = (data.supplier_id if hasattr(data, 'supplier_id') and data.supplier_id else None) or (wo.supplier_id if wo else None)
+        project_id = data.project_id or wo.project_id
+        supplier_id = (data.supplier_id if hasattr(data, 'supplier_id') and data.supplier_id else None) or wo.supplier_id
         
         # Validate FK: user
         user = db.query(User).filter_by(id=user_id).first()
@@ -205,32 +236,35 @@ class WorklogService:
             worklog_dict['overnight_rate'] = Decimal('250')
             overnight_total = 250.0
         
-        # Calculate hourly_rate_snapshot from supplier pricing
-        rate = None
-        if not worklog_dict.get('hourly_rate_snapshot'):
-            rate = self._resolve_hourly_rate(db, worklog_dict)
-            if not rate or rate <= 0:
-                raise ValidationException(
-                    "לא מוגדר תעריף לכלי/ספק זה. יש להגדיר מחיר בדף ספקים ותמחורים."
-                )
-            worklog_dict['hourly_rate_snapshot'] = rate
-        else:
-            rate = float(worklog_dict['hourly_rate_snapshot'])
+        # Never trust client-provided financial fields
+        for unsafe_field in ('hourly_rate_snapshot', 'cost_before_vat', 'cost_with_vat',
+                             'vat_rate', 'net_hours', 'paid_hours', 'total_hours',
+                             'approved_by_user_id', 'approved_at'):
+            worklog_dict.pop(unsafe_field, None)
 
-        hours = float(worklog_dict.get('work_hours') or worklog_dict.get('total_hours') or 0)
-        if rate:
-            rate_f = float(rate)
-            worklog_dict['cost_before_vat'] = round(hours * rate_f + overnight_total, 2)
-            worklog_dict['vat_rate'] = 17.0
-            worklog_dict['cost_with_vat'] = round(worklog_dict['cost_before_vat'] * 1.17, 2)
-        elif overnight_total:
-            worklog_dict['cost_before_vat'] = round(overnight_total, 2)
-            worklog_dict['vat_rate'] = 17.0
-            worklog_dict['cost_with_vat'] = round(worklog_dict['cost_before_vat'] * 1.17, 2)
+        rate = self._resolve_hourly_rate(db, worklog_dict)
+        if not rate or rate <= 0:
+            raise ValidationException(
+                "לא מוגדר תעריף לכלי/ספק זה. יש להגדיר מחיר בדף ספקים ותמחורים."
+            )
+        worklog_dict['hourly_rate_snapshot'] = rate
+
+        hours = float(worklog_dict.get('work_hours') or 0)
+        rate_f = float(rate)
+        worklog_dict['cost_before_vat'] = round(hours * rate_f + overnight_total, 2)
+        worklog_dict['vat_rate'] = self.VAT_RATE
+        worklog_dict['cost_with_vat'] = round(worklog_dict['cost_before_vat'] * (1 + self.VAT_RATE), 2)
 
         if includes_guard:
             worklog_dict['overnight_total'] = Decimal(str(overnight_total))
         
+        if scan_flags:
+            import json
+            existing_meta = worklog_dict.get('metadata_json')
+            meta = json.loads(existing_meta) if existing_meta else {}
+            meta['scan_flags'] = scan_flags
+            worklog_dict['metadata_json'] = json.dumps(meta, ensure_ascii=False)
+
         worklog = Worklog(**worklog_dict)
         db.add(worklog)
         db.commit()
@@ -276,14 +310,34 @@ class WorklogService:
         return db.query(Worklog).filter_by(id=worklog_id).first()
     
     def update(self, db: Session, worklog_id: int, data: WorklogUpdate, current_user_id: int) -> Worklog:
-        """Update worklog"""
+        """Update worklog — safe field allowlist, recalculates cost if hours change"""
         worklog = self.get_by_id(db, worklog_id)
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
         
+        ALLOWED_UPDATE_FIELDS = {
+            'report_date', 'work_hours', 'break_hours',
+            'start_time', 'end_time', 'activity_description', 'notes',
+        }
         update_dict = data.model_dump(exclude_unset=True)
+        hours_changed = False
         for field, value in update_dict.items():
-            setattr(worklog, field, value)
+            if field in ALLOWED_UPDATE_FIELDS:
+                if field == 'work_hours' and value != worklog.work_hours:
+                    hours_changed = True
+                setattr(worklog, field, value)
+        
+        if hours_changed and worklog.hourly_rate_snapshot:
+            wh = float(worklog.work_hours or 0)
+            bh = float(worklog.break_hours or 0)
+            rate = float(worklog.hourly_rate_snapshot)
+            overnight = float(worklog.overnight_nights or 0) * float(worklog.overnight_rate or 250)
+            worklog.total_hours = round(Decimal(str(wh + bh)), 2)
+            worklog.net_hours = round(Decimal(str(wh)), 2)
+            worklog.paid_hours = round(Decimal(str(wh)), 2)
+            worklog.cost_before_vat = round(Decimal(str(wh * rate + overnight)), 2)
+            worklog.vat_rate = Decimal(str(self.VAT_RATE))
+            worklog.cost_with_vat = round(worklog.cost_before_vat * (1 + Decimal(str(self.VAT_RATE))), 2)
         
         db.commit()
         db.refresh(worklog)
@@ -422,11 +476,19 @@ class WorklogService:
         return worklog
     
     def approve(self, db: Session, worklog_id: int, current_user_id: int) -> Worklog:
-        """Approve worklog"""
+        """Approve worklog — state machine + self-approval block"""
         worklog = self.get_by_id(db, worklog_id)
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
+
+        # State machine: only SUBMITTED can be approved
+        wl_status = (worklog.status or '').upper()
+        if wl_status not in ('SUBMITTED', 'PENDING'):
+            raise ValidationException(f"לא ניתן לאשר דיווח בסטטוס '{worklog.status}'. יש להגיש (SUBMIT) קודם.")
         
+        if worklog.user_id == current_user_id:
+            raise ValidationException("לא ניתן לאשר דיווח שנוצר על ידך. יש לבקש אישור מגורם אחר.")
+
         from datetime import datetime as _dt
         worklog.status = 'APPROVED'
         worklog.approved_by_user_id = current_user_id
@@ -454,8 +516,7 @@ class WorklogService:
 
                 wo = db.query(WorkOrder).filter(WorkOrder.id == worklog.work_order_id).first()
                 if wo and wo.project_id:
-                    cost = float(worklog.work_hours or 0) * float(worklog.hourly_rate_snapshot or 0)
-                    cost += float(worklog.overnight_nights or 0) * 250
+                    cost = float(worklog.cost_before_vat or 0)
 
                     budget = (
                         db.query(Budget)
@@ -721,7 +782,7 @@ def calculate_worklog_totals(
     overnight_nights: int,
     overnight_rate: float,
     hourly_rate: float,
-    vat_rate: float = 0.17,
+    vat_rate: float = 0.18,
 ) -> dict:
     """
     קלט: רשימת segments, דגל is_overnight
@@ -800,7 +861,7 @@ def save_worklog_with_segments(
         overnight_nights=overnight_nights,
         overnight_rate=overnight_rate,
         hourly_rate=hourly_rate,
-        vat_rate=float(wl.vat_rate or 0.17),
+        vat_rate=0.18,
     )
 
     # שמור segments
@@ -933,11 +994,12 @@ def _send_worklog_approved_emails(db, worklog):
 def send_worklog_invoiced_emails(db, worklogs, invoice):
     """Stage 3: Send emails when worklogs are marked INVOICED.
     Recipients: supplier + work_manager of each worklog.
+    Attaches Invoice PDF if generation succeeds.
     """
     import logging
     log = logging.getLogger(__name__)
     try:
-        from app.core.email import send_email
+        from app.core.email import send_email, send_email_with_pdf
         from sqlalchemy import text
 
         if not worklogs:
@@ -984,11 +1046,33 @@ def send_worklog_invoiced_emails(db, worklogs, invoice):
 
         subject = f"חשבונית {invoice_number} הופקה — {project_name}"
 
-        if supplier_email:
-            send_email(to=supplier_email, subject=subject, body=body)
+        # Generate PDF attachment
+        pdf_bytes = None
+        pdf_filename = f"invoice_{invoice_number}.pdf"
+        try:
+            from app.services.pdf_documents import generate_invoice_pdf
+            invoice_id = getattr(invoice, 'id', None)
+            if invoice_id:
+                pdf_bytes = generate_invoice_pdf(invoice_id, db)
+        except Exception as pdf_err:
+            log.warning(f"Invoice PDF generation failed for email: {pdf_err}")
 
-        for email in worker_emails:
-            send_email(to=email, subject=subject, body=body)
+        all_recipients = set()
+        if supplier_email:
+            all_recipients.add(supplier_email)
+        all_recipients.update(worker_emails)
+
+        for email in all_recipients:
+            try:
+                if pdf_bytes:
+                    send_email_with_pdf(
+                        to=email, subject=subject, body=body,
+                        pdf_bytes=pdf_bytes, pdf_filename=pdf_filename,
+                    )
+                else:
+                    send_email(to=email, subject=subject, body=body)
+            except Exception as send_err:
+                log.warning(f"Invoice email to {email} failed: {send_err}")
 
     except Exception as e:
         log.warning(f"Worklog Stage 3 (invoiced) email failed: {e}")

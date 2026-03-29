@@ -194,6 +194,17 @@ class UserService(BaseService[User]):
         # Audit log
         _audit_user(db, None, user.id, 'CREATE', {}, {'email': user.email, 'username': user.username})
 
+        # Activity log
+        try:
+            from app.services.activity_log_service import ActivityLogService
+            ActivityLogService().log_activity(
+                db=db, user_id=None, activity_type='user', action='user.created',
+                entity_type='user', entity_id=user.id,
+                details={'description_he': f'נוצר משתמש חדש: {user.full_name}', 'email': user.email}
+            )
+        except Exception:
+            pass
+
         return user
     
     def update_user(
@@ -217,6 +228,14 @@ class UserService(BaseService[User]):
         
         # Update
         update_dict = user_data.model_dump(exclude_unset=True, exclude_none=True)
+
+        # Handle password change if provided
+        password = update_dict.pop('password', None)
+        if password:
+            from app.core.security import get_password_hash
+            user.password_hash = get_password_hash(password)
+            db.flush()
+
         return self.update(db, user_id, update_dict)
     
     def change_password(

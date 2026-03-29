@@ -72,8 +72,11 @@ class WorkOrderService:
         # Normalize status to UPPERCASE
         wo_dict['status'] = (wo_dict.get('status') or 'PENDING').upper()
 
+        # Validate estimated_hours > 0
+        if not wo_dict.get("estimated_hours") or float(wo_dict.get("estimated_hours", 0)) <= 0:
+            raise HTTPException(status_code=400, detail="חובה לציין כמות שעות מוערכת (> 0)")
+
         #  Auto-resolve requested_equipment_model_id from equipment_type name 
-        # FK constraint fk_work_orders_req_model requires a valid equipment_models.id
         if not wo_dict.get("requested_equipment_model_id"):
             equipment_type_name = (wo_dict.get("equipment_type") or "").strip()
             if not equipment_type_name:
@@ -253,10 +256,28 @@ class WorkOrderService:
         return db_work_order
 
     def delete_work_order(self, db: Session, work_order_id: int) -> bool:
-        """Soft delete work order — sets is_active=False and deleted_at."""
+        """Soft delete work order — releases frozen budget, sets is_active=False."""
         db_work_order = self.get_work_order(db, work_order_id)
         if not db_work_order:
             return False
+
+        try:
+            if db_work_order.project_id and float(db_work_order.frozen_amount or 0) > 0:
+                from app.models.budget import Budget
+                budget = db.query(Budget).filter(
+                    Budget.project_id == db_work_order.project_id,
+                    Budget.is_active == True, Budget.deleted_at.is_(None),
+                ).first()
+                if budget:
+                    release = min(
+                        float(db_work_order.remaining_frozen or db_work_order.frozen_amount or 0),
+                        float(budget.committed_amount or 0)
+                    )
+                    from decimal import Decimal
+                    budget.committed_amount = max(Decimal(0), (budget.committed_amount or Decimal(0)) - Decimal(str(release)))
+                    budget.remaining_amount = (budget.total_amount or Decimal(0)) - (budget.committed_amount or Decimal(0)) - (budget.spent_amount or Decimal(0))
+        except Exception:
+            pass
 
         db_work_order.is_active = False
         db_work_order.updated_at = datetime.utcnow()
@@ -310,6 +331,17 @@ class WorkOrderService:
 
         db.commit()
         db.refresh(work_order)
+
+        try:
+            from app.services.supplier_rotation_service import SupplierRotationService
+            rot_svc = SupplierRotationService()
+            rot_svc.update_rotation_after_assignment(
+                db, supplier_id=work_order.supplier_id,
+                equipment_type_id=work_order.equipment_id,
+                area_id=work_order.location_id,
+            )
+        except Exception:
+            pass
 
         # Send email to supplier
         email_sent = False
@@ -456,6 +488,15 @@ class WorkOrderService:
 
         db.commit()
         db.refresh(work_order)
+
+        if response.lower() == "reject" and work_order.supplier_id:
+            try:
+                from app.services.supplier_rotation_service import SupplierRotationService
+                rot_svc = SupplierRotationService()
+                rot_svc.update_rotation_after_rejection(db, supplier_id=work_order.supplier_id)
+            except Exception:
+                pass
+
         return work_order
 
     def force_supplier(
@@ -466,8 +507,11 @@ class WorkOrderService:
         reason: str,
         created_by_id: Optional[int] = None,
     ) -> Optional[WorkOrder]:
-        """Force work order to specific supplier — with SupplierEquipment availability check."""
+        """Force work order to specific supplier — requires reason + equipment check."""
         from fastapi import HTTPException
+
+        if not reason or not reason.strip():
+            raise HTTPException(status_code=400, detail="חובה לציין סיבת אילוץ ספק")
 
         from app.models.supplier_equipment import SupplierEquipment
         from app.models.equipment_model import EquipmentModel
@@ -622,6 +666,14 @@ class WorkOrderService:
 
         db.commit()
         db.refresh(work_order)
+
+        try:
+            from app.services.supplier_rotation_service import SupplierRotationService
+            rot_svc = SupplierRotationService()
+            rot_svc.update_rotation_after_completion(db, supplier_id=work_order.supplier_id)
+        except Exception:
+            pass
+
         return work_order
 
     def expire_work_orders(self, db: Session) -> List[WorkOrder]:
@@ -855,7 +907,7 @@ class WorkOrderService:
         return wo
 
     def approve(self, db, wo_id, request=None, current_user=None, current_user_id=None, notes=None):
-        """Approve a work order by coordinator — APPROVED_AND_SENT + emails + notifications."""
+        """Approve a work order by coordinator — blocks self-approval."""
         from app.models.work_order import WorkOrder
         import datetime, logging
         log = logging.getLogger(__name__)
@@ -863,6 +915,11 @@ class WorkOrderService:
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
         if not wo:
             return wo
+
+        uid = current_user_id or (current_user.id if current_user else None)
+        if uid and wo.created_by_id == uid:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403, detail="לא ניתן לאשר הזמנה שנוצרה על ידך")
 
         wo.status = 'APPROVED_AND_SENT'
         wo.updated_at = datetime.datetime.now()

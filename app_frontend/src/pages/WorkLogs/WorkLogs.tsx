@@ -17,6 +17,11 @@ const WorkLogs: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { isOnline, pendingCount } = useOffline();
 
+  let userData: any = {};
+  try { userData = JSON.parse(localStorage.getItem('user') || '{}'); } catch {}
+  const userRole = (userData.role || userData.role_code || '').toUpperCase();
+  const isManager = ['ADMIN', 'AREA_MANAGER', 'REGION_MANAGER'].includes(userRole);
+
   useEffect(() => {
     fetchWorkLogs();
   }, []);
@@ -29,11 +34,16 @@ const WorkLogs: React.FC = () => {
       const filters: WorkLogFilters = {
         q: searchTerm || undefined,
         status: filterStatus !== 'all' ? filterStatus : undefined,
-        page_size: 50
+        page_size: 100
       };
-      
-      const response = await workLogService.getMyWorkLogs(filters);
-      // Handle both work_logs and items response formats
+
+      let response;
+      if (isManager) {
+        const res = await workLogService.getWorkLogs(filters);
+        response = res;
+      } else {
+        response = await workLogService.getMyWorkLogs(filters);
+      }
       setWorkLogs(response.work_logs || response.items || []);
     } catch (error: any) {
       console.error('Error fetching work logs:', error);
@@ -121,6 +131,7 @@ const WorkLogs: React.FC = () => {
                   )}
                 </div>
               )}
+              {!isManager && (
               <div className="flex gap-2">
                 <Link
                   to={projectCode ? `/work-logs/standard?project_code=${projectCode}` : "/work-logs/standard"}
@@ -144,6 +155,7 @@ const WorkLogs: React.FC = () => {
                   אחסון כלים
                 </Link>
               </div>
+              )}
             </div>
           </div>
 

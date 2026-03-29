@@ -45,6 +45,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=1, max_length=200)
     phone: Optional[str] = Field(None, max_length=20)
     username: Optional[str] = Field(None, min_length=3, max_length=50)
+    password: Optional[str] = Field(None, min_length=8, max_length=100)
     role_id: Optional[int] = None
     department_id: Optional[int] = None
     region_id: Optional[int] = None
@@ -53,6 +54,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     two_factor_enabled: Optional[bool] = None
     must_change_password: Optional[bool] = None
+    model_config = ConfigDict(extra='ignore')
 
 
 # ============================================================================

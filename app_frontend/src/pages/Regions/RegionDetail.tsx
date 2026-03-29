@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowRight, Map, TreePine, Building2, Users, Edit,
-  MapPin, Eye, ChevronLeft, DollarSign
+  MapPin, Eye, ChevronLeft
 } from 'lucide-react';
 import api from '../../services/api';
 import LeafletMap from '../../components/Map/LeafletMap';
@@ -66,25 +66,34 @@ const RegionDetail: React.FC = () => {
       const projectsRes = await api.get('/projects', { params: { region_id: id, per_page: 100 } });
       const allProjects = projectsRes.data.projects || projectsRes.data.items || [];
       
-      // שלוף את הפוליגונים של כל פרויקט
-      const polygonPromises = allProjects.map(async (project: any) => {
-        try {
-          const mapData = await api.get(`/projects/${project.id}/forest-map`);
-          if (mapData.data.has_forest && mapData.data.forest) {
-            return {
-              id: project.id,
-              name: project.name,
-              area_id: project.area_id,
-              geojson: mapData.data.forest.geojson_preview || mapData.data.forest.geojson_full
-            };
-          }
-        } catch (err) {
+      // Load region + area boundary polygons from GIS
+      const allPolygons: any[] = [];
+      try {
+        const regionBounds = await api.get('/geo/regions/boundaries');
+        const regionFeature = (regionBounds.data?.features || []).find((f: any) => f.properties?.id === Number(id));
+        if (regionFeature) {
+          allPolygons.push({
+            id: `region-${id}`,
+            name: regionRes.data.name,
+            area_id: null,
+            geojson: regionFeature,
+            isRegion: true,
+          });
         }
-        return null;
-      });
-      
-      const fetchedPolygons = (await Promise.all(polygonPromises)).filter(p => p !== null);
-      setPolygons(fetchedPolygons);
+      } catch {}
+      try {
+        const areaBounds = await api.get('/geo/areas/boundaries', { params: { region_id: id } });
+        for (const feat of (areaBounds.data?.features || [])) {
+          allPolygons.push({
+            id: `area-${feat.properties?.id}`,
+            name: feat.properties?.name,
+            area_id: feat.properties?.id,
+            geojson: feat,
+            isRegion: false,
+          });
+        }
+      } catch {}
+      setPolygons(allPolygons);
       
       const areasWithData = areasData.map((area: Area) => {
         const areaProjects = allProjects.filter((p: any) => p.area_id === area.id);
@@ -94,8 +103,8 @@ const RegionDetail: React.FC = () => {
           p.location?.latitude && p.location?.longitude
         );
         
-        let lat = 31.5; // ברירת מחדל - מרכז ישראל
-        let lng = 35.0;
+        let lat: number | undefined;
+        let lng: number | undefined;
         
         if (validProjects.length > 0) {
           lat = validProjects.reduce((sum: number, p: any) => sum + (p.location.latitude || 0), 0) / validProjects.length;
@@ -142,7 +151,7 @@ const RegionDetail: React.FC = () => {
 
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" dir="rtl">
+    <div className="min-h-screen flex flex-col" dir="rtl">
       {/* Header */}
       <div className="bg-white border-b z-20 flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 py-3">
@@ -186,7 +195,7 @@ const RegionDetail: React.FC = () => {
             </div>
             {region.total_budget && region.total_budget > 0 && (
               <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 rounded-full">
-                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <span className="w-4 h-4 text-emerald-600 font-bold leading-none inline-flex items-center justify-center">₪</span>
 <span className="font-bold text-emerald-700">{Number(region.total_budget).toLocaleString()}</span>
                 <span className="text-emerald-600">תקציב</span>
               </div>
@@ -202,7 +211,7 @@ const RegionDetail: React.FC = () => {
       </div>
 
       {/* Map Container - Leaflet */}
-      <div className="flex-1 relative min-h-[400px]">
+      <div className="relative" style={{ height: '500px' }}>
         <LeafletMap
           height="500px"
           mapType="satellite"
@@ -214,14 +223,15 @@ const RegionDetail: React.FC = () => {
             color: getAreaColor(index),
             onClick: () => setSelectedArea(area),
           }))}
+          fitBounds={true}
           polygons={polygons.map((poly, idx) => ({
             id: poly.id,
             name: poly.name,
             geometry: poly.geojson?.geometry || poly.geojson,
-            fillColor: getAreaColor(areas.findIndex(a => a.id === poly.area_id) || idx),
-            strokeColor: getAreaColor(areas.findIndex(a => a.id === poly.area_id) || idx),
-            fillOpacity: 0.25,
-            strokeWeight: 2,
+            fillColor: poly.isRegion ? '#16a34a' : getAreaColor(areas.findIndex(a => a.id === poly.area_id) >= 0 ? areas.findIndex(a => a.id === poly.area_id) : idx),
+            strokeColor: poly.isRegion ? '#15803d' : getAreaColor(areas.findIndex(a => a.id === poly.area_id) >= 0 ? areas.findIndex(a => a.id === poly.area_id) : idx),
+            fillOpacity: poly.isRegion ? 0.08 : 0.25,
+            strokeWeight: poly.isRegion ? 3 : 2,
           }))}
           maskPolygon={undefined}
         />

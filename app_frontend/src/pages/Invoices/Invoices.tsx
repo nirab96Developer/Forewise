@@ -8,7 +8,7 @@ import {
   Receipt,
   Eye,
   Download,
-  DollarSign
+  
 } from "lucide-react";
 import invoiceService, { Invoice } from "../../services/invoiceService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
@@ -146,7 +146,7 @@ const Invoices: React.FC = () => {
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-green-600" />
+                  <span className="w-6 h-6 text-green-600 font-bold leading-none inline-flex items-center justify-center">₪</span>
                 </div>
               </div>
             </div>
@@ -177,7 +177,7 @@ const Invoices: React.FC = () => {
                   </div>
                 </div>
                 <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-green-600" />
+                  <span className="w-6 h-6 text-green-600 font-bold leading-none inline-flex items-center justify-center">₪</span>
                 </div>
               </div>
             </div>
@@ -262,7 +262,8 @@ const Invoices: React.FC = () => {
                           </button>
                           <button 
                             className="p-2 hover:bg-gray-100 rounded-lg"
-                            title="הורדה"
+                            title="הורדת PDF"
+                            onClick={() => window.open(`/api/v1/invoices/${invoice.id}/pdf`, '_blank')}
                           >
                             <Download className="w-4 h-4 text-gray-600" />
                           </button>

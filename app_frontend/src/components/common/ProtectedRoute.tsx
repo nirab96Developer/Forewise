@@ -137,7 +137,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (authState.status === 'checking') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="relative">
+        <div className="relative overflow-visible" style={{ padding: 4 }}>
           <div className="w-16 h-16 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" />
           <div className="absolute inset-0 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="28" height="24">

@@ -5,8 +5,7 @@ import {
   FileText,
   Download,
   AlertCircle,
-  DollarSign,
-  Clock,
+    Clock,
   Users,
   Briefcase,
   Wrench,
@@ -443,7 +442,7 @@ ${item.unverified_count > 0 ? `<span class="badge"> ${item.unverified_count} ל�
               </div>
               <div className="bg-white rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-2 text-green-600 text-sm mb-1">
-                  <DollarSign className="w-4 h-4" />
+                  <span className="w-4 h-4 font-bold leading-none inline-flex items-center justify-center">₪</span>
                   עלות לפני מע"מ
                 </div>
                 <div className="text-xl font-bold text-green-700">
@@ -452,7 +451,7 @@ ${item.unverified_count > 0 ? `<span class="badge"> ${item.unverified_count} ל�
               </div>
               <div className="bg-white rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-2 text-purple-600 text-sm mb-1">
-                  <DollarSign className="w-4 h-4" />
+                  <span className="w-4 h-4 font-bold leading-none inline-flex items-center justify-center">₪</span>
                   כולל מע"מ
                 </div>
                 <div className="text-xl font-bold text-purple-700">

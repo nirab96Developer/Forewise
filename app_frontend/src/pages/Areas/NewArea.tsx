@@ -186,7 +186,7 @@ const NewArea: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="relative">
+          <div className="relative overflow-visible" style={{ padding: 4 }}>
           <div className="w-12 h-12 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}} />
           <div className="absolute inset-0 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="24" height="20">

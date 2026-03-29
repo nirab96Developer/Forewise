@@ -167,8 +167,15 @@ const App: React.FC = () => {
 
         {/* Debug Panel */}
         
-        {/* Human Support Chat - בוט תמיכה אנושי */}
-        {isLoggedIn && !isPublicPage && <HumanSupportChat />}
+        {/* Human Support Chat - בוט תמיכה (לא מוצג לאדמין — הוא עונה לקריאות, לא פותח) */}
+        {isLoggedIn && !isPublicPage && (() => {
+          try {
+            const u = JSON.parse(localStorage.getItem('user') || '{}');
+            const r = (u.role || u.role_code || '').toUpperCase();
+            if (r === 'ADMIN' || r === 'SUPER_ADMIN') return null;
+          } catch {}
+          return <HumanSupportChat />;
+        })()}
       </div>
     </ToastProvider>
   );

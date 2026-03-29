@@ -10,6 +10,7 @@ Scope levels:
 from datetime import datetime, date
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -122,11 +123,11 @@ async def get_activity_logs(
     # Auto-filter categories by role when no category specified
     if not category:
         if role_code == "ACCOUNTANT":
-            query = query.filter(ActivityLog.category.in_(["financial", "system"]))
+            query = query.filter(or_(ActivityLog.category.in_(["financial", "system"]), ActivityLog.category.is_(None)))
         elif role_code == "WORK_MANAGER":
-            query = query.filter(ActivityLog.category.in_(["operational", "system"]))
+            query = query.filter(or_(ActivityLog.category.in_(["operational", "system"]), ActivityLog.category.is_(None)))
         elif role_code == "ORDER_COORDINATOR":
-            query = query.filter(ActivityLog.category.in_(["operational", "system"]))
+            query = query.filter(or_(ActivityLog.category.in_(["operational", "system"]), ActivityLog.category.is_(None)))
     
     query = query.order_by(ActivityLog.created_at.desc())
     total = query.count()

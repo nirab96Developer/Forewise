@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  DollarSign, FileText, CheckCircle, AlertTriangle,
+  FileText, CheckCircle, AlertTriangle,
   Search, Filter, ShieldAlert, Info, RefreshCw, XCircle,
   Eye, X, Clock, Wrench
 } from "lucide-react";
@@ -147,20 +147,28 @@ const AccountantDashboard: React.FC = () => {
       <div className="p-3 sm:p-5 space-y-4 max-w-screen-xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <DollarSign className="w-6 h-6 text-green-600" />
-            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">בקרה כספית</h1>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => navigate("/invoices")}
-              className="flex items-center gap-1.5 px-3 min-h-[40px] text-xs font-bold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-              <FileText className="w-3.5 h-3.5" /> חשבוניות
-            </button>
-            <button onClick={loadData} disabled={loading}
-              className="flex items-center gap-1.5 px-3 min-h-[40px] text-xs font-bold bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors">
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-            </button>
+        <div className="bg-gradient-to-l from-green-700 to-green-800 rounded-2xl p-5 sm:p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-200 text-sm mb-1">{new Date().getHours() < 12 ? 'בוקר טוב' : new Date().getHours() < 17 ? 'צהריים טובים' : 'ערב טוב'}</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2.5">
+                <span className="w-6 h-6 text-green-300 font-bold leading-none inline-flex items-center justify-center">₪</span>
+                בקרה כספית
+              </h1>
+              <p className="text-green-200 text-sm mt-1">
+                {(k.pending_reports ?? 0) > 0 ? `${k.pending_reports} דיווחים ממתינים לאישור` : 'אין דיווחים ממתינים'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => navigate("/invoices")}
+                className="flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold bg-white/20 hover:bg-white/30 text-white rounded-xl backdrop-blur-sm transition-colors">
+                <FileText className="w-3.5 h-3.5" /> חשבוניות
+              </button>
+              <button onClick={loadData} disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold bg-white/15 hover:bg-white/25 text-white rounded-xl backdrop-blur-sm transition-colors disabled:opacity-50">
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -376,7 +384,7 @@ const AccountantDashboard: React.FC = () => {
 
                   {/* Cost */}
                   <div className="bg-gray-50 rounded-xl p-3">
-                    <h3 className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> חישוב עלות</h3>
+                    <h3 className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1"><span className="w-3.5 h-3.5 font-bold leading-none inline-flex items-center justify-center">₪</span> חישוב עלות</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
 <DField label="תעריף שעתי" value={`${detail.hourly_rate}`} />
                       <DField label="מקור תעריף" value={detail.rate_source_name || detail.rate_source || "—"} />

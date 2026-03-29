@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowRight, Truck, Wrench, DollarSign, RotateCcw,
+  ArrowRight, Truck, Wrench, RotateCcw,
   Search, Plus, ChevronDown, ChevronRight,
-  MapPin, Phone, Mail, AlertCircle, Moon, Edit2, Check, X, RefreshCw
+  MapPin, Phone, Mail, AlertCircle, Edit2, Check, X, RefreshCw
 } from 'lucide-react';
 import api from '../../services/api';
 import SupplierModal from '../../components/suppliers/SupplierModal';
@@ -352,9 +352,8 @@ const EquipmentTab: React.FC<{
                 <div className="border-t border-gray-100">
                   <div className="hidden md:grid grid-cols-12 gap-2 px-5 py-2 bg-gray-50 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                     <div className="col-span-2">רישוי</div><div className="col-span-3">סוג ציוד</div>
-                    <div className="col-span-2">קבוצה</div><div className="col-span-2 text-center">תעריף/שעה</div>
-<div className="col-span-1 text-center">לינה</div><div className="col-span-1 text-center"></div>
-                    <div className="col-span-1 text-center">סטטוס</div>
+                    <div className="col-span-2">קבוצה</div><div className="col-span-3 text-center">תעריף/שעה</div>
+                    <div className="col-span-2 text-center">סטטוס</div>
                   </div>
                   {eqList.map(eq => {
                     const et = eq.equipment_type ? typeMap[eq.equipment_type] : null;
@@ -365,12 +364,10 @@ const EquipmentTab: React.FC<{
                         <div className="col-span-2">
                           {et?.category_group && <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${gc(et.category_group)}`}>{et.category_group}</span>}
                         </div>
-                        <div className="col-span-2 text-center font-bold text-sm text-kkl-green">
+                        <div className="col-span-3 text-center font-bold text-sm text-kkl-green">
 {eq.hourly_rate ? `${Number(eq.hourly_rate).toLocaleString()}` : <span className="text-amber-500 font-semibold text-xs">לא הוגדר</span>}
                         </div>
-<div className="col-span-1 text-center text-xs text-gray-500">{eq.overnight_rate ? `${eq.overnight_rate}` : '—'}</div>
-                        <div className="col-span-1 text-center">{eq.night_guard ? <Moon className="w-4 h-4 text-blue-500 mx-auto" /> : <span className="text-gray-200 text-xs">—</span>}</div>
-                        <div className="col-span-1 text-center">
+                        <div className="col-span-2 text-center">
                           <button onClick={() => toggle(eq)}>
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${eq.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                               {eq.is_active ? 'פעיל' : 'כבוי'}
@@ -446,8 +443,8 @@ const PricingTab: React.FC<{
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="bg-gray-50 border-b border-gray-200 hidden md:grid grid-cols-12 gap-2 px-4 py-3">
-{['שם סוג ציוד','קבוצה','תעריף שעתי','תעריף לינה',' לילה','עודכן','סטטוס',''].map((h, i) => (
-            <div key={i} className={`text-right text-xs font-semibold text-gray-500 uppercase tracking-wider ${i===2||i===3||i===4||i===5||i===6?'text-center':''} ${i===0?'col-span-4':i===1?'col-span-2':'col-span-1'}`}>{h}</div>
+{['שם סוג ציוד','קבוצה','תעריף שעתי','תעריף לינה','עודכן','סטטוס',''].map((h, i) => (
+            <div key={i} className={`text-right text-xs font-semibold text-gray-500 uppercase tracking-wider ${i>=2?'text-center':''} ${i===0?'col-span-4':i===1?'col-span-2':i===6?'col-span-2':'col-span-1'}`}>{h}</div>
           ))}
         </div>
 
@@ -472,7 +469,6 @@ const PricingTab: React.FC<{
                     className="w-full text-center border border-kkl-green rounded-lg px-1 py-1 text-xs focus:outline-none" />
 : <span className="text-sm text-gray-600">{t.overnight_rate ? `${t.overnight_rate}` : '—'}</span>}
             </div>
-            <div className="col-span-1 text-center">{t.night_guard ? <Moon className="w-4 h-4 text-blue-500 mx-auto" /> : <span className="text-gray-200 text-xs">—</span>}</div>
             <div className="col-span-1 text-center text-xs text-gray-400">{t.updated_at ? new Date(t.updated_at).toLocaleDateString('he-IL') : '—'}</div>
             <div className="col-span-1 text-center">
               <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${t.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -629,7 +625,7 @@ const SupplierSettings: React.FC = () => {
   const tabs: { id: TabType; label: string; icon: React.ReactNode; count?: number }[] = [
     { id: 'suppliers', label: 'ספקים',              icon: <Truck className="w-3.5 h-3.5" />,     count: suppliers.filter(s=>s.is_active).length },
     { id: 'equipment', label: 'ציוד ספקים',         icon: <Wrench className="w-3.5 h-3.5" />,    count: equipment.length },
-    { id: 'pricing',   label: 'סוגי ציוד ותעריפים', icon: <DollarSign className="w-3.5 h-3.5" />, count: eqTypes.length },
+    { id: 'pricing',   label: 'סוגי ציוד ותעריפים', icon: <span className="w-3.5 h-3.5 font-bold leading-none inline-flex items-center justify-center">₪</span>, count: eqTypes.length },
     { id: 'rotation',  label: 'סבב הוגן',            icon: <RotateCcw className="w-3.5 h-3.5" />, count: rotations.filter(r=>r.is_active).length },
   ];
 

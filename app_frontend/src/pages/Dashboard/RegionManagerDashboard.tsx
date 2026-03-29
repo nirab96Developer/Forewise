@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  MapPin, AlertTriangle, BarChart3, Info, ShieldAlert
+  MapPin, AlertTriangle, BarChart3, Info, ShieldAlert, RefreshCw
 } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
@@ -49,11 +49,20 @@ const RegionManagerDashboard: React.FC = () => {
       <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-5 max-w-screen-2xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <MapPin className="w-6 h-6 text-blue-600" />
-          <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">מרחב {data.region_name}</h1>
-            <p className="text-xs text-gray-500">{k.total_areas} אזורים · {k.total_projects} פרויקטים</p>
+        <div className="bg-gradient-to-l from-green-700 to-green-800 rounded-2xl p-5 sm:p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-200 text-sm mb-1">{new Date().getHours() < 12 ? 'בוקר טוב' : new Date().getHours() < 17 ? 'צהריים טובים' : 'ערב טוב'}</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2.5">
+                <MapPin className="w-6 h-6 text-green-300" />
+                מרחב {data.region_name}
+              </h1>
+              <p className="text-green-200 text-sm mt-1">{k.total_areas} אזורים · {k.total_projects} פרויקטים</p>
+            </div>
+            <button onClick={() => window.location.reload()}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold bg-white/15 hover:bg-white/25 text-white rounded-xl backdrop-blur-sm transition-colors">
+              <RefreshCw className="w-3.5 h-3.5" /> רענן
+            </button>
           </div>
         </div>
 

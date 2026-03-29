@@ -45,6 +45,17 @@ class ActivityLogService:
         if details_data and isinstance(details_data, dict):
             description_text = details_data.get('description_he') or details_data.get('description')
 
+        category = None
+        act_str = str(activity_type or action or '').lower()
+        if any(k in act_str for k in ('work_order', 'worklog', 'equipment', 'supplier', 'project')):
+            category = 'operational'
+        elif any(k in act_str for k in ('invoice', 'budget', 'payment', 'financial')):
+            category = 'financial'
+        elif any(k in act_str for k in ('user', 'role', 'permission', 'setting')):
+            category = 'management'
+        else:
+            category = 'system'
+
         log = ActivityLog(
             user_id=user_id,
             activity_type=activity_type,
@@ -54,6 +65,7 @@ class ActivityLogService:
             details=details_json,
             description=description_text,
             custom_metadata=custom_metadata_json,
+            category=category,
             ip_address=ip_address,
             user_agent=user_agent,
             session_id=session_id,

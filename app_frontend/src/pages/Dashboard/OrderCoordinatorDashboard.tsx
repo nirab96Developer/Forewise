@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Briefcase, AlertTriangle, Send, CheckCircle, XCircle,
+  AlertTriangle, Send, CheckCircle, XCircle,
   Search, Filter, ChevronDown, ChevronUp,
-  ShieldAlert, Info, RefreshCw
+  ShieldAlert, Info, RefreshCw, Clock, Inbox, ArrowLeftRight
 } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
@@ -53,6 +53,13 @@ const timeAgo = (d: string | null) => {
   return `לפני ${Math.floor(hrs / 24)} ימים`;
 };
 
+const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "בוקר טוב";
+  if (h < 17) return "צהריים טובים";
+  return "ערב טוב";
+};
+
 const OrderCoordinatorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [data, setData] = useState<QueueData | null>(null);
@@ -82,7 +89,7 @@ const OrderCoordinatorDashboard: React.FC = () => {
     setActionBusy(woId);
     try {
       if (action === "send") await api.post(`/work-orders/${woId}/send-to-supplier`);
-      else if (action === "approve") await api.post(`/work-orders/${woId}/coordinator-approve`);
+      else if (action === "approve") await api.post(`/work-orders/${woId}/approve`);
       else if (action === "reject") await api.post(`/work-orders/${woId}/reject`, { reason: "נדחה ע״י מתאם" });
       else if (action === "next") await api.post(`/work-orders/${woId}/move-to-next-supplier`);
       else if (action === "resend") await api.post(`/work-orders/${woId}/send-to-supplier`);
@@ -96,37 +103,48 @@ const OrderCoordinatorDashboard: React.FC = () => {
   if (loading && !data) return <UnifiedLoader size="full" />;
   if (!data) return <div className="p-8 text-center text-gray-500">שגיאה בטעינת נתונים</div>;
 
-  const k = data.kpis;
+  const k = data.kpis || {} as Record<string, number>;
+  const totalActive = (k.pending ?? 0) + (k.distributing ?? 0) + (k.supplier_accepted ?? 0) + (k.expired ?? 0);
 
   return (
     <div className="min-h-full bg-gray-50" dir="rtl">
       <div className="p-3 sm:p-5 space-y-4 max-w-screen-xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Briefcase className="w-6 h-6 text-blue-600" />
-            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">תור עבודה — תיאום הזמנות</h1>
+        <div className="bg-gradient-to-l from-green-700 to-green-800 rounded-2xl p-5 sm:p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-200 text-sm mb-1">{getGreeting()}</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold flex items-center gap-2.5">
+                <ArrowLeftRight className="w-6 h-6 text-green-300" />
+                תיאום הזמנות
+              </h1>
+              <p className="text-green-200 text-sm mt-1">
+                {totalActive > 0
+                  ? `${totalActive} הזמנות דורשות טיפול`
+                  : "אין הזמנות ממתינות — הכל מטופל"}
+              </p>
+            </div>
+            <button onClick={loadData} disabled={loading}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold bg-white/15 hover:bg-white/25 text-white rounded-xl backdrop-blur-sm transition-colors disabled:opacity-50">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> רענן
+            </button>
           </div>
-          <button onClick={loadData} disabled={loading}
-            className="flex items-center gap-1.5 px-3 min-h-[40px] text-xs font-bold bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> רענן
-          </button>
         </div>
 
         {/* KPIs */}
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
-          <MiniKPI label="ממתין לשליחה" value={k.pending} color={k.pending > 0 ? "amber" : "gray"} />
-          <MiniKPI label="בהפצה" value={k.distributing} color={k.distributing > 0 ? "blue" : "gray"} />
-          <MiniKPI label="ממתין לאישור" value={k.supplier_accepted} color={k.supplier_accepted > 0 ? "green" : "gray"} pulse={k.supplier_accepted > 0} />
-          <MiniKPI label="פג תוקף" value={k.expired} color={k.expired > 0 ? "red" : "gray"} />
-          <MiniKPI label="אילוץ ספק" value={k.forced_cases} color={k.forced_cases > 0 ? "orange" : "gray"} />
+          <MiniKPI label="ממתין לשליחה" value={k.pending ?? 0} color={(k.pending ?? 0) > 0 ? "amber" : "gray"} icon={<Clock className="w-4 h-4" />} />
+          <MiniKPI label="בהפצה" value={k.distributing ?? 0} color={(k.distributing ?? 0) > 0 ? "blue" : "gray"} icon={<Send className="w-4 h-4" />} />
+          <MiniKPI label="ממתין לאישור" value={k.supplier_accepted ?? 0} color={(k.supplier_accepted ?? 0) > 0 ? "green" : "gray"} pulse={(k.supplier_accepted ?? 0) > 0} icon={<CheckCircle className="w-4 h-4" />} />
+          <MiniKPI label="פג תוקף" value={k.expired ?? 0} color={(k.expired ?? 0) > 0 ? "red" : "gray"} icon={<AlertTriangle className="w-4 h-4" />} />
+          <MiniKPI label="אילוץ ספק" value={k.forced_cases ?? 0} color={(k.forced_cases ?? 0) > 0 ? "orange" : "gray"} icon={<ShieldAlert className="w-4 h-4" />} />
         </div>
 
         {/* Alerts */}
-        {data.alerts.length > 0 && (
+        {(data.alerts?.length ?? 0) > 0 && (
           <div className="space-y-1.5">
-            {data.alerts.map((a, i) => {
+            {(data.alerts || []).map((a, i) => {
               const Icon = a.type === "error" ? ShieldAlert : a.type === "warning" ? AlertTriangle : Info;
               const cls = a.type === "error" ? "border-red-300 bg-red-50 text-red-800" :
                           a.type === "warning" ? "border-amber-300 bg-amber-50 text-amber-800" :
@@ -142,18 +160,18 @@ const OrderCoordinatorDashboard: React.FC = () => {
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 flex flex-wrap gap-2 items-center">
-          <div className="flex items-center gap-1.5 text-xs text-gray-500"><Filter className="w-3.5 h-3.5" /> סינון:</div>
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium"><Filter className="w-3.5 h-3.5" /> סינון:</div>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="px-2.5 py-2 text-xs border border-gray-300 rounded-lg bg-white min-w-[130px]">
+            className="px-2.5 py-2 text-xs border border-gray-300 rounded-lg bg-white min-w-[130px] focus:ring-2 focus:ring-green-300 focus:border-green-400">
             <option value="">כל הסטטוסים</option>
-            {data.filter_options.statuses.map(s => (
+            {(data.filter_options?.statuses || []).map(s => (
               <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
           <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)}
-            className="px-2.5 py-2 text-xs border border-gray-300 rounded-lg bg-white min-w-[130px]">
+            className="px-2.5 py-2 text-xs border border-gray-300 rounded-lg bg-white min-w-[130px] focus:ring-2 focus:ring-green-300 focus:border-green-400">
             <option value="">כל הפרויקטים</option>
-            {data.filter_options.projects.map(p => (
+            {(data.filter_options?.projects || []).map(p => (
               <option key={p.id} value={String(p.id)}>{p.name}</option>
             ))}
           </select>
@@ -161,16 +179,22 @@ const OrderCoordinatorDashboard: React.FC = () => {
             <Search className="w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input type="text" value={searchText}
               onChange={e => setSearchText(e.target.value)}
-              placeholder="חיפוש..."
-              className="w-full pr-8 pl-3 py-2 text-xs border border-gray-300 rounded-lg" />
+              placeholder="חיפוש לפי מספר או כותרת..."
+              className="w-full pr-8 pl-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-300 focus:border-green-400" />
           </div>
         </div>
 
         {/* Queue */}
         <div className="space-y-2.5">
-          {data.work_orders.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center text-gray-400 text-sm">אין הזמנות בתור</div>
-          ) : data.work_orders.map(wo => {
+          {(data.work_orders?.length ?? 0) === 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center">
+              <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Inbox className="w-8 h-8 text-green-400" />
+              </div>
+              <p className="text-lg font-bold text-gray-700 mb-1">אין הזמנות בתור</p>
+              <p className="text-sm text-gray-400">כל ההזמנות טופלו. המערכת תתעדכן אוטומטית כשיגיעו הזמנות חדשות.</p>
+            </div>
+          ) : (data.work_orders || []).map(wo => {
             const st = STATUS_CFG[wo.status] || { label: wo.status, cls: "bg-gray-100 text-gray-600" };
             const isExpanded = expandedId === wo.id;
             const isBusy = actionBusy === wo.id;
@@ -226,7 +250,7 @@ const OrderCoordinatorDashboard: React.FC = () => {
                       className="px-2.5 min-h-[36px] text-[11px] text-gray-500 hover:text-blue-600 transition-colors">
                       פרטים
                     </button>
-                    {wo.supplier_history.length > 0 && (
+                    {(wo.supplier_history?.length ?? 0) > 0 && (
                       <button onClick={() => setExpandedId(isExpanded ? null : wo.id)}
                         className="px-1.5 min-h-[36px] text-gray-400 hover:text-gray-600 transition-colors">
                         {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -236,7 +260,7 @@ const OrderCoordinatorDashboard: React.FC = () => {
                 </div>
 
                 {/* Expanded: supplier history */}
-                {isExpanded && wo.supplier_history.length > 0 && (
+                {isExpanded && (wo.supplier_history?.length ?? 0) > 0 && (
                   <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
                     <p className="text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-wide">היסטוריית ספקים</p>
                     <div className="space-y-1.5">
@@ -268,23 +292,33 @@ const OrderCoordinatorDashboard: React.FC = () => {
   );
 };
 
-const MiniKPI: React.FC<{ label: string; value: number; color: string; pulse?: boolean }> = ({ label, value, color, pulse }) => {
+const MiniKPI: React.FC<{ label: string; value: number; color: string; pulse?: boolean; icon?: React.ReactNode }> = ({ label, value, color, pulse, icon }) => {
   const bg: Record<string, string> = {
-    amber: "border-r-amber-500 bg-amber-50", blue: "border-r-blue-500 bg-blue-50",
-    green: "border-r-green-500 bg-green-50", red: "border-r-red-500 bg-red-50",
-    orange: "border-r-orange-500 bg-orange-50", gray: "border-r-gray-200 bg-white",
+    amber: "border-r-amber-500 bg-gradient-to-l from-amber-50 to-white", 
+    blue: "border-r-blue-500 bg-gradient-to-l from-blue-50 to-white",
+    green: "border-r-green-600 bg-gradient-to-l from-green-50 to-white", 
+    red: "border-r-red-500 bg-gradient-to-l from-red-50 to-white",
+    orange: "border-r-orange-500 bg-gradient-to-l from-orange-50 to-white", 
+    gray: "border-r-gray-200 bg-white",
   };
   const fg: Record<string, string> = {
     amber: "text-amber-700", blue: "text-blue-700", green: "text-green-700",
-    red: "text-red-700", orange: "text-orange-700", gray: "text-gray-400",
+    red: "text-red-700", orange: "text-orange-700", gray: "text-gray-300",
+  };
+  const iconCls: Record<string, string> = {
+    amber: "text-amber-400", blue: "text-blue-400", green: "text-green-500",
+    red: "text-red-400", orange: "text-orange-400", gray: "text-gray-300",
   };
   return (
-    <div className={`rounded-lg border border-gray-200 border-r-4 shadow-sm p-2.5 sm:p-3 min-h-[60px] ${bg[color] || bg.gray}`}>
-      <div className="flex items-center justify-between">
-        <p className={`text-xl sm:text-2xl font-extrabold ${fg[color] || "text-gray-900"}`}>{value}</p>
-        {pulse && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
+    <div className={`rounded-xl border border-gray-200 border-r-4 shadow-sm p-3 sm:p-3.5 min-h-[72px] transition-shadow hover:shadow-md ${bg[color] || bg.gray}`}>
+      <div className="flex items-center justify-between mb-1">
+        <p className={`text-2xl sm:text-3xl font-extrabold ${fg[color] || "text-gray-900"}`}>{value}</p>
+        <div className="flex items-center gap-1.5">
+          {pulse && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
+          {icon && <span className={iconCls[color] || "text-gray-300"}>{icon}</span>}
+        </div>
       </div>
-      <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+      <p className="text-[10px] sm:text-[11px] font-medium text-gray-500">{label}</p>
     </div>
   );
 };

@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, Search, Truck, DollarSign, Eye, MapPin,
+  ArrowRight, Search, Truck, Eye, MapPin,
   Package, Building2, ChevronDown, ChevronUp, Phone, User, Wrench
 } from 'lucide-react';
 import api from '../../services/api';
@@ -431,7 +431,7 @@ const EquipmentInventory: React.FC = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="w-3.5 h-3.5 text-emerald-500 font-bold leading-none inline-flex items-center justify-center">₪</span>
 <span className="font-bold text-emerald-600">{eq.hourly_rate ? `${eq.hourly_rate}/שעה` : '—'}</span>
                       </div>
                     </div>

@@ -303,7 +303,7 @@ const RolesPermissions: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="relative">
+              <div className="relative overflow-visible" style={{ padding: 4 }}>
           <div className="w-10 h-10 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}} />
           <div className="absolute inset-0 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="20" height="17">

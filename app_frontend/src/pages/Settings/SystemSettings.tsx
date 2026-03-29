@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Settings, Users, Truck, MapPin, FileText,
   ChevronLeft, Shield, Building2,
-  DollarSign, Receipt, Cog, Clock
+  Receipt, Cog, Clock
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -74,14 +74,14 @@ const settingsCategories: SettingsCategory[] = [
     id: 'budgets',
     title: 'תקציבים וניהול חשבונות',
     description: 'ניהול תקציבים, חשבוניות ודוחות כספיים',
-    icon: <DollarSign className="w-6 h-6" />,
+    icon: <span className="w-6 h-6 font-bold leading-none inline-flex items-center justify-center">₪</span>,
     color: 'bg-orange-500',
     items: [
       {
         id: 'budgets-list',
         title: 'תקציבים',
         description: 'ניהול תקציבי פרויקטים וניצול',
-        icon: <DollarSign className="w-5 h-5" />,
+        icon: <span className="w-5 h-5 font-bold leading-none inline-flex items-center justify-center">₪</span>,
         path: '/settings/budgets',
       },
       {

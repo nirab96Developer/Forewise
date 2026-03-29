@@ -2,7 +2,7 @@
 // src/pages/Regions/Regions.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Map, TreePine, MapPin, Building2, ChevronLeft, DollarSign } from 'lucide-react';
+import { Plus, Search, Map, TreePine, MapPin, Building2, ChevronLeft } from 'lucide-react';
 import api from '../../services/api';
 import TreeLoader from '../../components/common/TreeLoader';
 
@@ -155,7 +155,7 @@ const Regions: React.FC = () => {
               </div>
               {region.total_budget && region.total_budget > 0 && (
                 <div className="flex items-center gap-1.5 bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg font-bold">
-                  <DollarSign className="w-4 h-4" />
+                  <span className="w-4 h-4 font-bold leading-none inline-flex items-center justify-center">₪</span>
 <span>{Number(region.total_budget).toLocaleString()}</span>
                 </div>
               )}

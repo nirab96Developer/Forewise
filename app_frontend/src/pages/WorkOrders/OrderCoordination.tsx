@@ -12,6 +12,7 @@ import {
 import workOrderService, { WorkOrder } from "../../services/workOrderService";
 import api from "../../services/api";
 import authService from "../../services/authService";
+import UnifiedLoader from "../../components/common/UnifiedLoader";
 
 interface CoordinationOrder extends Omit<WorkOrder, 'status'> {
   status: string;
@@ -317,30 +318,7 @@ const OrderCoordination: React.FC = () => {
   };
 
   if (loading && orders.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="relative">
-          <div className="w-14 h-14 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="28" height="24">
-                <defs>
-                  <linearGradient id="oc1_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#1565c0"/><stop offset="100%" stopColor="#0097a7"/></linearGradient>
-                  <linearGradient id="oc1_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#0097a7"/><stop offset="50%" stopColor="#2e7d32"/><stop offset="100%" stopColor="#66bb6a"/></linearGradient>
-                  <linearGradient id="oc1_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#2e7d32"/><stop offset="40%" stopColor="#66bb6a"/><stop offset="100%" stopColor="#8B5e3c"/></linearGradient>
-                </defs>
-                <path d="M46 20 Q60 9 74 20" stroke="url(#oc1_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                <path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#oc1_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                <path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#oc1_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/>
-                <line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/>
-                <circle cx="60" cy="95" r="5" fill="#8B5e3c"/>
-              </svg>
-          </div>
-        </div>
-          <p className="mt-4 text-gray-500 text-sm animate-pulse">טוען תיאומים...</p>
-        </div>
-      </div>
-    );
+    return <UnifiedLoader size="full" message="טוען תיאומים..." />;
   }
 
   return (

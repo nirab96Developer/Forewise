@@ -280,10 +280,39 @@ def create_project(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Create project"""
+    """Create project with optional GIS point."""
     require_permission(current_user, "projects.create")
     try:
         item = service.create(db, data, current_user.id)
+
+        # Save location_geom if lat/lng provided
+        lat = getattr(data, 'latitude', None)
+        lng = getattr(data, 'longitude', None)
+        if lat and lng:
+            try:
+                from sqlalchemy import text as sql_text
+                db.execute(sql_text(
+                    "UPDATE projects SET location_geom = ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) WHERE id = :pid"
+                ), {"lng": lng, "lat": lat, "pid": item.id})
+
+                # Validate ST_Within area polygon (warn only, don't block)
+                if item.area_id:
+                    within = db.execute(sql_text("""
+                        SELECT ST_Covers(a.geom, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography)
+                        FROM areas a WHERE a.id = :aid AND a.geom IS NOT NULL
+                    """), {"lng": lng, "lat": lat, "aid": item.area_id}).scalar()
+                    if within is False:
+                        import logging
+                        logging.getLogger(__name__).warning(
+                            f"Project {item.id} location ({lat},{lng}) is outside area {item.area_id}"
+                        )
+
+                db.commit()
+                db.refresh(item)
+            except Exception as geo_err:
+                import logging
+                logging.getLogger(__name__).warning(f"GIS save failed for project {item.id}: {geo_err}")
+
         return item
     except (ValidationException, DuplicateException) as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -296,10 +325,25 @@ def update_project(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Update project"""
+    """Update project with optional GIS point."""
     require_permission(current_user, "projects.update")
     try:
         item = service.update(db, item_id, data, current_user.id)
+
+        lat = getattr(data, 'latitude', None)
+        lng = getattr(data, 'longitude', None)
+        if lat and lng:
+            try:
+                from sqlalchemy import text as sql_text
+                db.execute(sql_text(
+                    "UPDATE projects SET location_geom = ST_SetSRID(ST_MakePoint(:lng, :lat), 4326) WHERE id = :pid"
+                ), {"lng": lng, "lat": lat, "pid": item.id})
+                db.commit()
+                db.refresh(item)
+            except Exception as geo_err:
+                import logging
+                logging.getLogger(__name__).warning(f"GIS update failed for project {item.id}: {geo_err}")
+
         return item
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, AlertCircle, User, Mail, Phone, Lock } from 'lucide-react';
+import { ArrowRight, AlertCircle, User, Mail, Phone, Lock, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
 
@@ -51,6 +51,8 @@ const EditUser: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -120,6 +122,20 @@ const EditUser: React.FC = () => {
     } catch (err: any) {
       console.error('Error loading areas:', err);
       setAreas([]);
+    }
+  };
+
+  const handleDeactivateUser = async () => {
+    setDeleteLoading(true);
+    try {
+      await api.patch(`/users/${id}`, { is_active: false });
+      setShowDeleteConfirm(false);
+      navigate('/settings/admin/users', { replace: true });
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || 'שגיאה בהסרת משתמש');
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -401,7 +417,54 @@ const EditUser: React.FC = () => {
                 <ArrowRight className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Delete / Deactivate */}
+            <div className="mt-6 pt-6 border-t border-red-100">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-red-200 text-red-600 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors text-sm font-medium"
+              >
+                <Trash2 className="w-4 h-4" />
+                הסרת משתמש מהמערכת
+              </button>
+            </div>
           </form>
+
+          {/* Delete Confirmation Modal */}
+          {showDeleteConfirm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                <div className="p-6 text-center">
+                  <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-7 h-7 text-red-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">הסרת משתמש</h3>
+                  <p className="text-sm text-gray-600 mb-1">
+                    האם להסיר את <strong>{formData.full_name || formData.username}</strong> מהמערכת?
+                  </p>
+                  <p className="text-xs text-gray-400 mb-5">
+                    המשתמש יושבת ולא יוכל להתחבר. ניתן לשחזר בעתיד.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium"
+                    >
+                      ביטול
+                    </button>
+                    <button
+                      onClick={handleDeactivateUser}
+                      disabled={deleteLoading}
+                      className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      {deleteLoading ? 'מסיר...' : 'כן, הסר משתמש'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

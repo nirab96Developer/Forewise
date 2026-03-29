@@ -56,6 +56,7 @@ const AreaDetail: React.FC = () => {
   const navigate = useNavigate();
   const [area, setArea] = useState<Area | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [areaPolygons, setAreaPolygons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { canManageAreas } = useRoleAccess();
   const [error, setError] = useState<string | null>(null);
@@ -77,21 +78,24 @@ const AreaDetail: React.FC = () => {
       const projectsRes = await api.get('/projects', { params: { area_id: id, per_page: 100 } });
       const projectsData = projectsRes.data.projects || projectsRes.data.items || [];
       
-      // Generate approximate coordinates for projects without precise location data
-      const enrichedProjects = projectsData.map((p: Project) => {
-        if (!p.location?.latitude || !p.location?.longitude) {
-          return {
-            ...p,
-            location: {
-              latitude: 31.5 + (Math.random() - 0.5) * 1.5,
-              longitude: 34.8 + (Math.random() - 0.5) * 1.5,
-            }
-          };
+      setProjects(projectsData);
+
+      // Load area boundary polygon
+      try {
+        const areaBounds = await api.get('/geo/areas/boundaries', { params: { region_id: areaRes.data.region_id } });
+        const areaFeature = (areaBounds.data?.features || []).find((f: any) => f.properties?.id === Number(id));
+        if (areaFeature) {
+          setAreaPolygons([{
+            id: `area-${id}`,
+            name: areaRes.data.name,
+            geometry: areaFeature.geometry || areaFeature,
+            fillColor: '#16a34a',
+            strokeColor: '#15803d',
+            fillOpacity: 0.12,
+            strokeWeight: 2,
+          }]);
         }
-        return p;
-      });
-      
-      setProjects(enrichedProjects);
+      } catch {}
     } catch (err) {
       console.error('Error fetching area:', err);
       setError('שגיאה בטעינת האזור');
@@ -205,12 +209,16 @@ const AreaDetail: React.FC = () => {
         <LeafletMap
           height="500px"
           mapType="satellite"
-          points={projectsWithLocation.map(p => ({
+          fitBounds={true}
+          polygons={areaPolygons}
+          points={projectsWithLocation
+            .filter(p => p.location?.latitude && p.location?.longitude)
+            .map(p => ({
             id: p.id,
             name: p.name,
             code: p.code,
-            lat: p.location?.latitude || 0,
-            lng: p.location?.longitude || 0,
+            lat: p.location!.latitude!,
+            lng: p.location!.longitude!,
             color: getStatusColor(p.status),
             onClick: () => setSelectedProject(p),
             popupContent: '<div style="direction:rtl;padding:6px"><b>' + p.name + '</b><br><span style="font-size:11px;color:#6b7280">' + (p.code || '') + '</span><br><a href="/projects/' + p.code + '/workspace" style="display:inline-block;margin-top:4px;padding:3px 10px;background:#16a34a;color:#fff;border-radius:5px;text-decoration:none;font-size:11px">פתח</a></div>',

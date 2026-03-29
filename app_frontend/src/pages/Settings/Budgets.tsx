@@ -2,7 +2,7 @@
 // ניהול תקציבים — היררכיה: מרחבים / אזורים / פרויקטים
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  DollarSign, Plus, ChevronDown, ChevronRight, Edit2,
+  Plus, ChevronDown, ChevronRight, Edit2,
   X, Loader2, CheckCircle, AlertCircle, Search
 } from "lucide-react";
 import api from "../../services/api";
@@ -470,7 +470,7 @@ const Budgets: React.FC = () => {
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <div className="w-9 h-9 sm:w-10 sm:h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <DollarSign className="w-5 h-5 text-orange-600" />
+                <span className="w-5 h-5 text-orange-600 font-bold leading-none inline-flex items-center justify-center">₪</span>
               </div>
               <div className="min-w-0">
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">ניהול תקציבים</h1>

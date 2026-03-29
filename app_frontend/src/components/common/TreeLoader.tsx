@@ -18,14 +18,14 @@ const TreeLoader: React.FC<TreeLoaderProps> = ({ fullScreen = false, size = 'md'
   const s = sizes[size];
 
   const content = (
-    <div className="flex flex-col items-center justify-center">
-      <div className="relative">
+    <div className="flex flex-col items-center justify-center overflow-visible">
+      <div className="relative overflow-visible" style={{ padding: 4 }}>
         <div
           className={`${s.ring} rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin`}
           style={{ animationDuration: '0.8s' }}
         />
-        <div className={`absolute inset-0 ${s.ring} rounded-full bg-emerald-400/10 animate-pulse`} />
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className={`absolute inset-1 rounded-full bg-emerald-400/10 animate-pulse`} />
+        <div className="absolute inset-1 flex items-center justify-center">
           <ForewiseTree width={s.svgW} height={s.svgH} />
         </div>
       </div>

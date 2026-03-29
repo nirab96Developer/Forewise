@@ -167,13 +167,22 @@ class WorkOrderService {
     startDate: string,
     endDate: string
   ): Promise<CalendarEvent[]> {
-    const response = await api.get(`${this.baseUrl}/calendar/events`, {
-      params: {
-        start_date: startDate,
-        end_date: endDate,
-      },
-    });
-    return response.data;
+    try {
+      const response = await api.get(`${this.baseUrl}`, { params: { page_size: 100 } });
+      const items = response.data?.items || response.data || [];
+      return items
+        .filter((wo: any) => {
+          const d = (wo.created_at || wo.work_start_date || '').split('T')[0];
+          return d >= startDate && d <= endDate;
+        })
+        .map((wo: any) => ({
+          id: wo.id,
+          title: wo.title || wo.equipment_type || `הזמנה #${wo.order_number || wo.id}`,
+          date: (wo.created_at || wo.work_start_date || '').split('T')[0],
+          type: 'work_order' as const,
+          data: wo,
+        }));
+    } catch { return []; }
   }
 
   async getPendingWorkOrders(): Promise<WorkOrder[]> {

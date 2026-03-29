@@ -33,17 +33,17 @@ const UnifiedLoader: React.FC<UnifiedLoaderProps> = ({
         transition-all duration-300
       `}
     >
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative">
+      <div className="flex flex-col items-center gap-4 overflow-visible">
+        <div className="relative overflow-visible" style={{ padding: 4 }}>
           <div
             className={`${config.ringSize} rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin`}
             style={{ animationDuration: '1s' }}
           />
           <div
-            className={`absolute inset-0 ${config.ringSize} rounded-full bg-gradient-to-br from-emerald-400/20 to-green-500/20 animate-pulse`}
+            className={`absolute inset-1 rounded-full bg-gradient-to-br from-emerald-400/20 to-green-500/20 animate-pulse`}
           />
           {showLogo && (
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-1 flex items-center justify-center">
               <TreeSVG width={config.svgW} height={config.svgH} />
             </div>
           )}
@@ -58,7 +58,7 @@ const UnifiedLoader: React.FC<UnifiedLoaderProps> = ({
 
 export const PageSuspenseLoader: React.FC = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
-    <div className="relative">
+    <div className="relative overflow-visible" style={{ padding: 4 }}>
       <div className="w-16 h-16 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" />
       <div className="absolute inset-0 flex items-center justify-center">
         <TreeSVG width={28} height={24} />
@@ -70,7 +70,7 @@ export const PageSuspenseLoader: React.FC = () => (
 export const FullScreenLoader: React.FC<{ message?: string }> = ({ message }) => (
   <div className="fixed inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50">
     <div className="flex flex-col items-center gap-4">
-      <div className="relative">
+      <div className="relative overflow-visible" style={{ padding: 4 }}>
         <div className="w-16 h-16 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" />
         <div className="absolute inset-0 flex items-center justify-center">
           <TreeSVG width={28} height={24} />

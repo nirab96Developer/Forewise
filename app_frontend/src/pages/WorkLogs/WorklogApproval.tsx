@@ -89,7 +89,7 @@ const WorklogApproval: React.FC = () => {
                 {/* Worklogs List */}
                 {loading ? (
                     <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                        <div className="relative">
+                        <div className="relative overflow-visible" style={{ padding: 4 }}>
           <div className="w-14 h-14 rounded-full border-[3px] border-emerald-200 border-t-emerald-500 animate-spin" style={{animationDuration:'0.9s'}} />
           <div className="absolute inset-0 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="28" height="24">

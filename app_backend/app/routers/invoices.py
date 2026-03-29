@@ -374,7 +374,7 @@ def create_invoice_from_worklogs(
         total += line_base + overnight_cost
 
     # 4. יצירת invoice חדש
-    VAT_RATE = _Decimal("0.17")
+    VAT_RATE = _Decimal("0.18")
     subtotal = total
     tax_amount = (subtotal * VAT_RATE).quantize(_Decimal("0.01"))
     total_with_vat = subtotal + tax_amount
@@ -435,14 +435,19 @@ def create_invoice_from_worklogs(
         if col_exists:
             db.execute(sa_text("""
                 INSERT INTO invoice_items
-                  (invoice_id, worklog_id, description, quantity, unit_price, total_price, line_number, created_at, updated_at)
-                VALUES (:invoice_id, :worklog_id, :desc, 1, :unit, :total, :line_num, NOW(), NOW())
+                  (invoice_id, worklog_id, description, quantity, unit_price, total_price,
+                   discount_percent, discount_amount, subtotal, tax_rate, tax_amount,
+                   line_number, is_active, created_at, updated_at)
+                VALUES (:invoice_id, :worklog_id, :desc, 1, :unit, :total,
+                   0, 0, :total, 0.18, :tax,
+                   :line_num, true, NOW(), NOW())
             """), {
                 "invoice_id": invoice.id,
                 "worklog_id": w.id,
                 "desc": " | ".join(desc_parts),
                 "unit": float(line_total),
                 "total": float(line_total),
+                "tax": float(line_total * _Decimal("0.18")),
                 "line_num": idx + 1,
             })
         # Update worklog status
@@ -625,3 +630,34 @@ def get_uninvoiced_suppliers_endpoint(
     require_permission(current_user, "invoices.view")
     from app.services.invoice_service import get_uninvoiced_suppliers
     return get_uninvoiced_suppliers(project_id, month, year, db)
+
+
+@router.get("/{invoice_id}/pdf")
+def get_invoice_pdf(
+    invoice_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """Generate and return Invoice PDF (A4, RTL, weasyprint)."""
+    require_permission(current_user, "invoices.view")
+
+    from fastapi.responses import Response
+    from app.services.pdf_documents import generate_invoice_pdf
+
+    try:
+        pdf_bytes = generate_invoice_pdf(invoice_id, db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Invoice PDF generation failed: {e}")
+        raise HTTPException(status_code=500, detail="שגיאה ביצירת PDF")
+
+    inv = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    filename = f"invoice_{inv.invoice_number if inv else invoice_id}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )

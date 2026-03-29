@@ -637,6 +637,26 @@ def update_equipment(
         )
 
 
+@router.patch("/{equipment_id}", response_model=EquipmentResponse)
+def patch_equipment(
+    equipment_id: int,
+    data: EquipmentUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Partial update equipment (PATCH alias)"""
+    require_permission(current_user, "equipment.update")
+    try:
+        equipment = equipment_service.update(db, equipment_id, data, current_user_id=current_user.id)
+        return equipment
+    except NotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except (ValidationException, DuplicateException) as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="שגיאת שרת")
+
+
 @router.delete("/{equipment_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_equipment(
     equipment_id: int,

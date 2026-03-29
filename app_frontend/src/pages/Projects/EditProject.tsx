@@ -37,6 +37,13 @@ const EditProject: React.FC = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  let userData: any = {};
+  try { userData = JSON.parse(localStorage.getItem('user') || '{}'); } catch {}
+  const userRole = (userData.role || userData.role_code || '').toUpperCase();
+  const isAreaManager = userRole === 'AREA_MANAGER';
+  const isRegionManager = userRole === 'REGION_MANAGER';
+
   const [formData, setFormData] = useState<ProjectUpdate>({});
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
@@ -289,8 +296,8 @@ const EditProject: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-page p-6 pr-72" dir="rtl">
-      <div className="w-full max-w-3xl">
+    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
+      <div className="w-full max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
@@ -450,7 +457,7 @@ const EditProject: React.FC = () => {
                   name="region_id"
                   value={formData.region_id || ''}
                   onChange={handleChange}
-                  disabled={loadingRegions}
+                  disabled={loadingRegions || isAreaManager || isRegionManager}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">{loadingRegions ? 'טוען מרחבים...' : 'בחר מרחב'}</option>
@@ -473,7 +480,7 @@ const EditProject: React.FC = () => {
                   name="area_id"
                   value={formData.area_id || ''}
                   onChange={handleChange}
-                  disabled={!formData.region_id || loadingAreas}
+                  disabled={!formData.region_id || loadingAreas || isAreaManager}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">

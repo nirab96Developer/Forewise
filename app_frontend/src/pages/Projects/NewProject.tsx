@@ -34,16 +34,24 @@ interface Area {
 
 const NewProject: React.FC = () => {
   const navigate = useNavigate();
+
+  let userData: any = {};
+  try { userData = JSON.parse(localStorage.getItem('user') || '{}'); } catch {}
+  const userRole = (userData.role || userData.role_code || '').toUpperCase();
+  const userRegionId = userData.region_id;
+  const userAreaId = userData.area_id;
+  const isAreaManager = userRole === 'AREA_MANAGER';
+  const isRegionManager = userRole === 'REGION_MANAGER';
+
   const [formData, setFormData] = useState<ProjectCreate>({
     name: '',
     code: '',
     description: '',
     planned_start_date: '',
     planned_end_date: '',
-    
     allocated_budget: undefined,
-    region_id: undefined,
-    area_id: undefined,
+    region_id: isAreaManager || isRegionManager ? userRegionId : undefined,
+    area_id: isAreaManager ? userAreaId : undefined,
     manager_id: undefined
   });
   const [loading, setLoading] = useState(false);
@@ -58,10 +66,15 @@ const NewProject: React.FC = () => {
   useEffect(() => {
     loadUsers();
     loadRegions();
+    // For Area/Region Manager — load their areas immediately
+    if ((isAreaManager || isRegionManager) && userRegionId) {
+      loadAreas(userRegionId);
+    }
   }, []);
 
-  // Load areas when region changes
+  // Load areas when region changes (only for non-locked users)
   useEffect(() => {
+    if (isAreaManager || isRegionManager) return; // already loaded above
     if (formData.region_id) {
       loadAreas(formData.region_id);
     } else {
@@ -189,8 +202,8 @@ const NewProject: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-page p-6 pr-72" dir="rtl">
-      <div className="w-full max-w-3xl">
+    <div className="min-h-screen bg-gray-50 p-6" dir="rtl">
+      <div className="w-full max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
@@ -301,7 +314,7 @@ const NewProject: React.FC = () => {
                   name="region_id"
                   value={formData.region_id || ''}
                   onChange={handleChange}
-                  disabled={loadingRegions}
+                  disabled={loadingRegions || isAreaManager || isRegionManager}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">{loadingRegions ? 'טוען מרחבים...' : 'בחר מרחב'}</option>
@@ -324,7 +337,7 @@ const NewProject: React.FC = () => {
                   name="area_id"
                   value={formData.area_id || ''}
                   onChange={handleChange}
-                  disabled={!formData.region_id || loadingAreas}
+                  disabled={!formData.region_id || loadingAreas || isAreaManager}
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">

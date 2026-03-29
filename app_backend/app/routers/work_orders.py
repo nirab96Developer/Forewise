@@ -188,17 +188,18 @@ def get_work_order(
             )
         )
 
-        if current_user.area_id is not None:
+        role_code = (current_user.role.code if current_user.role else '').upper()
+        if current_user.area_id is not None and role_code not in ('ADMIN', 'SUPER_ADMIN', 'WORK_MANAGER', 'ORDER_COORDINATOR', 'ACCOUNTANT'):
             query = query.where(Project.area_id == current_user.area_id)
 
         work_order = db.execute(query).scalar_one_or_none()
         if not work_order:
-            raise NotFoundException("WorkOrder not found")
+            raise HTTPException(status_code=404, detail="WorkOrder not found")
 
         return _to_response(work_order, db)
 
-    except NotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -222,6 +223,12 @@ def create_work_order(
     try:
         work_order = work_order_service.create(db, data, current_user_id=current_user.id)
         notify_work_order_created(db, work_order)
+        try:
+            from app.services.activity_logger import log_work_order_created
+            log_work_order_created(db, work_order_id=work_order.id, user_id=current_user.id,
+                                   project_id=work_order.project_id)
+        except Exception:
+            pass
         return work_order
     
     except HTTPException:
@@ -864,7 +871,7 @@ def remove_equipment_from_project(
 
 
 # ============================================
-# QR SCAN ENDPOINTS (Task 7)
+# QR SCAN ENDPOINTS (Task 7) — 3 Scenarios
 # ============================================
 
 class ScanEquipmentRequest(BaseModel):
@@ -872,6 +879,88 @@ class ScanEquipmentRequest(BaseModel):
 
 class ConfirmEquipmentRequest(BaseModel):
     equipment_id: int = Field(..., description="מזהה כלי לאישור")
+
+class AdminOverrideEquipmentRequest(BaseModel):
+    license_plate: str = Field(..., description="מספר רישוי לאישור חריג")
+    reason: str = Field(..., description="סיבת אישור חריג")
+
+
+def _release_equipment_from_old_wo(db: Session, equipment: Equipment, exclude_wo_id: int, actor_id: int):
+    """
+    If equipment is currently assigned to another WO, release it:
+    - Keep already-reported hours/budget (spent stays)
+    - Release remaining frozen budget back to project
+    - Mark old WO as STOPPED
+    """
+    from sqlalchemy import text as sql_text
+
+    old_wos = (
+        db.query(WorkOrder)
+        .filter(
+            WorkOrder.equipment_id == equipment.id,
+            WorkOrder.id != exclude_wo_id,
+            WorkOrder.status.in_(["APPROVED_AND_SENT", "IN_PROGRESS", "ACTIVE"]),
+        )
+        .all()
+    )
+
+    released_details = []
+    for old_wo in old_wos:
+        remaining = float(old_wo.remaining_frozen or 0)
+        released = 0.0
+
+        if remaining > 0:
+            released = remaining
+            if old_wo.project_id:
+                budget = (
+                    db.query(Budget)
+                    .filter(
+                        Budget.project_id == old_wo.project_id,
+                        Budget.is_active.is_(True),
+                        Budget.deleted_at.is_(None),
+                    )
+                    .first()
+                )
+                if budget:
+                    committed = float(budget.committed_amount or 0)
+                    new_committed = max(0.0, committed - remaining)
+                    budget.committed_amount = new_committed
+                    total = float(budget.total_amount or 0)
+                    spent = float(budget.spent_amount or 0)
+                    budget.remaining_amount = max(total - new_committed - spent, 0.0)
+
+            old_wo.remaining_frozen = Decimal(0)
+
+        old_wo.equipment_id = None
+        old_wo.equipment_license_plate = None
+        old_wo.status = "STOPPED"
+        old_wo.updated_at = datetime.utcnow()
+
+        try:
+            db.execute(
+                sql_text("""
+                    INSERT INTO activity_logs (action, activity_type, entity_type, entity_id, user_id, description)
+                    VALUES ('EQUIPMENT_TRANSFERRED', 'update', 'work_order', :eid, :uid, :desc)
+                """),
+                {
+                    "eid": old_wo.id,
+                    "uid": actor_id,
+                    "desc": (
+                        f"כלי {equipment.license_plate} הועבר לפרויקט אחר; "
+                        f"שוחררו {released:,.0f} מהתקציב; הזמנה {old_wo.order_number or old_wo.id} עוצרה"
+                    ),
+                },
+            )
+        except Exception:
+            pass
+
+        released_details.append({
+            "old_wo_id": old_wo.id,
+            "old_wo_number": old_wo.order_number,
+            "released_amount": released,
+        })
+
+    return released_details
 
 
 @router.post("/{work_order_id}/scan-equipment")
@@ -883,42 +972,92 @@ def scan_equipment(
 ):
     """
     Scan equipment QR/license plate and match against work order.
-    3 scenarios: match, different plate (same type), wrong type.
+    3 scenarios:
+      A) Full match — plate + type match → auto-approve
+      B) Same type, different plate → return question for user confirmation
+      C) Wrong type → block (only Admin can override via separate endpoint)
     """
     require_permission(current_user, "work_orders.read")
 
     license_plate = body.license_plate.strip()
+    if not license_plate:
+        raise HTTPException(status_code=400, detail="מספר רישוי ריק")
+
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if not wo:
         raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
 
-    expected_plate = None
-    if wo.equipment_id:
+    expected_plate = wo.equipment_license_plate
+    if not expected_plate and wo.equipment_id:
         eq = db.query(Equipment).filter(Equipment.id == wo.equipment_id).first()
         if eq:
             expected_plate = eq.license_plate
 
-    # Scenario 1: Match
-    if license_plate and license_plate == expected_plate:
-        return {"status": "ok", "message": "כלי תואם — אומת בהצלחה"}
+    scanned_eq = db.query(Equipment).filter(Equipment.license_plate == license_plate).first()
 
-    scanned = db.query(Equipment).filter(Equipment.license_plate == license_plate).first()
-
-    # Scenario 2: Same type, different plate
-    if scanned and wo.equipment_type and scanned.equipment_type == wo.equipment_type:
+    # ── Scenario A: Full match ──
+    if license_plate == expected_plate:
+        if scanned_eq:
+            wo.equipment_id = scanned_eq.id
+        wo.equipment_license_plate = license_plate
+        wo.updated_at = datetime.utcnow()
+        if wo.status in ("APPROVED_AND_SENT",):
+            wo.status = "IN_PROGRESS"
+        db.commit()
+        db.refresh(wo)
         return {
-            "status": "different_plate",
-            "message": f"כלי מסוג {scanned.equipment_type} עם רישוי {license_plate}",
-            "question": "האם זה הכלי שברשותך?",
-            "equipment_id": scanned.id,
+            "status": "ok",
+            "message": "כלי תואם — אומת בהצלחה",
+            "work_order": _to_response(wo, db),
         }
 
-    # Scenario 3: Wrong type
+    # ── Scenario B: Same type, different plate ──
+    wo_type = (wo.equipment_type or "").strip().lower()
+    scanned_type = (scanned_eq.equipment_type if scanned_eq else "").strip().lower()
+
+    if scanned_eq and wo_type and scanned_type == wo_type:
+        old_project_info = None
+        old_wos = (
+            db.query(WorkOrder)
+            .filter(
+                WorkOrder.equipment_id == scanned_eq.id,
+                WorkOrder.id != work_order_id,
+                WorkOrder.status.in_(["APPROVED_AND_SENT", "IN_PROGRESS", "ACTIVE"]),
+            )
+            .all()
+        )
+        if old_wos:
+            from sqlalchemy import text as sql_text
+            for ow in old_wos:
+                proj_name = None
+                if ow.project_id:
+                    row = db.execute(sql_text("SELECT name FROM projects WHERE id=:pid"), {"pid": ow.project_id}).first()
+                    proj_name = row[0] if row else None
+                old_project_info = {
+                    "wo_id": ow.id,
+                    "wo_number": ow.order_number,
+                    "project_name": proj_name,
+                    "remaining_hours": float(ow.remaining_frozen or 0) / float(ow.hourly_rate or 1) if ow.hourly_rate else 0,
+                }
+
+        return {
+            "status": "different_plate",
+            "message": f"הכלי שנסרק ({license_plate}) שונה ממספר הרישוי בהזמנה ({expected_plate or 'לא הוגדר'})",
+            "question": "הכלי שנסרק שונה ממספר הרישוי בהזמנה. האם לשייך לפרויקט?",
+            "equipment_id": scanned_eq.id,
+            "equipment_type": scanned_eq.equipment_type,
+            "old_project": old_project_info,
+        }
+
+    # ── Scenario C: Wrong type → BLOCK ──
+    is_admin = current_user.role and current_user.role.code in ("ADMIN", "SUPER_ADMIN")
     return {
         "status": "wrong_type",
-        "message": "סוג ציוד לא תואם",
-        "ordered": wo.equipment_type or "לא ידוע",
-        "scanned": scanned.equipment_type if scanned else "לא ידוע",
+        "message": "סוג הציוד שנסרק שונה מההזמנה — לא ניתן לשייך",
+        "ordered_type": wo.equipment_type or "לא ידוע",
+        "scanned_type": scanned_eq.equipment_type if scanned_eq else "לא ידוע",
+        "admin_can_override": is_admin,
+        "equipment_id": scanned_eq.id if scanned_eq else None,
     }
 
 
@@ -930,8 +1069,9 @@ def confirm_equipment(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Confirm equipment assignment after scenario 2 (different plate, same type).
-    Updates the work order's equipment_id.
+    Confirm equipment assignment after scenario B (same type, different plate).
+    - Assigns equipment to this WO
+    - If equipment was in another active WO → release remaining budget there, stop that WO
     """
     require_permission(current_user, "work_orders.update")
 
@@ -943,14 +1083,102 @@ def confirm_equipment(
     if not eq:
         raise HTTPException(status_code=404, detail="ציוד לא נמצא")
 
+    # Validate same type
+    wo_type = (wo.equipment_type or "").strip().lower()
+    eq_type = (eq.equipment_type or "").strip().lower()
+    if wo_type and eq_type and wo_type != eq_type:
+        raise HTTPException(status_code=400, detail="סוג הכלי אינו תואם להזמנה. נדרש אישור מנהל מערכת.")
+
+    # Release from old project if needed
+    released = _release_equipment_from_old_wo(db, eq, exclude_wo_id=work_order_id, actor_id=current_user.id)
+
+    # Assign to current WO
     wo.equipment_id = eq.id
+    wo.equipment_license_plate = eq.license_plate
     wo.updated_at = datetime.utcnow()
+    if wo.status in ("APPROVED_AND_SENT",):
+        wo.status = "IN_PROGRESS"
+
+    db.commit()
+    db.refresh(wo)
+
+    msg = f"כלי {eq.license_plate} שויך להזמנה בהצלחה"
+    if released:
+        old_nums = ", ".join(str(r["old_wo_number"] or r["old_wo_id"]) for r in released)
+        msg += f" (הוסר מהזמנות: {old_nums})"
+
+    return {
+        "status": "ok",
+        "message": msg,
+        "released_from": released,
+        "work_order": _to_response(wo, db),
+    }
+
+
+@router.post("/{work_order_id}/admin-override-equipment")
+def admin_override_equipment(
+    work_order_id: int,
+    body: AdminOverrideEquipmentRequest,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """
+    Admin-only: override equipment type mismatch (scenario C).
+    Requires reason documentation.
+    """
+    is_admin = current_user.role and current_user.role.code in ("ADMIN", "SUPER_ADMIN")
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="רק מנהל מערכת יכול לאשר חריגת סוג כלי")
+
+    if not body.reason or not body.reason.strip():
+        raise HTTPException(status_code=400, detail="חובה לציין סיבה לאישור חריג")
+
+    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+
+    license_plate = body.license_plate.strip()
+    eq = db.query(Equipment).filter(Equipment.license_plate == license_plate).first()
+
+    # Release from old project if needed
+    released = []
+    if eq:
+        released = _release_equipment_from_old_wo(db, eq, exclude_wo_id=work_order_id, actor_id=current_user.id)
+        wo.equipment_id = eq.id
+
+    wo.equipment_license_plate = license_plate
+    wo.updated_at = datetime.utcnow()
+    if wo.status in ("APPROVED_AND_SENT",):
+        wo.status = "IN_PROGRESS"
+
+    # Log the admin override
+    from sqlalchemy import text as sql_text
+    try:
+        db.execute(
+            sql_text("""
+                INSERT INTO activity_logs (action, activity_type, entity_type, entity_id, user_id, description, category)
+                VALUES ('ADMIN_EQUIPMENT_OVERRIDE', 'update', 'work_order', :eid, :uid, :desc, 'management')
+            """),
+            {
+                "eid": work_order_id,
+                "uid": current_user.id,
+                "desc": (
+                    f"אישור חריג: כלי {license_plate} (סוג: {eq.equipment_type if eq else 'לא ידוע'}) "
+                    f"שויך להזמנה {wo.order_number or wo.id} (סוג נדרש: {wo.equipment_type or 'לא ידוע'}). "
+                    f"סיבה: {body.reason.strip()}"
+                ),
+            },
+        )
+    except Exception:
+        pass
+
     db.commit()
     db.refresh(wo)
 
     return {
         "status": "ok",
-        "message": f"כלי {eq.license_plate} שויך להזמנה בהצלחה",
+        "message": f"אישור חריג — כלי {license_plate} שויך להזמנה",
+        "released_from": released,
         "work_order": _to_response(wo, db),
     }
 
@@ -1082,15 +1310,30 @@ def get_work_order_pdf(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """
-    Get work order as printable HTML page (use browser Print  Save as PDF).
-    """
+    """Generate and return Work Order PDF (A4, RTL, weasyprint)."""
     require_permission(current_user, "work_orders.read")
 
-    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
-    if not wo:
-        raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+    from fastapi.responses import Response
+    from app.services.pdf_documents import generate_work_order_pdf
 
-    from fastapi.responses import HTMLResponse
-    html = _build_work_order_html(wo, db)
-    return HTMLResponse(content=html)
+    try:
+        pdf_bytes = generate_work_order_pdf(work_order_id, db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Work Order PDF generation failed: {e}")
+        from fastapi.responses import HTMLResponse
+        html = _build_work_order_html(
+            db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first(), db
+        )
+        return HTMLResponse(content=html)
+
+    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
+    filename = f"work_order_{wo.order_number or work_order_id}.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )

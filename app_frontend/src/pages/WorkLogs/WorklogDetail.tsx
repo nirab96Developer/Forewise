@@ -11,8 +11,7 @@ import {
   FileText,
   Wrench,
   MapPin,
-  DollarSign,
-  Send,
+    Send,
   Download,
 } from "lucide-react";
 import workLogService, { WorkLog } from "../../services/workLogService";
@@ -439,7 +438,7 @@ const WorklogDetail: React.FC = () => {
             {showCostBreakdown && (
               <div className="bg-white rounded-xl shadow-sm p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-green-600" />
+                  <span className="w-5 h-5 text-green-600 font-bold leading-none inline-flex items-center justify-center">₪</span>
                   פירוט עלות
                 </h2>
                 {(() => {

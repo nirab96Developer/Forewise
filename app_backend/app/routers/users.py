@@ -111,6 +111,20 @@ def update_user(
     return user
 
 
+@router.patch("/{user_id}", response_model=UserResponse)
+def patch_user(
+    user_id: int,
+    user_data: UserUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """עדכון חלקי של משתמש (PATCH alias)"""
+    require_permission(current_user, "users.update")
+    
+    user = user_service.update_user(db, user_id, user_data)
+    return user
+
+
 # ============================================================================
 # Delete
 # ============================================================================
