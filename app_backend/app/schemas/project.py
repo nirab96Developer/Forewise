@@ -88,6 +88,7 @@ class LocationBrief(BaseModel):
 class ProjectResponse(ProjectBase):
     """Response"""
     id: int
+    status: Optional[str] = None
     manager_id: Optional[int] = None
     region_id: Optional[int] = None
     area_id: Optional[int] = None
