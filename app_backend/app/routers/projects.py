@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
+from app.models.budget import Budget
 from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
     ProjectList, ProjectSearch, ProjectStatistics
@@ -26,13 +27,14 @@ def _effective_project_status(
     has_work_manager: bool = False,
     has_area_manager: bool = False,
     has_accountant: bool = False,
+    has_location: bool = False,
 ) -> str:
     """
     Backend source-of-truth for project status shown to the UI.
 
     A project is considered ACTIVE only when:
     - DB status/is_active do not indicate otherwise
-    - region, area and location exist
+    - region, area and an operational location marker exist
     - a work manager is assigned
     - area manager exists for the area
     - accountant exists for the area
@@ -49,7 +51,7 @@ def _effective_project_status(
     required_ok = all([
         project_data.get("region_id"),
         project_data.get("area_id"),
-        project_data.get("location_id"),
+        has_location or project_data.get("location_id"),
         has_work_manager,
         has_area_manager,
         has_accountant,
@@ -170,6 +172,11 @@ def list_projects(
                 area_manager_map.setdefault(row[0], {"id": row[1], "full_name": row[2]})
 
         for p in items:
+            has_location = bool(
+                p.location_id
+                or getattr(p, "forest_polygon_id", None)
+                or getattr(p, "forest_id", None)
+            )
             p.__dict__['allocated_budget'] = budget_map.get(p.id, 0.0)
             p.__dict__['manager'] = wm_map.get(p.id)
             p.__dict__['accountant'] = accountant_map.get(p.area_id)
@@ -186,6 +193,7 @@ def list_projects(
                 has_work_manager=bool(p.__dict__.get('manager')),
                 has_area_manager=bool(p.__dict__.get('area_manager')),
                 has_accountant=bool(p.__dict__.get('accountant')),
+                has_location=has_location,
             )
 
     return ProjectList(items=items, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
@@ -364,6 +372,12 @@ def get_by_code_alias(
         has_work_manager=bool(result.get("manager")),
         has_area_manager=bool(result.get("area_manager")),
         has_accountant=bool(result.get("accountant")),
+        has_location=bool(
+            result.get("location_id")
+            or result.get("forest_polygon_id")
+            or result.get("forest_id")
+            or item.id in coords
+        ),
     )
     
     return result
