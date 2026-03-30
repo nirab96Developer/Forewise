@@ -220,7 +220,8 @@ def create_standard_worklog(
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="שגיאת שרת")
+        logger.error(f"Error creating standard worklog: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="שגיאת שרת")
 
 
 @router.post("/manual", response_model=WorklogResponse, status_code=status.HTTP_201_CREATED)
@@ -270,7 +271,8 @@ def create_manual_worklog(
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="שגיאת שרת")
+        logger.error(f"Error creating manual worklog: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="שגיאת שרת")
 
 
 @router.post("/storage", response_model=WorklogResponse, status_code=status.HTTP_201_CREATED)
@@ -313,7 +315,8 @@ def create_storage_worklog(
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="שגיאת שרת")
+        logger.error(f"Error creating storage worklog: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="שגיאת שרת")
 
 
 @router.put("/{worklog_id}", response_model=WorklogResponse)

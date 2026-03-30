@@ -150,9 +150,11 @@ api.interceptors.response.use(
       // Components handle 404 individually when needed
     } else if (error.response?.status === 422) {
       const detail = error.response?.data?.detail;
-      const errorMessage = typeof detail === 'object' && detail?.message
-        ? detail.message
-        : typeof detail === 'string' ? detail : 'שגיאה בנתונים';
+      const errorObj = error.response?.data?.error;
+      const errorMessage = errorObj?.message
+        || (typeof detail === 'object' && detail?.message ? detail.message : null)
+        || (typeof detail === 'string' ? detail : null)
+        || 'שגיאה בנתונים';
       if ((window as any).showToast) {
         (window as any).showToast(errorMessage, 'error');
       }

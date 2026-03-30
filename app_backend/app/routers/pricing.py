@@ -37,14 +37,14 @@ class ComputeCostRequest(BaseModel):
 
 class ComputeCostResponse(BaseModel):
     """תשובת חישוב עלות"""
-    hours: float
+    hours: Optional[float] = None
     hourly_rate: float
-    daily_rate: Optional[float]
+    daily_rate: Optional[float] = None
     total_cost: float
     total_cost_with_vat: float
     rate_source: str
-    rate_source_id: Optional[int]
-    rate_source_name: Optional[str]
+    rate_source_id: Optional[int] = None
+    rate_source_name: Optional[str] = None
 
 
 @router.post("/compute-cost", response_model=ComputeCostResponse)
@@ -65,17 +65,26 @@ async def compute_cost(
     """
     rate_service = get_rate_service(db)
     
-    result = rate_service.compute_worklog_cost(
-        work_type=request.work_type,
-        hours=request.hours,
-        equipment_id=request.equipment_id,
-        equipment_type_id=request.equipment_type_id,
-        supplier_id=request.supplier_id,
-        project_id=request.project_id,
-        for_date=request.for_date
-    )
-    
-    return ComputeCostResponse(**result)
+    try:
+        result = rate_service.compute_worklog_cost(
+            work_type=request.work_type,
+            hours=request.hours,
+            equipment_id=request.equipment_id,
+            equipment_type_id=request.equipment_type_id,
+            supplier_id=request.supplier_id,
+            project_id=request.project_id,
+            for_date=request.for_date
+        )
+        
+        result["hours"] = float(request.hours)
+        return ComputeCostResponse(**result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"שגיאה בחישוב עלות: {str(e)}"
+        )
 
 
 @router.get("/rate-for-equipment-type/{type_id}")

@@ -448,12 +448,15 @@ async def health_check_db():
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
-        return {
-            "database": "error",
-            "error": str(e),
-            "status": "error",
-            "timestamp": datetime.now().isoformat(),
-        }
+        return JSONResponse(
+            status_code=503,
+            content={
+                "database": "error",
+                "error": str(e),
+                "status": "error",
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
 
 @app.get("/info", tags=[" מערכת"], summary="מידע מערכת", description="מחזיר מידע מפורט על המערכת")
@@ -549,6 +552,8 @@ if not api_router.routes:
                     "full_name": user.full_name
                 }
             }
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
         finally:
