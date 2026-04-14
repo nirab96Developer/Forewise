@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 
+from loguru import logger
 from app.core.config import settings
 
 
