@@ -98,7 +98,7 @@ const StatsBar: React.FC<{ suppliers: Supplier[]; equipment: Equipment[]; rotati
   const cards = [
     { label: 'ספקים פעילים',     value: activeSuppliers, cls: 'text-gray-900' },
     { label: 'כלים בשטח',         value: totalEq,         cls: 'text-gray-900' },
-    { label: 'בסבב הוגן',         value: inRotation,      cls: 'text-kkl-green' },
+    { label: 'בסבב הוגן',         value: inRotation,      cls: 'text-fw-green' },
     { label: 'שמירת לילה',        value: nightGuard,      cls: 'text-blue-600' },
     { label: 'ללא אזור שירות',    value: noArea,          cls: noArea > 0 ? 'text-amber-500' : 'text-gray-900' },
   ];
@@ -154,25 +154,25 @@ const SuppliersTab: React.FC<{
         <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="חיפוש שם ספק, ח.פ, איש קשר..."
-            className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm placeholder-gray-400 bg-white focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" />
+            className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm placeholder-gray-400 bg-white focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" />
         </div>
         <select value={fReg} onChange={e => { setFReg(e.target.value); setFArea('all'); }}
-          className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+          className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל המרחבים</option>
           {regions.map(r => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
         </select>
         <select value={fArea} onChange={e => setFArea(e.target.value)}
-          className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+          className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל האזורים</option>
           {filtAreas.map(a => <option key={a.id} value={String(a.id)}>{a.name}</option>)}
         </select>
         <select value={fType} onChange={e => setFType(e.target.value)}
-          className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+          className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל סוגי הציוד</option>
           {eqTypes.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
         <select value={fStat} onChange={e => setFStat(e.target.value)}
-          className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+          className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל הסטטוסים</option>
           <option value="active">פעילים</option>
           <option value="inactive">לא פעילים</option>
@@ -194,7 +194,7 @@ const SuppliersTab: React.FC<{
             <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors items-center"
               onClick={() => setExp(expanded === s.id ? null : s.id)}>
               <div className="col-span-3 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-green-100 text-kkl-green text-xs font-bold flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-green-100 text-fw-green text-xs font-bold flex items-center justify-center flex-shrink-0">
                   {s.name[0]}
                 </div>
                 <span className="font-semibold text-sm text-gray-800 truncate">{s.name}</span>
@@ -207,7 +207,7 @@ const SuppliersTab: React.FC<{
               <div className="col-span-2 text-xs text-gray-600">{s.contact_name || '—'}</div>
               <div className="col-span-2 text-xs text-gray-500">{s.phone || '—'}</div>
               <div className="col-span-1 text-center">
-                <span className="font-bold text-kkl-green">{s.equipment_count ?? 0}</span>
+                <span className="font-bold text-fw-green">{s.equipment_count ?? 0}</span>
               </div>
               <div className="col-span-1 text-center">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${s.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -235,7 +235,7 @@ const SuppliersTab: React.FC<{
                     <div className="flex flex-wrap gap-1 mb-2">
                       {(s.active_area_ids?.length ?? 0) > 0
                         ? s.active_area_ids!.slice(0, 6).map(id => {
-                            return <span key={id} className="inline-block bg-green-50 text-kkl-green text-xs font-semibold px-2 py-0.5 rounded-full border border-green-200">{`אזור ${id}`}</span>;
+                            return <span key={id} className="inline-block bg-green-50 text-fw-green text-xs font-semibold px-2 py-0.5 rounded-full border border-green-200">{`אזור ${id}`}</span>;
                           })
                         : <span className="text-xs text-gray-400">לא שויך לאזורים</span>}
                     </div>
@@ -246,7 +246,7 @@ const SuppliersTab: React.FC<{
                 </div>
                 <div className="flex gap-2 mt-4">
                   <button onClick={() => onAddEq(s.id)}
-                    className="px-3 py-1.5 rounded-lg bg-kkl-green text-white text-xs font-semibold hover:bg-kkl-green-dark transition-colors">
+                    className="px-3 py-1.5 rounded-lg bg-fw-green text-white text-xs font-semibold hover:bg-fw-green-dark transition-colors">
                     + הוסף כלי
                   </button>
                   <button onClick={() => toggle(s)}
@@ -307,17 +307,17 @@ const EquipmentTab: React.FC<{
         <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="חיפוש מספר רישוי..."
-            className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm placeholder-gray-400 bg-white focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" />
+            className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm placeholder-gray-400 bg-white focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" />
         </div>
-        <select value={fReg} onChange={e => setFReg(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+        <select value={fReg} onChange={e => setFReg(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל המרחבים</option>
           {regions.map(r => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
         </select>
-        <select value={fType} onChange={e => setFType(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+        <select value={fType} onChange={e => setFType(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל סוגי הציוד</option>
           {types.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select value={fStat} onChange={e => setFStat(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+        <select value={fStat} onChange={e => setFStat(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל הסטטוסים</option>
           <option value="active">פעילים</option>
           <option value="inactive">לא פעילים</option>
@@ -335,7 +335,7 @@ const EquipmentTab: React.FC<{
           return (
             <div key={s.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => toggleExp(s.id)}>
-                <div className="w-9 h-9 rounded-full bg-green-100 text-kkl-green text-sm font-bold flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-green-100 text-fw-green text-sm font-bold flex items-center justify-center flex-shrink-0">
                   {s.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -364,7 +364,7 @@ const EquipmentTab: React.FC<{
                         <div className="col-span-2">
                           {et?.category_group && <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${gc(et.category_group)}`}>{et.category_group}</span>}
                         </div>
-                        <div className="col-span-3 text-center font-bold text-sm text-kkl-green">
+                        <div className="col-span-3 text-center font-bold text-sm text-fw-green">
 {eq.hourly_rate ? `${Number(eq.hourly_rate).toLocaleString()}` : <span className="text-amber-500 font-semibold text-xs">לא הוגדר</span>}
                         </div>
                         <div className="col-span-2 text-center">
@@ -428,13 +428,13 @@ const PricingTab: React.FC<{
         <div className="relative flex-1 min-w-48">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="חיפוש שם סוג ציוד..."
-            className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm placeholder-gray-400 bg-white focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" />
+            className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm placeholder-gray-400 bg-white focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" />
         </div>
-        <select value={fGrp} onChange={e => setFGrp(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+        <select value={fGrp} onChange={e => setFGrp(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל הקבוצות</option>
           {groups.map(g => <option key={g} value={g}>{g}</option>)}
         </select>
-        <select value={fStat} onChange={e => setFStat(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+        <select value={fStat} onChange={e => setFStat(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל הסטטוסים</option>
           <option value="active">פעיל</option>
           <option value="no_rate">חסר תעריף</option>
@@ -457,16 +457,16 @@ const PricingTab: React.FC<{
             <div className="col-span-1 text-center">
               {editing === t.id
                 ? <input type="number" value={eRate} onChange={e => setERate(e.target.value)} placeholder={String(t.hourly_rate || '')}
-                    className="w-full text-center border border-kkl-green rounded-lg px-1 py-1 text-xs focus:outline-none" />
+                    className="w-full text-center border border-fw-green rounded-lg px-1 py-1 text-xs focus:outline-none" />
                 : t.hourly_rate
-? <span className="font-bold text-kkl-green">{t.hourly_rate}</span>
+? <span className="font-bold text-fw-green">{t.hourly_rate}</span>
                   : <button onClick={() => { setEdit(t.id); setERate(''); setENight(''); }}
                       className="px-2 py-1 rounded-lg border border-amber-300 text-xs font-semibold text-amber-600 hover:bg-amber-50">הגדר</button>}
             </div>
             <div className="col-span-1 text-center">
               {editing === t.id
                 ? <input type="number" value={eNight} onChange={e => setENight(e.target.value)} placeholder={String(t.overnight_rate || '')}
-                    className="w-full text-center border border-kkl-green rounded-lg px-1 py-1 text-xs focus:outline-none" />
+                    className="w-full text-center border border-fw-green rounded-lg px-1 py-1 text-xs focus:outline-none" />
 : <span className="text-sm text-gray-600">{t.overnight_rate ? `${t.overnight_rate}` : '—'}</span>}
             </div>
             <div className="col-span-1 text-center text-xs text-gray-400">{t.updated_at ? new Date(t.updated_at).toLocaleDateString('he-IL') : '—'}</div>
@@ -477,7 +477,7 @@ const PricingTab: React.FC<{
             </div>
             <div className="col-span-1 flex items-center justify-end gap-1">
               {editing === t.id
-                ? <><button onClick={() => save(t)} className="p-1 text-kkl-green hover:bg-green-50 rounded-lg"><Check className="w-4 h-4" /></button>
+                ? <><button onClick={() => save(t)} className="p-1 text-fw-green hover:bg-green-50 rounded-lg"><Check className="w-4 h-4" /></button>
                      <button onClick={() => setEdit(null)} className="p-1 text-gray-400 hover:bg-gray-50 rounded-lg"><X className="w-4 h-4" /></button></>
                 : <button onClick={() => { setEdit(t.id); setERate(''); setENight(''); }} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
                     <Edit2 className="w-3.5 h-3.5" />
@@ -535,15 +535,15 @@ const RotationTab: React.FC<{
         </div>
       )}
       <div className="flex gap-3 mb-4 items-center flex-wrap">
-        <select value={fReg} onChange={e => { setFReg(e.target.value); setFA('all'); }} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+        <select value={fReg} onChange={e => { setFReg(e.target.value); setFA('all'); }} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל המרחבים</option>
           {regions.map(r => <option key={r.id} value={String(r.id)}>{r.name}</option>)}
         </select>
-        <select value={fArea} onChange={e => setFA(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+        <select value={fArea} onChange={e => setFA(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל האזורים</option>
           {filtAreas.map(a => <option key={a.id} value={String(a.id)}>{a.name}</option>)}
         </select>
-        <select value={fType} onChange={e => setFT(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+        <select value={fType} onChange={e => setFT(e.target.value)} className="px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
           <option value="all">כל סוגי הציוד</option>
           {types.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
@@ -560,7 +560,7 @@ const RotationTab: React.FC<{
           return (
             <div key={aId}>
               <div className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-kkl-green" />
+                <MapPin className="w-4 h-4 text-fw-green" />
                 {area?.name}
                 <span className="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full">{region?.name}</span>
                 <span className="text-xs text-gray-400 font-normal mr-auto">{aRots.length} ספקים</span>
@@ -632,7 +632,7 @@ const SupplierSettings: React.FC = () => {
   if (loading) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
       <div className="flex flex-col items-center gap-3">
-        <RefreshCw className="w-8 h-8 animate-spin text-kkl-green" />
+        <RefreshCw className="w-8 h-8 animate-spin text-fw-green" />
         <span className="text-sm text-gray-500">טוען נתונים...</span>
       </div>
     </div>
@@ -658,7 +658,7 @@ const SupplierSettings: React.FC = () => {
               <Plus className="w-4 h-4" /> ספק חדש
             </button>
             <button onClick={() => setShowEM(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-kkl-green text-white text-sm font-semibold hover:bg-kkl-green-dark transition-colors">
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-fw-green text-white text-sm font-semibold hover:bg-fw-green-dark transition-colors">
               <Plus className="w-4 h-4" /> הוסף כלי
             </button>
           </div>
@@ -673,7 +673,7 @@ const SupplierSettings: React.FC = () => {
             <button key={tab.id} onClick={() => switchTab(tab.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer border-none ${
                 activeTab === tab.id
-                  ? 'font-semibold bg-kkl-green text-white'
+                  ? 'font-semibold bg-fw-green text-white'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 bg-transparent'
               }`}>
               {tab.icon}

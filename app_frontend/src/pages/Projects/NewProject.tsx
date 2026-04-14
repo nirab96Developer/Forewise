@@ -209,7 +209,7 @@ const NewProject: React.FC = () => {
           <div className="flex items-center mb-4">
             <button 
               onClick={() => navigate('/projects')}
-              className="text-kkl-green hover:text-kkl-green-hover flex items-center"
+              className="text-fw-green hover:text-fw-green-hover flex items-center"
             >
               <ArrowRight className="w-4 h-4 ml-1" />
               חזרה לרשימת פרויקטים
@@ -234,7 +234,7 @@ const NewProject: React.FC = () => {
                 onChange={handleChange}
                 required
                 placeholder="הכנס שם הפרויקט"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               />
             </div>
 
@@ -250,7 +250,7 @@ const NewProject: React.FC = () => {
                 value={formData.code || ''}
                 onChange={handleChange}
                 placeholder="ייווצר אוטומטית אם לא מוגדר"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               />
             </div>
 
@@ -267,7 +267,7 @@ const NewProject: React.FC = () => {
                 required
                 rows={4}
                 placeholder="תאר את הפרויקט..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               />
             </div>
 
@@ -284,7 +284,7 @@ const NewProject: React.FC = () => {
                   value={formData.planned_start_date || ''}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
                 />
               </div>
               <div>
@@ -298,7 +298,7 @@ const NewProject: React.FC = () => {
                   value={formData.planned_end_date || ''}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
                 />
               </div>
             </div>
@@ -315,7 +315,7 @@ const NewProject: React.FC = () => {
                   value={formData.region_id || ''}
                   onChange={handleChange}
                   disabled={loadingRegions || isAreaManager || isRegionManager}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">{loadingRegions ? 'טוען מרחבים...' : 'בחר מרחב'}</option>
                   {regions.map((region) => (
@@ -338,7 +338,7 @@ const NewProject: React.FC = () => {
                   value={formData.area_id || ''}
                   onChange={handleChange}
                   disabled={!formData.region_id || loadingAreas || isAreaManager}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">
                     {!formData.region_id 
@@ -370,7 +370,7 @@ const NewProject: React.FC = () => {
                 value={formData.manager_id || ''}
                 onChange={handleChange}
                 disabled={loadingUsers}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">{loadingUsers ? 'טוען מנהלים...' : 'בחר מנהל'}</option>
                 {users.map((user) => (
@@ -399,7 +399,7 @@ const NewProject: React.FC = () => {
                   placeholder="הכנס תקציב"
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
                 />
               </div>
             </div>
@@ -424,7 +424,7 @@ const NewProject: React.FC = () => {
                 type="submit"
                 disabled={loading || getValidationErrors().length > 0}
                 title={getValidationErrors().length > 0 ? `חסרים: ${getValidationErrors().join(', ')}` : undefined}
-                className="flex-1 bg-kkl-green hover:bg-kkl-green-hover text-white px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 bg-fw-green hover:bg-fw-green-hover text-white px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

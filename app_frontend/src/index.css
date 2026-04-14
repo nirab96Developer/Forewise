@@ -36,11 +36,11 @@ div > label {
 
 :root {
   /* KKL/Hillan Brand Colors - Professional & Clean */
-  --kkl-blue: #0072c6;
-  --kkl-green: #00994C;
-  --kkl-green-hover: #007A3B;
-  --kkl-green-light: #4caf50;
-  --kkl-brown: #795548;
+  --fw-blue: #0072c6;
+  --fw-green: #00994C;
+  --fw-green-hover: #007A3B;
+  --fw-green-light: #4caf50;
+  --fw-brown: #795548;
   
   /* Hillan Colors */
   --hillan-green: #4caf50;
@@ -166,12 +166,12 @@ div > label {
   /* Larger text on mobile */
   h1 {
     font-size: 1.75rem;
-    color: var(--kkl-green);
+    color: var(--fw-green);
   }
   
   h2 {
     font-size: 1.5rem;
-    color: var(--kkl-green);
+    color: var(--fw-green);
   }
   
   /* Better padding for mobile */
@@ -197,12 +197,12 @@ div > label {
   }
   
   /* Green buttons on mobile */
-  button[type="submit"], .bg-kkl-green, .bg-green-600 {
+  button[type="submit"], .bg-fw-green, .bg-green-600 {
     background: linear-gradient(135deg, #00994C 0%, #007A3B 100%);
     box-shadow: 0 4px 12px rgba(0, 153, 76, 0.3);
   }
   
-  button[type="submit"]:active, .bg-kkl-green:active, .bg-green-600:active {
+  button[type="submit"]:active, .bg-fw-green:active, .bg-green-600:active {
     background: linear-gradient(135deg, #007A3B 0%, #00662F 100%);
     box-shadow: 0 2px 6px rgba(0, 153, 76, 0.4);
     transform: scale(0.98);
@@ -210,7 +210,7 @@ div > label {
   
   /* Green input focus on mobile */
   input:focus, textarea:focus, select:focus {
-    border-color: var(--kkl-green);
+    border-color: var(--fw-green);
     box-shadow: 0 0 0 3px rgba(0, 153, 76, 0.1);
   }
   
@@ -342,32 +342,32 @@ select {
 }
 
 /* KKL Colors */
-.kkl-blue {
-  color: var(--kkl-blue);
+.fw-blue {
+  color: var(--fw-blue);
 }
 
-.bg-kkl-blue {
-  background-color: var(--kkl-blue);
+.bg-fw-blue {
+  background-color: var(--fw-blue);
 }
 
-.kkl-green {
-  color: var(--kkl-green);
+.fw-green {
+  color: var(--fw-green);
 }
 
-.bg-kkl-green {
-  background-color: var(--kkl-green);
+.bg-fw-green {
+  background-color: var(--fw-green);
 }
 
-.kkl-brown {
-  color: var(--kkl-brown);
+.fw-brown {
+  color: var(--fw-brown);
 }
 
-.bg-kkl-brown {
-  background-color: var(--kkl-brown);
+.bg-fw-brown {
+  background-color: var(--fw-brown);
 }
 
 /* Custom Utilities */
-.kkl-shadow {
+.fw-shadow {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 

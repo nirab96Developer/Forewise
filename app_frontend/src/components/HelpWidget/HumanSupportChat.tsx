@@ -595,7 +595,7 @@ const HumanSupportChat: React.FC = () => {
         className={`fixed bottom-4 left-4 md:bottom-6 md:left-6 z-30 p-2.5 md:p-3.5 rounded-full shadow-lg transition-all duration-300 ${
           isOpen 
             ? 'bg-gray-700 hover:bg-gray-800 scale-90' 
-            : 'bg-gradient-to-br from-kkl-green to-kkl-green-dark hover:shadow-2xl hover:scale-110'
+            : 'bg-gradient-to-br from-fw-green to-fw-green-dark hover:shadow-2xl hover:scale-110'
         }`}
         aria-label={isOpen ? 'סגור צ\'אט' : 'פתח צ\'אט תמיכה'}
       >
@@ -616,7 +616,7 @@ const HumanSupportChat: React.FC = () => {
           dir="rtl"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-kkl-green to-kkl-green-dark p-4 text-white flex items-center justify-between">
+          <div className="bg-gradient-to-r from-fw-green to-fw-green-dark p-4 text-white flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <Sparkles className="w-5 h-5" />
@@ -657,7 +657,7 @@ const HumanSupportChat: React.FC = () => {
                   className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                     message.from === 'user'
                       ? 'bg-white border border-gray-200 text-gray-800'
-                      : 'bg-gradient-to-br from-kkl-green to-kkl-green-dark text-white'
+                      : 'bg-gradient-to-br from-fw-green to-fw-green-dark text-white'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-line leading-relaxed">{message.text}</p>
@@ -683,7 +683,7 @@ const HumanSupportChat: React.FC = () => {
             {/* Typing indicator */}
             {isTyping && (
               <div className="flex justify-end">
-                <div className="bg-gradient-to-br from-kkl-green to-kkl-green-dark text-white rounded-2xl px-4 py-3">
+                <div className="bg-gradient-to-br from-fw-green to-fw-green-dark text-white rounded-2xl px-4 py-3">
                   <div className="flex items-center gap-1">
                     <span className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                     <span className="w-2 h-2 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -706,13 +706,13 @@ const HumanSupportChat: React.FC = () => {
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   placeholder="כתוב הודעה..."
-                  className="flex-1 px-4 py-3 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-kkl-green"
+                  className="flex-1 px-4 py-3 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-fw-green"
                   disabled={isSending}
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!inputText.trim() || isSending}
-                  className="p-3 bg-kkl-green text-white rounded-xl hover:bg-kkl-green-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-3 bg-fw-green text-white rounded-xl hover:bg-fw-green-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSending ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

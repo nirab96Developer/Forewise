@@ -19,7 +19,7 @@ export const Card: React.FC<BaseCardProps> = ({
     bg-white rounded-2xl border border-gray-100 
     shadow-lg hover:shadow-xl 
     transition-all duration-300 ease-out
-    hover:scale-[1.01] hover:border-kkl-green/20
+    hover:scale-[1.01] hover:border-fw-green/20
     ${className}
   `}>
     {children}

@@ -211,7 +211,7 @@ const EditUser: React.FC = () => {
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   required
                 />
               </div>
@@ -225,7 +225,7 @@ const EditUser: React.FC = () => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   required
                 />
               </div>
@@ -240,7 +240,7 @@ const EditUser: React.FC = () => {
                 type="text"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                 required
               />
             </div>
@@ -255,7 +255,7 @@ const EditUser: React.FC = () => {
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="050-0000000"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               />
             </div>
 
@@ -271,7 +271,7 @@ const EditUser: React.FC = () => {
                     type="password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                     minLength={8}
                   />
                 </div>
@@ -285,7 +285,7 @@ const EditUser: React.FC = () => {
                     type="password"
                     value={formData.confirm_password}
                     onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                     minLength={8}
                   />
                 </div>
@@ -300,7 +300,7 @@ const EditUser: React.FC = () => {
                 <select
                   value={formData.role_id}
                   onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
-                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   disabled={loadingData}
                 >
                   <option value="">בחר תפקיד</option>
@@ -319,7 +319,7 @@ const EditUser: React.FC = () => {
                 <select
                   value={formData.department_id}
                   onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
-                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   disabled={loadingData}
                 >
                   <option value="">בחר מחלקה</option>
@@ -340,7 +340,7 @@ const EditUser: React.FC = () => {
                 <select
                   value={formData.region_id}
                   onChange={(e) => setFormData({ ...formData, region_id: e.target.value, area_id: '' })}
-                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   disabled={loadingData}
                 >
                   <option value="">בחר מרחב</option>
@@ -359,7 +359,7 @@ const EditUser: React.FC = () => {
                 <select
                   value={formData.area_id}
                   onChange={(e) => setFormData({ ...formData, area_id: e.target.value })}
-                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   disabled={loadingData || !formData.region_id}
                 >
                   <option value="">בחר אזור</option>
@@ -379,7 +379,7 @@ const EditUser: React.FC = () => {
                   id="is_active"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="h-4 w-4 text-kkl-green focus:ring-kkl-green border-gray-300 rounded"
+                  className="h-4 w-4 text-fw-green focus:ring-fw-green border-gray-300 rounded"
                 />
                 <label htmlFor="is_active" className="mr-2 text-sm text-gray-700">
                   משתמש פעיל
@@ -392,7 +392,7 @@ const EditUser: React.FC = () => {
                   id="two_factor_enabled"
                   checked={formData.two_factor_enabled}
                   onChange={(e) => setFormData({ ...formData, two_factor_enabled: e.target.checked })}
-                  className="h-4 w-4 text-kkl-green focus:ring-kkl-green border-gray-300 rounded"
+                  className="h-4 w-4 text-fw-green focus:ring-fw-green border-gray-300 rounded"
                 />
                 <label htmlFor="two_factor_enabled" className="mr-2 text-sm text-gray-700">
                   הפעל אימות דו-שלבי (2FA)
@@ -411,7 +411,7 @@ const EditUser: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-6 py-3 bg-kkl-green text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-fw-green text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? 'שומר...' : 'שמור שינויים'}
                 <ArrowRight className="w-5 h-5" />

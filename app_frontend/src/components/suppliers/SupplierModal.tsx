@@ -53,7 +53,7 @@ const SupplierModal: React.FC<Props> = ({ onClose, onSaved }) => {
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden border border-gray-200 shadow-lg" onClick={e=>e.stopPropagation()}>
         {/* Header */}
-        <div className="bg-kkl-green px-6 py-4 flex items-start justify-between">
+        <div className="bg-fw-green px-6 py-4 flex items-start justify-between">
           <div>
             <div className="text-white font-bold text-base">הוספת ספק חדש</div>
             <div className="text-white/75 text-xs mt-0.5">ספק חדש יצורף לסבב אוטומטית לפי אזורי השירות</div>
@@ -67,7 +67,7 @@ const SupplierModal: React.FC<Props> = ({ onClose, onSaved }) => {
         <div className="flex bg-gray-50 border-b border-gray-200">
           {STEPS.map((s, i) => (
             <button key={i} onClick={() => i<step && setStep(i)}
-              className={`flex-1 py-2.5 text-xs font-medium text-center border-none bg-transparent cursor-pointer border-b-2 transition-colors ${i===step ? 'font-semibold text-kkl-green border-kkl-green' : i<step ? 'text-gray-500 border-transparent hover:text-gray-700' : 'text-gray-400 border-transparent cursor-default'}`}>
+              className={`flex-1 py-2.5 text-xs font-medium text-center border-none bg-transparent cursor-pointer border-b-2 transition-colors ${i===step ? 'font-semibold text-fw-green border-fw-green' : i<step ? 'text-gray-500 border-transparent hover:text-gray-700' : 'text-gray-400 border-transparent cursor-default'}`}>
               {i+1} — {s}
             </button>
           ))}
@@ -80,36 +80,36 @@ const SupplierModal: React.FC<Props> = ({ onClose, onSaved }) => {
           {step===0 && (<>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">שם חברה / ספק <span className="text-red-500">*</span></label>
               <input value={form.name} onChange={e=>f('name',e.target.value)} placeholder="שם מלא"
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" /></div>
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-xs font-semibold text-gray-600 mb-1">ח.פ / עוסק מורשה <span className="text-red-500">*</span></label>
                 <input value={form.tax_id} onChange={e=>f('tax_id',e.target.value)} placeholder="514123456"
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" /></div>
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" /></div>
               <div><label className="block text-xs font-semibold text-gray-600 mb-1">כתובת</label>
                 <input value={form.address} onChange={e=>f('address',e.target.value)} placeholder="רחוב, עיר"
-                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" /></div>
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" /></div>
             </div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">הערות</label>
               <textarea value={form.notes} onChange={e=>f('notes',e.target.value)} rows={2} placeholder="הערות (אופציונלי)"
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm placeholder-gray-400 resize-none focus:outline-none focus:border-kkl-green" /></div>
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm placeholder-gray-400 resize-none focus:outline-none focus:border-fw-green" /></div>
           </>)}
 
           {step===1 && (<>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">שם איש קשר</label>
               <input value={form.contact_name} onChange={e=>f('contact_name',e.target.value)} placeholder="שם מלא"
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" /></div>
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">טלפון <span className="text-red-500">*</span></label>
               <input value={form.phone} onChange={e=>f('phone',e.target.value)} placeholder="05X-XXXXXXX" type="tel"
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" /></div>
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" /></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">דוא"ל</label>
               <input value={form.email} onChange={e=>f('email',e.target.value)} placeholder="supplier@example.com" type="email"
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-kkl-green focus:ring-1 focus:ring-kkl-green" /></div>
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-fw-green focus:ring-1 focus:ring-fw-green" /></div>
           </>)}
 
           {step===2 && (<>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">מרחב</label>
               <select value={form.region_id} onChange={e=>f('region_id',e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 bg-white focus:outline-none focus:border-kkl-green cursor-pointer">
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-700 bg-white focus:outline-none focus:border-fw-green cursor-pointer">
                 <option value="">בחר מרחב</option>
                 {regions.map(r=><option key={r.id} value={String(r.id)}>{r.name}</option>)}
               </select></div>
@@ -118,7 +118,7 @@ const SupplierModal: React.FC<Props> = ({ onClose, onSaved }) => {
               <div className="flex flex-wrap gap-2">
                 {areas.map(a=>(
                   <button key={a.id} onClick={()=>toggleArea(a.id)}
-                    className={`px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors ${selectedAreas.includes(a.id) ? 'border-kkl-green bg-green-50 font-semibold text-kkl-green' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                    className={`px-3 py-1.5 rounded-full border text-xs font-medium cursor-pointer transition-colors ${selectedAreas.includes(a.id) ? 'border-fw-green bg-green-50 font-semibold text-fw-green' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
                     {a.name}
                   </button>
                 ))}
@@ -138,10 +138,10 @@ const SupplierModal: React.FC<Props> = ({ onClose, onSaved }) => {
             {step>0 ? 'חזור' : 'ביטול'}
           </button>
           {step<2
-            ? <button onClick={next} className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-kkl-green text-white text-sm font-semibold hover:bg-kkl-green-dark transition-colors">
+            ? <button onClick={next} className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-fw-green text-white text-sm font-semibold hover:bg-fw-green-dark transition-colors">
                 המשך <ChevronLeft className="w-4 h-4" />
               </button>
-            : <button onClick={save} disabled={saving} className="px-5 py-2 rounded-xl bg-kkl-green text-white text-sm font-semibold hover:bg-kkl-green-dark transition-colors disabled:opacity-50">
+            : <button onClick={save} disabled={saving} className="px-5 py-2 rounded-xl bg-fw-green text-white text-sm font-semibold hover:bg-fw-green-dark transition-colors disabled:opacity-50">
                 {saving ? 'שומר...' : 'צור ספק'}
               </button>}
         </div>

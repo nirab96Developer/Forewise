@@ -59,24 +59,24 @@ const PriceList: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-kkl-bg flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-kkl-green border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-fw-bg flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-fw-green border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-kkl-bg" dir="rtl">
+    <div className="min-h-screen bg-fw-bg" dir="rtl">
       <div className="max-w-5xl mx-auto px-4 py-6">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate('/settings')} className="text-gray-400 hover:text-kkl-green">
+          <button onClick={() => navigate('/settings')} className="text-gray-400 hover:text-fw-green">
             <ChevronRight className="w-6 h-6" />
           </button>
           <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
             <DollarSign className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-kkl-text">מחירון מערכת</h1>
+            <h1 className="text-2xl font-bold text-fw-text">מחירון מערכת</h1>
             <p className="text-gray-500">תעריפי עבודה, ציוד ושירותים</p>
           </div>
         </div>
@@ -88,9 +88,9 @@ const PriceList: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden mb-6">
-          <div className="px-5 py-4 border-b border-kkl-border bg-gradient-to-l from-amber-50 to-white">
-            <h2 className="text-lg font-semibold text-kkl-text">תעריפי מערכת</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-fw-border overflow-hidden mb-6">
+          <div className="px-5 py-4 border-b border-fw-border bg-gradient-to-l from-amber-50 to-white">
+            <h2 className="text-lg font-semibold text-fw-text">תעריפי מערכת</h2>
             <p className="text-sm text-gray-500">תעריפים כלליים לסוגי עבודה ושירותים</p>
           </div>
           <div className="divide-y divide-gray-100">
@@ -101,12 +101,12 @@ const PriceList: React.FC = () => {
                     {rateIcon(rate.rate_code)}
                   </div>
                   <div>
-                    <div className="font-medium text-kkl-text">{rate.rate_name}</div>
+                    <div className="font-medium text-fw-text">{rate.rate_name}</div>
                     {rate.description && <div className="text-xs text-gray-400">{rate.description}</div>}
                   </div>
                 </div>
                 <div className="text-left">
-                  <div className="text-lg font-bold text-kkl-green">{fmt(rate.rate_value)}</div>
+                  <div className="text-lg font-bold text-fw-green">{fmt(rate.rate_value)}</div>
                   <div className="text-xs text-gray-400">
                     {rate.rate_code.includes('DAY') ? 'ליום' : rate.rate_code.includes('FEE') ? 'קבוע' : 'לשעה'}
                   </div>
@@ -119,9 +119,9 @@ const PriceList: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden mb-6">
-          <div className="px-5 py-4 border-b border-kkl-border bg-gradient-to-l from-green-50 to-white">
-            <h2 className="text-lg font-semibold text-kkl-text">תעריפי ציוד לפי סוג</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-fw-border overflow-hidden mb-6">
+          <div className="px-5 py-4 border-b border-fw-border bg-gradient-to-l from-green-50 to-white">
+            <h2 className="text-lg font-semibold text-fw-text">תעריפי ציוד לפי סוג</h2>
             <p className="text-sm text-gray-500">תעריף שעתי ולינת ציוד לכל סוג כלי</p>
           </div>
           <div className="overflow-x-auto">
@@ -145,10 +145,10 @@ const PriceList: React.FC = () => {
                           <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
                             <Truck className="w-4 h-4" />
                           </div>
-                          <span className="font-medium text-kkl-text">{et.name}</span>
+                          <span className="font-medium text-fw-text">{et.name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-center font-semibold text-kkl-green">{fmt(rate)}</td>
+                      <td className="px-5 py-3 text-center font-semibold text-fw-green">{fmt(rate)}</td>
                       <td className="px-5 py-3 text-center text-gray-600">
                         {et.overnight_rate ? fmt(et.overnight_rate) : '—'}
                       </td>

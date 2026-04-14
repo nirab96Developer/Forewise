@@ -205,7 +205,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           </p>
           <button
             onClick={() => window.history.back()}
-            className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors"
+            className="px-4 py-2 bg-fw-green text-white rounded-lg hover:bg-fw-green-dark transition-colors"
           >
             חזור אחורה
           </button>

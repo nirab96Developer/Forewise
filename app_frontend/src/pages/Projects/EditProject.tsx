@@ -286,7 +286,7 @@ const EditProject: React.FC = () => {
           <div className="text-xl text-red-600 mb-4">{error}</div>
           <button 
             onClick={() => loadData()}
-            className="bg-kkl-green text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            className="bg-fw-green text-white px-4 py-2 rounded-lg hover:bg-green-700"
           >
             נסה שוב
           </button>
@@ -303,7 +303,7 @@ const EditProject: React.FC = () => {
           <div className="flex items-center mb-4">
             <button 
               onClick={() => navigate(`/projects/${code}`)}
-              className="text-kkl-green hover:text-kkl-green-hover flex items-center"
+              className="text-fw-green hover:text-fw-green-hover flex items-center"
             >
               <ArrowRight className="w-4 h-4 ml-1" />
               חזרה לפרויקט
@@ -327,7 +327,7 @@ const EditProject: React.FC = () => {
                 value={formData.name || ''}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               />
             </div>
 
@@ -343,7 +343,7 @@ const EditProject: React.FC = () => {
                 value={formData.code || ''}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               />
             </div>
 
@@ -358,7 +358,7 @@ const EditProject: React.FC = () => {
                 value={formData.description || ''}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               />
             </div>
 
@@ -372,7 +372,7 @@ const EditProject: React.FC = () => {
                 name="status"
                 value={formData.status || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               >
                 <option value="ACTIVE">פעיל</option>
                 <option value="COMPLETED">הושלם</option>
@@ -393,7 +393,7 @@ const EditProject: React.FC = () => {
                   name="planned_start_date"
                   value={formData.planned_start_date || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
                 />
               </div>
               <div>
@@ -406,7 +406,7 @@ const EditProject: React.FC = () => {
                   name="planned_end_date"
                   value={formData.planned_end_date || ''}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
                 />
               </div>
             </div>
@@ -424,7 +424,7 @@ const EditProject: React.FC = () => {
                 onChange={handleChange}
                 min="0"
                 step="0.01"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               />
             </div>
 
@@ -442,7 +442,7 @@ const EditProject: React.FC = () => {
                 min="0"
                 max="100"
                 step="0.1"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all"
               />
             </div>
 
@@ -458,7 +458,7 @@ const EditProject: React.FC = () => {
                   value={formData.region_id || ''}
                   onChange={handleChange}
                   disabled={loadingRegions || isAreaManager || isRegionManager}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">{loadingRegions ? 'טוען מרחבים...' : 'בחר מרחב'}</option>
                   {regions.map((region) => (
@@ -481,7 +481,7 @@ const EditProject: React.FC = () => {
                   value={formData.area_id || ''}
                   onChange={handleChange}
                   disabled={!formData.region_id || loadingAreas || isAreaManager}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                   <option value="">
                     {!formData.region_id 
@@ -513,7 +513,7 @@ const EditProject: React.FC = () => {
                 value={formData.manager_id || ''}
                 onChange={handleChange}
                 disabled={loadingUsers}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-kkl-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-fw-green transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">{loadingUsers ? 'טוען מנהלים...' : 'בחר מנהל'}</option>
                 {users.map((user) => (
@@ -546,7 +546,7 @@ const EditProject: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-kkl-green hover:bg-kkl-green-hover text-white px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 bg-fw-green hover:bg-fw-green-hover text-white px-6 py-3 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

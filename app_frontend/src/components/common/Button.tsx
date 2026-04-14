@@ -29,19 +29,19 @@ const Button: React.FC<ButtonProps> = ({
   const getVariantClasses = (): string => {
     switch (variant) {
       case 'primary':
-        return 'bg-gradient-to-l from-kkl-green to-kkl-green-hover hover:shadow-lg hover:scale-[1.02] text-white focus:ring-kkl-green shadow-md';
+        return 'bg-gradient-to-l from-fw-green to-fw-green-hover hover:shadow-lg hover:scale-[1.02] text-white focus:ring-fw-green shadow-md';
       case 'secondary':
         return 'bg-gradient-to-l from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 text-gray-800 focus:ring-gray-400 border border-gray-200 shadow-sm';
       case 'outline':
-        return 'bg-white border-2 border-kkl-green hover:bg-kkl-green hover:text-white text-kkl-green focus:ring-kkl-green transition-all duration-200';
+        return 'bg-white border-2 border-fw-green hover:bg-fw-green hover:text-white text-fw-green focus:ring-fw-green transition-all duration-200';
       case 'danger':
         return 'bg-gradient-to-l from-red-600 to-red-700 hover:shadow-lg hover:scale-[1.02] text-white focus:ring-red-500 shadow-md';
       case 'success':
-        return 'bg-gradient-to-l from-success-green to-kkl-green hover:shadow-lg hover:scale-[1.02] text-white focus:ring-success-green shadow-md';
+        return 'bg-gradient-to-l from-success-green to-fw-green hover:shadow-lg hover:scale-[1.02] text-white focus:ring-success-green shadow-md';
       case 'link':
-        return 'bg-transparent hover:underline text-kkl-green hover:text-kkl-green-hover p-0 focus:ring-0';
+        return 'bg-transparent hover:underline text-fw-green hover:text-fw-green-hover p-0 focus:ring-0';
       default:
-        return 'bg-gradient-to-l from-kkl-green to-kkl-green-hover hover:shadow-lg hover:scale-[1.02] text-white focus:ring-kkl-green shadow-md';
+        return 'bg-gradient-to-l from-fw-green to-fw-green-hover hover:shadow-lg hover:scale-[1.02] text-white focus:ring-fw-green shadow-md';
     }
   };
 

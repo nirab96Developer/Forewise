@@ -106,7 +106,7 @@ const EquipmentDetail: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center mb-4">
-            <Link to="/equipment" className="text-kkl-green hover:text-green-700 flex items-center">
+            <Link to="/equipment" className="text-fw-green hover:text-green-700 flex items-center">
               <ArrowRight className="w-4 h-4 ml-1" />
               חזרה לרשימת ציוד
             </Link>
@@ -166,7 +166,7 @@ const EquipmentDetail: React.FC = () => {
               <ul className="space-y-2">
                 {equipment.specifications.map((spec, index) => (
                   <li key={index} className="flex items-center">
-                    <div className="w-2 h-2 bg-kkl-green rounded-full ml-2"></div>
+                    <div className="w-2 h-2 bg-fw-green rounded-full ml-2"></div>
                     <span className="text-gray-700">{spec}</span>
                   </li>
                 ))}
@@ -178,7 +178,7 @@ const EquipmentDetail: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">היסטוריית תחזוקה</h2>
               <div className="space-y-4">
                 {equipment.maintenance_history.map((maintenance, index) => (
-                  <div key={index} className="border-l-4 border-kkl-green pl-4 py-2">
+                  <div key={index} className="border-l-4 border-fw-green pl-4 py-2">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium text-gray-900">{maintenance.description}</p>
@@ -198,7 +198,7 @@ const EquipmentDetail: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">פעולות מהירות</h3>
               <div className="space-y-3">
-                <button className="w-full bg-kkl-green hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                <button className="w-full bg-fw-green hover:bg-green-700 text-white px-4 py-2 rounded-lg">
                   הזמן לתחזוקה
                 </button>
                 <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">

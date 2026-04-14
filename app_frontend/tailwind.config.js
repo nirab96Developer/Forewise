@@ -6,27 +6,27 @@ module.exports = {
       colors: {
         // 🎨 KKL Official Palette - Hilan Style
         // Primary Greens
-        "kkl-green": "#00994C",
-        "kkl-green-dark": "#007A3B",
-        "kkl-green-light": "#DFF7EC",
-        "kkl-green-hover": "#007A3B",
+        "fw-green": "#00994C",
+        "fw-green-dark": "#007A3B",
+        "fw-green-light": "#DFF7EC",
+        "fw-green-hover": "#007A3B",
         
         // Neutrals
-        "kkl-bg": "#F5F7F8",
-        "kkl-text": "#4A4A4A",
-        "kkl-gray-light": "#EAEAEA",
-        "kkl-border": "#DDDDDD",
-        "kkl-white": "#FFFFFF",
+        "fw-bg": "#F5F7F8",
+        "fw-text": "#4A4A4A",
+        "fw-gray-light": "#EAEAEA",
+        "fw-border": "#DDDDDD",
+        "fw-white": "#FFFFFF",
         
         // Status Colors
-        "kkl-success": "#0FA958",
-        "kkl-warning": "#F2C94C",
-        "kkl-error": "#EB5757",
-        "kkl-info": "#56CCF2",
+        "fw-success": "#0FA958",
+        "fw-warning": "#F2C94C",
+        "fw-error": "#EB5757",
+        "fw-info": "#56CCF2",
         
         // Legacy support
-        "kkl-blue": "#0072C6",
-        "kkl-brown": "#795548",
+        "fw-blue": "#0072C6",
+        "fw-brown": "#795548",
         
         // Brand Colors (legacy)
         "brand-bg": "#F5F7F8",

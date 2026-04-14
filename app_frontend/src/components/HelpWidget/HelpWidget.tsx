@@ -89,7 +89,7 @@ const HelpWidget: React.FC = () => {
         className={`fixed bottom-6 left-6 z-50 p-4 rounded-full shadow-lg transition-all duration-300 ${
           isOpen 
             ? 'bg-gray-700 hover:bg-gray-800' 
-            : 'bg-gradient-to-r from-kkl-green to-green-600 hover:shadow-xl hover:scale-110'
+            : 'bg-gradient-to-r from-fw-green to-green-600 hover:shadow-xl hover:scale-110'
         }`}
         aria-label={isOpen ? 'סגור עזרה' : 'פתח עזרה'}
       >
@@ -104,7 +104,7 @@ const HelpWidget: React.FC = () => {
       {isOpen && (
         <div className="fixed bottom-24 left-6 z-50 w-80 bg-white rounded-2xl shadow-2xl overflow-hidden animate-slideUp" dir="rtl">
           {/* Header */}
-          <div className="bg-gradient-to-r from-kkl-green to-green-600 p-4 text-white">
+          <div className="bg-gradient-to-r from-fw-green to-green-600 p-4 text-white">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded-lg">
                 <HelpCircle className="w-6 h-6" />
@@ -148,7 +148,7 @@ const HelpWidget: React.FC = () => {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="ספר לנו מה קורה..."
-                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-kkl-green focus:border-transparent resize-none"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fw-green focus:border-transparent resize-none"
                     rows={4}
                   />
                 </div>
@@ -156,7 +156,7 @@ const HelpWidget: React.FC = () => {
                 <button
                   onClick={handleSend}
                   disabled={!message.trim() || isSending}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-kkl-green to-green-600 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-fw-green to-green-600 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
                 >
                   {isSending ? (
                     <>

@@ -47,7 +47,7 @@ const ForgotPassword: React.FC = () => {
           </button>
         </form>
         <div className="mt-4 text-sm text-right">
-          <Link to="/login" className="text-kkl-blue hover:underline">
+          <Link to="/login" className="text-fw-blue hover:underline">
             חזרה להתחברות
           </Link>
         </div>

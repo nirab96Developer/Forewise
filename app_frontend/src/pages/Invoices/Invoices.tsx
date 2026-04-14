@@ -199,7 +199,7 @@ const Invoices: React.FC = () => {
               <div className="flex items-center justify-center gap-3">
                 <button 
                   onClick={() => navigate('/work-orders')}
-                  className="px-5 py-2.5 bg-gradient-to-r from-kkl-green to-green-600 text-white rounded-lg font-medium hover:shadow-lg transition-all"
+                  className="px-5 py-2.5 bg-gradient-to-r from-fw-green to-green-600 text-white rounded-lg font-medium hover:shadow-lg transition-all"
                 >
                   צפה בהזמנות עבודה
                 </button>

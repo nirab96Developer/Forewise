@@ -192,13 +192,13 @@ const FairRotation: React.FC = () => {
     .sort((a, b) => (a.priority || 0) - (b.priority || 0));
 
   return (
-    <div className="min-h-screen bg-kkl-bg" dir="rtl">
+    <div className="min-h-screen bg-fw-bg" dir="rtl">
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <button
             onClick={() => navigate('/settings/suppliers')}
-            className="text-kkl-green hover:text-kkl-green-dark flex items-center gap-1 mb-4 text-sm"
+            className="text-fw-green hover:text-fw-green-dark flex items-center gap-1 mb-4 text-sm"
           >
             <ArrowRight className="w-4 h-4" />
             חזרה להגדרות ספקים
@@ -209,14 +209,14 @@ const FairRotation: React.FC = () => {
                 <RotateCcw className="w-6 h-6 text-purple-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-kkl-text">סבב הוגן</h1>
+                <h1 className="text-2xl font-bold text-fw-text">סבב הוגן</h1>
                 <p className="text-gray-500">ניהול סדר ועדיפות ספקים בהקצאות</p>
               </div>
             </div>
             {canManageRotation && (
               <button
                 onClick={() => handleOpenModal()}
-                className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-fw-green text-white rounded-lg hover:bg-fw-green-dark transition-colors flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
                 הוסף ספק לסבב
@@ -227,23 +227,23 @@ const FairRotation: React.FC = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border border-kkl-border p-4">
-            <div className="text-2xl font-bold text-kkl-green">{rotations.length}</div>
+          <div className="bg-white rounded-xl border border-fw-border p-4">
+            <div className="text-2xl font-bold text-fw-green">{rotations.length}</div>
             <div className="text-sm text-gray-500">ספקים בסבב</div>
           </div>
-          <div className="bg-white rounded-xl border border-kkl-border p-4">
+          <div className="bg-white rounded-xl border border-fw-border p-4">
             <div className="text-2xl font-bold text-green-600">
               {rotations.filter(r => r.is_active).length}
             </div>
             <div className="text-sm text-gray-500">ספקים פעילים</div>
           </div>
-          <div className="bg-white rounded-xl border border-kkl-border p-4">
+          <div className="bg-white rounded-xl border border-fw-border p-4">
             <div className="text-2xl font-bold text-blue-600">
               {rotations.reduce((sum, r) => sum + (r.usage_count || 0), 0)}
             </div>
             <div className="text-sm text-gray-500">סה"כ הקצאות</div>
           </div>
-          <div className="bg-white rounded-xl border border-kkl-border p-4">
+          <div className="bg-white rounded-xl border border-fw-border p-4">
             <div className="text-2xl font-bold text-orange-600">
               {rotations.reduce((sum, r) => sum + (r.skip_count || 0), 0)}
             </div>
@@ -252,7 +252,7 @@ const FairRotation: React.FC = () => {
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-4 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-fw-border p-4 mb-6">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -260,13 +260,13 @@ const FairRotation: React.FC = () => {
               placeholder="חיפוש ספקים..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pr-10 pl-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+              className="w-full pr-10 pl-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
             />
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-fw-border overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="relative overflow-visible" style={{ padding: 4 }}>
@@ -290,7 +290,7 @@ const FairRotation: React.FC = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-kkl-border">
+                <thead className="bg-gray-50 border-b border-fw-border">
                   <tr>
                     <th className="text-center px-4 py-3 text-sm font-semibold text-gray-600 w-16">עדיפות</th>
                     <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">ספק</th>
@@ -313,7 +313,7 @@ const FairRotation: React.FC = () => {
                     </tr>
                   ) : (
                     filteredRotations.map((rotation, index) => (
-                      <tr key={rotation.id} className="border-b border-kkl-border hover:bg-gray-50">
+                      <tr key={rotation.id} className="border-b border-fw-border hover:bg-gray-50">
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-center gap-1">
                             <button
@@ -323,7 +323,7 @@ const FairRotation: React.FC = () => {
                             >
                               <ChevronUp className="w-4 h-4" />
                             </button>
-                            <span className="w-8 h-8 bg-kkl-green text-white rounded-full flex items-center justify-center font-bold text-sm">
+                            <span className="w-8 h-8 bg-fw-green text-white rounded-full flex items-center justify-center font-bold text-sm">
                               {rotation.priority}
                             </span>
                             <button
@@ -337,10 +337,10 @@ const FairRotation: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-kkl-green-light rounded-lg flex items-center justify-center">
-                              <Truck className="w-5 h-5 text-kkl-green" />
+                            <div className="w-10 h-10 bg-fw-green-light rounded-lg flex items-center justify-center">
+                              <Truck className="w-5 h-5 text-fw-green" />
                             </div>
-                            <span className="font-medium text-kkl-text">
+                            <span className="font-medium text-fw-text">
                               {getSupplierName(rotation.supplier_id)}
                             </span>
                           </div>
@@ -361,7 +361,7 @@ const FairRotation: React.FC = () => {
                           {(rotation as any).region_name || '—'}
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <span className="font-medium text-kkl-green">{rotation.usage_count || (rotation as any).total_assignments || 0}</span>
+                          <span className="font-medium text-fw-green">{rotation.usage_count || (rotation as any).total_assignments || 0}</span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className={(rotation.skip_count || (rotation as any).rejection_count) > 0 ? 'text-orange-600' : 'text-gray-400'}>
@@ -391,7 +391,7 @@ const FairRotation: React.FC = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => handleOpenModal(rotation)}
-                                className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
+                                className="p-2 text-gray-400 hover:text-fw-green hover:bg-fw-green-light rounded-lg transition-colors"
                                 title="עריכה"
                               >
                                 <Edit className="w-4 h-4" />
@@ -429,8 +429,8 @@ const FairRotation: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
-            <div className="flex items-center justify-between p-5 border-b border-kkl-border">
-              <h2 className="text-lg font-bold text-kkl-text">
+            <div className="flex items-center justify-between p-5 border-b border-fw-border">
+              <h2 className="text-lg font-bold text-fw-text">
                 {editingRotation ? 'עריכת ספק בסבב' : 'הוספת ספק לסבב'}
               </h2>
               <button
@@ -449,11 +449,11 @@ const FairRotation: React.FC = () => {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-kkl-text mb-2">ספק *</label>
+                <label className="block text-sm font-medium text-fw-text mb-2">ספק *</label>
                 <select
                   value={formData.supplier_id}
                   onChange={(e) => setFormData({ ...formData, supplier_id: parseInt(e.target.value) })}
-                  className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full pr-4 pl-10 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                 >
                   <option value={0}>בחר ספק...</option>
                   {suppliers.filter(s => s.is_active).map(supplier => (
@@ -466,34 +466,34 @@ const FairRotation: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-kkl-text mb-2">עדיפות</label>
+                  <label className="block text-sm font-medium text-fw-text mb-2">עדיפות</label>
                   <input
                     type="number"
                     min="1"
                     value={formData.priority}
                     onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 1 })}
-                    className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-kkl-text mb-2">סוג ציוד</label>
+                  <label className="block text-sm font-medium text-fw-text mb-2">סוג ציוד</label>
                   <input
                     type="text"
                     value={formData.equipment_type}
                     onChange={(e) => setFormData({ ...formData, equipment_type: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                     placeholder="השאר ריק לכל הסוגים"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-kkl-text mb-2">הערות</label>
+                <label className="block text-sm font-medium text-fw-text mb-2">הערות</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={2}
-                  className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent resize-none"
+                  className="w-full px-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent resize-none"
                   placeholder="הערות נוספות..."
                 />
               </div>
@@ -503,23 +503,23 @@ const FairRotation: React.FC = () => {
                   type="checkbox"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4 text-kkl-green rounded focus:ring-kkl-green"
+                  className="w-4 h-4 text-fw-green rounded focus:ring-fw-green"
                 />
-                <span className="text-sm text-kkl-text">פעיל בסבב</span>
+                <span className="text-sm text-fw-text">פעיל בסבב</span>
               </label>
             </div>
 
-            <div className="flex justify-end gap-3 p-5 border-t border-kkl-border">
+            <div className="flex justify-end gap-3 p-5 border-t border-fw-border">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 border border-kkl-border text-kkl-text rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-fw-border text-fw-text rounded-lg hover:bg-gray-50 transition-colors"
               >
                 ביטול
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 bg-fw-green text-white rounded-lg hover:bg-fw-green-dark transition-colors flex items-center gap-2 disabled:opacity-50"
               >
                 {saving ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

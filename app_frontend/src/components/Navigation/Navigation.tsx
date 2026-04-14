@@ -120,8 +120,8 @@ const Navigation: React.FC = () => {
         !isOnline ? 'mt-7' : ''
       } ${
         isMobile 
-          ? 'bg-gradient-to-r from-green-600 via-kkl-green to-green-700' 
-          : 'bg-kkl-green'
+          ? 'bg-gradient-to-r from-green-600 via-fw-green to-green-700' 
+          : 'bg-fw-green'
       }`}>
         <div className="h-full flex items-center justify-between px-6 md:px-8">
           {/* Left side - Logo & App Name */}
@@ -219,8 +219,8 @@ const Navigation: React.FC = () => {
                         transform hover:scale-[1.02] hover:shadow-md touch-manipulation
                         ${active 
                           ? isMobile
-                            ? 'bg-gradient-to-r from-green-600 to-kkl-green text-white shadow-lg scale-[1.02]'
-                            : 'bg-kkl-green text-white shadow-lg scale-[1.02]'
+                            ? 'bg-gradient-to-r from-green-600 to-fw-green text-white shadow-lg scale-[1.02]'
+                            : 'bg-fw-green text-white shadow-lg scale-[1.02]'
                           : isMobile
                             ? 'text-gray-700 hover:bg-green-50 hover:text-green-800'
                             : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
@@ -240,7 +240,7 @@ const Navigation: React.FC = () => {
                       
                       <span className={`
                         transition-all duration-300 flex-shrink-0
-                        ${active ? 'text-white scale-110' : 'text-gray-600 group-hover:text-kkl-green'}
+                        ${active ? 'text-white scale-110' : 'text-gray-600 group-hover:text-fw-green'}
                       `}>
                         <IconComponent size={20} />
                       </span>

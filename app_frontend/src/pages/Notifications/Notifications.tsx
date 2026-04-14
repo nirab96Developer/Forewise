@@ -148,7 +148,7 @@ const Notifications: React.FC = () => {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2 flex items-center">
-                <Bell className="w-8 h-8 ml-3 text-kkl-green" />
+                <Bell className="w-8 h-8 ml-3 text-fw-green" />
                 התראות
                 {unreadCount > 0 && (
                   <span className="bg-red-500 text-white text-sm rounded-full px-3 py-1 mr-3 animate-pulse">
@@ -161,7 +161,7 @@ const Notifications: React.FC = () => {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="bg-gradient-to-r from-kkl-green to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-lg flex items-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                className="bg-gradient-to-r from-fw-green to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-lg flex items-center shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
               >
                 <Eye className="w-5 h-5 ml-2" />
                 סמן הכל כנקרא
@@ -174,7 +174,7 @@ const Notifications: React.FC = () => {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow min-w-[200px]"
+              className="pr-4 pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent shadow-sm hover:shadow-md transition-shadow min-w-[200px]"
             >
               <option value="all">כל ההתראות</option>
               <option value="info">מידע</option>
@@ -249,7 +249,7 @@ const Notifications: React.FC = () => {
               <p className="text-gray-600 mb-6">אין התראות להצגה לפי הסינון הנוכחי</p>
               <button 
                 onClick={() => setFilterType('all')}
-                className="bg-kkl-green hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                className="bg-fw-green hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
               >
                 הצג הכל
               </button>

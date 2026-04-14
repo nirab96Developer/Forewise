@@ -156,7 +156,7 @@ const EquipmentRequestsStatus: React.FC = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="pr-4 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+              className="pr-4 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
             >
               <option value="all">כל הסטטוסים</option>
               <option value="pending">ממתין לאישור</option>

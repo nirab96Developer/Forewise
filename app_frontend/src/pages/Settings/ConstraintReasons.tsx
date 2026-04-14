@@ -162,13 +162,13 @@ const ConstraintReasons: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-kkl-bg" dir="rtl">
+    <div className="min-h-screen bg-fw-bg" dir="rtl">
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <button
             onClick={() => navigate('/settings/suppliers')}
-            className="text-kkl-green hover:text-kkl-green-dark flex items-center gap-1 mb-4 text-sm"
+            className="text-fw-green hover:text-fw-green-dark flex items-center gap-1 mb-4 text-sm"
           >
             <ArrowRight className="w-4 h-4" />
             חזרה להגדרות ספקים
@@ -179,14 +179,14 @@ const ConstraintReasons: React.FC = () => {
                 <AlertTriangle className="w-6 h-6 text-orange-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-kkl-text">סיבות אילוץ ספק</h1>
+                <h1 className="text-2xl font-bold text-fw-text">סיבות אילוץ ספק</h1>
                 <p className="text-gray-500">ניהול סיבות לבחירת ספק ידנית במקום סבב הוגן</p>
               </div>
             </div>
             {canManageSystem && (
               <button
                 onClick={() => handleOpenModal()}
-                className="px-3 py-1.5 bg-kkl-green text-white text-sm rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                className="px-3 py-1.5 bg-fw-green text-white text-sm rounded-lg hover:bg-fw-green-dark transition-colors flex items-center gap-1.5 whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>סיבה חדשה</span>
@@ -196,7 +196,7 @@ const ConstraintReasons: React.FC = () => {
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-4 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-fw-border p-4 mb-6">
           <div className="relative">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -204,13 +204,13 @@ const ConstraintReasons: React.FC = () => {
               placeholder="חיפוש סיבות אילוץ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pr-10 pl-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+              className="w-full pr-10 pl-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
             />
           </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-fw-border overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="relative overflow-visible" style={{ padding: 4 }}>
@@ -234,7 +234,7 @@ const ConstraintReasons: React.FC = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-kkl-border">
+                <thead className="bg-gray-50 border-b border-fw-border">
                   <tr>
                     <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">קוד</th>
                     <th className="text-right px-4 py-3 text-sm font-semibold text-gray-600">שם</th>
@@ -254,7 +254,7 @@ const ConstraintReasons: React.FC = () => {
                     </tr>
                   ) : (
                     filteredReasons.map((reason) => (
-                      <tr key={reason.id} className="border-b border-kkl-border hover:bg-gray-50">
+                      <tr key={reason.id} className="border-b border-fw-border hover:bg-gray-50">
                         <td className="px-4 py-3">
                           <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
                             {reason.code}
@@ -262,7 +262,7 @@ const ConstraintReasons: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           <div>
-                            <span className="font-medium text-kkl-text">{reason.name_he}</span>
+                            <span className="font-medium text-fw-text">{reason.name_he}</span>
                             {reason.description && (
                               <p className="text-xs text-gray-500 mt-1">{reason.description}</p>
                             )}
@@ -304,7 +304,7 @@ const ConstraintReasons: React.FC = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => handleOpenModal(reason)}
-                                className="p-2 text-gray-400 hover:text-kkl-green hover:bg-kkl-green-light rounded-lg transition-colors"
+                                className="p-2 text-gray-400 hover:text-fw-green hover:bg-fw-green-light rounded-lg transition-colors"
                                 title="עריכה"
                               >
                                 <Edit className="w-4 h-4" />
@@ -342,8 +342,8 @@ const ConstraintReasons: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
-            <div className="flex items-center justify-between p-5 border-b border-kkl-border">
-              <h2 className="text-lg font-bold text-kkl-text">
+            <div className="flex items-center justify-between p-5 border-b border-fw-border">
+              <h2 className="text-lg font-bold text-fw-text">
                 {editingReason ? 'עריכת סיבת אילוץ' : 'סיבת אילוץ חדשה'}
               </h2>
               <button
@@ -363,21 +363,21 @@ const ConstraintReasons: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-kkl-text mb-2">קוד *</label>
+                  <label className="block text-sm font-medium text-fw-text mb-2">קוד *</label>
                   <input
                     type="text"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                    className="w-full px-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                     placeholder="TECH_01"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-kkl-text mb-2">קטגוריה</label>
+                  <label className="block text-sm font-medium text-fw-text mb-2">קטגוריה</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full pr-4 pl-10 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                    className="w-full pr-4 pl-10 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   >
                     <option value="technical">טכני</option>
                     <option value="availability">זמינות</option>
@@ -389,34 +389,34 @@ const ConstraintReasons: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-kkl-text mb-2">שם בעברית *</label>
+                <label className="block text-sm font-medium text-fw-text mb-2">שם בעברית *</label>
                 <input
                   type="text"
                   value={formData.name_he}
                   onChange={(e) => setFormData({ ...formData, name_he: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   placeholder="ספק יחיד באזור"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-kkl-text mb-2">שם באנגלית</label>
+                <label className="block text-sm font-medium text-fw-text mb-2">שם באנגלית</label>
                 <input
                   type="text"
                   value={formData.name_en}
                   onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                   placeholder="Single supplier in area"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-kkl-text mb-2">תיאור</label>
+                <label className="block text-sm font-medium text-fw-text mb-2">תיאור</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={2}
-                  className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent resize-none"
+                  className="w-full px-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent resize-none"
                   placeholder="תיאור מפורט של סיבת האילוץ..."
                 />
               </div>
@@ -427,9 +427,9 @@ const ConstraintReasons: React.FC = () => {
                     type="checkbox"
                     checked={formData.requires_additional_text}
                     onChange={(e) => setFormData({ ...formData, requires_additional_text: e.target.checked })}
-                    className="w-4 h-4 text-kkl-green rounded focus:ring-kkl-green"
+                    className="w-4 h-4 text-fw-green rounded focus:ring-fw-green"
                   />
-                  <span className="text-sm text-kkl-text">דורש הסבר נוסף</span>
+                  <span className="text-sm text-fw-text">דורש הסבר נוסף</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -437,9 +437,9 @@ const ConstraintReasons: React.FC = () => {
                     type="checkbox"
                     checked={formData.requires_approval}
                     onChange={(e) => setFormData({ ...formData, requires_approval: e.target.checked })}
-                    className="w-4 h-4 text-kkl-green rounded focus:ring-kkl-green"
+                    className="w-4 h-4 text-fw-green rounded focus:ring-fw-green"
                   />
-                  <span className="text-sm text-kkl-text">דורש אישור מנהל</span>
+                  <span className="text-sm text-fw-text">דורש אישור מנהל</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -447,24 +447,24 @@ const ConstraintReasons: React.FC = () => {
                     type="checkbox"
                     checked={formData.is_active}
                     onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-4 h-4 text-kkl-green rounded focus:ring-kkl-green"
+                    className="w-4 h-4 text-fw-green rounded focus:ring-fw-green"
                   />
-                  <span className="text-sm text-kkl-text">פעיל</span>
+                  <span className="text-sm text-fw-text">פעיל</span>
                 </label>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 p-5 border-t border-kkl-border">
+            <div className="flex justify-end gap-3 p-5 border-t border-fw-border">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 border border-kkl-border text-kkl-text rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-fw-border text-fw-text rounded-lg hover:bg-gray-50 transition-colors"
               >
                 ביטול
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 bg-fw-green text-white rounded-lg hover:bg-fw-green-dark transition-colors flex items-center gap-2 disabled:opacity-50"
               >
                 {saving ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

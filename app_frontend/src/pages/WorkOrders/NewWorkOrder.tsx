@@ -53,9 +53,9 @@ interface EquipmentCategory {
 
 // Section Title Component
 const SectionTitle: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> = ({ icon, children }) => (
-  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-kkl-border">
-    <span className="text-kkl-green">{icon}</span>
-    <h3 className="text-base font-semibold text-kkl-text">{children}</h3>
+  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-fw-border">
+    <span className="text-fw-green">{icon}</span>
+    <h3 className="text-base font-semibold text-fw-text">{children}</h3>
   </div>
 );
 
@@ -474,28 +474,28 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
 
   if (loadingData) {
     return (
-      <div className="min-h-screen bg-kkl-bg flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-fw-bg flex items-center justify-center" dir="rtl">
         <div className="flex items-center gap-3 bg-white p-6 rounded-xl shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="24" height="20" className="animate-pulse flex-shrink-0"><defs><linearGradient id="nwo_t" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#1565c0'}}/><stop offset="100%" style={{stopColor:'#0097a7'}}/></linearGradient><linearGradient id="nwo_m" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#0097a7'}}/><stop offset="50%" style={{stopColor:'#2e7d32'}}/><stop offset="100%" style={{stopColor:'#66bb6a'}}/></linearGradient><linearGradient id="nwo_b" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style={{stopColor:'#2e7d32'}}/><stop offset="40%" style={{stopColor:'#66bb6a'}}/><stop offset="100%" style={{stopColor:'#8B5e3c'}}/></linearGradient></defs><path d="M46 20 Q60 9 74 20" stroke="url(#nwo_t)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><path d="M30 47 Q42 34 60 43 Q78 34 90 47" stroke="url(#nwo_m)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><path d="M14 74 Q28 60 46 69 Q60 76 74 69 Q92 60 106 74" stroke="url(#nwo_b)" strokeWidth="5.5" fill="none" strokeLinecap="round"/><line x1="60" y1="76" x2="60" y2="90" stroke="#8B5e3c" strokeWidth="3.5" strokeLinecap="round"/><circle cx="60" cy="95" r="5" fill="#8B5e3c"/></svg>
-          <span className="text-kkl-text">טוען נתונים...</span>
+          <span className="text-fw-text">טוען נתונים...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-kkl-bg" dir="rtl">
+    <div className="min-h-screen bg-fw-bg" dir="rtl">
       <div className="max-w-3xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
           <button 
             onClick={() => projectCode ? navigate(`/projects/${projectCode}`) : navigate('/work-orders')}
-            className="text-kkl-green hover:text-kkl-green-dark flex items-center gap-1 mb-4 text-sm"
+            className="text-fw-green hover:text-fw-green-dark flex items-center gap-1 mb-4 text-sm"
           >
             <ArrowRight className="w-4 h-4" />
             חזרה
           </button>
-          <h1 className="text-2xl font-bold text-kkl-text">דרישת כלים</h1>
+          <h1 className="text-2xl font-bold text-fw-text">דרישת כלים</h1>
           {selectedProject && (
             <p className="text-gray-500 mt-1">פרויקט: {selectedProject.name}</p>
           )}
@@ -505,7 +505,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
         <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* === בלוק 1: פרטי עבודה === */}
-          <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-5">
+          <div className="bg-white rounded-xl shadow-sm border border-fw-border p-5">
             <SectionTitle icon={<Calendar className="w-5 h-5" />}>
               פרטי עבודה
             </SectionTitle>
@@ -514,8 +514,8 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
             {projectCode ? (
               /* Locked project display */
               <div className="mb-4">
-                <label className="block text-sm font-medium text-kkl-text mb-2">פרויקט</label>
-                <div className="w-full pr-4 pl-4 py-2.5 border border-kkl-border bg-gray-50 rounded-lg text-sm text-kkl-text flex items-center justify-between">
+                <label className="block text-sm font-medium text-fw-text mb-2">פרויקט</label>
+                <div className="w-full pr-4 pl-4 py-2.5 border border-fw-border bg-gray-50 rounded-lg text-sm text-fw-text flex items-center justify-between">
                   <span className="font-medium">{selectedProject?.name || '...'}</span>
                   <span className="text-gray-400 text-xs">{selectedProject?.code || projectCode}</span>
                 </div>
@@ -523,7 +523,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
               </div>
             ) : (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-kkl-text mb-2">
+                <label className="block text-sm font-medium text-fw-text mb-2">
                   פרויקט *
                 </label>
                 <select
@@ -533,7 +533,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                     setSelectedProject(project || null);
                   }}
                   required
-                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent min-h-[44px]"
                 >
                   <option value="">בחר פרויקט</option>
                   {projects.map(project => (
@@ -550,18 +550,18 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
               <div className={`mb-4 p-3 rounded-lg border ${
                 (selectedProject.spent_budget || 0) >= (selectedProject.allocated_budget || 0) 
                   ? 'bg-red-50 border-red-200' 
-                  : 'bg-kkl-green-light border-kkl-green/20'
+                  : 'bg-fw-green-light border-fw-green/20'
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Info className="w-4 h-4 text-kkl-green" />
-                    <span className="text-sm font-medium text-kkl-text">יתרה תקציבית:</span>
+                    <Info className="w-4 h-4 text-fw-green" />
+                    <span className="text-sm font-medium text-fw-text">יתרה תקציבית:</span>
                   </div>
                   <div className="text-left">
                     <span className={`text-lg font-bold ${
                       (selectedProject.spent_budget || 0) >= (selectedProject.allocated_budget || 0) 
                         ? 'text-red-600' 
-                        : 'text-kkl-green'
+                        : 'text-fw-green'
                     }`}>
 {((selectedProject.allocated_budget || 0) - (selectedProject.spent_budget || 0)).toLocaleString('he-IL')}
                     </span>
@@ -582,7 +582,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
             <div className="grid grid-cols-12 gap-4">
               {/* Start Date */}
               <div className="col-span-12 sm:col-span-4">
-                <label className="block text-sm font-medium text-kkl-text mb-2">
+                <label className="block text-sm font-medium text-fw-text mb-2">
                   תאריך התחלה
                 </label>
                 <input
@@ -591,13 +591,13 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                   value={formData.start_date}
                   onChange={handleChange}
                   required
-                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent min-h-[44px]"
                 />
               </div>
 
               {/* Work Days */}
               <div className="col-span-12 sm:col-span-4">
-                <label className="block text-sm font-medium text-kkl-text mb-2">
+                <label className="block text-sm font-medium text-fw-text mb-2">
                   מספר ימים
                 </label>
                 <input
@@ -607,18 +607,18 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                   onChange={handleChange}
                   required
                   min="1"
-                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent min-h-[44px]"
                 />
               </div>
 
               {/* Total Hours - Highlighted Box */}
               <div className="col-span-12 sm:col-span-4">
-                <div className="bg-kkl-green-light border border-kkl-green/20 rounded-lg p-4 h-full flex flex-col justify-center">
-                  <div className="flex items-center gap-2 text-sm text-kkl-green mb-1">
+                <div className="bg-fw-green-light border border-fw-green/20 rounded-lg p-4 h-full flex flex-col justify-center">
+                  <div className="flex items-center gap-2 text-sm text-fw-green mb-1">
                     <Clock className="w-4 h-4" />
                     סה"כ שעות עבודה
                   </div>
-                  <div className="text-2xl font-bold text-kkl-green">{totalHours} שעות</div>
+                  <div className="text-2xl font-bold text-fw-green">{totalHours} שעות</div>
                   {workDaysNumber && workDaysNumber > 0 ? (
                     <p className="text-xs text-gray-500 mt-1 leading-tight max-w-full break-words">
                       {totalHours} שעות ({BILLABLE_HOURS_PER_DAY} שעות נטו × {workDaysNumber} ימים)
@@ -635,7 +635,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                     </p>
                   )}
                   {pricingPreview?.rateSourceName && rateForEstimate > 0 && (
-                    <p className="text-xs text-kkl-green mt-1 leading-tight max-w-full break-words">
+                    <p className="text-xs text-fw-green mt-1 leading-tight max-w-full break-words">
                       תעריף: {rateForEstimate.toLocaleString('he-IL')} לשעה · מקור: {pricingPreview.rateSourceName}
                     </p>
                   )}
@@ -647,7 +647,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
           </div>
 
           {/* === בלוק 2: הגדרת כלים === */}
-          <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-5">
+          <div className="bg-white rounded-xl shadow-sm border border-fw-border p-5">
             <SectionTitle icon={<Truck className="w-5 h-5" />}>
               הגדרת כלים
             </SectionTitle>
@@ -655,14 +655,14 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
             <div className="grid grid-cols-12 gap-4">
               {/* Tool Type */}
               <div className="col-span-12 sm:col-span-6">
-                <label className="block text-sm font-medium text-kkl-text mb-2">
+                <label className="block text-sm font-medium text-fw-text mb-2">
                   סוג כלי *
                 </label>
                 <select
                   value={selectedCategoryId?.toString() || ''}
                   onChange={handleCategoryChange}
                   required
-                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent min-h-[44px]"
                 >
                   <option value="">בחר סוג כלי...</option>
                   {equipmentCategories.map((category) => (
@@ -675,7 +675,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
 
               {/* Quantity */}
               <div className="col-span-12 sm:col-span-6">
-                <label className="block text-sm font-medium text-kkl-text mb-2">
+                <label className="block text-sm font-medium text-fw-text mb-2">
                   כמות כלים
                 </label>
                 <input
@@ -686,7 +686,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                   required
                   min="1"
                   max="5"
-                  className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                  className="w-full pr-4 pl-10 py-2.5 text-base border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent min-h-[44px]"
                 />
               </div>
             </div>
@@ -699,11 +699,11 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                   name="has_overnight"
                   checked={formData.has_overnight}
                   onChange={handleChange}
-                  className="w-5 h-5 rounded border-kkl-border text-kkl-green focus:ring-kkl-green"
+                  className="w-5 h-5 rounded border-fw-border text-fw-green focus:ring-fw-green"
                 />
                 <div className="flex items-center gap-2">
                   <Moon className="w-4 h-4 text-indigo-500" />
-                  <span className="text-sm text-kkl-text">כלי עם שמירה (לינת שטח)</span>
+                  <span className="text-sm text-fw-text">כלי עם שמירה (לינת שטח)</span>
                 </div>
               </label>
             </div>
@@ -764,7 +764,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
           </div>
 
           {/* === בלוק 3: שיטת הקצאת ספק === */}
-          <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-5">
+          <div className="bg-white rounded-xl shadow-sm border border-fw-border p-5">
             <SectionTitle icon={<Users className="w-5 h-5" />}>
               שיטת הקצאת ספק
             </SectionTitle>
@@ -773,8 +773,8 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
               {/* Fair Rotation Option */}
               <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
                 formData.allocation_method === 'fair_rotation' 
-                  ? 'border-kkl-green bg-kkl-green-light' 
-                  : 'border-gray-200 hover:border-kkl-green/50'
+                  ? 'border-fw-green bg-fw-green-light' 
+                  : 'border-gray-200 hover:border-fw-green/50'
               }`}>
                 <input
                   type="radio"
@@ -782,10 +782,10 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                   value="fair_rotation"
                   checked={formData.allocation_method === 'fair_rotation'}
                   onChange={handleChange}
-                  className="w-4 h-4 text-kkl-green focus:ring-kkl-green"
+                  className="w-4 h-4 text-fw-green focus:ring-fw-green"
                 />
                 <div className="flex-1">
-                  <span className="text-sm font-medium text-kkl-text">סבב הוגן</span>
+                  <span className="text-sm font-medium text-fw-text">סבב הוגן</span>
                   <span className="text-xs text-gray-500 mr-2">- המערכת תבחר ספק אוטומטית</span>
                 </div>
               </label>
@@ -793,8 +793,8 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
               {/* Supplier Selection Option */}
               <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
                 formData.allocation_method === 'supplier_selection' 
-                  ? 'border-kkl-green bg-kkl-green-light' 
-                  : 'border-gray-200 hover:border-kkl-green/50'
+                  ? 'border-fw-green bg-fw-green-light' 
+                  : 'border-gray-200 hover:border-fw-green/50'
               }`}>
                 <input
                   type="radio"
@@ -802,10 +802,10 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                   value="supplier_selection"
                   checked={formData.allocation_method === 'supplier_selection'}
                   onChange={handleChange}
-                  className="w-4 h-4 text-kkl-green focus:ring-kkl-green"
+                  className="w-4 h-4 text-fw-green focus:ring-fw-green"
                 />
                 <div className="flex-1">
-                  <span className="text-sm font-medium text-kkl-text">בחירת ספק</span>
+                  <span className="text-sm font-medium text-fw-text">בחירת ספק</span>
                   <span className="text-xs text-gray-500 mr-2">- בחירה ידנית של ספק</span>
                 </div>
               </label>
@@ -813,16 +813,16 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
 
             {/* Supplier Selection Fields - Only shown when supplier_selection is chosen */}
             {formData.allocation_method === 'supplier_selection' && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-kkl-border space-y-4">
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-fw-border space-y-4">
                 <div className="flex items-start gap-2 text-sm text-gray-600 mb-3">
-                  <Info className="w-4 h-4 mt-0.5 text-kkl-info flex-shrink-0" />
+                  <Info className="w-4 h-4 mt-0.5 text-fw-info flex-shrink-0" />
                   <span>נדרש לפי נהלי Forewise כאשר סוטים מסבב הוגן</span>
                 </div>
 
                 <div className="grid grid-cols-12 gap-4">
                   {/* Supplier Select */}
                   <div className="col-span-12 sm:col-span-6">
-                    <label className="block text-sm font-medium text-kkl-text mb-2">
+                    <label className="block text-sm font-medium text-fw-text mb-2">
                       בחר ספק *
                     </label>
                     <select
@@ -830,7 +830,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                       value={formData.supplier_id}
                       onChange={handleChange}
                       required
-                      className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                      className="w-full pr-4 pl-10 py-2.5 text-base border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent min-h-[44px]"
                     >
                       <option value="">בחר ספק...</option>
                       {filteredSuppliers.map(supplier => (
@@ -840,7 +840,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                       ))}
                     </select>
                     {selectedCategoryId && filteredSuppliers.length === 0 && (
-                      <p className="text-xs text-kkl-warning mt-1">
+                      <p className="text-xs text-fw-warning mt-1">
                         אין ספקים זמינים לסוג כלי זה
                       </p>
                     )}
@@ -848,7 +848,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
 
                   {/* Constraint Reason */}
                   <div className="col-span-12 sm:col-span-6">
-                    <label className="block text-sm font-medium text-kkl-text mb-2">
+                    <label className="block text-sm font-medium text-fw-text mb-2">
                       סיבת אילוץ ספק *
                     </label>
                     <select
@@ -856,7 +856,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                       value={formData.constraint_reason_id}
                       onChange={handleChange}
                       required
-                      className="w-full pr-4 pl-10 py-2.5 text-base border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent min-h-[44px]"
+                      className="w-full pr-4 pl-10 py-2.5 text-base border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent min-h-[44px]"
                     >
                       <option value="">בחר סיבת אילוץ...</option>
                       {constraintReasons.map(reason => (
@@ -871,7 +871,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                 {/* Constraint Explanation - Only if reason requires it */}
                 {selectedConstraintReason?.requires_additional_text && (
                   <div>
-                    <label className="block text-sm font-medium text-kkl-text mb-2">
+                    <label className="block text-sm font-medium text-fw-text mb-2">
                       הסבר סיבת האילוץ *
                     </label>
                     <textarea
@@ -881,7 +881,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                       required
                       rows={2}
                       placeholder="נא לפרט את סיבת האילוץ..."
-                      className="w-full px-4 py-2.5 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent resize-none"
+                      className="w-full px-4 py-2.5 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent resize-none"
                     />
                   </div>
                 )}
@@ -909,7 +909,7 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
           </div>
 
           {/* === בלוק 4: הערות נוספות (אופציונלי) === */}
-          <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-5">
+          <div className="bg-white rounded-xl shadow-sm border border-fw-border p-5">
             <SectionTitle icon={<FileText className="w-5 h-5" />}>
               הערות נוספות
             </SectionTitle>
@@ -920,28 +920,28 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
               onChange={handleChange}
               rows={3}
               placeholder="הערות נוספות (אופציונלי)"
-              className="w-full px-4 py-3 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent resize-none"
             />
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-kkl-error/30 rounded-lg p-4 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-kkl-error flex-shrink-0 mt-0.5" />
-              <p className="text-kkl-error text-sm">{error}</p>
+            <div className="bg-red-50 border border-fw-error/30 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-fw-error flex-shrink-0 mt-0.5" />
+              <p className="text-fw-error text-sm">{error}</p>
             </div>
           )}
 
           {/* === כפתורים === */}
           {totalAmountEstimate > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-5">
+            <div className="bg-white rounded-xl shadow-sm border border-fw-border p-5">
               <SectionTitle icon={<Info className="w-5 h-5" />}>
                 תחזית עלות
               </SectionTitle>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                <div className="bg-kkl-green-light rounded-lg p-4 border border-kkl-green/20">
+                <div className="bg-fw-green-light rounded-lg p-4 border border-fw-green/20">
                   <div className="text-gray-500 mb-1">עלות עבודה</div>
-                  <div className="text-xl font-bold text-kkl-green">{hoursCostEstimate.toLocaleString('he-IL')}</div>
+                  <div className="text-xl font-bold text-fw-green">{hoursCostEstimate.toLocaleString('he-IL')}</div>
                 </div>
                 <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
                   <div className="text-gray-500 mb-1">עלות שמירה</div>
@@ -949,23 +949,23 @@ showToast(' זכור: אחרי סנכרון תצטרך לשלוח את ההזמ�
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <div className="text-gray-500 mb-1">סה"כ כולל מע"מ</div>
-                  <div className="text-xl font-bold text-kkl-text">{Math.round(totalAmountWithVatEstimate).toLocaleString('he-IL')}</div>
+                  <div className="text-xl font-bold text-fw-text">{Math.round(totalAmountWithVatEstimate).toLocaleString('he-IL')}</div>
                 </div>
               </div>
             </div>
           )}
-          <div className="flex justify-end gap-3 pt-4 border-t border-kkl-border">
+          <div className="flex justify-end gap-3 pt-4 border-t border-fw-border">
             <button
               type="button"
               onClick={() => projectCode ? navigate(`/projects/${projectCode}`) : navigate('/work-orders')}
-              className="px-6 py-2.5 rounded-lg border border-kkl-border text-kkl-text hover:bg-gray-50 transition-colors font-medium"
+              className="px-6 py-2.5 rounded-lg border border-fw-border text-fw-text hover:bg-gray-50 transition-colors font-medium"
             >
               ביטול
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 rounded-lg bg-kkl-green text-white hover:bg-kkl-green-dark disabled:opacity-50 transition-colors font-medium flex items-center gap-2"
+              className="px-6 py-2.5 rounded-lg bg-fw-green text-white hover:bg-fw-green-dark disabled:opacity-50 transition-colors font-medium flex items-center gap-2"
             >
               {loading ? (
                 <>

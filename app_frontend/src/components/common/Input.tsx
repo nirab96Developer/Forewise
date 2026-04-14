@@ -41,9 +41,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(({
       case 'error':
         return 'border-red-300 focus:border-red-500 focus:ring-red-500 bg-red-50/50';
       case 'success':
-        return 'border-kkl-green focus:border-kkl-green focus:ring-kkl-green bg-green-50/50';
+        return 'border-fw-green focus:border-fw-green focus:ring-fw-green bg-green-50/50';
       default:
-        return 'border-gray-200 focus:border-kkl-green focus:ring-kkl-green hover:border-gray-300';
+        return 'border-gray-200 focus:border-fw-green focus:ring-fw-green hover:border-gray-300';
     }
   };
 

@@ -59,7 +59,7 @@ const settingsCategories: SettingsCategory[] = [
     title: 'ספקים וציוד',
     description: 'ניהול ספקים, ציוד, תמחור, סבב הוגן ואילוצים',
     icon: <Truck className="w-6 h-6" />,
-    color: 'bg-kkl-green',
+    color: 'bg-fw-green',
     items: [
       {
         id: 'suppliers-list',
@@ -240,16 +240,16 @@ if (c.budgets_overrun > 0) parts.push(` ${c.budgets_overrun} חריגות`);
   };
 
   return (
-    <div className="min-h-screen bg-kkl-bg" dir="rtl">
+    <div className="min-h-screen bg-fw-bg" dir="rtl">
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-kkl-green rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-fw-green rounded-xl flex items-center justify-center">
               <Settings className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-kkl-text">הגדרות מערכת</h1>
+              <h1 className="text-2xl font-bold text-fw-text">הגדרות מערכת</h1>
               <p className="text-gray-500">ניהול הגדרות, ספקים, כלים ופרמטרים</p>
             </div>
           </div>
@@ -260,7 +260,7 @@ if (c.budgets_overrun > 0) parts.push(` ${c.budgets_overrun} חריגות`);
           {settingsCategories.map((category) => (
             <div 
               key={category.id}
-              className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden"
+              className="bg-white rounded-xl shadow-sm border border-fw-border overflow-hidden"
             >
               {/* Category Header */}
               <button
@@ -272,7 +272,7 @@ if (c.budgets_overrun > 0) parts.push(` ${c.budgets_overrun} חריגות`);
                     {category.icon}
                   </div>
                   <div className="text-right">
-                    <h2 className="text-lg font-semibold text-kkl-text">{category.title}</h2>
+                    <h2 className="text-lg font-semibold text-fw-text">{category.title}</h2>
                     <p className="text-sm text-gray-500">{category.description}</p>
                   </div>
                   {getCategoryBadge(category.id) && (
@@ -292,20 +292,20 @@ getCategoryBadge(category.id).includes('') ? 'bg-red-100 text-red-700' : 'bg-gra
 
               {/* Category Items */}
               {expandedCategory === category.id && (
-                <div className="border-t border-kkl-border bg-gray-50 p-4">
+                <div className="border-t border-fw-border bg-gray-50 p-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {category.items.map((item) => (
                       <button
                         key={item.id}
                         onClick={() => handleItemClick(item.path)}
-                        className="bg-white p-4 rounded-lg border border-kkl-border hover:border-kkl-green hover:shadow-md transition-all text-right group"
+                        className="bg-white p-4 rounded-lg border border-fw-border hover:border-fw-green hover:shadow-md transition-all text-right group"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 bg-kkl-green-light rounded-lg flex items-center justify-center text-kkl-green group-hover:bg-kkl-green group-hover:text-white transition-colors">
+                          <div className="w-10 h-10 bg-fw-green-light rounded-lg flex items-center justify-center text-fw-green group-hover:bg-fw-green group-hover:text-white transition-colors">
                             {item.icon}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-kkl-text group-hover:text-kkl-green transition-colors">
+                            <h3 className="font-medium text-fw-text group-hover:text-fw-green transition-colors">
                               {item.title}
                             </h3>
                             <p className="text-xs text-gray-500 mt-1 line-clamp-2">
@@ -329,20 +329,20 @@ getCategoryBadge(category.id).includes('') ? 'bg-red-100 text-red-700' : 'bg-gra
 
         {/* Quick Stats - from live counts */}
         <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border border-kkl-border p-4 text-center">
-            <div className="text-2xl font-bold text-kkl-green">{counts.users_active || 0}</div>
+          <div className="bg-white rounded-xl border border-fw-border p-4 text-center">
+            <div className="text-2xl font-bold text-fw-green">{counts.users_active || 0}</div>
             <div className="text-sm text-gray-500">משתמשים</div>
           </div>
-          <div className="bg-white rounded-xl border border-kkl-border p-4 text-center">
-            <div className="text-2xl font-bold text-kkl-green">{counts.regions || 0}</div>
+          <div className="bg-white rounded-xl border border-fw-border p-4 text-center">
+            <div className="text-2xl font-bold text-fw-green">{counts.regions || 0}</div>
             <div className="text-sm text-gray-500">מרחבים</div>
           </div>
-          <div className="bg-white rounded-xl border border-kkl-border p-4 text-center">
-            <div className="text-2xl font-bold text-kkl-green">{counts.equipment_total || 0}</div>
+          <div className="bg-white rounded-xl border border-fw-border p-4 text-center">
+            <div className="text-2xl font-bold text-fw-green">{counts.equipment_total || 0}</div>
             <div className="text-sm text-gray-500">כלים במערכת</div>
           </div>
-          <div className="bg-white rounded-xl border border-kkl-border p-4 text-center">
-            <div className="text-2xl font-bold text-kkl-green">{counts.suppliers_active || 0}</div>
+          <div className="bg-white rounded-xl border border-fw-border p-4 text-center">
+            <div className="text-2xl font-bold text-fw-green">{counts.suppliers_active || 0}</div>
             <div className="text-sm text-gray-500">ספקים פעילים</div>
           </div>
         </div>

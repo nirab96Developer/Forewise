@@ -359,12 +359,12 @@ const AccountantInbox: React.FC = () => {
   }).length;
 
   return (
-    <div className="min-h-screen bg-kkl-bg" dir="rtl">
+    <div className="min-h-screen bg-fw-bg" dir="rtl">
       {/* Reject modal */}
       {rejectModal?.open && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-kkl-text mb-3 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-fw-text mb-3 flex items-center gap-2">
               <XCircle className="w-5 h-5 text-red-600" />
               סיבת דחייה
             </h3>
@@ -373,11 +373,11 @@ const AccountantInbox: React.FC = () => {
               onChange={e => setRejectReason(e.target.value)}
               placeholder="פרט את הסיבה לדחיית הדיווח..."
               rows={3}
-              className="w-full p-3 border border-kkl-border rounded-lg text-sm mb-4"
+              className="w-full p-3 border border-fw-border rounded-lg text-sm mb-4"
               autoFocus
             />
             <div className="flex gap-3">
-              <button onClick={() => { setRejectModal(null); setRejectReason(''); }} className="flex-1 px-4 py-2 border border-kkl-border rounded-lg text-sm text-gray-600 hover:bg-gray-50">ביטול</button>
+              <button onClick={() => { setRejectModal(null); setRejectReason(''); }} className="flex-1 px-4 py-2 border border-fw-border rounded-lg text-sm text-gray-600 hover:bg-gray-50">ביטול</button>
               <button
                 onClick={handleReject}
                 disabled={processing !== null}
@@ -394,17 +394,17 @@ const AccountantInbox: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="mb-6">
-          <button onClick={() => navigate('/settings')} className="text-kkl-green text-sm flex items-center gap-1 mb-4">
+          <button onClick={() => navigate('/settings')} className="text-fw-green text-sm flex items-center gap-1 mb-4">
             <ArrowRight className="w-4 h-4" />
             חזרה
           </button>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-kkl-green rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-fw-green rounded-xl flex items-center justify-center">
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-kkl-text">תיבת נכנסים — אישורי השקעה</h1>
+                <h1 className="text-2xl font-bold text-fw-text">תיבת נכנסים — אישורי השקעה</h1>
                 <p className="text-gray-500 text-sm">
                   {pendingCount > 0 ? (
                     <span className="text-yellow-700 font-medium">{pendingCount} ממתינים לאישורך</span>
@@ -460,7 +460,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-4 mb-6 space-y-3">
+        <div className="bg-white rounded-xl shadow-sm border border-fw-border p-4 mb-6 space-y-3">
           <div className="flex flex-col lg:flex-row gap-3">
             <div className="relative flex-1 min-w-0">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -469,7 +469,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                 placeholder="חיפוש לפי פרויקט, ספק, תאריך, מספר..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pr-9 pl-4 py-2 border border-kkl-border rounded-lg text-sm"
+                className="w-full pr-9 pl-4 py-2 border border-fw-border rounded-lg text-sm"
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -485,7 +485,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                   onClick={() => setFilterStatus(f.value)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     filterStatus === f.value
-                      ? 'bg-kkl-green text-white'
+                      ? 'bg-fw-green text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
@@ -500,7 +500,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
               <select
                 value={filterProjectId}
                 onChange={e => setFilterProjectId(e.target.value)}
-                className="w-full border border-kkl-border rounded-lg px-3 py-2 text-sm bg-white"
+                className="w-full border border-fw-border rounded-lg px-3 py-2 text-sm bg-white"
               >
                 <option value="">כל הפרויקטים</option>
                 {projectOptions.map(p => (
@@ -513,7 +513,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
               <select
                 value={filterSupplierId}
                 onChange={e => setFilterSupplierId(e.target.value)}
-                className="w-full border border-kkl-border rounded-lg px-3 py-2 text-sm bg-white"
+                className="w-full border border-fw-border rounded-lg px-3 py-2 text-sm bg-white"
               >
                 <option value="">כל הספקים</option>
                 {supplierOptions.map(s => (
@@ -527,7 +527,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                 type="date"
                 value={dateFrom}
                 onChange={e => setDateFrom(e.target.value)}
-                className="w-full border border-kkl-border rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-fw-border rounded-lg px-3 py-2 text-sm"
               />
             </div>
             <div>
@@ -536,7 +536,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                 type="date"
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
-                className="w-full border border-kkl-border rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-fw-border rounded-lg px-3 py-2 text-sm"
               />
             </div>
           </div>
@@ -551,7 +551,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
         )}
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-fw-border overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <div className="relative overflow-visible" style={{ padding: 4 }}>
@@ -580,7 +580,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px]">
-                <thead className="bg-gray-50 border-b border-kkl-border">
+                <thead className="bg-gray-50 border-b border-fw-border">
                   <tr>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">מספר</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">תאריך</th>
@@ -602,7 +602,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                     const isApproved = ns === 'APPROVED';
                     const isInvoiced = ns === 'INVOICED';
                     return (
-                      <tr key={w.id} className="border-b border-kkl-border hover:bg-gray-50 transition-colors">
+                      <tr key={w.id} className="border-b border-fw-border hover:bg-gray-50 transition-colors">
                         {/* Number */}
                         <td className="px-4 py-3">
                           <span className="text-sm font-mono text-gray-500">#{w.report_number}</span>
@@ -617,15 +617,15 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                         {/* Project */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Building2 className="w-4 h-4 text-kkl-green flex-shrink-0" />
+                            <Building2 className="w-4 h-4 text-fw-green flex-shrink-0" />
                             <div>
-                              <p className="text-sm font-medium text-kkl-text">{w.project_name}</p>
+                              <p className="text-sm font-medium text-fw-text">{w.project_name}</p>
                               {w.project_code && <p className="text-xs text-gray-400">{w.project_code}</p>}
                             </div>
                           </div>
                         </td>
                         {/* Supplier */}
-                        <td className="px-4 py-3 text-sm text-kkl-text max-w-[140px]">
+                        <td className="px-4 py-3 text-sm text-fw-text max-w-[140px]">
                           <span className="line-clamp-2">{w.supplier_name || '—'}</span>
                         </td>
                         {/* Type */}
@@ -640,13 +640,13 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                         </td>
                         {/* Hours */}
                         <td className="px-4 py-3 text-center">
-                          <span className="text-sm font-semibold text-kkl-text">
+                          <span className="text-sm font-semibold text-fw-text">
                             {parseFloat(w.total_hours || '0').toFixed(1)}h
                           </span>
                         </td>
                         {/* Cost before VAT */}
                         <td className="px-4 py-3 text-center">
-                          <span className="text-sm font-bold text-kkl-text">
+                          <span className="text-sm font-bold text-fw-text">
                             {w.cost_before_vat
 ? `${parseFloat(String(w.cost_before_vat)).toLocaleString('he-IL')}`
                               : '—'}
@@ -675,7 +675,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                                 <button
                                   onClick={() => handleApprove(w.id)}
                                   disabled={processing === w.id}
-                                  className="flex items-center gap-1 px-3 py-1.5 bg-kkl-green text-white rounded-lg text-xs font-medium hover:bg-kkl-green-dark transition-colors disabled:opacity-50"
+                                  className="flex items-center gap-1 px-3 py-1.5 bg-fw-green text-white rounded-lg text-xs font-medium hover:bg-fw-green-dark transition-colors disabled:opacity-50"
                                   title="אשר דיווח"
                                 >
                                   {processing === w.id
@@ -728,7 +728,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
         {filtered.length > 0 && !loading && (
           <div className="mt-4 flex items-center justify-between text-sm text-gray-500 px-1">
             <span>{filtered.length} דיווחים מוצגים</span>
-            <span className="font-medium text-kkl-text">
+            <span className="font-medium text-fw-text">
 סה"כ: {filtered
                 .reduce((sum, w) => sum + parseFloat(w.cost_before_vat || '0'), 0)
                 .toLocaleString('he-IL')}

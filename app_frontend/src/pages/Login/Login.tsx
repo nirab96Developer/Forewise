@@ -407,7 +407,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
               <a 
                 href="/forgot-password"
                 data-testid="login-forgot"
-                className="text-sm text-kkl-blue hover:text-blue-700 transition-colors"
+                className="text-sm text-fw-blue hover:text-blue-700 transition-colors"
               >
                 שכחת סיסמה?
               </a>
@@ -420,13 +420,13 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
                 disabled={isLoading}
                 onClick={() => setRememberMe(prev => !prev)}
                 className="flex items-center gap-2 min-h-[44px] px-2 touch-manipulation select-none
-                           focus:outline-none focus:ring-2 focus:ring-kkl-green/40 rounded-lg
+                           focus:outline-none focus:ring-2 focus:ring-fw-green/40 rounded-lg
                            disabled:opacity-50"
               >
                 {/* Custom checkbox visual */}
                 <span className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                   rememberMe
-                    ? 'bg-kkl-green border-kkl-green'
+                    ? 'bg-fw-green border-fw-green'
                     : 'bg-white border-gray-300'
                 }`}>
                   {rememberMe && (
@@ -520,12 +520,12 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
                     setIsLoading(false);
                   }
                 }}
-                className="w-full bg-gradient-to-r from-kkl-blue via-kkl-green to-kkl-brown
+                className="w-full bg-gradient-to-r from-fw-blue via-fw-green to-fw-brown
                         text-white py-3 text-base sm:text-lg rounded-lg
                         flex items-center justify-center gap-2
                         hover:opacity-90 active:opacity-80 hover:shadow-md font-medium min-h-[44px]
                         transform transition-all duration-300 touch-manipulation
-                        focus:outline-none focus:ring-2 focus:ring-kkl-blue focus:ring-offset-2
+                        focus:outline-none focus:ring-2 focus:ring-fw-blue focus:ring-offset-2
                         active:scale-[0.98]
                         disabled:opacity-50 disabled:cursor-not-allowed"
               >

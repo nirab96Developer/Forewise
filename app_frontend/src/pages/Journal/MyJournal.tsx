@@ -462,7 +462,7 @@ const MyJournal: React.FC = () => {
   if (isLoading) return <UnifiedLoader size="full" />;
   
   return (
-    <div className="min-h-screen bg-kkl-bg" dir="rtl">
+    <div className="min-h-screen bg-fw-bg" dir="rtl">
       {/* Header with Filters */}
       <div className="sticky top-0 z-20 bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -672,12 +672,12 @@ Excel
           
           {/* Calendar Section */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden">
+            <div className="bg-white rounded-xl shadow-sm border border-fw-border overflow-hidden">
               {/* Calendar Header */}
-              <div className="px-6 py-4 flex items-center justify-between border-b border-kkl-border">
+              <div className="px-6 py-4 flex items-center justify-between border-b border-fw-border">
                 <div className="flex items-center gap-3">
-                  <CalendarIcon className="w-5 h-5 text-kkl-green" />
-                  <h2 className="text-lg font-semibold text-kkl-green">
+                  <CalendarIcon className="w-5 h-5 text-fw-green" />
+                  <h2 className="text-lg font-semibold text-fw-green">
                     יומן – {getMonthName(currentMonth)} {currentYear}
                   </h2>
                 </div>
@@ -685,27 +685,27 @@ Excel
                 <div className="flex items-center gap-2">
                   <button 
                     onClick={goToPreviousMonth}
-                    className="p-2.5 hover:bg-kkl-green-light rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    className="p-2.5 hover:bg-fw-green-light rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
-                    <ChevronRight className="w-5 h-5 text-kkl-green" />
+                    <ChevronRight className="w-5 h-5 text-fw-green" />
                   </button>
                   <button
                     onClick={goToToday}
-                    className="px-3 py-1.5 text-sm bg-kkl-green-light text-kkl-green rounded-lg hover:bg-kkl-green hover:text-white transition-colors font-medium"
+                    className="px-3 py-1.5 text-sm bg-fw-green-light text-fw-green rounded-lg hover:bg-fw-green hover:text-white transition-colors font-medium"
                   >
                     היום
                   </button>
                   <button 
                     onClick={goToNextMonth}
-                    className="p-2.5 hover:bg-kkl-green-light rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    className="p-2.5 hover:bg-fw-green-light rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                   >
-                    <ChevronLeft className="w-5 h-5 text-kkl-green" />
+                    <ChevronLeft className="w-5 h-5 text-fw-green" />
                   </button>
                 </div>
               </div>
               
               {/* Week Days Header */}
-              <div className="grid grid-cols-7 border-b border-kkl-border">
+              <div className="grid grid-cols-7 border-b border-fw-border">
                 {weekDays.map((day, index) => (
                   <div 
                     key={index} 
@@ -729,18 +729,18 @@ Excel
                       key={index}
                       onClick={() => setSelectedDay(day)}
                       className={`
-                        min-h-[90px] p-2 border-b border-l border-kkl-border text-right transition-all
-                        ${!day.isCurrentMonth ? 'bg-gray-50' : 'bg-white hover:bg-kkl-green-light/30'}
-                        ${day.isToday ? 'bg-kkl-green-light' : ''}
-                        ${isSelected ? 'ring-2 ring-inset ring-kkl-green' : ''}
+                        min-h-[90px] p-2 border-b border-l border-fw-border text-right transition-all
+                        ${!day.isCurrentMonth ? 'bg-gray-50' : 'bg-white hover:bg-fw-green-light/30'}
+                        ${day.isToday ? 'bg-fw-green-light' : ''}
+                        ${isSelected ? 'ring-2 ring-inset ring-fw-green' : ''}
                       `}
                     >
                       {/* Day Number */}
                       <div className="flex items-center justify-between mb-1">
                         <span className={`
                           text-sm font-medium
-                          ${!day.isCurrentMonth ? 'text-gray-300' : 'text-kkl-text'}
-                          ${day.isToday ? 'w-7 h-7 bg-kkl-green text-white rounded-full flex items-center justify-center' : ''}
+                          ${!day.isCurrentMonth ? 'text-gray-300' : 'text-fw-text'}
+                          ${day.isToday ? 'w-7 h-7 bg-fw-green text-white rounded-full flex items-center justify-center' : ''}
                           ${day.date.getDay() === 6 && day.isCurrentMonth ? 'text-red-400' : ''}
                         `}>
                           {day.date.getDate()}
@@ -756,13 +756,13 @@ Excel
                       {hasEvents && day.isCurrentMonth && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {day.workOrders.length > 0 && (
-                            <span className="w-2 h-2 bg-kkl-green rounded-full" />
+                            <span className="w-2 h-2 bg-fw-green rounded-full" />
                           )}
                           {day.activities.length > 0 && (
-                            <span className="w-2 h-2 bg-kkl-green rounded-full" />
+                            <span className="w-2 h-2 bg-fw-green rounded-full" />
                           )}
                           {day.personalNotes.length > 0 && (
-                            <span className="w-2 h-2 bg-kkl-green rounded-full" />
+                            <span className="w-2 h-2 bg-fw-green rounded-full" />
                           )}
                         </div>
                       )}
@@ -776,8 +776,8 @@ Excel
           {/* Day Details Sidebar */}
           <div className="space-y-6">
             {/* Selected Day Info */}
-            <div className="bg-white rounded-xl shadow-sm border border-kkl-border overflow-hidden">
-              <div className="bg-kkl-green p-4">
+            <div className="bg-white rounded-xl shadow-sm border border-fw-border overflow-hidden">
+              <div className="bg-fw-green p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-white/70 text-sm">יום נבחר</p>
@@ -807,10 +807,10 @@ Excel
                   <>
                     {/* Holiday Notice */}
                     {selectedDay.isHoliday && (
-                      <div className="bg-kkl-green-light border border-kkl-green/20 rounded-lg p-3 flex items-center gap-3">
-                        <CalendarIcon className="w-5 h-5 text-kkl-green" />
+                      <div className="bg-fw-green-light border border-fw-green/20 rounded-lg p-3 flex items-center gap-3">
+                        <CalendarIcon className="w-5 h-5 text-fw-green" />
                         <div>
-                          <p className="font-medium text-kkl-green">{selectedDay.holidayName}</p>
+                          <p className="font-medium text-fw-green">{selectedDay.holidayName}</p>
                           <p className="text-sm text-gray-500">חג</p>
                         </div>
                       </div>
@@ -821,14 +821,14 @@ Excel
                       <button
                         key={wo.id}
                         onClick={() => navigate(`/work-orders/${wo.data.id || wo.id}`)}
-                        className="w-full text-right bg-white border border-kkl-border rounded-lg p-3 hover:border-kkl-green hover:shadow-sm transition-all cursor-pointer group"
+                        className="w-full text-right bg-white border border-fw-border rounded-lg p-3 hover:border-fw-green hover:shadow-sm transition-all cursor-pointer group"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 bg-kkl-green-light rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Hammer className="w-4 h-4 text-kkl-green" />
+                          <div className="w-8 h-8 bg-fw-green-light rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Hammer className="w-4 h-4 text-fw-green" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-kkl-text text-sm truncate group-hover:text-kkl-green transition-colors">{wo.title}</h4>
+                            <h4 className="font-medium text-fw-text text-sm truncate group-hover:text-fw-green transition-colors">{wo.title}</h4>
                             <p className="text-xs text-gray-500 mt-1 line-clamp-1">{wo.data.description}</p>
                             <span className={`inline-block mt-2 text-xs px-2 py-0.5 rounded-full font-medium ${
                               wo.data.status === 'APPROVED_AND_SENT' ? 'bg-green-100 text-green-700' :
@@ -861,20 +861,20 @@ wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
                             navigate('/projects');
                           }
                         }}
-                        className="w-full text-right bg-white border border-kkl-border rounded-lg p-3 hover:border-kkl-green hover:shadow-sm transition-all cursor-pointer group"
+                        className="w-full text-right bg-white border border-fw-border rounded-lg p-3 hover:border-fw-green hover:shadow-sm transition-all cursor-pointer group"
                       >
                         <div className="flex items-start gap-3">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                             activity.status === 'approved' ? 'bg-green-100 text-green-600' :
                             activity.status === 'rejected' ? 'bg-red-100 text-red-600' :
                             activity.status === 'pending' ? 'bg-yellow-100 text-yellow-600' :
-                            'bg-kkl-green-light text-kkl-green'
+                            'bg-fw-green-light text-fw-green'
                           }`}>
                             {getActivityIcon(activity.type, activity.action)}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2">
-                              <h4 className="font-medium text-kkl-text text-sm truncate group-hover:text-kkl-green transition-colors">{activity.title}</h4>
+                              <h4 className="font-medium text-fw-text text-sm truncate group-hover:text-fw-green transition-colors">{activity.title}</h4>
                               {getStatusBadge(activity.status)}
                             </div>
                             <p className="text-xs text-gray-500 mt-1 line-clamp-2">{activity.description}</p>
@@ -884,7 +884,7 @@ wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
                                 {activity.time}
                               </span>
                               {activity.projectName && (
-                                <span className="text-xs text-kkl-green font-medium">{activity.projectName}</span>
+                                <span className="text-xs text-fw-green font-medium">{activity.projectName}</span>
                               )}
                             </div>
                           </div>
@@ -897,15 +897,15 @@ wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
                     {selectedDay.personalNotes.map((note) => (
                       <div
                         key={note.id}
-                        className="bg-white border border-kkl-border rounded-lg p-3"
+                        className="bg-white border border-fw-border rounded-lg p-3"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <div className="w-8 h-8 bg-kkl-green-light rounded-lg flex items-center justify-center flex-shrink-0">
-                              <PenLine className="w-4 h-4 text-kkl-green" />
+                            <div className="w-8 h-8 bg-fw-green-light rounded-lg flex items-center justify-center flex-shrink-0">
+                              <PenLine className="w-4 h-4 text-fw-green" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-kkl-text text-sm">{note.title}</h4>
+                              <h4 className="font-medium text-fw-text text-sm">{note.title}</h4>
                               <p className="text-xs text-gray-500 mt-1">{note.content}</p>
                             </div>
                           </div>
@@ -925,13 +925,13 @@ wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
                      selectedDay.personalNotes.length === 0 &&
                      !selectedDay.isHoliday && (
                       <div className="text-center py-8">
-                        <div className="w-14 h-14 bg-kkl-green-light rounded-full flex items-center justify-center mx-auto mb-3">
-                          <CalendarIcon className="w-7 h-7 text-kkl-green" />
+                        <div className="w-14 h-14 bg-fw-green-light rounded-full flex items-center justify-center mx-auto mb-3">
+                          <CalendarIcon className="w-7 h-7 text-fw-green" />
                         </div>
                         <p className="text-gray-500 text-sm">אין אירועים ליום זה</p>
                         <button
                           onClick={() => setShowAddNote(true)}
-                          className="mt-3 text-kkl-green hover:text-kkl-green-dark font-medium text-sm"
+                          className="mt-3 text-fw-green hover:text-fw-green-dark font-medium text-sm"
                         >
                           + הוסף הערה
                         </button>
@@ -947,29 +947,29 @@ wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
             </div>
             
             {/* Quick Stats */}
-            <div className="bg-white rounded-xl shadow-sm border border-kkl-border p-4">
-              <h3 className="font-semibold text-kkl-text mb-4">סיכום החודש</h3>
+            <div className="bg-white rounded-xl shadow-sm border border-fw-border p-4">
+              <h3 className="font-semibold text-fw-text mb-4">סיכום החודש</h3>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-kkl-green-light rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-kkl-green">
+                <div className="bg-fw-green-light rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-fw-green">
                     {activities.filter(a => a.status === 'completed').length}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">משימות הושלמו</p>
                 </div>
-                <div className="bg-kkl-green-light rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-kkl-green">
+                <div className="bg-fw-green-light rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-fw-green">
                     {activities.filter(a => a.status === 'pending').length}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">ממתינות לאישור</p>
                 </div>
-                <div className="bg-kkl-green-light rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-kkl-green">
+                <div className="bg-fw-green-light rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-fw-green">
                     {workOrders.length}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">הזמנות עבודה</p>
                 </div>
-                <div className="bg-kkl-green-light rounded-lg p-3 text-center">
-                  <p className="text-2xl font-bold text-kkl-green">
+                <div className="bg-fw-green-light rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-fw-green">
                     {personalNotes.length}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">הערות אישיות</p>
@@ -991,7 +991,7 @@ wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
             onClick={(e) => e.stopPropagation()}
             className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden"
           >
-            <div className="bg-kkl-green p-4 flex items-center justify-between">
+            <div className="bg-fw-green p-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">הערה חדשה</h3>
               <button
                 onClick={() => setShowAddNote(false)}
@@ -1003,22 +1003,22 @@ wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
             
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-kkl-text mb-2">כותרת</label>
+                <label className="block text-sm font-medium text-fw-text mb-2">כותרת</label>
                 <input
                   type="text"
                   value={newNote.title}
                   onChange={(e) => setNewNote({...newNote, title: e.target.value})}
-                  className="w-full px-4 py-3 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent transition-all"
+                  className="w-full px-4 py-3 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent transition-all"
                   placeholder="הכנס כותרת..."
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-kkl-text mb-2">תוכן</label>
+                <label className="block text-sm font-medium text-fw-text mb-2">תוכן</label>
                 <textarea
                   value={newNote.content}
                   onChange={(e) => setNewNote({...newNote, content: e.target.value})}
-                  className="w-full px-4 py-3 border border-kkl-border rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent transition-all resize-none"
+                  className="w-full px-4 py-3 border border-fw-border rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent transition-all resize-none"
                   rows={4}
                   placeholder="הכנס תוכן..."
                 />
@@ -1027,14 +1027,14 @@ wo.data.status === 'PENDING_APPROVAL' ? ' ממתין לאישור' :
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setShowAddNote(false)}
-                  className="flex-1 px-4 py-3 border border-kkl-border text-kkl-text rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  className="flex-1 px-4 py-3 border border-fw-border text-fw-text rounded-lg hover:bg-gray-50 transition-colors font-medium"
                 >
                   ביטול
                 </button>
                 <button
                   onClick={addPersonalNote}
                   disabled={!newNote.title.trim()}
-                  className="flex-1 px-4 py-3 bg-kkl-green text-white rounded-lg hover:bg-kkl-green-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-3 bg-fw-green text-white rounded-lg hover:bg-fw-green-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   שמור
                 </button>

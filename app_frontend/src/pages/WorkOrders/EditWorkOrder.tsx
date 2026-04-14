@@ -124,7 +124,7 @@ const EditWorkOrder: React.FC = () => {
           <div className="text-xl text-red-600 mb-4">{error}</div>
           <button 
             onClick={() => loadData()}
-            className="bg-kkl-green text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            className="bg-fw-green text-white px-4 py-2 rounded-lg hover:bg-green-700"
           >
             נסה שוב
           </button>
@@ -141,7 +141,7 @@ const EditWorkOrder: React.FC = () => {
           <div className="flex items-center mb-4">
             <button 
               onClick={() => navigate(`/work-orders/${id}`)}
-              className="text-kkl-green hover:text-green-700 flex items-center"
+              className="text-fw-green hover:text-green-700 flex items-center"
             >
               <ArrowRight className="w-4 h-4 ml-1" />
               חזרה לפרטי הזמנה
@@ -165,7 +165,7 @@ const EditWorkOrder: React.FC = () => {
                 value={formData.title || ''}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               />
             </div>
 
@@ -180,7 +180,7 @@ const EditWorkOrder: React.FC = () => {
                 value={formData.project_id || ''}
                 onChange={handleChange}
                 required
-                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               >
                 <option value="">בחר פרויקט</option>
                 {projects.map(project => (
@@ -201,7 +201,7 @@ const EditWorkOrder: React.FC = () => {
                 name="supplier_id"
                 value={formData.supplier_id || ''}
                 onChange={handleChange}
-                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               >
                 <option value="">בחר ספק (אופציונלי)</option>
                 {suppliers.map(supplier => (
@@ -224,7 +224,7 @@ const EditWorkOrder: React.FC = () => {
                 value={formData.equipment_type || ''}
                 onChange={handleChange}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               />
             </div>
 
@@ -241,7 +241,7 @@ const EditWorkOrder: React.FC = () => {
                   value={formData.work_start_date || ''}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                 />
               </div>
               <div>
@@ -255,7 +255,7 @@ const EditWorkOrder: React.FC = () => {
                   value={formData.work_end_date || ''}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
                 />
               </div>
             </div>
@@ -270,7 +270,7 @@ const EditWorkOrder: React.FC = () => {
                 name="priority"
                 value={formData.priority || 'medium'}
                 onChange={handleChange}
-                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full pr-3 pl-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               >
                 <option value="low">נמוכה</option>
                 <option value="medium">בינונית</option>
@@ -291,7 +291,7 @@ const EditWorkOrder: React.FC = () => {
                 onChange={handleChange}
                 min="0"
                 step="0.5"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               />
             </div>
 
@@ -308,7 +308,7 @@ const EditWorkOrder: React.FC = () => {
                 onChange={handleChange}
                 min="0"
                 step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               />
             </div>
 
@@ -323,7 +323,7 @@ const EditWorkOrder: React.FC = () => {
                 value={formData.description || ''}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kkl-green focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-fw-green focus:border-transparent"
               />
             </div>
 
@@ -346,7 +346,7 @@ const EditWorkOrder: React.FC = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-kkl-green hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50"
+                className="flex-1 bg-fw-green hover:bg-green-700 text-white px-4 py-2 rounded-lg disabled:opacity-50"
               >
                 {loading ? 'מעדכן...' : 'עדכן'}
               </button>
