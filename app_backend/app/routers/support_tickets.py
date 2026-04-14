@@ -17,7 +17,7 @@ from app.schemas.support_ticket import SupportTicketCreate, SupportTicketUpdate
 from app.services.activity_logger import log_support_ticket_created, log_support_ticket_replied, log_support_ticket_status_changed
 
 # Admin email for ticket notifications
-ADMIN_EMAIL = "avitbulnir@gmail.com"
+ADMIN_EMAIL = "support@forewise.co"
 
 
 def _notify_admins_new_ticket(db, ticket_id: int, ticket_number: str,

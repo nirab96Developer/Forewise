@@ -5,9 +5,9 @@ const BASE = process.env.BASE_URL || "http://localhost:5173";
 
 // Test credentials per role
 const CREDS = {
-  WORK_MANAGER: { email: "avitbulnir+kobi.nissim@gmail.com",  password: "Test1234!" },
-  AREA_MANAGER: { email: "avitbulnir+eli.nachum@gmail.com",   password: "Test1234!" },
-  ADMIN:        { email: "avitbulnir@gmail.com",              password: "Test1234!" },
+  WORK_MANAGER: { email: "work.manager@forewise.co",  password: "Test1234!" },
+  AREA_MANAGER: { email: "area.manager@forewise.co",   password: "Test1234!" },
+  ADMIN:        { email: "admin@forewise.co",              password: "Test1234!" },
 };
 
 async function login(request: any, role: keyof typeof CREDS): Promise<string | null> {

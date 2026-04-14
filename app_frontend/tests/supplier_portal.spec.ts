@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 const BASE = process.env.BASE_URL || "http://localhost:5173";
 const API   = process.env.API_URL  || "http://localhost:8000";
 
-const ADMIN_EMAIL    = "avitbulnir@gmail.com";
+const ADMIN_EMAIL    = "admin@forewise.co";
 const ADMIN_PASSWORD = "Test1234!";
 
 test.describe("Supplier Portal", () => {

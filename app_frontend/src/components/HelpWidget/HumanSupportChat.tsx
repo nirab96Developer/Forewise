@@ -556,7 +556,7 @@ const HumanSupportChat: React.FC = () => {
     } catch (error) {
       console.error('Error sending ticket:', error);
       await addBotMessage(
-"אופס, משהו השתבש \n\nנסה שוב או שלח מייל:\n avitbulnir@gmail.com"
+"אופס, משהו השתבש \n\nנסה שוב או שלח מייל:\n support@forewise.co"
       );
     } finally {
       setIsSending(false);
@@ -729,7 +729,7 @@ const HumanSupportChat: React.FC = () => {
             <div className="p-3 bg-gray-100 border-t border-gray-200 text-center">
               <p className="text-xs text-gray-500 flex items-center justify-center gap-2">
                 <Mail className="w-3 h-3" />
-                מייל: avitbulnir@gmail.com
+                מייל: support@forewise.co
               </p>
             </div>
           )}

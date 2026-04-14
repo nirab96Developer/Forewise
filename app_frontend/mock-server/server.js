@@ -74,7 +74,7 @@ app.get("/api/v1/auth/me", (req, res) => {
   res.json({
     id: "1",
     username: "admin",
-    email: "admin@kkl.co.il",
+    email: "admin@forewise.co",
     firstName: "מנהל",
     lastName: "מערכת",
     role: "admin",

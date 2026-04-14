@@ -4,7 +4,7 @@ const BASE = process.env.BASE_URL || "http://localhost:5173";
 const API   = process.env.API_URL  || "http://localhost:8000";
 
 // Real WORK_MANAGER credentials from DB
-const WM_EMAIL    = "avitbulnir+kobi.nissim@gmail.com";
+const WM_EMAIL    = "work.manager@forewise.co";
 const WM_PASSWORD = "Test1234!";
 
 test.describe("Work Order Flow", () => {
