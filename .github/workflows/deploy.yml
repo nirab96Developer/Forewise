@@ -59,19 +59,26 @@ jobs:
             echo ">> Restarting backend..."
             systemctl restart forewise.service
 
-            # 6. Verify deployment (retry up to 30 seconds)
+            # 6. Verify deployment — wait up to 90 seconds for 16 gunicorn workers to come up
             echo ">> Waiting for backend to start..."
-            for i in 1 2 3 4 5 6; do
+            HEALTH=""
+            for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18; do
               sleep 5
               HEALTH=$(curl -s http://localhost:8000/api/v1/health 2>/dev/null || true)
               if echo "$HEALTH" | grep -q '"status":"ok"'; then
-                echo "   Health OK (attempt $i)"
+                echo "   Health OK after $((i * 5))s (attempt $i)"
                 break
               fi
-              echo "   Attempt $i: not ready yet..."
+              STATUS=$(systemctl is-active forewise.service 2>/dev/null || echo "unknown")
+              echo "   Attempt $i (${STATUS}): not ready yet..."
+              if [ "$STATUS" = "failed" ]; then
+                echo "DEPLOY FAILED: service entered failed state"
+                systemctl status forewise.service --no-pager -l || true
+                exit 1
+              fi
             done
 
-            systemctl is-active forewise.service || { echo "DEPLOY FAILED: service not active"; exit 1; }
+            systemctl is-active forewise.service || { echo "DEPLOY FAILED: service not active after 90s"; systemctl status forewise.service --no-pager -l || true; exit 1; }
             echo "$HEALTH" | grep -q '"status":"ok"' || { echo "DEPLOY FAILED: health check failed"; exit 1; }
 
             # 7. Reload nginx
