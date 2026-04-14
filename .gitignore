@@ -136,6 +136,24 @@ __pycache__/
 docs/debug-reports/
 
 # ──────────────────────────────────────────
+# BUILD OUTPUT — never commit
+# ──────────────────────────────────────────
+app_frontend/dist/
+app_frontend/dist_electron/
+app_frontend/test-results/
+app_frontend/playwright-report/
+app_frontend/allure-results/
+app_backend/reports/worklogs/
+
+# ──────────────────────────────────────────
+# LOGS
+# ──────────────────────────────────────────
+*.log
+logs/
+app_backend/logs/
+qa_report.log
+
+# ──────────────────────────────────────────
 # MISC / IDE
 # ──────────────────────────────────────────
 .claude/
