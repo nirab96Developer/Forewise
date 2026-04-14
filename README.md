@@ -1,5 +1,7 @@
 # Forewise — Forest & Project Operations Management
 
+© 2026 Nir Avitbul. All rights reserved.
+
 A full-stack web application for managing field operations in forests and nature reserves.
 Handles the complete lifecycle from project creation through work orders, supplier coordination,
 equipment tracking, time reporting, and invoicing.
