@@ -598,7 +598,7 @@ Error: password authentication failed for user "forewise_app"
 
 ```
 ⚠️ app_frontend/.env.production
-VITE_GOOGLE_MAPS_API_KEY=AIzaSyAhfG1czq1pQN3dWC0EYD1E37lz5N520d8
+VITE_GOOGLE_MAPS_API_KEY=[REDACTED]
 ```
 
 **פתרון:** העבר ל-environment variable או Key Vault

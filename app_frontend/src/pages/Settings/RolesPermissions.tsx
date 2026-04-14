@@ -105,17 +105,36 @@ const RolesPermissions: React.FC = () => {
     try {
       const [rolesRes, permissionsRes] = await Promise.all([
         api.get('/roles', { params: { limit: 50 } }).catch(() => ({ data: [] })),
-        api.get('/permissions', { params: { limit: 300 } }).catch(() => ({ data: [] }))
+        api.get('/permissions', { params: { page_size: 500 } }).catch(() => ({ data: [] }))
       ]);
       
-      // Handle both array and {items: [...]} response formats
       const rolesData = rolesRes?.data?.items || rolesRes?.data || [];
       const permissionsData = permissionsRes?.data?.items || permissionsRes?.data || [];
       
       setRoles(Array.isArray(rolesData) ? rolesData : []);
-      // Filter out junk test permissions
-      const cleanPerms = (Array.isArray(permissionsData) ? permissionsData : [])
-        .filter((p: any) => !p.code?.startsWith('test.') && p.name !== 'Code Test Permission' && p.name !== 'Test Create Permission' && p.name !== 'Delete Test Permission' && p.name !== 'First Permission' && p.name !== 'Updated Permission Name');
+
+      // Remove junk + de-duplicate: keep UPPERCASE if both formats exist for same action
+      const rawPerms = (Array.isArray(permissionsData) ? permissionsData : [])
+        .filter((p: any) => !p.code?.startsWith('test.') &&
+          !['Code Test Permission','Test Create Permission','Delete Test Permission',
+            'First Permission','Updated Permission Name'].includes(p.name));
+
+      // Prefer UPPERCASE codes — deduplicate by semantic meaning
+      const seenSemantic = new Set<string>();
+      const cleanPerms = rawPerms
+        .sort((a: any, b: any) => {
+          // UPPERCASE first
+          const aUp = a.code === a.code?.toUpperCase() ? 0 : 1;
+          const bUp = b.code === b.code?.toUpperCase() ? 0 : 1;
+          return aUp - bUp;
+        })
+        .filter((p: any) => {
+          const key = p.code?.toLowerCase().replace(/[._]/g, '');
+          if (seenSemantic.has(key)) return false;
+          seenSemantic.add(key);
+          return true;
+        });
+
       setPermissions(cleanPerms);
     } catch (err) {
       console.error('Error loading data:', err);

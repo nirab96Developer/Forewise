@@ -1,11 +1,9 @@
 
 // src/components/Map/LeafletMap.tsx
-// Universal Leaflet map - robust, mobile-friendly, no API key
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -47,10 +45,24 @@ export interface LeafletMapProps {
   mapType?: 'street' | 'satellite' | 'topo';
 }
 
-const TILES = {
-  street: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  topo: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+const OWM_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || '';
+
+const BASE_TILES = {
+  street:    { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',   label: '🗺️ רגיל'   },
+  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', label: '🛰️ לוויין' },
+  hybrid:    { url: 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', label: '🏙️ היברידי' },
+  topo:      { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',      label: '🏔️ טופו'   },
+};
+
+type BaseType   = keyof typeof BASE_TILES;
+type WeatherKey = 'none' | 'clouds' | 'precipitation' | 'wind' | 'temp';
+
+const WEATHER_LAYERS: Record<WeatherKey, { label: string; emoji: string; url: string }> = {
+  none:          { label: 'כבוי',      emoji: '—',  url: '' },
+  clouds:        { label: 'עננים',     emoji: '☁️', url: `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${OWM_KEY}` },
+  precipitation: { label: 'גשם',       emoji: '🌧️', url: `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OWM_KEY}` },
+  wind:          { label: 'רוח',       emoji: '💨', url: `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${OWM_KEY}` },
+  temp:          { label: 'טמפרטורה', emoji: '🌡️', url: `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${OWM_KEY}` },
 };
 
 function geomToLatLngs(geometry: any): L.LatLngTuple[][] {
@@ -77,22 +89,22 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
   className = '',
   mapType = 'street',
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const tileRef = useRef<L.TileLayer | null>(null);
-  const layerGroupRef = useRef<L.LayerGroup | null>(null);
-  const hasFittedRef = useRef(false);
-  const [activeType, setActiveType] = useState(mapType);
+  const containerRef   = useRef<HTMLDivElement>(null);
+  const mapRef         = useRef<L.Map | null>(null);
+  const tileRef        = useRef<L.TileLayer | null>(null);
+  const weatherRef     = useRef<L.TileLayer | null>(null);
+  const layerGroupRef  = useRef<L.LayerGroup | null>(null);
+  const hasFittedRef   = useRef(false);
+
+  const [activeBase,    setActiveBase]    = useState<BaseType>(mapType === 'satellite' ? 'satellite' : mapType === 'topo' ? 'topo' : 'street');
+  const [activeWeather, setActiveWeather] = useState<WeatherKey>('none');
+  const [showWeather,   setShowWeather]   = useState(false);
 
   // Create map once
   useEffect(() => {
-    if (!containerRef.current) return;
-    if (mapRef.current) return;
+    if (!containerRef.current || mapRef.current) return;
 
-    const ISRAEL_BOUNDS = L.latLngBounds(
-      L.latLng(29.0, 33.8),
-      L.latLng(33.8, 36.4)
-    );
+    const ISRAEL_BOUNDS = L.latLngBounds(L.latLng(29.0, 33.8), L.latLng(33.8, 36.4));
 
     const map = L.map(containerRef.current, {
       center: center as L.LatLngExpression,
@@ -107,39 +119,55 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       tap: false,
     } as L.MapOptions & { tap: boolean });
 
-    const tile = L.tileLayer(TILES[activeType], { maxZoom: 19 });
+    const subdomains = activeBase === 'hybrid' ? ['0', '1', '2', '3'] : ['a', 'b', 'c'];
+    const tile = L.tileLayer(BASE_TILES[activeBase].url, { maxZoom: 20, subdomains });
     tile.addTo(map);
     tileRef.current = tile;
 
-    map.on('drag', () => {
-      map.panInsideBounds(ISRAEL_BOUNDS, { animate: false });
-    });
+    map.on('drag', () => map.panInsideBounds(ISRAEL_BOUNDS, { animate: false }));
 
     const layerGroup = L.layerGroup().addTo(map);
     layerGroupRef.current = layerGroup;
-
     mapRef.current = map;
 
-    // Fix size after render
-    setTimeout(() => { map.invalidateSize(); }, 100);
-    setTimeout(() => { map.invalidateSize(); }, 500);
+    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => map.invalidateSize(), 500);
 
     return () => {
       map.remove();
       mapRef.current = null;
       tileRef.current = null;
+      weatherRef.current = null;
       layerGroupRef.current = null;
     };
   }, []);
 
-  // Switch tile layer
+  // Switch base tile layer
   useEffect(() => {
     if (!mapRef.current || !tileRef.current) return;
-    tileRef.current.setUrl(TILES[activeType]);
-  }, [activeType]);
+    const subdomains = activeBase === 'hybrid' ? ['0', '1', '2', '3'] : ['a', 'b', 'c'];
+    tileRef.current.setUrl(BASE_TILES[activeBase].url);
+    (tileRef.current as any).options.subdomains = subdomains;
+    tileRef.current.redraw();
+  }, [activeBase]);
+
+  // Switch weather overlay
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (weatherRef.current) {
+      mapRef.current.removeLayer(weatherRef.current);
+      weatherRef.current = null;
+    }
+    if (activeWeather !== 'none' && WEATHER_LAYERS[activeWeather].url) {
+      const wLayer = L.tileLayer(WEATHER_LAYERS[activeWeather].url, { opacity: 0.6, maxZoom: 20 });
+      wLayer.addTo(mapRef.current);
+      weatherRef.current = wLayer;
+    }
+  }, [activeWeather]);
 
   const prevMaskRef = useRef(maskPolygon);
-  // Render content (points, polygons, mask)
+
+  // Render points, polygons, mask
   useEffect(() => {
     if (!mapRef.current || !layerGroupRef.current) return;
     if (maskPolygon !== prevMaskRef.current) {
@@ -149,25 +177,18 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
     const map = mapRef.current;
     const group = layerGroupRef.current;
     group.clearLayers();
-
     const allBounds = L.latLngBounds([]);
 
-    // Mask - dim outside, highlight inside
     if (maskPolygon?.geometry) {
       const worldOuter: L.LatLngTuple[] = [[-85, -180], [-85, 180], [85, 180], [85, -180]];
       const holes = geomToLatLngs(maskPolygon.geometry);
       holes.forEach(hole => {
-        L.polygon([worldOuter, hole] as any, {
-          fillColor: '#f0fdf4', fillOpacity: 0.7, stroke: false, interactive: false,
-        }).addTo(group);
-        L.polyline(hole, {
-          color: '#047857', weight: 3, opacity: 1, dashArray: '8, 4',
-        }).addTo(group);
+        L.polygon([worldOuter, hole] as any, { fillColor: '#f0fdf4', fillOpacity: 0.7, stroke: false, interactive: false }).addTo(group);
+        L.polyline(hole, { color: '#047857', weight: 3, opacity: 1, dashArray: '8, 4' }).addTo(group);
         hole.forEach(p => allBounds.extend(p));
       });
     }
 
-    // Polygons
     polygons.forEach(poly => {
       if (!poly.geometry) return;
       const paths = geomToLatLngs(poly.geometry);
@@ -185,82 +206,104 @@ const LeafletMap: React.FC<LeafletMapProps> = ({
       });
     });
 
-    // Points
     points.forEach(point => {
       if (!point.lat || !point.lng) return;
       const color = point.color || '#16a34a';
       const icon = L.divIcon({
         className: '',
-        html: '<div style="width:16px;height:16px;border-radius:50%;background:' + color +
-          ';border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>',
+        html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`,
         iconSize: [16, 16], iconAnchor: [8, 8],
       });
       const marker = L.marker([point.lat, point.lng], { icon }).addTo(group);
       const popup = point.popupContent ||
-        '<div style="direction:rtl;padding:4px;min-width:100px"><b>' + point.name + '</b>' +
-        (point.code ? '<br><span style="color:#6b7280;font-size:11px">' + point.code + '</span>' : '') + '</div>';
+        `<div style="direction:rtl;padding:4px;min-width:100px"><b>${point.name}</b>${point.code ? `<br><span style="color:#6b7280;font-size:11px">${point.code}</span>` : ''}</div>`;
       marker.bindPopup(popup);
       if (point.onClick) marker.on('click', point.onClick);
-      // Only include points in bounds if there are no polygons (otherwise zoom to polygons)
-      if (polygons.length === 0 && !maskPolygon) {
-        allBounds.extend([point.lat, point.lng]);
-      }
+      if (polygons.length === 0 && !maskPolygon) allBounds.extend([point.lat, point.lng]);
     });
 
-    // If no polygon bounds set, fallback to points
     if (!allBounds.isValid() && points.length > 0) {
       points.forEach(p => { if (p.lat && p.lng) allBounds.extend([p.lat, p.lng]); });
     }
 
-    // Fit bounds — only on first load or when mask/polygon selection changes
     const shouldFit = !hasFittedRef.current || maskPolygon;
     if (fitBounds && allBounds.isValid() && shouldFit) {
-      setTimeout(() => {
-        map.fitBounds(allBounds, { padding: [40, 40], maxZoom: 15 });
-        map.invalidateSize();
-      }, 200);
+      setTimeout(() => { map.fitBounds(allBounds, { padding: [40, 40], maxZoom: 15 }); map.invalidateSize(); }, 200);
       hasFittedRef.current = true;
     }
   }, [points, polygons, maskPolygon]);
 
-  // Fix size when tab becomes visible
   useEffect(() => {
-    const observer = new ResizeObserver(() => {
-      mapRef.current?.invalidateSize();
-    });
+    const observer = new ResizeObserver(() => mapRef.current?.invalidateSize());
     if (containerRef.current) observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
 
   const pixelHeight = height === '100%' ? 'calc(100vh - 250px)' : height;
+  const btnBase = (active: boolean) => ({
+    padding: '5px 10px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+    border: 'none', cursor: 'pointer' as const,
+    background: active ? '#16a34a' : 'transparent',
+    color: active ? '#fff' : '#374151',
+    whiteSpace: 'nowrap' as const,
+  });
 
   return (
     <div className={className} style={{ position: 'relative', minHeight: '300px', overflow: 'hidden', isolation: 'isolate' }}>
-      {/* Map type buttons */}
+
+      {/* Base layer selector */}
       <div style={{
         position: 'absolute', top: 10, left: 10, zIndex: 1000,
-        display: 'flex', gap: 2, background: '#fff', borderRadius: 8, padding: 3,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.2)', border: '1px solid #e5e7eb'
+        display: 'flex', gap: 2, background: 'rgba(255,255,255,0.96)',
+        borderRadius: 8, padding: 3,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.18)', border: '1px solid #e5e7eb',
       }}>
-        {(['street', 'satellite', 'topo'] as const).map(type => (
-          <button key={type} onClick={() => setActiveType(type)}
-            style={{
-              padding: '5px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6, border: 'none', cursor: 'pointer',
-              background: activeType === type ? '#16a34a' : 'transparent',
-              color: activeType === type ? '#fff' : '#374151',
-            }}>
-            {type === 'street' ? 'רגיל' : type === 'satellite' ? 'לוויין' : 'טופו'}
+        {(Object.keys(BASE_TILES) as BaseType[]).map(type => (
+          <button key={type} onClick={() => setActiveBase(type)} style={btnBase(activeBase === type)}>
+            {BASE_TILES[type].label}
           </button>
         ))}
       </div>
 
+      {/* Weather toggle button */}
+      <div style={{ position: 'absolute', top: 50, left: 10, zIndex: 1000 }}>
+        <button
+          onClick={() => setShowWeather(v => !v)}
+          style={{
+            padding: '5px 12px', fontSize: 12, fontWeight: 600, borderRadius: 8,
+            border: '1px solid #e5e7eb', cursor: 'pointer',
+            background: showWeather ? '#0ea5e9' : 'rgba(255,255,255,0.96)',
+            color: showWeather ? '#fff' : '#374151',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+          }}>
+          🌤️ מזג אוויר {activeWeather !== 'none' ? `· ${WEATHER_LAYERS[activeWeather].emoji}` : ''}
+        </button>
+
+        {/* Weather layer options */}
+        {showWeather && (
+          <div style={{
+            marginTop: 4, background: 'rgba(255,255,255,0.97)', borderRadius: 8,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.15)', border: '1px solid #e5e7eb',
+            padding: 4, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 140,
+          }}>
+            {(Object.keys(WEATHER_LAYERS) as WeatherKey[]).map(key => (
+              <button key={key} onClick={() => { setActiveWeather(key); }}
+                style={{
+                  padding: '5px 10px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+                  border: 'none', cursor: 'pointer', textAlign: 'right',
+                  background: activeWeather === key ? '#0ea5e9' : 'transparent',
+                  color: activeWeather === key ? '#fff' : '#374151',
+                }}>
+                {WEATHER_LAYERS[key].emoji} {WEATHER_LAYERS[key].label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div ref={containerRef} style={{
-        width: '100%',
-        height: pixelHeight,
-        minHeight: '300px',
-        borderRadius: 12,
-        overflow: 'hidden',
-        background: '#e5e7eb',
+        width: '100%', height: pixelHeight, minHeight: '300px',
+        borderRadius: 12, overflow: 'hidden', background: '#e5e7eb',
       }} />
     </div>
   );

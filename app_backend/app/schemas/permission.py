@@ -85,7 +85,7 @@ class PermissionSearch(BaseModel):
     action: Optional[str] = None
     is_active: Optional[bool] = True
     page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=50, ge=1, le=100)
+    page_size: int = Field(default=200, ge=1, le=500)
     sort_by: str = Field(default="code")
     sort_desc: bool = False
 

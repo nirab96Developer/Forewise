@@ -65,8 +65,8 @@ SMTP_PASSWORD: str = "nuxo pldc qtwn rhvn"  # ⚠️ HARDCODED PASSWORD!
 SECRET_KEY="9ed9a3dfc0518cdb39d9aebd4ead7aa354f7667bc3695e5f9ba92274a21d3714"  # ⚠️ EXPOSED
 SMTP_USER="9d8d03001@smtp-brevo.com"
 EMAIL_PASSWORD="bskadgDWZkKbzyb"  # ⚠️ EXPOSED
-BREVO_API_KEY=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  # ⚠️ EXPOSED
-VITE_GOOGLE_MAPS_API_KEY=AIzaSyCxYnvuDsofgDxi_KOczhLnuEW80xH06jU  # ⚠️ EXPOSED
+BREVO_API_KEY=[REDACTED]  # ⚠️ EXPOSED
+VITE_GOOGLE_MAPS_API_KEY=[REDACTED]  # ⚠️ EXPOSED
 ```
 
 **`app_backend/alembic.ini` (שורה 6):**
@@ -76,7 +76,7 @@ sqlalchemy.url = postgresql://forest_admin:N123321ir!@localhost:5432/reporting_a
 
 **`app_frontend/.env.production` (שורה 10):**
 ```bash
-VITE_GOOGLE_MAPS_API_KEY=AIzaSyAhfG1czq1pQN3dWC0EYD1E37lz5N520d8  # ⚠️ EXPOSED
+VITE_GOOGLE_MAPS_API_KEY=[REDACTED]  # ⚠️ EXPOSED
 ```
 
 #### 💥 השפעה:
