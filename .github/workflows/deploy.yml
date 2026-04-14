@@ -55,7 +55,13 @@ jobs:
             npm run build
             cd ..
 
-            # 5. Restart backend
+            # 5. Ensure gunicorn is available in .venv (symlink if needed)
+            if [ ! -f "app_backend/.venv/bin/gunicorn" ]; then
+              echo ">> Linking gunicorn into .venv..."
+              ln -sf "$(which gunicorn)" app_backend/.venv/bin/gunicorn
+            fi
+
+            # 5b. Restart backend
             echo ">> Restarting backend..."
             systemctl restart forewise.service
 
