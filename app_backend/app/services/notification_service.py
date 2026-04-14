@@ -5,16 +5,12 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from app.models.notification import Notification
 from app.models.user import User
 from app.schemas.notification import (
     NotificationCreate,
-    NotificationUpdate,
-    NotificationResponse,
-    NotificationPriority,
 )
 
 log = logging.getLogger(__name__)

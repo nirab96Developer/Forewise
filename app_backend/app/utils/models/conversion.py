@@ -9,7 +9,7 @@ batch migrations.
 import time
 import uuid
 from datetime import date, datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 from sqlalchemy import inspect

@@ -4,14 +4,13 @@ Geo Router - API endpoints for forest polygons, region/area boundaries
 
 from typing import Annotated, Dict, Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 import json
 
 from app.core.database import get_db
 from app.models import User
-from app.models.region import Region
-from app.models.area import Area
 from app.core.dependencies import get_current_active_user, require_permission
 from app.services.forest_polygon_service import forest_polygon_service
 
@@ -88,6 +87,77 @@ def get_project_forest_polygon(
     return forest_polygon_service.get_project_forest_map(db, project_id)
 
 
+# ===== Create Single Polygon =====
+
+class ForestPolygonCreate(BaseModel):
+    project_id: Optional[int] = None
+    name: Optional[str] = ""
+    geometry: Dict[str, Any]
+
+
+@router.post("/forest-polygons", status_code=201)
+def create_forest_polygon(
+    data: ForestPolygonCreate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """
+    Create a single forest polygon from drawn geometry.
+    Accepts Polygon or MultiPolygon GeoJSON geometry.
+    Optionally links it to a project.
+    Returns the created polygon with area in hectares and dunam.
+    """
+    require_permission(current_user, "projects.update")
+
+    geom_type = data.geometry.get("type")
+    if geom_type not in ("Polygon", "MultiPolygon"):
+        raise HTTPException(status_code=400, detail="Geometry must be Polygon or MultiPolygon")
+
+    geometry = data.geometry
+    if geom_type == "Polygon":
+        geometry = {"type": "MultiPolygon", "coordinates": [geometry["coordinates"]]}
+
+    geojson_str = json.dumps(geometry)
+
+    result = db.execute(text("""
+        WITH new_geom AS (
+            SELECT
+                ST_SetSRID(ST_GeomFromGeoJSON(:geojson), 4326) AS geom,
+                md5(ST_AsEWKB(ST_Multi(ST_MakeValid(
+                    ST_SetSRID(ST_GeomFromGeoJSON(:geojson), 4326)
+                )))) AS hash
+        )
+        INSERT INTO forest_polygons (geom, geom_hash)
+        SELECT geom, hash FROM new_geom
+        ON CONFLICT (geom_hash) DO UPDATE SET geom_hash = forest_polygons.geom_hash
+        RETURNING id,
+            ROUND(ST_Area(geom::geography) / 10000, 2) AS area_hectares,
+            ROUND(ST_Area(geom::geography) / 1000, 2)  AS area_dunam
+    """), {"geojson": geojson_str}).fetchone()
+
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to create polygon")
+
+    polygon_id = result[0]
+    area_hectares = float(result[1])
+    area_dunam = float(result[2])
+
+    # Link to project if provided
+    if data.project_id:
+        from app.models.project import Project as ProjectModel
+        project = db.query(ProjectModel).filter(ProjectModel.id == data.project_id).first()
+        if project:
+            project.forest_polygon_id = polygon_id
+
+    db.commit()
+
+    return {
+        "id": polygon_id,
+        "area_hectares": area_hectares,
+        "area_dunam": area_dunam,
+    }
+
+
 # ===== Admin Import Endpoints =====
 
 @router.post("/forest-polygons/import")
@@ -139,7 +209,7 @@ async def import_forest_polygons_file(
         geojson = json.loads(content.decode('utf-8'))
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON file")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=400, detail="שגיאת שרת")
     
     result = forest_polygon_service.import_geojson(db, geojson)

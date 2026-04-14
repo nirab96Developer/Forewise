@@ -10,7 +10,7 @@ from app.models.permission import Permission
 from app.models.role_permission import RolePermission
 from app.schemas.role import RoleCreate, RoleUpdate, RoleSearch
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import NotFoundException, DuplicateException
 
 
 class RoleService(BaseService[Role]):
@@ -91,7 +91,7 @@ class RoleService(BaseService[Role]):
     ) -> None:
         """הקצאת הרשאה לתפקיד"""
         # Validate role exists
-        role = self.get_by_id_or_404(db, role_id)
+        self.get_by_id_or_404(db, role_id)
         
         # Validate permission exists
         permission = db.query(Permission).filter(Permission.id == permission_id).first()

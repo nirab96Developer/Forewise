@@ -78,15 +78,14 @@ class PaymentUpdate(PydanticBaseModel):
         return v
 
 
-class PaymentResponse(PaymentBase):
-    """Payment response schema."""
+class PaymentSummaryResponse(PaymentBase):
+    """Abbreviated payment response (list views)."""
 
     id: int
     processed_by_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    # From relationships
     invoice_number: Optional[str] = None
     processed_by_name: Optional[str] = None
 

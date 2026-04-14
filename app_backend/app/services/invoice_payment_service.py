@@ -3,9 +3,7 @@ InvoicePayment Service
 """
 
 from typing import Optional, List, Tuple
-from decimal import Decimal
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
 
 from app.models.invoice_payment import InvoicePayment
 from app.models.invoice import Invoice

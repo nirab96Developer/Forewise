@@ -10,7 +10,7 @@ from app.models.area import Area
 from app.models.region import Region
 from app.schemas.area import AreaCreate, AreaUpdate, AreaSearch, AreaStatistics
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import ValidationException, DuplicateException
 
 
 class AreaService(BaseService[Area]):

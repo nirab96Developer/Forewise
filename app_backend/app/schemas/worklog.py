@@ -12,7 +12,7 @@ class WorklogBase(BaseModel):
     """Base worklog schema"""
     report_date: Optional[date] = Field(None, description="תאריך דיווח")
     work_date: Optional[date] = Field(None, description="תאריך עבודה (alias)")
-    work_hours: Optional[Decimal] = Field(None, ge=0, description="שעות עבודה")
+    work_hours: Optional[Decimal] = Field(None, gt=0, description="שעות עבודה")
     activity_description: Optional[str] = Field(None, description="תיאור פעילות")
     description: Optional[str] = Field(None, description="תיאור (alias)")
     notes: Optional[str] = None
@@ -53,7 +53,7 @@ class WorklogCreate(WorklogBase):
 class WorklogUpdate(BaseModel):
     """Update worklog"""
     report_date: Optional[date] = None
-    work_hours: Optional[Decimal] = Field(None, ge=0)
+    work_hours: Optional[Decimal] = Field(None, gt=0)
     break_hours: Optional[Decimal] = Field(None, ge=0)
     start_time: Optional[time] = None
     end_time: Optional[time] = None

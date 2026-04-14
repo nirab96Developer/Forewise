@@ -3,7 +3,7 @@
 import secrets
 import string
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 

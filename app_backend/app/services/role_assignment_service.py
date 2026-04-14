@@ -4,13 +4,13 @@ RoleAssignment Service - לוגיקה עסקית להקצאת תפקידים
 from datetime import datetime
 from typing import List, Tuple, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_
 
 from app.models.role_assignment import RoleAssignment
 from app.models.user import User
 from app.models.role import Role
-from app.schemas.role_assignment import RoleAssignmentCreate, RoleAssignmentUpdate, RoleAssignmentSearch
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.schemas.role_assignment import RoleAssignmentCreate, RoleAssignmentSearch
+from app.core.exceptions import NotFoundException, DuplicateException
 
 
 class RoleAssignmentService:

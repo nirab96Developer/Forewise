@@ -7,15 +7,12 @@ from typing import TYPE_CHECKING, Optional
 from datetime import datetime
 
 from sqlalchemy import Integer, String, Text, DateTime, ForeignKey, text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
 
 if TYPE_CHECKING:
-    from app.models.work_order import WorkOrder
-    from app.models.supplier import Supplier
-    from app.models.supplier_constraint_reason import SupplierConstraintReason
-    from app.models.user import User
+    pass
 
 
 class SupplierConstraintLog(Base):

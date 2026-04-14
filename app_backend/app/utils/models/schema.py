@@ -5,10 +5,9 @@ Model schema utilities
 Provides functions for extracting and analyzing model schemas.
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List
 
 from sqlalchemy import inspect
-from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session
 
 from app.core.logging import logger

@@ -12,9 +12,8 @@ import json
 import logging
 from datetime import datetime
 from typing import Dict, List
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -95,7 +94,7 @@ async def authenticate_websocket(websocket: WebSocket, token: str = None) -> Use
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
             
-    except (JWTError, ValueError) as e:
+    except (JWTError, ValueError):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     

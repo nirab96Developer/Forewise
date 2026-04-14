@@ -9,13 +9,12 @@ from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import Integer, String, Text, Boolean, Date, ForeignKey, Numeric
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.budget import Budget
-    from app.models.user import User
+    pass
 
 
 class BalanceRelease(BaseModel):

@@ -115,7 +115,8 @@ showToast('החשבונית נשלחה לספק במייל ', 'success');
   };
 
   const handlePrint = () => {
-    window.open(`/api/v1/invoices/${id}/pdf`, '_blank');
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
+    window.open(`/api/v1/invoices/${id}/pdf?token=${encodeURIComponent(token)}`, '_blank');
   };
 
   if (loading) return <UnifiedLoader size="full" />;

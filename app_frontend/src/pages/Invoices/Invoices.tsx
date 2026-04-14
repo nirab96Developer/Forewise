@@ -233,7 +233,7 @@ const Invoices: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-gray-900">
-{new Intl.NumberFormat('he-IL').format(invoice.amount || 0)}
+{new Intl.NumberFormat('he-IL').format(invoice.amount || invoice.total_amount || 0)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -243,7 +243,7 @@ const Invoices: React.FC = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-600">
-                          {invoice.created_at ? new Date(invoice.created_at).toLocaleDateString('he-IL') : 'לא צוין'}
+                          {invoice.issue_date ? new Date(invoice.issue_date).toLocaleDateString('he-IL') : invoice.created_at ? new Date(invoice.created_at).toLocaleDateString('he-IL') : 'לא צוין'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -258,7 +258,10 @@ const Invoices: React.FC = () => {
                           <button 
                             className="p-2 hover:bg-gray-100 rounded-lg"
                             title="הורדת PDF"
-                            onClick={() => window.open(`/api/v1/invoices/${invoice.id}/pdf`, '_blank')}
+                            onClick={() => {
+                              const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
+                              window.open(`/api/v1/invoices/${invoice.id}/pdf?token=${encodeURIComponent(token)}`, '_blank');
+                            }}
                           >
                             <Download className="w-4 h-4 text-gray-600" />
                           </button>

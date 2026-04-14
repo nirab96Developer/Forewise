@@ -11,7 +11,7 @@ from app.core.exceptions import ValidationException
 from app.models.work_order import WorkOrder
 from app.models.supplier import Supplier
 from app.models.project import Project
-from app.schemas.work_order import WorkOrderCreate, WorkOrderUpdate, WorkOrderResponse
+from app.schemas.work_order import WorkOrderCreate, WorkOrderUpdate
 from app.services.rate_service import resolve_supplier_pricing
 
 
@@ -344,7 +344,6 @@ class WorkOrderService:
         """
         import secrets
         from datetime import timedelta
-        from app.core.config import settings
 
         work_order = self.get_work_order(db, work_order_id)
         if not work_order:
@@ -783,8 +782,8 @@ class WorkOrderService:
             from app.services.supplier_rotation_service import SupplierRotationService
             rot_svc = SupplierRotationService()
             rot_svc.update_rotation_after_completion(db, supplier_id=work_order.supplier_id)
-        except Exception:
-            pass
+        except Exception as _rce:
+            log.warning(f"Fair Rotation update on complete WO {work_order.id}: {_rce}")
 
         return work_order
 
@@ -1202,27 +1201,92 @@ class WorkOrderService:
         return wo
 
     def reject(self, db, wo_id, request=None, reason=None, current_user=None, current_user_id=None):
-        """Reject a work order  rejected."""
+        """Reject a work order → REJECTED + release committed budget + update Fair Rotation."""
         from app.models.work_order import WorkOrder
         import datetime
+        import logging
+        log = logging.getLogger(__name__)
+
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
-        if wo:
-            wo.status = 'REJECTED'
-            wo.updated_at = datetime.datetime.now()
-            db.commit()
-            db.refresh(wo)
+        if not wo:
+            return wo
+
+        wo.status = 'REJECTED'
+        wo.updated_at = datetime.datetime.now()
+
+        # Release committed budget
+        try:
+            if wo.project_id and (wo.frozen_amount or 0) > 0:
+                from app.models.budget import Budget
+                from decimal import Decimal
+                budget = db.query(Budget).filter(
+                    Budget.project_id == wo.project_id,
+                    Budget.is_active == True,
+                    Budget.deleted_at.is_(None),
+                ).first()
+                if budget:
+                    frozen = Decimal(str(wo.frozen_amount or 0))
+                    budget.committed_amount = max(Decimal(0), (budget.committed_amount or Decimal(0)) - frozen)
+                    budget.remaining_amount = (
+                        (budget.total_amount or Decimal(0))
+                        - (budget.committed_amount or Decimal(0))
+                        - (budget.spent_amount or Decimal(0))
+                    )
+                    wo.frozen_amount = 0
+        except Exception as _be:
+            log.warning(f"Budget release on reject WO {wo_id}: {_be}")
+
+        db.commit()
+        db.refresh(wo)
+
+        # Fair Rotation update
+        try:
+            if wo.supplier_id:
+                from app.services.supplier_rotation_service import SupplierRotationService
+                SupplierRotationService().update_rotation_after_rejection(db, supplier_id=wo.supplier_id)
+        except Exception as _re:
+            log.warning(f"Fair Rotation update on reject WO {wo_id}: {_re}")
+
         return wo
 
     def cancel(self, db, wo_id, notes=None, version=None, current_user=None, current_user_id=None):
-        """Cancel a work order  cancelled."""
+        """Cancel a work order → CANCELLED + release committed budget."""
         from app.models.work_order import WorkOrder
         import datetime
+        import logging
+        log = logging.getLogger(__name__)
+
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
-        if wo:
-            wo.status = 'CANCELLED'
-            wo.updated_at = datetime.datetime.now()
-            db.commit()
-            db.refresh(wo)
+        if not wo:
+            return wo
+
+        wo.status = 'CANCELLED'
+        wo.updated_at = datetime.datetime.now()
+
+        # Release committed budget — same logic as reject/delete
+        try:
+            if wo.project_id and (wo.frozen_amount or 0) > 0:
+                from app.models.budget import Budget
+                from decimal import Decimal
+                budget = db.query(Budget).filter(
+                    Budget.project_id == wo.project_id,
+                    Budget.is_active == True,
+                    Budget.deleted_at.is_(None),
+                ).first()
+                if budget:
+                    frozen = Decimal(str(wo.frozen_amount or 0))
+                    budget.committed_amount = max(Decimal(0), (budget.committed_amount or Decimal(0)) - frozen)
+                    budget.remaining_amount = (
+                        (budget.total_amount or Decimal(0))
+                        - (budget.committed_amount or Decimal(0))
+                        - (budget.spent_amount or Decimal(0))
+                    )
+                    wo.frozen_amount = 0
+        except Exception as _be:
+            log.warning(f"Budget release on cancel WO {wo_id}: {_be}")
+
+        db.commit()
+        db.refresh(wo)
         return wo
 
     def start(self, db, wo_id, request=None, current_user=None, current_user_id=None):

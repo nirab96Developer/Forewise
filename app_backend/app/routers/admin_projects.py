@@ -1,16 +1,13 @@
 """Admin endpoints for project management"""
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
 from app.models.project import Project
 from app.models.area import Area
-from app.models.region import Region
-from app.schemas.project import ProjectUpdate
 
 router = APIRouter(prefix="/admin/projects", tags=["Admin - Projects"])
 

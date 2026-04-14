@@ -3,7 +3,6 @@ Budget Service
 """
 
 from typing import Optional, List, Tuple
-from decimal import Decimal
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select, func, or_
 
@@ -11,7 +10,7 @@ from app.models.budget import Budget
 from app.models.budget_item import BudgetItem
 from app.schemas.budget import BudgetCreate, BudgetUpdate, BudgetSearch, BudgetStatistics
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import ValidationException, DuplicateException
 
 
 class BudgetService(BaseService[Budget]):
@@ -119,7 +118,7 @@ class BudgetService(BaseService[Budget]):
     
     def soft_delete(self, db: Session, budget_id: int, current_user_id: int) -> Budget:
         """Soft delete budget"""
-        budget = self.get_by_id_or_404(db, budget_id)
+        self.get_by_id_or_404(db, budget_id)
         
         # Check no active items
         active_items = db.query(BudgetItem).filter(

@@ -2,8 +2,8 @@
 Budgets Router
 """
 
-from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -381,7 +381,7 @@ def get_budget_committed(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """Work Orders holding budget (committed amounts)."""
-    from app.models import Budget, WorkOrder, Project, Supplier
+    from app.models import Budget, WorkOrder, Supplier
     
     budget = db.query(Budget).filter(Budget.id == budget_id, Budget.is_active == True).first()
     if not budget or not budget.project_id:
@@ -428,7 +428,6 @@ def get_budget_spent(
 ):
     """Worklogs that consumed budget (spent amounts)."""
     from app.models import Budget, Worklog
-    from sqlalchemy import text
     
     budget = db.query(Budget).filter(Budget.id == budget_id, Budget.is_active == True).first()
     if not budget or not budget.project_id:

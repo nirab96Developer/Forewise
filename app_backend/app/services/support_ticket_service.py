@@ -10,7 +10,7 @@ from app.models.role import Role
 from app.models.support_ticket import SupportTicket
 from app.models.support_ticket_comment import SupportTicketComment
 from app.models.user import User
-from app.schemas.support_ticket import (CommentCreate, TicketCreate,
+from app.schemas.support_ticket import (TicketCreate,
                                         TicketUpdate)
 
 

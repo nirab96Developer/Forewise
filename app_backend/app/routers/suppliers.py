@@ -4,7 +4,7 @@ Suppliers Router
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from typing import Annotated, Optional, List
+from typing import Annotated, Optional
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_permission

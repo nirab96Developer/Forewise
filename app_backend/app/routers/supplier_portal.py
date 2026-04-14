@@ -9,7 +9,6 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import and_, or_
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
@@ -21,8 +20,6 @@ from app.models.supplier_equipment import SupplierEquipment
 from app.models.equipment_model import EquipmentModel
 from app.models.project import Project
 from app.models.equipment import Equipment
-from app.models.region import Region
-from app.models.area import Area
 
 router = APIRouter(prefix="/supplier-portal", tags=["Supplier Portal"])
 
@@ -474,9 +471,10 @@ def accept_work_order(
         raise
     except Exception as e:
         db.rollback()
+        logger.error(f"Portal accept error: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"שגיאה באישור ההזמנה: {str(e)}"
+            detail="שגיאה באישור ההזמנה"
         )
 
 
@@ -535,17 +533,26 @@ def reject_work_order(
             work_order.status = "REJECTED"
             db.commit()
         
+        # Fair Rotation — update rejected supplier's score
+        try:
+            if work_order.supplier_id:
+                from app.services.supplier_rotation_service import SupplierRotationService
+                SupplierRotationService().update_rotation_after_rejection(db, supplier_id=work_order.supplier_id)
+        except Exception as _re:
+            logger.warning(f"Fair Rotation update on portal reject WO {work_order.id}: {_re}")
+
         return SupplierResponseResult(
             success=True,
             message="ההזמנה נדחתה. תודה על העדכון.",
             order_number=work_order.order_number
         )
-        
+
     except Exception as e:
         db.rollback()
+        logger.error(f"Portal reject error WO: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"שגיאה בדחיית ההזמנה: {str(e)}"
+            detail="שגיאה בדחיית ההזמנה"
         )
 
 
@@ -860,8 +867,6 @@ def _send_order_to_supplier(db: Session, work_order: WorkOrder):
             )
         
         logger.info(f"Sent order to supplier {supplier.name}")
-        
-        # TODO: Add SMS sending via external service
-        
+
     except Exception as e:
         logger.error(f"Failed to send order to supplier: {e}")

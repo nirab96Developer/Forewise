@@ -1,9 +1,8 @@
 """Application exceptions"""
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional
 
 from fastapi import HTTPException, status
-from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 logger = logging.getLogger(__name__)

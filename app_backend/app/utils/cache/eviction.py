@@ -10,7 +10,7 @@ Implements various eviction strategies for cache management:
 import threading
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, List, Optional, Tuple, TypeVar, Union
+from typing import Dict, Generic, Optional, TypeVar
 
 T = TypeVar("T")
 

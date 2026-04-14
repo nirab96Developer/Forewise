@@ -6,8 +6,6 @@ Uses weasyprint for pixel-perfect A4 rendering.
 import logging
 import os
 from datetime import datetime
-from decimal import Decimal
-from typing import Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text

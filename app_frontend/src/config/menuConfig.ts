@@ -220,7 +220,7 @@ const ROLE_MENU_CONFIG: Record<UserRole, { items: string[]; dividerAfter?: strin
     dividerAfter: ["dashboard", "orderCoordination"],
   },
   [UserRole.ACCOUNTANT]: {
-    items: ["dashboard", "accountantInbox", "invoices", "budgets", "reports"],
+    items: ["dashboard", "accountantInbox", "invoices", "reports"],
     dividerAfter: ["dashboard", "invoices"],
   },
   [UserRole.SUPPLIER_MANAGER]: {

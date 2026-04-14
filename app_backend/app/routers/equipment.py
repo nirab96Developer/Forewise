@@ -14,8 +14,6 @@ from app.schemas.equipment import (
     EquipmentCreate,
     EquipmentUpdate,
     EquipmentResponse,
-    EquipmentBrief,
-    EquipmentList,
     EquipmentSearch,
     EquipmentStatistics,
     EquipmentAssignRequest
@@ -144,7 +142,7 @@ def list_equipment(
             "total_pages": total_pages
         }
     
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -180,7 +178,7 @@ def get_equipment_statistics(
         stats = equipment_service.get_statistics(db, filters)
         return stats
     
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -203,7 +201,7 @@ def get_active_equipment(
         search = EquipmentSearch(is_active=True, page=1, page_size=200)
         equipment_list, _ = equipment_service.list(db, search)
         return equipment_list
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -230,7 +228,7 @@ def get_equipment_needing_maintenance(
         # Filter for those needing maintenance
         # This is a simplified implementation - enhance based on actual maintenance fields
         return equipment_list
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -258,7 +256,7 @@ def get_equipment_types_list(
         search = EquipmentTypeSearch(is_active=True, page=1, page_size=100)
         types, _ = et_service.list(db, search)
         return types
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -470,7 +468,6 @@ def release_equipment(
     from app.models.equipment import Equipment
     from app.models.work_order import WorkOrder
     from datetime import datetime as dt
-    from sqlalchemy import text as sa_text
     
     equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if not equipment:
@@ -554,7 +551,7 @@ def get_equipment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -589,7 +586,7 @@ def create_equipment(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(e)
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -630,7 +627,7 @@ def update_equipment(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(e)
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -685,7 +682,7 @@ def delete_equipment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -699,7 +696,7 @@ def toggle_equipment_active(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     """הפעל / השבת כלי ציוד"""
-    require_permission(current_user, "EQUIPMENT.UPDATE")
+    require_permission(current_user, "equipment.update")
     eq = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if not eq:
         raise HTTPException(status_code=404, detail="ציוד לא נמצא")
@@ -740,7 +737,7 @@ def restore_equipment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -768,7 +765,7 @@ def assign_equipment(
             raise ValidationException("project_id is required")
         
         # Create assignment
-        assignment = equipment_service.assign_to_project(
+        equipment_service.assign_to_project(
             db=db,
             equipment_id=equipment_id,
             project_id=request.project_id,
@@ -792,7 +789,7 @@ def assign_equipment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -833,7 +830,7 @@ def update_equipment_maintenance(
         return equipment
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"

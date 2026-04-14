@@ -491,7 +491,7 @@ class EquipmentMaintenanceService:
         # Import here to avoid circular dependency
         from app.services.notification_service import NotificationService
 
-        notification_service = NotificationService()
+        NotificationService()
 
         # Implement notification logic based on event type
         pass

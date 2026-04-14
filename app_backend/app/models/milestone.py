@@ -8,13 +8,12 @@ from typing import TYPE_CHECKING, Optional
 from datetime import date
 
 from sqlalchemy import Integer, String, Text, Boolean, Date, ForeignKey, Float
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.project import Project
-    from app.models.user import User
+    pass
 
 
 class Milestone(BaseModel):

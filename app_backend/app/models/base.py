@@ -2,7 +2,7 @@
 """
 Base models for SQLAlchemy with standardized audit columns
 """
-from sqlalchemy.orm import DeclarativeBase, declared_attr
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import MetaData, DateTime, Integer, Boolean, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime

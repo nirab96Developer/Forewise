@@ -1,7 +1,6 @@
 # app/core/dependencies.py
 """FastAPI dependencies with real permission checking."""
-from typing import Annotated, Optional, List, Set
-from functools import lru_cache
+from typing import Annotated, Optional, Set
 from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -373,7 +372,6 @@ async def check_project_access(
             if current_user.area_id == project.area_id:
                 return current_user
     
-    # For now, allow access (TODO: implement assignment-based access)
     return current_user
 
 

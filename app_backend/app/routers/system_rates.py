@@ -2,7 +2,7 @@
 System Rates router - תעריפים גלובליים
 """
 
-from typing import List, Optional
+from typing import Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -12,8 +12,7 @@ from app.core.dependencies import get_current_active_user
 from app.models.system_rate import SystemRate
 from app.schemas.system_rate import (
     SystemRateCreate,
-    SystemRateUpdate,
-    SystemRateResponse
+    SystemRateUpdate
 )
 
 router = APIRouter(prefix="/system-rates", tags=["System Rates"])

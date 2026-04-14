@@ -1,9 +1,9 @@
 # app/services/supplier_rotation_service.py
 """Supplier rotation (fair queue) service — aligned with SupplierRotation model."""
-from datetime import date, datetime
+from datetime import date
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.models.supplier import Supplier

@@ -1,6 +1,6 @@
 # app/routers/support_tickets.py
 """Support ticket endpoints."""
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -11,10 +11,9 @@ from datetime import datetime
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.core.email import send_email
-from app.core.config import settings
 from app.models.user import User
 from app.models.support_ticket import SupportTicket
-from app.schemas.support_ticket import SupportTicketCreate, SupportTicketUpdate, SupportTicketResponse
+from app.schemas.support_ticket import SupportTicketCreate, SupportTicketUpdate
 from app.services.activity_logger import log_support_ticket_created, log_support_ticket_replied, log_support_ticket_status_changed
 
 # Admin email for ticket notifications
@@ -66,7 +65,7 @@ def _notify_user_ticket_update(db, ticket_id: int, ticket_number: str,
             link=f"/support",
         )
         notification_service.create_notification(db, notif)
-    except Exception as e:
+    except Exception:
 
         pass
 
@@ -106,7 +105,7 @@ http://167.99.228.10/support
 מערכת ניהול יערות Forewise
 """
         send_email(to=ADMIN_EMAIL, subject=subject, body=body)
-    except Exception as e:
+    except Exception:
 
         pass
 
@@ -340,7 +339,7 @@ async def create_ticket_from_widget(
     # Store metadata in custom_metadata_json
     try:
         new_ticket.custom_metadata_json = json.dumps(metadata, ensure_ascii=False)
-    except Exception as e:
+    except Exception:
         pass
 
     db.add(new_ticket)

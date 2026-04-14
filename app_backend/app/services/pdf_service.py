@@ -3,7 +3,7 @@ PDF Service - General PDF generation functions
 """
 import base64
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from decimal import Decimal
 import logging
 

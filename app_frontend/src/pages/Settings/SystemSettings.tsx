@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Settings, Users, Truck, MapPin, FileText,
   ChevronLeft, Shield, Building2,
-  Receipt, Cog, Clock
+  Receipt, Cog, Clock, DollarSign
 } from 'lucide-react';
 import api from '../../services/api';
 
@@ -137,6 +137,13 @@ const settingsCategories: SettingsCategory[] = [
     icon: <Cog className="w-6 h-6" />,
     color: 'bg-gray-600',
     items: [
+      {
+        id: 'price-list',
+        title: 'מחירון מערכת',
+        description: 'תעריפי עבודה, ציוד ושירותים',
+        icon: <DollarSign className="w-5 h-5" />,
+        path: '/settings/price-list',
+      },
       {
         id: 'work-hours',
         title: 'זמני עבודה',

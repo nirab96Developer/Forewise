@@ -9,13 +9,12 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_permission
 from app.services.activity_log_service import ActivityLogService
 
-_audit = ActivityLogService(), require_permission
+_activity_log = ActivityLogService()
 from app.models.user import User
 from app.schemas.user import (
     UserCreate,
     UserUpdate,
     UserResponse,
-    UserBrief,
     UserListResponse,
     UserSearch,
     UserPasswordChange,

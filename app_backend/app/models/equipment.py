@@ -5,25 +5,17 @@ CORE entity with full audit columns
 
 from __future__ import annotations
 
-from datetime import datetime, date
+from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Unicode, Text, Numeric
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Unicode, Text, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.equipment_type import EquipmentType
-    from app.models.equipment_category import EquipmentCategory
-    from app.models.location import Location
-    from app.models.user import User
-    from app.models.project import Project
-    from app.models.supplier import Supplier
-    from app.models.equipment_assignment import EquipmentAssignment
-    from app.models.equipment_maintenance import EquipmentMaintenance
-    from app.models.equipment_scan import EquipmentScan
 
 
 class Equipment(BaseModel):

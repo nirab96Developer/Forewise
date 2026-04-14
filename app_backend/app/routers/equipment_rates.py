@@ -4,7 +4,6 @@ Manage hourly rates per equipment type with change history.
 """
 
 from typing import Annotated, Optional, List
-from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text

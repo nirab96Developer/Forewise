@@ -3,7 +3,7 @@ User schemas - סכמות משתמש
 """
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
 # ============================================================================

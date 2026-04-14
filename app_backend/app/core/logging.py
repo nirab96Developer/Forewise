@@ -2,12 +2,10 @@
 Simplified logging configuration for the application
 """
 import logging
-import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Optional
 
-from loguru import logger
 
 from app.core.config import settings
 

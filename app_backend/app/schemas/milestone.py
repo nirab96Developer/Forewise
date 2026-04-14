@@ -5,7 +5,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MilestoneStatus(str, Enum):

@@ -1,11 +1,10 @@
 # app/schemas/otp_token.py
 """OTP token schemas."""
 
-from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 
 class OtpType(str, Enum):

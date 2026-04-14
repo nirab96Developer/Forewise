@@ -1,6 +1,6 @@
 # app/routers/notifications.py
 """Notification API endpoints - נקודות קצה להתראות"""
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -11,7 +11,6 @@ from app.models.user import User
 from app.schemas.notification import (
     NotificationCreate,
     NotificationUpdate,
-    NotificationResponse,
     NotificationStats,
     NotificationBulkAction
 )

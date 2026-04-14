@@ -77,6 +77,7 @@ const ConstraintReasons = lazy(() => import("../pages/Settings/ConstraintReasons
 const FairRotation = lazy(() => import("../pages/Settings/FairRotation"));
 // EquipmentCatalog merged into SupplierSettings
 const WorkHours = lazy(() => import("../pages/Settings/WorkHours"));
+const PriceList = lazy(() => import("../pages/Settings/PriceList"));
 const Budgets = lazy(() => import("../pages/Settings/Budgets"));
 const BudgetDetail = lazy(() => import("../pages/Settings/BudgetDetail"));
 const RolesPermissions = lazy(() => import("../pages/Settings/RolesPermissions"));
@@ -277,6 +278,7 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ setGlobalLoading }) => {
         <Route path="/settings/constraint-reasons" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><ConstraintReasons /></Guarded>} />
         <Route path="/settings/fair-rotation" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><FairRotation /></Guarded>} />
         <Route path="/settings/work-hours" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><WorkHours /></Guarded>} />
+        <Route path="/settings/price-list" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><PriceList /></Guarded>} />
         <Route path="/settings/suppliers" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><SupplierSettings /></Guarded>} />
         <Route path="/settings/suppliers/:id" element={<Guarded permission={PERMISSIONS.SYSTEM_SETTINGS}><SupplierSettings /></Guarded>} />
 

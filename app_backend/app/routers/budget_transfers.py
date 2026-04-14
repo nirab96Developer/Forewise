@@ -7,7 +7,7 @@ GET  /api/v1/budget-transfers
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import Annotated, List, Optional
+from typing import Annotated, Optional
 from pydantic import BaseModel
 
 from app.core.database import get_db

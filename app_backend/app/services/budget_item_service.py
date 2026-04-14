@@ -3,7 +3,6 @@ BudgetItem Service
 """
 
 from typing import Optional, List, Tuple
-from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, or_
 
@@ -11,7 +10,7 @@ from app.models.budget_item import BudgetItem
 from app.models.budget import Budget
 from app.schemas.budget_item import BudgetItemCreate, BudgetItemUpdate, BudgetItemSearch, BudgetItemStatistics
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import ValidationException, DuplicateException
 
 
 class BudgetItemService(BaseService[BudgetItem]):

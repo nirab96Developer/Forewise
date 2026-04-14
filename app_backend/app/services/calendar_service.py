@@ -1,9 +1,9 @@
 # app/services/calendar_service.py
 """Calendar and scheduling service."""
-from datetime import date, datetime, time, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import date
+from typing import Any, Dict, List
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.models.equipment_assignment import EquipmentAssignment

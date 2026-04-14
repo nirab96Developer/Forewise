@@ -3,7 +3,7 @@ Invoices Router
 """
 
 from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -40,7 +40,34 @@ def list_invoices(
 
     invoices, total = invoice_service.list(db, search)
     total_pages = (total + search.page_size - 1) // search.page_size if total > 0 else 1
-    return InvoiceList(items=invoices, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
+
+    from app.models.supplier import Supplier
+    from app.models.project import Project
+    enriched = []
+    for inv in invoices:
+        brief = {
+            "id": inv.id,
+            "invoice_number": str(inv.invoice_number) if inv.invoice_number else None,
+            "supplier_id": inv.supplier_id,
+            "project_id": inv.project_id,
+            "status": inv.status,
+            "total_amount": inv.total_amount or 0,
+            "amount": inv.total_amount or 0,
+            "paid_amount": inv.paid_amount or 0,
+            "issue_date": inv.issue_date,
+            "due_date": inv.due_date,
+            "created_at": str(inv.created_at) if inv.created_at else None,
+            "is_active": inv.is_active,
+        }
+        if inv.supplier_id:
+            s = db.query(Supplier).filter(Supplier.id == inv.supplier_id).first()
+            brief["supplier_name"] = s.name if s else None
+        if inv.project_id:
+            p = db.query(Project).filter(Project.id == inv.project_id).first()
+            brief["project_name"] = p.name if p else None
+        enriched.append(brief)
+
+    return InvoiceList(items=enriched, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
 
 
 @router.get("/statistics", response_model=InvoiceStatistics)
@@ -201,7 +228,7 @@ def approve_invoice(
     except NotFoundException as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -228,7 +255,7 @@ def send_invoice_to_supplier(
         return {"message": "Invoice sent to supplier", "invoice_id": invoice_id}
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -267,7 +294,7 @@ def create_invoice_from_work_order(
         return invoice
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -316,7 +343,6 @@ def create_invoice_from_worklogs(
     require_permission(current_user, "invoices.create")
 
     from app.models.worklog import Worklog
-    from app.models.invoice import Invoice
     from sqlalchemy import text
     from datetime import date, datetime
 
@@ -401,7 +427,7 @@ def create_invoice_from_worklogs(
 
     try:
         invoice = invoice_service.create(db, invoice_data, current_user.id)
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="שגיאת שרת")
 
     # 5. יצירת invoice_items + עדכון worklog status
@@ -637,9 +663,27 @@ def get_uninvoiced_suppliers_endpoint(
 def get_invoice_pdf(
     invoice_id: int,
     db: Annotated[Session, Depends(get_db)],
-    current_user: Annotated[User, Depends(get_current_active_user)],
+    token: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
 ):
-    """Generate and return Invoice PDF (A4, RTL, weasyprint)."""
+    """Generate and return Invoice PDF (A4, RTL, weasyprint).
+    Supports both Bearer header and ?token= query parameter for direct browser access.
+    """
+    from app.core.security import decode_token
+
+    auth_token = token
+    if not auth_token and authorization and authorization.startswith("Bearer "):
+        auth_token = authorization[7:]
+
+    current_user = None
+    if auth_token:
+        payload = decode_token(auth_token)
+        if payload and "sub" in payload:
+            current_user = db.query(User).filter(User.id == int(payload["sub"]), User.is_active == True).first()
+
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     require_permission(current_user, "invoices.read")
 
     from fastapi.responses import Response

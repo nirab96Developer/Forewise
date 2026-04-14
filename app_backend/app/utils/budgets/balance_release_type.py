@@ -1,11 +1,10 @@
 # app/utils/budgets/balance_release_type.py
-import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,7 @@ from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.schemas.report import (
-    ReportCreate, ReportUpdate, ReportResponse,
-    ReportList, ReportSearch, ReportStatistics
+    ReportCreate, ReportUpdate, ReportSearch, ReportStatistics
 )
 from app.services.report_service import ReportService
 from app.core.exceptions import NotFoundException, ValidationException, DuplicateException

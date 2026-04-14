@@ -7,13 +7,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 from datetime import date, datetime
 
-from sqlalchemy import Integer, String, Text, Boolean, Date, DateTime, Float, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, Text, Boolean, Date, DateTime, Float, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.supplier import Supplier
+    pass
 
 
 class SupplierRotation(BaseModel):

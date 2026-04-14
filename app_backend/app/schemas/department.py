@@ -3,7 +3,7 @@ Department schemas
 """
 
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict
 
 

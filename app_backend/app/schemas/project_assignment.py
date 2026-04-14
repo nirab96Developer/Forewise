@@ -1,7 +1,6 @@
 # /root/app_backend/app/schemas/project_assignment.py - חדש
 """Project assignment schemas - Aligned with database model."""
 from datetime import date, datetime
-from decimal import Decimal
 from enum import Enum
 from typing import Optional, Dict, List
 

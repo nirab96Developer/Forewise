@@ -12,7 +12,6 @@ from app.core.dependencies import (check_project_access, get_current_active_user
 from app.schemas.common import PaginationParams
 from app.schemas.project_assignment import (AssignmentCreate,
                                             AssignmentResponse,
-                                            AssignmentStatistics,
                                             AssignmentUpdate,
                                             ProjectTeamResponse,
                                             UserProjectsResponse)

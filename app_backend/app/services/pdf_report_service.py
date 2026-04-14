@@ -1,9 +1,8 @@
 """
 PDF Report Generation Service - שירות יצירת דוחות PDF
 """
-import os
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader

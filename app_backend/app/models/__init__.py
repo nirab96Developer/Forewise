@@ -45,7 +45,7 @@ import app.models.budget_transfer
 import app.models.supplier_invitation  # Fair rotation invitations
 import app.models.forest  # PostGIS forest polygons
 import app.models.project_assignment  # Project user assignments
-import app.models.biometric_credential  # WebAuthn biometric credentials
+import app.models.biometric_credential  # noqa: F401 — SQLAlchemy model registration
 
 # Step 3: NOW import the actual classes for use
 from app.models.user import User
@@ -132,4 +132,6 @@ __all__ = [
     'Forest',
     'ProjectAssignment',
     'BiometricCredential',
+    'DeviceToken',
+    'SupplierEquipment',
 ]

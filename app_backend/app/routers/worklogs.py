@@ -478,7 +478,7 @@ def submit_worklog(
         raise
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -537,7 +537,7 @@ def approve_worklog(
         return updated
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -561,23 +561,28 @@ def send_approval_pdf_safe(ctx: dict):
 
 
 def _send_approval_pdf_impl(db: Session, ctx: dict):
-    """Internal: generate and send approval PDF."""
+    """Generate approval PDF and email it to the supplier."""
     try:
+        from sqlalchemy import text as sa_text
         from app.services.pdf_service import generate_worklog_pdf
         from app.core.email import send_email_with_pdf
         from app.models.project import Project
         from app.models.supplier import Supplier
         from app.models.work_order import WorkOrder
 
+        report_number = ctx.get('report_number', '')
+        report_date = ctx.get('report_date')
+
         worklog_data = {
             'id': ctx['worklog_id'],
-            'report_number': ctx['report_number'],
-            'work_date': ctx['report_date'].strftime('%d/%m/%Y') if ctx.get('report_date') else '',
+            'report_number': report_number,
+            'work_date': report_date.strftime('%d/%m/%Y') if report_date else '',
             'project_name': '',
             'region_name': '',
             'area_name': '',
             'supplier_name': '',
             'supplier_phone': '',
+            'supplier_email': '',
             'equipment_code': '',
             'equipment_type': ctx.get('equipment_type', ''),
             'total_hours': ctx.get('total_hours', 0),
@@ -597,11 +602,13 @@ def _send_approval_pdf_impl(db: Session, ctx: dict):
             if project:
                 worklog_data['project_name'] = project.name
                 if project.area_id:
-                    ar = db.execute(text("SELECT a.name, r.name FROM areas a LEFT JOIN regions r ON a.region_id=r.id WHERE a.id=:aid"),
-                                   {"aid": project.area_id}).first()
-                    if ar:
-                        worklog_data['area_name'] = ar[0] or ''
-                        worklog_data['region_name'] = ar[1] or ''
+                    row = db.execute(
+                        sa_text("SELECT a.name, r.name FROM areas a LEFT JOIN regions r ON a.region_id=r.id WHERE a.id=:aid"),
+                        {"aid": project.area_id}
+                    ).first()
+                    if row:
+                        worklog_data['area_name'] = row[0] or ''
+                        worklog_data['region_name'] = row[1] or ''
 
         if ctx.get('work_order_id'):
             work_order = db.query(WorkOrder).filter(WorkOrder.id == ctx['work_order_id']).first()
@@ -610,39 +617,34 @@ def _send_approval_pdf_impl(db: Session, ctx: dict):
                 if supplier:
                     worklog_data['supplier_name'] = supplier.name
                     worklog_data['supplier_phone'] = supplier.phone or ''
-        
-        # Generate PDF
+                    worklog_data['supplier_email'] = supplier.email or ''
+
         pdf_bytes = generate_worklog_pdf(worklog_data)
-        pdf_filename = f"worklog_{worklog.report_number}_{worklog.report_date.strftime('%Y%m%d') if worklog.report_date else 'report'}.pdf"
-        
-        # Send to supplier (if email available)
+        date_str = report_date.strftime('%Y%m%d') if report_date else 'report'
+        pdf_filename = f"worklog_{report_number}_{date_str}.pdf"
+
         if worklog_data.get('supplier_email'):
             try:
                 send_email_with_pdf(
                     to=worklog_data['supplier_email'],
-                    subject=f"אישור דיווח עבודה מס' {worklog.report_number} - Forewise",
-                    body=f"""שלום רב,
-
-מצורף אישור דיווח עבודה יומי מספר {worklog.report_number}.
-
-פרטי הדיווח:
-• פרויקט: {worklog_data['project_name']}
-• תאריך: {worklog_data['work_date']}
-• שעות לתשלום: {worklog_data.get('billable_hours', 0)}
-
-בברכה,
-מערכת ניהול יערות Forewise""",
+                    subject=f"אישור דיווח עבודה מס' {report_number} - Forewise",
+                    body=(
+                        f"שלום רב,\n\nמצורף אישור דיווח עבודה יומי מספר {report_number}.\n\n"
+                        f"פרויקט: {worklog_data['project_name']}\n"
+                        f"תאריך: {worklog_data['work_date']}\n"
+                        f"שעות לתשלום: {worklog_data.get('billable_hours', 0)}\n\n"
+                        "בברכה,\nמערכת Forewise"
+                    ),
                     pdf_bytes=pdf_bytes,
-                    pdf_filename=pdf_filename
+                    pdf_filename=pdf_filename,
                 )
-            except Exception as e:
-                logger.error(f"Failed to send PDF to supplier: {e}")
-        
-        # Log success
-        logger.info(f"Approval PDF generated for worklog {worklog.id}")
-        
+            except Exception as email_err:
+                logger.error(f"PDF email failed for worklog {ctx['worklog_id']}: {email_err}")
+
+        logger.info(f"Approval PDF generated for worklog {ctx['worklog_id']}")
+
     except Exception as e:
-        logger.error(f"Error sending approval PDF: {e}")
+        logger.error(f"PDF generation failed for worklog {ctx.get('worklog_id')}: {e}")
 
 
 @router.post("/{worklog_id}/reject", response_model=WorklogResponse)
@@ -666,11 +668,47 @@ def reject_worklog(
         return updated
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
         )
+
+
+@router.get("/{worklog_id}/pdf")
+def get_worklog_pdf(
+    worklog_id: int,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    """
+    Generate and return a PDF for a worklog report.
+    """
+    require_permission(current_user, "worklogs.read")
+
+    from fastapi.responses import Response
+    from app.services.pdf_report_service import generate_and_save_worklog_pdf
+
+    try:
+        pdf_path = generate_and_save_worklog_pdf(worklog_id, db)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Worklog PDF generation failed: {e}")
+        raise HTTPException(status_code=500, detail="שגיאה ביצירת PDF")
+
+    import os
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=500, detail="PDF file not found after generation")
+
+    with open(pdf_path, "rb") as f:
+        pdf_bytes = f.read()
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="worklog_{worklog_id}.pdf"'},
+    )
 
 
 def _send_worklog_stage1_emails(db, worklog, current_user):

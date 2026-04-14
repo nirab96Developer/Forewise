@@ -8,14 +8,12 @@ from typing import TYPE_CHECKING, Optional
 from datetime import datetime
 
 from sqlalchemy import Integer, String, Text, Boolean, DateTime, ForeignKey, Float
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.equipment import Equipment
-    from app.models.location import Location
-    from app.models.user import User
+    pass
 
 
 class EquipmentScan(BaseModel):

@@ -7,16 +7,12 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user, require_permission
+from app.core.dependencies import get_current_active_user
 from app.models.user import User
 from app.models.role import Role
 from app.models.project import Project
 from app.models.area import Area
 from app.models.region import Region
-from app.models.department import Department
-from app.models.location import Location
-from app.schemas.user import UserCreate, UserUpdate
-from app.schemas.project import ProjectUpdate
 from app.core.security import get_password_hash
 
 router = APIRouter(prefix="/admin", tags=["Admin Management"])

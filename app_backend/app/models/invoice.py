@@ -7,19 +7,15 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Date, ForeignKey, Integer, Numeric, Unicode
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Date, Integer, Numeric, Unicode
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.supplier import Supplier
-    from app.models.project import Project
-    from app.models.user import User
-    from app.models.invoice_item import InvoiceItem
-    from app.models.invoice_payment import InvoicePayment
+    pass
 
 
 class Invoice(BaseModel):

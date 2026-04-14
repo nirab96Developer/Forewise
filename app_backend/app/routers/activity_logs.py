@@ -8,7 +8,7 @@ Scope levels:
 - SYSTEM: admin sees everything
 """
 from datetime import datetime, date
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -66,7 +66,6 @@ async def get_activity_logs(
     if start_date:
         query = query.filter(ActivityLog.created_at >= start_date)
     if end_date:
-        from datetime import timedelta
         end_datetime = datetime.combine(end_date, datetime.max.time())
         query = query.filter(ActivityLog.created_at <= end_datetime)
     if action:

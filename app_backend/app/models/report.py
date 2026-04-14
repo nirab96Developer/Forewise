@@ -6,7 +6,7 @@ CORE entity
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Unicode
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -15,7 +15,6 @@ from app.models.base import BaseModel
 
 if TYPE_CHECKING:
     from app.models.user import User
-    from app.models.report_run import ReportRun
 
 
 class Report(BaseModel):

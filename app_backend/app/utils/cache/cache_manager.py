@@ -6,20 +6,16 @@ Provides fast in-memory storage with remote storage backup,
 TTL management, namespaces, and statistics.
 """
 import asyncio
-import fnmatch
 import hashlib
-import inspect
 import json
 import logging
 import threading
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from functools import wraps
-from typing import (Any, Callable, Dict, Generic, List, Optional, Set, Tuple,
-                    TypeVar, Union, cast)
+from typing import (Any, Callable, Dict, List, Optional, TypeVar, Union)
 
 import redis
-from redis.connection import ConnectionPool
 
 try:
     import orjson

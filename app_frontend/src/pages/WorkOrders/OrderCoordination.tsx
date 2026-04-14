@@ -183,7 +183,7 @@ const OrderCoordination: React.FC = () => {
   const handleMoveToNextSupplier = async (orderId: number) => {
     try {
       setProcessing(orderId);
-      await api.post('/supplier-distribution/distribute', { work_order_id: orderId });
+      await api.post(`/work-orders/${orderId}/move-to-next-supplier`);
       if ((window as any).showToast) (window as any).showToast('הועבר לספק הבא בסבב', 'success');
       await loadOrders();
     } catch (err: any) {

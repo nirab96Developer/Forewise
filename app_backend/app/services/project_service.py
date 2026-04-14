@@ -126,7 +126,6 @@ class ProjectService:
         # Auto-create budget for new project
         try:
             from app.models.budget import Budget
-            import datetime as _dt
             budget = Budget(
                 project_id=item.id,
                 total_amount=0,

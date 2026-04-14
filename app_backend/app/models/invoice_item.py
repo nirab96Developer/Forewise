@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Optional
 from decimal import Decimal
 
 from sqlalchemy import Integer, String, Text, Boolean, ForeignKey, Numeric
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.invoice import Invoice
+    pass
 
 
 class InvoiceItem(BaseModel):

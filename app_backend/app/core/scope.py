@@ -9,7 +9,6 @@ This module ensures:
   - Role-appropriate access is enforced
 """
 import logging
-from typing import Optional
 
 from sqlalchemy.orm import Session
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, List
 
-from sqlalchemy import Integer, String, Unicode, UnicodeText
+from sqlalchemy import Integer, Unicode, UnicodeText
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.models.base import BaseModel

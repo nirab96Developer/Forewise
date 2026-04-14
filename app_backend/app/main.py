@@ -3,7 +3,6 @@
 Forewise - Main Application Entry Point
 """
 from app.routers import api_router
-from fastapi import APIRouter
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -11,9 +10,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 # Import configurations
@@ -509,8 +506,6 @@ except Exception as e:
 if not api_router.routes:
     from fastapi import HTTPException
     from app.core.security import verify_password
-    from app.models.user import User
-    from sqlalchemy.orm import Session
 
     from pydantic import BaseModel
 

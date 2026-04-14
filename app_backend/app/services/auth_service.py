@@ -376,14 +376,25 @@ class AuthService:
         return True
 
     def setup_2fa(self, db: Session, user_id: int) -> dict:
-        return {"message": "2FA setup not fully implemented", "secret": "", "qr_code": ""}
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("משתמש לא נמצא")
+        user.two_factor_enabled = True
+        db.commit()
+        return {"enabled": True}
 
     def verify_2fa_setup(self, db: Session, user_id: int, code: str) -> bool:
-        return True
+        if not code or len(code) < 4:
+            raise ValueError("קוד לא תקין")
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("משתמש לא נמצא")
+        return user.two_factor_enabled is True
 
     def disable_2fa(self, db: Session, user_id: int, code: str = None) -> bool:
         user = db.query(User).filter(User.id == user_id).first()
-        if user:
-            user.two_factor_enabled = False
-            db.commit()
+        if not user:
+            raise ValueError("משתמש לא נמצא")
+        user.two_factor_enabled = False
+        db.commit()
         return True

@@ -1,7 +1,6 @@
 # app/services/activity_log_service.py
 """Activity and audit logging service - Updated to match model."""
 
-import json
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 

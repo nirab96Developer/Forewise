@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from datetime import datetime, date
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Unicode, Numeric
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Unicode, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
@@ -21,10 +21,6 @@ if TYPE_CHECKING:
     from app.models.equipment_model import EquipmentModel
     from app.models.location import Location
     from app.models.user import User
-    from app.models.work_order_status import WorkOrderStatus as WorkOrderStatusModel
-    from app.models.supplier_constraint_reason import SupplierConstraintReason
-    from app.models.supplier_rejection_reason import SupplierRejectionReason
-    from app.models.worklog import Worklog
 
 
 class WorkOrder(BaseModel):

@@ -1,6 +1,5 @@
 # /root/app_backend/app/schemas/report_run_summary.py - חדש (אופציונלי)
 """Report run summary schema."""
-from decimal import Decimal
 from typing import Dict
 
 from pydantic import BaseModel, Field

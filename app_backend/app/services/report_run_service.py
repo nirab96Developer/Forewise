@@ -5,7 +5,7 @@ ReportRun Service
 from typing import Optional, List, Tuple
 from datetime import datetime
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import func
 
 from app.models.report_run import ReportRun
 from app.models.report import Report

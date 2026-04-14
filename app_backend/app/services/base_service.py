@@ -5,7 +5,7 @@ Base Service - שירות בסיס עם תמיכה ב-soft delete
 from datetime import datetime
 from typing import TypeVar, Generic, Type, Optional, List, Any, Dict
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 
 from app.models.base import BaseModel

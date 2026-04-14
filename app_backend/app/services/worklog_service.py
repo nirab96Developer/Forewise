@@ -22,7 +22,7 @@ from datetime import datetime
 from typing import Optional, List, Tuple
 from decimal import Decimal
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func
 
 from app.models.worklog import Worklog
 from app.models.work_order import WorkOrder
@@ -31,7 +31,7 @@ from app.models.project import Project
 from app.models.equipment import Equipment
 from app.models.activity_type import ActivityType
 from app.schemas.worklog import WorklogCreate, WorklogUpdate, WorklogSearch, WorklogStatistics
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import NotFoundException, ValidationException
 from app.services import activity_logger
 from app.services.rate_service import resolve_supplier_pricing
 
@@ -282,10 +282,6 @@ class WorklogService:
         if wh > 0 and not worklog_dict.get('paid_hours'):
             worklog_dict['paid_hours'] = round(wh, 2)
         
-        # Persist equipment_scanned if sent
-        if 'equipment_scanned' in worklog_dict:
-            pass  # model has this column, keep it
-
         # Overnight/guard handling: the frontend sends a single boolean `includes_guard`.
         # We strip any client-provided overnight fields and recompute them below
         # to prevent rate manipulation.

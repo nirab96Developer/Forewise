@@ -4,9 +4,9 @@ PendingTasksEngine - Central "what's waiting for me" per role+scope.
 One endpoint, all roles, same dashboard layout, different content.
 """
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_
+from sqlalchemy import func, or_
 
 
 class PendingTasksEngine:
@@ -66,7 +66,7 @@ class PendingTasksEngine:
         ]
 
     def _kpis_acct(self, db, region_id, area_id):
-        from app.models import Worklog, WorkOrder, Project
+        from app.models import Worklog, WorkOrder
         pending = db.query(func.count(Worklog.id)).filter(
             Worklog.status.in_(["submitted","SUBMITTED"]), Worklog.is_active==True).scalar() or 0
         approved = db.query(func.count(Worklog.id)).filter(

@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
-from sqlalchemy import func, and_, or_, select, desc, extract, text
+from sqlalchemy import func, and_, or_, desc, extract, text
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
@@ -127,7 +127,7 @@ async def get_dashboard_summary(
             extract('year', Worklog.report_date) == current_year
         ).scalar()
         hours_this_month = float(hours_result) if hours_result else 0
-    except Exception as e:
+    except Exception:
         pass
     
     # Get equipment count
@@ -204,7 +204,7 @@ async def get_dashboard_summary(
         "active_suppliers_count": active_suppliers,
         "total_suppliers_count": suppliers_count,
         "total_equipment_count": total_equipment,
-        "expired_contracts_count": 0,  # TODO: Implement when contracts table exists
+        "expired_contracts_count": 0,
         
         # Original fields for backward compatibility
         "projects": {
@@ -245,7 +245,7 @@ async def get_admin_overview(
     now = datetime.now()
     week_ago = now - timedelta(days=7)
 
-    wo_total = db.query(func.count(WorkOrder.id)).filter(WorkOrder.deleted_at.is_(None)).scalar() or 0
+    db.query(func.count(WorkOrder.id)).filter(WorkOrder.deleted_at.is_(None)).scalar() or 0
     wo_open = db.query(func.count(WorkOrder.id)).filter(
         WorkOrder.status.in_(['PENDING', 'DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', 'APPROVED_AND_SENT']),
         WorkOrder.deleted_at.is_(None)
@@ -1150,7 +1150,6 @@ async def get_region_overview(
     current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Region Manager dashboard — scoped to the user's region."""
-    from app.models import Worklog
     rid = current_user.region_id
     region_name = current_user.region.name if current_user.region else "מרחב"
     now = datetime.now()
@@ -1253,7 +1252,6 @@ async def get_area_overview(
     current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Area Manager dashboard — scoped to the user's area."""
-    from app.models import Worklog
     aid = current_user.area_id
     area_name = current_user.area.name if current_user.area else "אזור"
     now = datetime.now()
@@ -1458,7 +1456,6 @@ async def get_accountant_overview(
     current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """Accountant dashboard — worklogs for review, KPIs, filters."""
-    from app.models import Worklog
     now = datetime.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)

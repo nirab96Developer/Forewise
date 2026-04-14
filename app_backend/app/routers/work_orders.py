@@ -19,7 +19,6 @@ from app.models.work_order import WorkOrder
 from app.models.project import Project
 from app.models.budget import Budget
 from app.models.equipment import Equipment
-from app.models.location import Location
 from app.services.notification_service import (
     notify_work_order_created,
     notify_work_order_approved,
@@ -29,10 +28,8 @@ from app.schemas.work_order import (
     WorkOrderCreate,
     WorkOrderUpdate,
     WorkOrderResponse,
-    WorkOrderBrief,
     WorkOrderList,
     WorkOrderSearch,
-    WorkOrderStatusUpdate,
     WorkOrderApproveRequest,
     WorkOrderRejectRequest,
     WorkOrderStatistics
@@ -143,7 +140,7 @@ def list_work_orders(
             total_pages=total_pages
         )
     
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -174,7 +171,7 @@ def get_work_order_statistics(
         stats = work_order_service.get_statistics(db, filters)
         return stats
 
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -242,7 +239,7 @@ def get_work_order(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -279,7 +276,7 @@ def create_work_order(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except DuplicateException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -310,7 +307,7 @@ def update_work_order(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except DuplicateException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -364,7 +361,7 @@ def delete_work_order(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -392,7 +389,7 @@ def restore_work_order(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -484,7 +481,7 @@ def approve_work_order(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except DuplicateException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -517,7 +514,7 @@ def reject_work_order(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except DuplicateException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -549,7 +546,7 @@ def cancel_work_order(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except DuplicateException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -583,7 +580,7 @@ def close_work_order(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except DuplicateException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -621,7 +618,7 @@ def patch_approve_work_order(
     """
     if request is None:
         request = WorkOrderApproveRequest()
-    return approve_work_order(work_order_id, request, db, current_user)
+    return approve_work_order(work_order_id, db, current_user, request)
 
 
 @router.patch("/{work_order_id}/reject", response_model=WorkOrderResponse)
@@ -661,7 +658,7 @@ def start_work_order(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -729,7 +726,7 @@ def send_work_order_to_supplier(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -757,7 +754,7 @@ def move_to_next_supplier(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -785,7 +782,7 @@ def resend_to_supplier(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -916,7 +913,7 @@ def remove_equipment_from_project(
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="שגיאת שרת")
 
 

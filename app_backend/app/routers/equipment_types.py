@@ -11,7 +11,7 @@ from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.schemas.equipment_type import (
     EquipmentTypeCreate, EquipmentTypeUpdate, EquipmentTypeResponse,
-    EquipmentTypeList, EquipmentTypeSearch, EquipmentTypeStatistics
+    EquipmentTypeSearch, EquipmentTypeStatistics
 )
 from app.services.equipment_type_service import EquipmentTypeService
 from app.core.exceptions import NotFoundException, ValidationException, DuplicateException

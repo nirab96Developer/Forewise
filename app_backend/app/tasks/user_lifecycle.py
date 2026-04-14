@@ -2,7 +2,6 @@
 CRON task: anonymize suspended users whose scheduled_deletion_at has passed.
 Runs nightly at midnight via the lifespan scheduler.
 """
-import asyncio
 import logging
 from datetime import datetime
 

@@ -4,9 +4,8 @@ Redis client wrapper for caching and session management
 """
 import json
 import logging
-import pickle
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import redis
 

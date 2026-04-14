@@ -9,7 +9,7 @@ from sqlalchemy import select, func, or_
 from app.models.department import Department
 from app.schemas.department import DepartmentCreate, DepartmentUpdate, DepartmentSearch, DepartmentStatistics
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import ValidationException, DuplicateException
 
 
 class DepartmentService(BaseService[Department]):

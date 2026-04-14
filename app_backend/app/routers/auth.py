@@ -1,17 +1,16 @@
 # app/routers/auth.py
 """Authentication endpoints."""
-from typing import List, Optional
+from typing import Optional
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, status, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
 from app.models.role import Role
-from app.models.permission import Permission
 from app.models.otp_token import OTPToken
 from app.models.session import Session as UserSession
 from app.models.activity_log import ActivityLog, ActivityType
@@ -19,7 +18,7 @@ from app.models.biometric_credential import BiometricCredential
 from app.schemas.auth import (LoginRequest, LoginResponse, TokenRefreshRequest, TokenRefreshResponse,
                              LogoutRequest, PasswordChangeRequest, PasswordResetRequest,
                              PasswordResetConfirm, TwoFactorSetupRequest, TwoFactorSetupResponse,
-                             TwoFactorVerifyRequest, TwoFactorDisableRequest, UserSessionsResponse,
+                             TwoFactorDisableRequest, UserSessionsResponse,
                              AccountLockRequest, AccountUnlockRequest, SecurityAuditResponse,
                              PermissionCheckRequest, PermissionCheckResponse, AuthStatusResponse,
                              LoginAttemptsResponse, OTPVerificationRequest)
@@ -27,10 +26,9 @@ from app.services.activity_log_service import ActivityLogService
 from app.services.auth_service import AuthService
 from app.core.security import create_access_token, create_refresh_token, get_password_hash
 from app.core.config import settings
-from app.core.rate_limiting import check_otp_rate_limit, check_account_lock, lock_account_on_failure
+from app.core.rate_limiting import check_otp_rate_limit, check_account_lock
 import secrets
 import string
-import json
 import hashlib
 import base64
 import os
@@ -54,43 +52,42 @@ def register(
     email: str = Body(...),
     password: str = Body(...),
     full_name: str = Body(...),
+    role_code: str = Body("WORK_MANAGER"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """יצירת משתמש חדש"""
+    """יצירת משתמש חדש — דורש הרשאת Admin בלבד"""
+    from app.core.dependencies import require_permission
+    require_permission(current_user, "users.create")
+
+    # רק ADMIN יכול ליצור משתמשים
+    if not current_user.role or current_user.role.code != "ADMIN":
+        raise HTTPException(status_code=403, detail="רק מנהל מערכת יכול ליצור משתמשים")
+
     try:
-        # בדיקה אם המשתמש כבר קיים
         existing_user = db.query(User).filter(User.email == email).first()
         if existing_user:
             raise HTTPException(status_code=400, detail="משתמש כבר קיים")
-        
-        # יצירת תפקיד admin אם לא קיים
-        admin_role = db.query(Role).filter(Role.code == "ADMIN").first()
-        if not admin_role:
-            admin_role = Role(
-                code="ADMIN",
-                name="מנהל מערכת",
-                description="מנהל מערכת עם הרשאות מלאות",
-                is_active=True,
-                is_system_role=True
-            )
-            db.add(admin_role)
-            db.flush()
-        
-        # יצירת משתמש חדש
+
+        target_role = db.query(Role).filter(Role.code == role_code.upper()).first()
+        if not target_role:
+            raise HTTPException(status_code=400, detail=f"תפקיד '{role_code}' לא קיים במערכת")
+
         new_user = User(
             email=email,
             password_hash=get_password_hash(password),
             full_name=full_name,
             status="ACTIVE",
             is_active=True,
-            role_id=admin_role.id
+            role_id=target_role.id,
         )
-        
+
         db.add(new_user)
         db.commit()
-        
-        return {"message": "משתמש נוצר בהצלחה", "email": email}
-        
+
+        logger.info(f"User created by admin {current_user.id}: {email} with role {role_code}")
+        return {"message": "משתמש נוצר בהצלחה", "email": email, "role": role_code}
+
     except HTTPException:
         raise
     except Exception as e:
@@ -599,10 +596,6 @@ async def verify_otp(
 ):
     """Verify OTP code."""
     try:
-        # Debug logging
-        logger.info(f"Verifying OTP for user_id: {data.user_id}, code: {data.code}")
-        
-        # נקה whitespace מהקוד
         code_clean = str(data.code).strip()
         
         # חפש את ה-OTP token במסד הנתונים עם הקוד הנכון
@@ -617,9 +610,6 @@ async def verify_otp(
         if not otp_token:
             logger.warning(f"No valid OTP token found for user {data.user_id} with code {code_clean}")
             raise HTTPException(status_code=400, detail="Invalid or expired 2FA code")
-        
-        # Debug - הדפס את הטוקן מהמסד
-        logger.info(f"OTP token found: {otp_token.token} for user {data.user_id}")
         
         # סמן את ה-token כמשומש
         otp_token.is_used = True
@@ -825,8 +815,7 @@ async def biometric_register_verify(
         user_id = current_user.id
         credential_id = request.get("credentialId")
         attestation_object = request.get("attestationObject")
-        client_data_json = request.get("clientDataJSON")
-        
+
         if not credential_id:
             raise HTTPException(status_code=400, detail="Missing credentialId")
         
@@ -1041,10 +1030,6 @@ async def delete_biometric_credential(
     
     return {"message": "Credential deleted successfully"}
 
-
-# ============================================================
-# NEW DEVICE-BASED AUTH ENDPOINTS (Spec v2)
-# ============================================================
 
 from app.models.device_token import DeviceToken
 import uuid as uuid_module
@@ -1383,11 +1368,8 @@ def list_devices(
 # WebAuthn — proper register/login flows (py webauthn 2.x)
 # ============================================================
 
-import os as _os
-from datetime import timezone as _timezone
 from urllib.parse import urlparse as _urlparse
 
-# Legacy in-memory stores kept for fallback/debug only.
 _wn_reg_challenges: dict = {}
 _wn_login_challenges: dict = {}
 
@@ -1401,8 +1383,6 @@ try:
         PublicKeyCredentialDescriptor,
         PublicKeyCredentialType,
     )
-    from webauthn.helpers.cose import COSEAlgorithmIdentifier
-    import webauthn.helpers.base64url_to_bytes as _b64url
     _WN_OK = True
 except Exception as _e:
     logger.warning(f"webauthn library not available: {_e}")

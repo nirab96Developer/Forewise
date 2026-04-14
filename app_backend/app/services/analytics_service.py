@@ -1,6 +1,6 @@
 """Analytics service."""
-from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict
 
 from sqlalchemy.orm import Session
 

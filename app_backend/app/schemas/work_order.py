@@ -6,7 +6,7 @@ from typing import Optional, List
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, ConfigDict, model_validator, validator
+from pydantic import BaseModel, Field, ConfigDict, validator
 
 
 class WorkOrderFilters(BaseModel):
@@ -101,9 +101,9 @@ class WorkOrderCreate(BaseModel):
     # Status and priority
     status: Optional[str] = Field("pending", max_length=50, description="Status")
     priority: Optional[str] = Field("medium", max_length=20, description="Priority")
-    
+
     # Financial
-    estimated_hours: Optional[Decimal] = Field(None, ge=0)
+    estimated_hours: Optional[Decimal] = Field(None, gt=0, description="שעות משוערות — חייב להיות גדול מ-0")
     hourly_rate: Optional[Decimal] = Field(None, ge=0)
     
     # Constraints

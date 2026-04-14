@@ -10,6 +10,7 @@ export interface Invoice {
   supplier_name?: string;
   work_order_id?: number;
   invoice_date: string;
+  issue_date?: string;
   due_date?: string;
   subtotal: number;
   tax_amount: number;

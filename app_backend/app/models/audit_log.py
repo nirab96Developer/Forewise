@@ -7,12 +7,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Integer, String, Text, Boolean, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    pass
 
 
 class AuditLog(BaseModel):

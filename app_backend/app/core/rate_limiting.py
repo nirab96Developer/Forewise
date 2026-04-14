@@ -3,10 +3,9 @@
 Rate limiting middleware and utilities
 """
 import time
-from typing import Dict, Optional
+from typing import Dict
 from fastapi import Request, HTTPException, status
 from collections import defaultdict, deque
-import asyncio
 import logging
 
 logger = logging.getLogger(__name__)

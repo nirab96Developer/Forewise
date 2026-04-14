@@ -110,11 +110,16 @@ class InvoiceBrief(BaseModel):
     id: int
     invoice_number: Optional[str] = None
     supplier_id: Optional[int] = None
+    supplier_name: Optional[str] = None
     project_id: Optional[int] = None
+    project_name: Optional[str] = None
     status: Optional[str] = None
     total_amount: Optional[Decimal] = Decimal("0")
+    amount: Optional[Decimal] = Decimal("0")
     paid_amount: Optional[Decimal] = Decimal("0")
+    issue_date: Optional[date] = None
     due_date: Optional[date] = None
+    created_at: Optional[str] = None
     is_active: bool = True
 
     model_config = ConfigDict(from_attributes=True)

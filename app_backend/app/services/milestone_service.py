@@ -1,17 +1,14 @@
 """Project milestone service."""
-from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import date, timedelta
+from typing import Any, Dict, List
 
-from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import (BusinessLogicException, NotFoundException,
-                                 ValidationException)
+from app.core.exceptions import (NotFoundException)
 from app.models.milestone import Milestone
 from app.models.project import Project
 from app.schemas.milestone import (MilestoneCreate, MilestoneResponse,
-                                   MilestoneStatus, MilestoneType,
-                                   MilestoneUpdate)
+                                   MilestoneStatus)
 
 
 class MilestoneService:

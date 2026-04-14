@@ -14,7 +14,6 @@ from app.models.user import User
 from app.models.worklog import Worklog
 from app.models.work_order import WorkOrder
 from app.models.equipment import Equipment
-from app.models.project import Project
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
@@ -96,7 +95,7 @@ async def sync_batch(
             conflicts=conflicts
         )
         
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"
@@ -373,7 +372,7 @@ async def get_sync_status(
             ]
         }
         
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="שגיאת שרת"

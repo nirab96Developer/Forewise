@@ -4,7 +4,6 @@ SMS service for sending OTP codes and notifications
 """
 import logging
 import requests
-from typing import Optional
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)

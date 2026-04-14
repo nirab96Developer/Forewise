@@ -2,7 +2,6 @@
 """Services module initialization."""
 
 from app.services.activity_log_service import ActivityLogService
-from app.services import activity_logger  # Activity logging helper
 from app.services.area_service import AreaService
 # Auth and User Services
 from app.services.auth_service import AuthService

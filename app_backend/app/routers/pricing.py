@@ -8,16 +8,15 @@ from decimal import Decimal
 from typing import Optional, List, Dict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, and_, text as _text
+from sqlalchemy import func, text as _text
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
-from app.services.rate_service import RateService, get_rate_service
+from app.services.rate_service import get_rate_service
 from app.models.worklog import Worklog
 from app.models.project import Project
 from app.models.supplier import Supplier
-from app.models.equipment import Equipment
 from app.models.equipment_type import EquipmentType
 
 
@@ -473,7 +472,6 @@ async def get_pricing_report_by_equipment_type(
     """
     from app.models.equipment import Equipment
     from app.models.equipment_category import EquipmentCategory
-    from sqlalchemy import case as sa_case, text as sa_text
 
     et_id_expr = func.coalesce(
         Worklog.equipment_type_id,

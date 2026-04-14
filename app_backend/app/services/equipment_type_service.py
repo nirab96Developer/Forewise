@@ -8,7 +8,7 @@ from sqlalchemy import select, func, or_
 
 from app.models.equipment_type import EquipmentType
 from app.schemas.equipment_type import EquipmentTypeCreate, EquipmentTypeUpdate, EquipmentTypeSearch, EquipmentTypeStatistics
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import NotFoundException, DuplicateException
 
 
 class EquipmentTypeService:

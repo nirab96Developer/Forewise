@@ -7,7 +7,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Unicode
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, Unicode
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel

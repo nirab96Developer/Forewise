@@ -22,10 +22,7 @@ def process_expired_portals() -> dict:
     """
     from app.core.database import SessionLocal
     from app.models.work_order import WorkOrder
-    from app.models.supplier_rotation import SupplierRotation
-    from app.models.supplier import Supplier
     from app.models.project import Project
-    from sqlalchemy import and_
 
     db = SessionLocal()
     stats = {"expired_forced": 0, "rotated": 0, "no_supplier": 0, "errors": 0}
@@ -247,8 +244,6 @@ def _notify_coordinator(db, work_order, message):
     try:
         from app.services.notification_service import NotificationService
         from app.schemas.notification import NotificationCreate
-        from app.models.user import User
-        from app.models.role import Role
         from sqlalchemy import text
 
         region_id = getattr(getattr(work_order, "project", None), "region_id", None)

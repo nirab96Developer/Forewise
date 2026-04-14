@@ -2,19 +2,15 @@
 """File management service for uploads and documents."""
 import hashlib
 import mimetypes
-import os
-import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, List, Optional
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.file import File
-from app.models.user import User
-from app.schemas.file import FileCreate, FileUpdate
 
 
 class FileService:
@@ -151,12 +147,6 @@ class FileService:
         file_record = self.get_file(db, file_id)
         if not file_record:
             return None
-
-        # Check access permissions
-        if not file_record.is_public and user_id:
-            # Check if user has access to the entity
-            # TODO: Implement entity-specific access checks
-            pass
 
         # Update download count
         file_record.download_count = (file_record.download_count or 0) + 1

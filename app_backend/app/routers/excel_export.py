@@ -4,7 +4,7 @@ GET /api/v1/reports/export/excel?type=worklogs|invoices|projects|equipment
 """
 import io
 import urllib.parse
-from datetime import date, datetime
+from datetime import date
 from typing import Annotated, Literal
 
 import openpyxl

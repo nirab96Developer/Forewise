@@ -230,29 +230,18 @@ class DashboardService {
   }
 
   /**
-   * סגירת התראה
+   * סגירת התראה (client-side only — alerts are dynamically generated)
    */
-  async dismissAlert(alertId: number): Promise<void> {
-    try {
-      await api.post(`/dashboard/alerts/${alertId}/dismiss`);
-    } catch (error) {
-      console.error('Error dismissing alert:', error);
-      throw error;
-    }
+  async dismissAlert(_alertId: number): Promise<void> {
+    // Alerts are generated dynamically on each dashboard load,
+    // dismissal is handled in component state.
   }
 
   /**
-   * פעולה על התראה
+   * פעולה על התראה (client-side only)
    */
-  async handleAlertAction(alertId: number, action: string): Promise<void> {
-    try {
-      await api.post(`/dashboard/alerts/${alertId}/action`, null, {
-        params: { action }
-      });
-    } catch (error) {
-      console.error('Error handling alert action:', error);
-      throw error;
-    }
+  async handleAlertAction(_alertId: number, _action: string): Promise<void> {
+    // Alert actions are handled via navigation in the dashboard components.
   }
 
   /**

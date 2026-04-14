@@ -12,7 +12,6 @@ from app.schemas.permission import (
     PermissionCreate,
     PermissionUpdate,
     PermissionResponse,
-    PermissionBrief,
     PermissionListResponse,
     PermissionSearch
 )

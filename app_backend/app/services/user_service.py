@@ -4,12 +4,12 @@ User Service - לוגיקה עסקית למשתמשים
 from datetime import datetime
 from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import select, and_, or_, func
+from sqlalchemy import select, func
 
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate, UserSearch
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import ValidationException, DuplicateException
 from app.core.security import get_password_hash, verify_password
 
 

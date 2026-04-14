@@ -1,8 +1,7 @@
 # app/routers/supplier_rotations.py
 """Supplier rotations management endpoints - Fair rotation system."""
-from typing import List, Optional
+from typing import Optional
 import logging
-from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi import status as http_status

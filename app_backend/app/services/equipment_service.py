@@ -3,7 +3,7 @@ Equipment Service - לוגיקה עסקית לציוד
 Handles all business logic for equipment management
 """
 
-from datetime import datetime, date
+from datetime import datetime
 from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select, and_, or_, func
@@ -22,7 +22,7 @@ from app.schemas.equipment import (
     EquipmentStatistics
 )
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import ValidationException, DuplicateException
 
 
 class EquipmentService(BaseService[Equipment]):
@@ -421,7 +421,7 @@ class EquipmentService(BaseService[Equipment]):
             NotFoundError: If equipment not found
             ValidationError: If equipment has active assignments
         """
-        equipment = self.get_by_id_or_404(db, equipment_id, include_deleted=False)
+        self.get_by_id_or_404(db, equipment_id, include_deleted=False)
         
         # Business rule: Cannot delete if has active assignments
         active_assignments = db.query(EquipmentAssignment).filter(

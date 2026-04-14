@@ -1,7 +1,7 @@
 """
 RoleAssignments Router - API endpoints להקצאת תפקידים
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from typing import Annotated, List, Optional
 
@@ -10,10 +10,7 @@ from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.schemas.role_assignment import (
     RoleAssignmentCreate,
-    RoleAssignmentUpdate,
-    RoleAssignmentResponse,
-    RoleAssignmentListResponse,
-    RoleAssignmentSearch
+    RoleAssignmentResponse
 )
 from app.services.role_assignment_service import role_assignment_service
 

@@ -208,7 +208,7 @@ class SupplierService(BaseService[Supplier]):
         
         Business rule: Check no active work orders
         """
-        supplier = self.get_by_id_or_404(db, supplier_id)
+        self.get_by_id_or_404(db, supplier_id)
         
         # Business rule: Cannot delete if has active work orders
         active_work_orders = db.query(WorkOrder).filter(

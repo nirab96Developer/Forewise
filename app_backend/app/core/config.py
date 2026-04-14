@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import model_validator, field_validator, Field
+from pydantic import model_validator, Field
 
 
 class Settings(BaseSettings):

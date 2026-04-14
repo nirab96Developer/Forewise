@@ -1,7 +1,6 @@
 """Routers module."""
 from fastapi import APIRouter
 import logging
-import os
 import importlib
 
 logger = logging.getLogger(__name__)
@@ -58,6 +57,7 @@ ROUTER_MODULES = [
     "equipment_rates",
     "excel_export",
     "journal",
+    "work_order_coordination_logs",
     # "supplier_distribution",  # removed — file deleted, not in use
 ]
 

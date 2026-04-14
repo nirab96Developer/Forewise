@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from app.models.daily_work_report import DailyWorkReport

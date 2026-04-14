@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConstraintReason(str, Enum):

@@ -9,7 +9,7 @@ from sqlalchemy import select, func, or_
 from app.models.report import Report
 from app.schemas.report import ReportCreate, ReportUpdate, ReportSearch, ReportStatistics
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import DuplicateException
 
 
 class ReportService(BaseService[Report]):

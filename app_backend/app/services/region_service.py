@@ -9,7 +9,7 @@ from sqlalchemy import select, func, or_
 from app.models.region import Region
 from app.schemas.region import RegionCreate, RegionUpdate, RegionSearch, RegionStatistics
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import DuplicateException
 
 
 class RegionService(BaseService[Region]):

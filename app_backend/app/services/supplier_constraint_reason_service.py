@@ -12,7 +12,7 @@ from app.schemas.supplier_constraint_reason import (
     SupplierConstraintReasonCreate, SupplierConstraintReasonUpdate,
     SupplierConstraintReasonSearch, SupplierConstraintReasonStatistics
 )
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import NotFoundException, DuplicateException
 
 
 class SupplierConstraintReasonService:

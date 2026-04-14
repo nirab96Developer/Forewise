@@ -1,9 +1,9 @@
 # app/services/project_assignment_service.py
 """Project assignment management service."""
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.project import Project

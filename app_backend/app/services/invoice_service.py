@@ -6,7 +6,7 @@ from typing import Optional, List, Tuple
 from decimal import Decimal
 from datetime import date as dt_date
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func
 
 from app.models.invoice import Invoice
 from app.services.activity_log_service import ActivityLogService
@@ -16,7 +16,7 @@ from app.models.supplier import Supplier
 from app.models.project import Project
 from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceSearch, InvoiceStatistics
 from app.services.base_service import BaseService
-from app.core.exceptions import NotFoundException, ValidationException, DuplicateException
+from app.core.exceptions import ValidationException, DuplicateException
 
 
 class InvoiceService(BaseService[Invoice]):
@@ -469,7 +469,7 @@ def generate_monthly_invoice(
         overnight_total = sum(float(w.overnight_total or 0) for w in wls)
         rate = float(wls[0].hourly_rate_snapshot or 100)
         item_subtotal = round(paid_hours_total * rate + overnight_total, 2)
-        tax = round(item_subtotal * vat_pct, 2)
+        round(item_subtotal * vat_pct, 2)
 
         eq_name = ""
         if wls[0].equipment:

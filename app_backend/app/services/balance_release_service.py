@@ -4,12 +4,12 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.balance_release import BalanceRelease
 from app.models.budget import Budget
-from app.schemas.balance_release import ReleaseCreate, ReleaseUpdate
+from app.schemas.balance_release import ReleaseCreate
 
 
 class BalanceReleaseService:

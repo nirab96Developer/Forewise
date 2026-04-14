@@ -6,8 +6,7 @@ Provides functions for validating SQLAlchemy models against database schema
 and comparing model structures.
 """
 
-import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import MetaData, inspect
 from sqlalchemy.orm import Session

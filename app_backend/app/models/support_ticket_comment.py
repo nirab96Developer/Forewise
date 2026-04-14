@@ -5,16 +5,14 @@ SYNCED WITH DB - 17.11.2025
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
-from datetime import datetime
 
-from sqlalchemy import Integer, String, Text, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Integer, Text, Boolean, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
 if TYPE_CHECKING:
-    from app.models.support_ticket import SupportTicket
-    from app.models.user import User
+    pass
 
 
 class SupportTicketComment(BaseModel):
