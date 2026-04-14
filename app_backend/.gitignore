@@ -6,19 +6,27 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 *.log
+
+# Testing / linting caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
 
 # IDE
 .vscode/
 .idea/
 *.swp
+*.bak
 
-# Environment Variables - NEVER COMMIT!
+# Environment Variables
 .env
 .env.*
 !.env.example
-!.env.example.NEW
 .env.local
 .env.production
 .env.development
@@ -33,3 +41,14 @@ ENV/
 *.key
 *.pem
 *.secret
+
+# Generated output — not source
+reports/worklogs/
+nohup.out
+*_report.json
+*_analysis.json
+*_summary.json
+*_checks.json
+*_structures*.json
+*_decisions.json
+project_structure.txt
