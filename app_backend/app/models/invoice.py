@@ -5,11 +5,11 @@ CORE entity with full audit columns
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Date, Integer, Numeric, Unicode
+from sqlalchemy import Date, DateTime, Integer, Numeric, Unicode
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
@@ -94,6 +94,26 @@ class Invoice(BaseModel):
     payment_method: Mapped[Optional[str]] = mapped_column(
         Unicode(50), nullable=True,
         comment="אמצעי תשלום"
+    )
+
+    payment_reference: Mapped[Optional[str]] = mapped_column(
+        Unicode(100), nullable=True,
+        comment="אסמכתה / מספר עסקה"
+    )
+
+    paid_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True, index=True,
+        comment="תאריך התשלום בפועל"
+    )
+
+    paid_by: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, index=True,
+        comment="מי סימן כשולמה (no FK constraint in DB!)"
+    )
+
+    sent_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True,
+        comment="תאריך שליחה לספק"
     )
 
     # Additional

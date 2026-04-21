@@ -5,88 +5,93 @@
 // ============================================================
 
 // ============================================================
-// Permission Codes - תואם ל-DB
+// Permission Codes — canonical form is lowercase "resource.action"
+// matches Backend (app_backend/app/models/permission.py validator)
 // ============================================================
 export const PERMISSIONS = {
   // Dashboard
-  DASHBOARD_VIEW: "DASHBOARD.VIEW",
-  
+  DASHBOARD_VIEW: "dashboard.view",
+
   // Projects
-  PROJECTS_VIEW: "PROJECTS.VIEW",
-  PROJECTS_CREATE: "PROJECTS.CREATE",
-  PROJECTS_UPDATE: "PROJECTS.UPDATE",
-  PROJECTS_DELETE: "PROJECTS.DELETE",
-  
+  PROJECTS_VIEW: "projects.read",
+  PROJECTS_CREATE: "projects.create",
+  PROJECTS_UPDATE: "projects.update",
+  PROJECTS_DELETE: "projects.delete",
+
   // Work Orders
-  WORK_ORDERS_VIEW: "WORK_ORDERS.VIEW",
-  WORK_ORDERS_CREATE: "WORK_ORDERS.CREATE",
-  WORK_ORDERS_UPDATE: "WORK_ORDERS.UPDATE",
-  WORK_ORDERS_DELETE: "WORK_ORDERS.DELETE",
-  WORK_ORDERS_COORDINATE: "WORK_ORDERS.COORDINATE",
-  WORK_ORDERS_RESEND: "WORK_ORDERS.RESEND",
-  WORK_ORDERS_ESCALATE: "WORK_ORDERS.ESCALATE",
-  
+  WORK_ORDERS_VIEW: "work_orders.read",
+  WORK_ORDERS_CREATE: "work_orders.create",
+  WORK_ORDERS_UPDATE: "work_orders.update",
+  WORK_ORDERS_DELETE: "work_orders.delete",
+  WORK_ORDERS_COORDINATE: "work_orders.distribute",
+  WORK_ORDERS_APPROVE: "work_orders.approve",
+  WORK_ORDERS_CANCEL: "work_orders.cancel",
+  WORK_ORDERS_CLOSE: "work_orders.close",
+  WORK_ORDERS_RESEND: "work_orders.update",
+  WORK_ORDERS_ESCALATE: "work_orders.update",
+
   // Worklogs
-  WORKLOGS_VIEW: "WORKLOGS.VIEW",
-  WORKLOGS_CREATE: "WORKLOGS.CREATE",
-  WORKLOGS_UPDATE: "WORKLOGS.UPDATE",
-  WORKLOGS_APPROVE: "WORKLOGS.APPROVE",
-  
+  WORKLOGS_VIEW: "worklogs.read",
+  WORKLOGS_CREATE: "worklogs.create",
+  WORKLOGS_UPDATE: "worklogs.update",
+  WORKLOGS_APPROVE: "worklogs.approve",
+  WORKLOGS_SUBMIT: "worklogs.submit",
+
   // Equipment
-  EQUIPMENT_VIEW: "EQUIPMENT.VIEW",
-  EQUIPMENT_CREATE: "EQUIPMENT.CREATE",
-  EQUIPMENT_UPDATE: "EQUIPMENT.UPDATE",
-  EQUIPMENT_REQUEST: "EQUIPMENT.REQUEST",
-  EQUIPMENT_SCAN: "EQUIPMENT.SCAN",
-  
+  EQUIPMENT_VIEW: "equipment.read",
+  EQUIPMENT_CREATE: "equipment.create",
+  EQUIPMENT_UPDATE: "equipment.update",
+  EQUIPMENT_REQUEST: "equipment.assign",
+  EQUIPMENT_SCAN: "equipment.read",
+
   // Suppliers
-  SUPPLIERS_VIEW: "SUPPLIERS.VIEW",
-  SUPPLIERS_CREATE: "SUPPLIERS.CREATE",
-  SUPPLIERS_UPDATE: "SUPPLIERS.UPDATE",
-  SUPPLIERS_DELETE: "SUPPLIERS.DELETE",
-  
+  SUPPLIERS_VIEW: "suppliers.read",
+  SUPPLIERS_CREATE: "suppliers.create",
+  SUPPLIERS_UPDATE: "suppliers.update",
+  SUPPLIERS_DELETE: "suppliers.delete",
+
   // Invoices
-  INVOICES_VIEW: "INVOICES.VIEW",
-  INVOICES_CREATE: "INVOICES.CREATE",
-  INVOICES_UPDATE: "INVOICES.UPDATE",
-  INVOICES_APPROVE: "INVOICES.APPROVE",
-  
+  INVOICES_VIEW: "invoices.read",
+  INVOICES_CREATE: "invoices.create",
+  INVOICES_UPDATE: "invoices.update",
+  INVOICES_APPROVE: "invoices.approve",
+
   // Budgets
-  BUDGETS_VIEW: "BUDGETS.VIEW",
-  BUDGETS_CREATE: "BUDGETS.CREATE",
-  BUDGETS_UPDATE: "BUDGETS.UPDATE",
-  BUDGETS_APPROVE: "BUDGETS.APPROVE",
-  
+  BUDGETS_VIEW: "budgets.read",
+  BUDGETS_CREATE: "budgets.create",
+  BUDGETS_UPDATE: "budgets.update",
+  BUDGETS_APPROVE: "budgets.approve",
+
   // Reports
-  REPORTS_VIEW: "REPORTS.VIEW",
-  REPORTS_EXPORT: "REPORTS.EXPORT",
-  
+  REPORTS_VIEW: "reports.read",
+  REPORTS_EXPORT: "reports.read",
+
   // Users
-  USERS_VIEW: "USERS.VIEW",
-  USERS_CREATE: "USERS.CREATE",
-  USERS_UPDATE: "USERS.UPDATE",
-  USERS_DELETE: "USERS.DELETE",
-  
+  USERS_VIEW: "users.read",
+  USERS_CREATE: "users.create",
+  USERS_UPDATE: "users.update",
+  USERS_DELETE: "users.delete",
+
   // Roles
-  ROLES_VIEW: "ROLES.VIEW",
-  ROLES_MANAGE: "ROLES.MANAGE",
-  
+  ROLES_VIEW: "roles.read",
+  ROLES_MANAGE: "roles.manage_permissions",
+
   // Geography
-  REGIONS_VIEW: "REGIONS.VIEW",
-  REGIONS_MANAGE: "REGIONS.MANAGE",
-  AREAS_VIEW: "AREAS.VIEW",
-  AREAS_MANAGE: "AREAS.MANAGE",
-  
-  // Activity Log - scoped levels
-  ACTIVITY_LOG_MY: "ACTIVITY_LOG.MY",
-  ACTIVITY_LOG_AREA: "ACTIVITY_LOG.AREA",
-  ACTIVITY_LOG_REGION: "ACTIVITY_LOG.REGION",
-  ACTIVITY_LOG_SYSTEM: "ACTIVITY_LOG.SYSTEM",
+  REGIONS_VIEW: "regions.read",
+  REGIONS_MANAGE: "regions.update",
+  AREAS_VIEW: "areas.read",
+  AREAS_MANAGE: "areas.update",
+
+  // Activity Log — frontend pseudo-permissions (no backend route uses them)
+  ACTIVITY_LOG_MY: "activity_log.my",
+  ACTIVITY_LOG_AREA: "activity_log.area",
+  ACTIVITY_LOG_REGION: "activity_log.region",
+  ACTIVITY_LOG_SYSTEM: "activity_log.system",
 
   // System
-  SYSTEM_ADMIN: "SYSTEM.ADMIN",
-  SYSTEM_SETTINGS: "SYSTEM.SETTINGS",
-  SYSTEM_ACTIVITY_LOG: "SYSTEM.ACTIVITY_LOG",  // legacy - kept for compat
+  SYSTEM_ADMIN: "system.admin",
+  SYSTEM_SETTINGS: "system.settings",
+  SYSTEM_ACTIVITY_LOG: "activity_log.system",
 } as const;
 
 export type PermissionCode = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -144,22 +149,28 @@ export function getUserRole(): string {
 }
 
 /**
- * Check if user has a specific permission
+ * Check if user has a specific permission.
+ * Comparison is case-insensitive — Backend canonical form is lowercase
+ * (`resource.action`) but legacy frontend code may still pass UPPERCASE
+ * strings such as "WORK_ORDERS.VIEW". Both must match.
  */
 export function hasPermission(permission: string): boolean {
   const role = getUserRole();
-  
-  // ADMIN has all permissions
+
+  // ADMIN bypass
   if (role === 'ADMIN') return true;
-  
+
+  if (!permission) return false;
+  const target = permission.toLowerCase();
+
   const permissions = getUserPermissions();
-  
-  // Check for exact match
-  if (permissions.includes(permission)) return true;
-  
-  // Check for SYSTEM.ADMIN (super permission)
-  if (permissions.includes(PERMISSIONS.SYSTEM_ADMIN)) return true;
-  
+  for (const p of permissions) {
+    if (!p) continue;
+    if (p.toLowerCase() === target) return true;
+    // SYSTEM.ADMIN super-permission
+    if (p.toLowerCase() === 'system.admin') return true;
+  }
+
   return false;
 }
 

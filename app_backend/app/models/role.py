@@ -18,11 +18,15 @@ if TYPE_CHECKING:
 
 class RoleCode(str, enum.Enum):
     ADMIN = "ADMIN"
+    SUPER_ADMIN = "SUPER_ADMIN"          # alias for top-tier administrators
     REGION_MANAGER = "REGION_MANAGER"
     AREA_MANAGER = "AREA_MANAGER"
+    ORDER_COORDINATOR = "ORDER_COORDINATOR"  # מתאם הזמנות
     WORK_MANAGER = "WORK_MANAGER"
+    FIELD_WORKER = "FIELD_WORKER"        # used in worklog/excel paths
     ACCOUNTANT = "ACCOUNTANT"
     SUPPLIER = "SUPPLIER"
+    SUPPLIER_MANAGER = "SUPPLIER_MANAGER"
     VIEWER = "VIEWER"
 
 

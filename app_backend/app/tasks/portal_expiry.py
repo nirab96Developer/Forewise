@@ -125,16 +125,27 @@ Hierarchy: area region None.
     from app.models.supplier_rotation import SupplierRotation
     from app.models.supplier import Supplier
     from app.models.equipment import Equipment
+    from app.models.equipment_model import EquipmentModel
 
     all_excluded = set(exclude_ids or set())
     if exclude_id:
         all_excluded.add(exclude_id)
 
-    eq_type_id = getattr(work_order, 'equipment_type_id', None)
+    # Resolve equipment type id from the order itself (the WO has no
+    # `equipment_type_id` column — fall back through the requested model
+    # before resorting to the attached equipment which is usually null in
+    # DISTRIBUTING / EXPIRED states).
+    eq_type_id = None
+    if getattr(work_order, 'requested_equipment_model_id', None):
+        eq_model = db.query(EquipmentModel).filter(
+            EquipmentModel.id == work_order.requested_equipment_model_id
+        ).first()
+        if eq_model:
+            eq_type_id = getattr(eq_model, 'category_id', None)
     if not eq_type_id and work_order.equipment_id:
         eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
         if eq:
-            eq_type_id = getattr(eq, 'type_id', None)
+            eq_type_id = getattr(eq, 'type_id', None) or getattr(eq, 'category_id', None)
 
     def search(filter_area_id=None, filter_region_id=None):
         query = (

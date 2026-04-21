@@ -5,7 +5,7 @@ Worklogs Router
 from datetime import date
 from typing import Annotated, Optional
 import logging
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -23,7 +23,8 @@ from app.services.notification_service import (
 )
 from app.schemas.worklog import (
     WorklogCreate, WorklogUpdate, WorklogResponse,
-    WorklogList, WorklogSearch, WorklogStatistics
+    WorklogList, WorklogSearch, WorklogStatistics,
+    WorklogActionBody,
 )
 from app.services.worklog_service import WorklogService
 from app.core.exceptions import NotFoundException, ValidationException
@@ -392,8 +393,11 @@ def submit_worklog(
     worklog_id: int,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    notes: Optional[str] = None
+    body: Optional[WorklogActionBody] = Body(default=None),
+    notes: Optional[str] = Query(default=None, description="Legacy: prefer JSON body.notes"),
 ):
+    # Accept either a JSON body or a legacy query param
+    notes = (body.notes if body and body.notes else notes)
     """
     Submit worklog for approval
 
@@ -472,7 +476,7 @@ def submit_worklog(
                         """), {"eq_id": wo.equipment_id, "scan_date": report_date}).scalar()
 
         # Use service method (handles log internally)
-        updated = worklog_service.submit(db, worklog_id, current_user.id)
+        updated = worklog_service.submit(db, worklog_id, current_user.id, notes=notes)
         return updated
     except HTTPException:
         raise
@@ -491,8 +495,11 @@ def approve_worklog(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
     background_tasks: BackgroundTasks = None,
-    notes: Optional[str] = None
+    body: Optional[WorklogActionBody] = Body(default=None),
+    notes: Optional[str] = Query(default=None, description="Legacy: prefer JSON body.notes"),
 ):
+    # Accept either a JSON body or a legacy query param
+    notes = (body.notes if body and body.notes else notes)
     """
     Approve worklog and send PDF report
     
@@ -507,7 +514,7 @@ def approve_worklog(
 
     try:
         # Use service method (handles log internally)
-        updated = worklog_service.approve(db, worklog_id, current_user.id)
+        updated = worklog_service.approve(db, worklog_id, current_user.id, notes=notes)
         notify_worklog_approved(db, updated)
 
         # Capture data BEFORE session closes (background task runs after response)
@@ -652,19 +659,28 @@ def reject_worklog(
     worklog_id: int,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
-    rejection_reason: Optional[str] = None
+    body: Optional[WorklogActionBody] = Body(default=None),
+    rejection_reason: Optional[str] = Query(default=None, description="Legacy: prefer JSON body.rejection_reason"),
 ):
     """
-    Reject worklog
+    Reject worklog (with mandatory reason)
 
     Permissions: worklogs.approve
     """
     require_permission(current_user, "worklogs.approve")
 
+    # Accept either a JSON body or a legacy query param
+    reason = (body.rejection_reason if body and body.rejection_reason else rejection_reason)
+    if not reason or not reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="חובה לציין סיבת דחייה (rejection_reason)",
+        )
+
     try:
         # Use service method (handles log internally)
-        updated = worklog_service.reject(db, worklog_id, current_user.id, rejection_reason)
-        notify_worklog_rejected(db, updated, reason=rejection_reason or "")
+        updated = worklog_service.reject(db, worklog_id, current_user.id, reason)
+        notify_worklog_rejected(db, updated, reason=reason)
         return updated
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

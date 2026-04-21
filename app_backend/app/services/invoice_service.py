@@ -159,12 +159,20 @@ class InvoiceService(BaseService[Invoice]):
         return invoice
     
     def list(self, db: Session, search: InvoiceSearch) -> Tuple[List[Invoice], int]:
-        """List invoices"""
+        """List invoices.
+
+        Honors `search.area_id` by joining through `projects.area_id`. The router
+        sets this for non-broad roles (everyone except ADMIN / ACCOUNTANT /
+        REGION_MANAGER) so users only see invoices in their own area.
+        Previously this filter was silently dropped — F2.8.
+        """
+        from app.models.project import Project
+
         query = self._base_query(db, include_deleted=search.include_deleted)
-        
+
         if search.q:
             query = query.where(Invoice.invoice_number.ilike(f"%{search.q}%"))
-        
+
         if search.supplier_id:
             query = query.where(Invoice.supplier_id == search.supplier_id)
         if search.project_id:
@@ -177,15 +185,21 @@ class InvoiceService(BaseService[Invoice]):
             query = query.where(Invoice.issue_date <= search.issue_date_to)
         if search.is_active is not None:
             query = query.where(Invoice.is_active == search.is_active)
-        
+        if search.area_id is not None:
+            # Project FK is not enforced in DB but the Python model has the column
+            query = (
+                query.join(Project, Project.id == Invoice.project_id)
+                     .where(Project.area_id == search.area_id)
+            )
+
         total = db.execute(select(func.count()).select_from(query.subquery())).scalar() or 0
-        
+
         sort_col = getattr(Invoice, search.sort_by, Invoice.issue_date)
         query = query.order_by(sort_col.desc() if search.sort_desc else sort_col.asc())
-        
+
         offset = (search.page - 1) * search.page_size
         invoices = db.execute(query.offset(offset).limit(search.page_size)).scalars().all()
-        
+
         return invoices, total
     
     def get_by_number(self, db: Session, invoice_number: str) -> Optional[Invoice]:
@@ -231,9 +245,12 @@ class InvoiceService(BaseService[Invoice]):
         return invoice
 
     def send_to_supplier(self, db, invoice_id: int, user_id: int):
-        """Mark invoice as sent to supplier."""
+        """Mark invoice as sent to supplier and stamp `sent_at`."""
+        from datetime import datetime as _dt
         invoice = self.get_by_id_or_404(db, invoice_id)
         invoice.status = 'SENT'
+        invoice.sent_at = _dt.utcnow()
+        invoice.updated_at = _dt.utcnow()
         db.commit()
         db.refresh(invoice)
         try:

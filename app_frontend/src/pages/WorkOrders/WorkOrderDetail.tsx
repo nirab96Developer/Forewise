@@ -261,20 +261,15 @@ const WorkOrderDetail: React.FC = () => {
         </div>
       </div>
 
-      {/* סריקת ציוד — Modal */}
+      {/* סריקת ציוד — Modal (זרימה מאוחדת: scan → 3 מצבים → confirm/override). */}
+      {/* The modal owns the entire intake flow now; this caller only refreshes
+          the WO state once intake completes. */}
       <ScanEquipmentModal
         isOpen={scanModalOpen}
         onClose={() => setScanModalOpen(false)}
         workOrderId={workOrder.id}
-        onSuccess={(equipmentId: number, licensePlate: string, _name: string) => {
-          api.post(`/work-orders/${workOrder.id}/confirm-equipment`, { equipment_id: equipmentId })
-            .then(() => {
-              fetchWorkOrder();
-              (window as any).showToast?.(`כלי ${licensePlate} שויך להזמנה`, 'success');
-            })
-            .catch((e: any) => {
-              (window as any).showToast?.(e.response?.data?.detail || 'שגיאה בשיוך', 'error');
-            });
+        onSuccess={(_equipmentId: number, _licensePlate: string, _name: string) => {
+          fetchWorkOrder();
           setScanModalOpen(false);
         }}
       />

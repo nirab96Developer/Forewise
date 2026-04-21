@@ -126,7 +126,9 @@ class ProjectService {
         total: response.data.total || 0,
         page: response.data.page || 1,
         limit: response.data.page_size || 20,
-        total_pages: response.data.pages || 1
+        // BE returns the field as `total_pages` (was wrongly read as `pages`,
+        // which always fell back to 1 and broke pagination on >50 projects).
+        total_pages: response.data.total_pages || response.data.pages || 1,
       }))
       .finally(() => {
         _inflight.delete(key);
@@ -206,11 +208,12 @@ class ProjectService {
   }
 
   /**
-   * קבלת סטטיסטיקות פרויקט
+   * קבלת סטטיסטיקות פרויקטים גלובליות.
+   * (אין endpoint per-id ב-BE; השדה היחיד הוא `/projects/statistics`.)
    */
-  async getProjectStatistics(id: number): Promise<any> {
+  async getProjectStatistics(): Promise<any> {
     try {
-      const response = await api.get(`/projects/${id}/statistics`);
+      const response = await api.get('/projects/statistics');
       return response.data;
     } catch (error) {
       console.error('Error fetching project statistics:', error);
@@ -219,16 +222,11 @@ class ProjectService {
   }
 
   /**
-   * עדכון סטטוס פרויקט
+   * עדכון סטטוס פרויקט — דרך updateProject הסטנדרטי.
+   * (לא היה endpoint `/projects/:id/status` ב-BE; משתמשים ב-PUT `/projects/:id`.)
    */
   async updateProjectStatus(id: number, status: string): Promise<Project> {
-    try {
-      const response = await api.put(`/projects/${id}/status`, { status });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating project status:', error);
-      throw error;
-    }
+    return this.updateProject(id, { status });
   }
 }
 

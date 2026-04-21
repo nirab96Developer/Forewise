@@ -11,9 +11,8 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class InvoiceStatus(str, Enum):
-    """Invoice status enum"""
+    """Invoice status enum — must stay aligned with app.core.enums.InvoiceStatus."""
     DRAFT = "DRAFT"
-    PENDING = "PENDING"
     APPROVED = "APPROVED"
     SENT = "SENT"
     PAID = "PAID"
@@ -78,6 +77,7 @@ class InvoiceUpdate(BaseModel):
     paid_amount: Optional[Decimal] = Field(None, ge=0)
     status: Optional[InvoiceStatus] = None
     payment_method: Optional[str] = None
+    payment_reference: Optional[str] = None
     notes: Optional[str] = None
     pdf_path: Optional[str] = None
     version: Optional[int] = Field(None, description="גרסה (optimistic locking)")
@@ -89,19 +89,23 @@ class InvoiceResponse(InvoiceBase):
     invoice_number: str
     paid_amount: Decimal
     payment_method: Optional[str] = None
+    payment_reference: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    paid_by: Optional[int] = None
+    sent_at: Optional[datetime] = None
     pdf_path: Optional[str] = None
     created_by: Optional[int] = None
-    
+
     # Audit
     created_at: datetime
     updated_at: datetime
     deleted_at: Optional[datetime] = None
     is_active: bool
     version: int
-    
+
     # Computed
     balance_due: Optional[Decimal] = None
-    
+
     model_config = ConfigDict(from_attributes=True)
 
 

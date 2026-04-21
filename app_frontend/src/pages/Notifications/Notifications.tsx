@@ -29,11 +29,8 @@ const Notifications: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await notificationService.getNotifications();
-      
-      // Handle both array and object response
-      const notificationsList = Array.isArray(response) 
-        ? response 
-        : (response.notifications || []);
+      // Backend always returns { items, total, page, page_size }.
+      const notificationsList = response.items || [];
       
       // Transform API response to component format
       const transformed: Notification[] = notificationsList.map((notif: any) => ({

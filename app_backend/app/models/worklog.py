@@ -254,6 +254,12 @@ class Worklog(Base):
         comment="הערות"
     )
 
+    # Free-form JSON metadata (scan_flags, hours summary, etc.)
+    metadata_json: Mapped[Optional[str]] = mapped_column(
+        Unicode, nullable=True,
+        comment="מטא-דאטה ב-JSON (scan_flags, hours_summary)"
+    )
+
     # Audit - TRANSACTIONS category (inherited from Base but not BaseModel!)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=text('SYSUTCDATETIME()'),

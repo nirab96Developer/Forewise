@@ -150,6 +150,14 @@ class WorklogService:
         if not wo:
             raise ValidationException(f"Work order {data.work_order_id} not found")
 
+        # RULE 1b: business-rule validation for work_hours per report_type.
+        # Schema allows ge=0 (storage worklogs are 0h) but for any other type
+        # we require at least one positive hour to avoid bogus zero-cost rows.
+        report_type_lower = (data.report_type or 'standard').lower()
+        wh_value = float(data.work_hours or 0)
+        if report_type_lower != 'storage' and wh_value <= 0:
+            raise ValidationException("חובה לדווח על שעות עבודה > 0 (אלא בדיווח אחסון).")
+
         # RULE 2: project_id must exist (workspace enforcement)
         if not wo.project_id:
             raise ValidationException("להזמנה זו אין פרויקט משויך")
@@ -501,16 +509,35 @@ class WorklogService:
         
         return worklogs, total
     
-    def submit(self, db: Session, worklog_id: int, current_user_id: int) -> Worklog:
-        """Submit worklog for approval"""
+    def submit(self, db: Session, worklog_id: int, current_user_id: int, notes: Optional[str] = None) -> Worklog:
+        """Submit worklog for approval.
+
+        - Validates current state (only PENDING/DRAFT can be submitted).
+        - Persists submitted_at / submitted_by_id (audit trail).
+        - Appends optional notes to existing notes column.
+        """
         from sqlalchemy import text as sa_text
+        from datetime import datetime as _dt
         worklog = self.get_by_id(db, worklog_id)
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
-        
-        worklog.status = 'SUBMITTED'
 
-        # Compute hours for metadata
+        # State machine: only PENDING/DRAFT can be submitted
+        wl_status = (worklog.status or '').upper()
+        if wl_status in ('SUBMITTED', 'APPROVED', 'INVOICED', 'REJECTED'):
+            raise ValidationException(
+                f"לא ניתן להגיש דיווח בסטטוס '{worklog.status}'."
+            )
+
+        worklog.status = 'SUBMITTED'
+        worklog.submitted_at = _dt.utcnow()
+        worklog.submitted_by_id = current_user_id
+        if notes:
+            stamp = _dt.utcnow().strftime('%Y-%m-%d %H:%M')
+            addition = f"\n[הגשה {stamp}] {notes.strip()}"
+            worklog.notes = (worklog.notes or '') + addition
+
+        # Compute hours metadata + persist on the row so reviewers can see context
         hours_meta = {}
         if worklog.work_order_id:
             try:
@@ -536,13 +563,13 @@ class WorklogService:
             except Exception:
                 pass
 
-        # Enrich metadata_json
+        # Enrich metadata_json (column added in migration d1e2f3a4b5c6)
         if hours_meta:
             import json
             try:
                 existing = json.loads(worklog.metadata_json or '{}') if worklog.metadata_json else {}
                 existing.update(hours_meta)
-                worklog.metadata_json = json.dumps(existing)
+                worklog.metadata_json = json.dumps(existing, ensure_ascii=False)
             except Exception:
                 pass
 
@@ -567,8 +594,12 @@ class WorklogService:
 
         return worklog
     
-    def approve(self, db: Session, worklog_id: int, current_user_id: int) -> Worklog:
-        """Approve worklog — state machine + self-approval block"""
+    def approve(self, db: Session, worklog_id: int, current_user_id: int, notes: Optional[str] = None) -> Worklog:
+        """Approve worklog — state machine + self-approval block.
+
+        Optional ``notes`` are appended to the worklog so the approval reasoning
+        is preserved (audit + supplier visibility).
+        """
         worklog = self.get_by_id(db, worklog_id)
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
@@ -577,7 +608,7 @@ class WorklogService:
         wl_status = (worklog.status or '').upper()
         if wl_status not in ('SUBMITTED', 'PENDING'):
             raise ValidationException(f"לא ניתן לאשר דיווח בסטטוס '{worklog.status}'. יש להגיש (SUBMIT) קודם.")
-        
+
         if worklog.user_id == current_user_id:
             raise ValidationException("לא ניתן לאשר דיווח שנוצר על ידך. יש לבקש אישור מגורם אחר.")
 
@@ -585,6 +616,10 @@ class WorklogService:
         worklog.status = 'APPROVED'
         worklog.approved_by_user_id = current_user_id
         worklog.approved_at = _dt.utcnow()
+        if notes:
+            stamp = _dt.utcnow().strftime('%Y-%m-%d %H:%M')
+            addition = f"\n[אושר {stamp}] {notes.strip()}"
+            worklog.notes = (worklog.notes or '') + addition
         db.commit()
         db.refresh(worklog)
         
@@ -654,12 +689,18 @@ class WorklogService:
         return worklog
     
     def reject(self, db: Session, worklog_id: int, current_user_id: int, reason: str = None) -> Worklog:
-        """Reject worklog"""
+        """Reject worklog and persist the reason on the row."""
+        from datetime import datetime as _dt
         worklog = self.get_by_id(db, worklog_id)
         if not worklog:
             raise NotFoundException(f"Worklog {worklog_id} not found")
-        
+
         worklog.status = 'REJECTED'
+        # Persist reason so the worker, accountant and audit can see WHY.
+        # (Previously the parameter was accepted but silently dropped — bug F2.6.)
+        if reason:
+            worklog.rejection_reason = reason.strip()
+        worklog.updated_at = _dt.utcnow()
         db.commit()
         db.refresh(worklog)
         

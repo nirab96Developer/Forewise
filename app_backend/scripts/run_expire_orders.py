@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
-"""Expire stale work orders — run via cron every 15 minutes."""
-import sys
+"""DEPRECATED — replaced by app/tasks/portal_expiry.py.
+
+The expiry of supplier-portal tokens is now handled by an in-process scheduler
+that ships with the FastAPI app (started in main.py lifespan, see
+``schedule_portal_expiry_check``). This script used to query the obsolete
+``sent_to_supplier`` status and is therefore a no-op.
+
+If you still have a crontab entry calling this file, please remove it — running
+two expiry mechanisms in parallel can corrupt rotation order.
+"""
 import logging
+import sys
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("expire_orders")
 
-try:
-    from app.core.database import SessionLocal
-    from app.services.work_order_service import WorkOrderService
-
-    svc = WorkOrderService()
-    db = SessionLocal()
-    try:
-        expired = svc.expire_work_orders(db)
-        if expired:
-            log.info(f"Expired {len(expired)} stale work orders: {[wo.id for wo in expired]}")
-        else:
-            log.info("No stale work orders to expire")
-    finally:
-        db.close()
-except Exception as e:
-    log.error(f"Expiration task failed: {e}")
-    sys.exit(1)
+log.warning(
+    "run_expire_orders.py is DEPRECATED. Expiry runs in-process via "
+    "app/tasks/portal_expiry.py. Remove this cron entry."
+)
+sys.exit(0)

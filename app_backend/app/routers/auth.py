@@ -65,16 +65,26 @@ def register(
         raise HTTPException(status_code=403, detail="רק מנהל מערכת יכול ליצור משתמשים")
 
     try:
-        existing_user = db.query(User).filter(User.email == email).first()
+        from app.services.auth_service import normalize_login_identifier
+        from sqlalchemy import func as _sa_func
+
+        # Store the email exactly as typed but check uniqueness case-insensitively
+        # so we never end up with both "User@x.com" and "user@x.com".
+        email_norm = normalize_login_identifier(email)
+        existing_user = (
+            db.query(User)
+            .filter(_sa_func.lower(User.email) == email_norm)
+            .first()
+        )
         if existing_user:
-            raise HTTPException(status_code=400, detail="משתמש כבר קיים")
+            raise HTTPException(status_code=400, detail="משתמש עם מייל זה כבר קיים")
 
         target_role = db.query(Role).filter(Role.code == role_code.upper()).first()
         if not target_role:
             raise HTTPException(status_code=400, detail=f"תפקיד '{role_code}' לא קיים במערכת")
 
         new_user = User(
-            email=email,
+            email=email_norm,  # persist normalized form so future direct comparisons work
             password_hash=get_password_hash(password),
             full_name=full_name,
             status="ACTIVE",
@@ -85,8 +95,8 @@ def register(
         db.add(new_user)
         db.commit()
 
-        logger.info(f"User created by admin {current_user.id}: {email} with role {role_code}")
-        return {"message": "משתמש נוצר בהצלחה", "email": email, "role": role_code}
+        logger.info(f"User created by admin {current_user.id}: {email_norm} with role {role_code}")
+        return {"message": "משתמש נוצר בהצלחה", "email": email_norm, "role": role_code}
 
     except HTTPException:
         raise
@@ -120,7 +130,7 @@ def login(
                     db=db,
                     user_id=result["user"]["id"],
                     activity_type=ActivityType.LOGIN,
-                    action="user_login",
+                    action="user.login",
                     entity_type="user",
                     entity_id=result["user"]["id"],
                     metadata={"ip_address": ip_address, "user_agent": user_agent},
@@ -203,12 +213,12 @@ def logout(
             all_sessions=logout_data.all_sessions
         )
 
-        # Log activity
+        # Log activity (canonical dotted action — see strings/activity.ts)
         activity_log_service.log_activity(
             db=db,
             user_id=current_user.id,
             activity_type="user_logout",
-            action="user_logout",
+            action="user.logout",
             entity_type="user",
             entity_id=current_user.id,
             metadata={"all_sessions": logout_data.all_sessions},
@@ -236,12 +246,12 @@ def change_password(
         )
 
         if success:
-            # Log activity
+            # Log activity (canonical dotted action — see strings/activity.ts)
             activity_log_service.log_activity(
                 db=db,
                 user_id=current_user.id,
                 activity_type="password_changed",
-                action="password_changed",
+                action="user.password_changed",
                 entity_type="user",
                 entity_id=current_user.id,
             )
@@ -464,11 +474,11 @@ def lock_account(
         )
 
         if success:
-            # Log activity
+            # Canonical dotted action — see strings/activity.ts
             activity_log_service.log_activity(
                 db=db,
                 user_id=current_user.id,
-                action="account_locked",
+                action="user.account_locked",
                 entity_type="user",
                 entity_id=lock_data.user_id,
                 details={"reason": lock_data.reason, "duration_hours": lock_data.duration_hours},
@@ -495,11 +505,11 @@ def unlock_account(
         )
 
         if success:
-            # Log activity
+            # Canonical dotted action — see strings/activity.ts
             activity_log_service.log_activity(
                 db=db,
                 user_id=current_user.id,
-                action="account_unlocked",
+                action="user.account_unlocked",
                 entity_type="user",
                 entity_id=unlock_data.user_id,
                 details={"reason": unlock_data.reason},
@@ -553,22 +563,26 @@ def send_otp(
     request: dict,
     db: Session = Depends(get_db),
 ):
-    """Send OTP to user email."""
+    """Send OTP to user email (lookup is case-insensitive)."""
     try:
-        email = request.get("email")
-        if not email:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required")
-        
-        # Check OTP rate limit
+        from app.services.auth_service import normalize_login_identifier
+        from sqlalchemy import func as _sa_func
+
+        email_raw = request.get("email")
+        if not email_raw:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="חובה לציין כתובת מייל")
+
+        email = normalize_login_identifier(email_raw)
+
+        # Check OTP rate limit + account lock by the normalized form so users
+        # can't bypass by toggling case.
         check_otp_rate_limit(email)
-        
-        # Check if account is locked
         check_account_lock(email)
-        
-        # Find user by email
-        user = db.query(User).filter(User.email == email).first()
+
+        # Find user by email — case-insensitive
+        user = db.query(User).filter(_sa_func.lower(User.email) == email).first()
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="המשתמש לא נמצא")
         
         # Generate OTP token
         otp_token = auth_service._generate_otp_token(db, user.id)
@@ -644,11 +658,12 @@ async def verify_otp(
         )
         db.add(session)
         
-        # רשום פעילות
+        # רשום פעילות — use a canonical machine-readable code so the FE can
+        # translate it via `getActivityLabel()` (was a free-form English string).
         activity_log = ActivityLog(
             user_id=user.id,
             activity_type=ActivityType.LOGIN,
-            action="2FA verification successful",
+            action="user.otp_verified",
             entity_type="user",
             entity_id=user.id,
             session_id=session.session_id
@@ -658,24 +673,20 @@ async def verify_otp(
         # שמור הכל
         db.commit()
         
-        # הכן את התגובה
+        # הכן את התגובה — מבנה זהה ל-_build_user_payload כדי לשמור עקביות בלקוח
         user_data = {
             "id": user.id,
             "email": user.email,
             "username": user.username,
             "full_name": user.full_name,
-            "role": {
-                "id": user.role.id,
-                "code": user.role.code,
-                "name": user.role.name,
-                "permissions": [
-                    {"code": p.code, "name": p.name} 
-                    for p in user.role.permissions
-                ] if user.role else []
-            } if user.role else None,
+            "role": user.role.code if user.role else None,
+            "role_code": user.role.code if user.role else None,
+            "permissions": [p.code for p in user.role.permissions] if user.role and user.role.permissions else [],
             "department_id": user.department_id,
             "region_id": user.region_id,
-            "area_id": user.area_id
+            "area_id": user.area_id,
+            "must_change_password": bool(getattr(user, "must_change_password", False)),
+            "last_login": user.last_login.isoformat() if user.last_login else None,
         }
         
         logger.info(f"OTP verification successful for user {user.id}")
@@ -704,24 +715,28 @@ async def resend_otp(
     db: Session = Depends(get_db),
     auth_service: AuthService = Depends(AuthService),
 ):
-    """Resend OTP code - always generates a new one."""
+    """Resend OTP code - always generates a new one.
+
+    SECURITY: The OTP code is sent to the user via email/SMS only.
+    It MUST NEVER be returned in the HTTP response body.
+    """
     try:
         logger.info(f"Resending OTP for user_id: {data.user_id}")
-        
+
         # בדוק שהמשתמש קיים
         user = db.query(User).filter(User.id == data.user_id).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        
-        # שליחה חוזרת - תמיד יוצר חדש
-        new_otp = auth_service.resend_otp_token(db, data.user_id)
-        
-        logger.info(f"New OTP generated for user {data.user_id}: {new_otp}")
-        
+
+        # שליחה חוזרת - תמיד יוצר חדש (החדש נשלח במייל/SMS, לא חוזר ב-API)
+        auth_service.resend_otp_token(db, data.user_id)
+
+        logger.info(f"New OTP generated and dispatched for user {data.user_id}")
+
         return {
             "message": "OTP code resent successfully",
-            "otp_token": new_otp,
-            "user_id": data.user_id
+            "user_id": data.user_id,
+            "email": user.email,
         }
         
     except HTTPException:
@@ -871,10 +886,16 @@ async def biometric_get_challenge(
             "created_at": datetime.utcnow()
         }
         
-        # Get credentials for this user (by username)
+        # Get credentials for this user (by username — case-insensitive)
         query = db.query(BiometricCredential).filter(BiometricCredential.is_active == True)
         if username:
-            user = db.query(User).filter(User.username == username, User.is_active == True).first()
+            from app.services.auth_service import normalize_login_identifier
+            from sqlalchemy import func as _sa_func
+            username_norm = normalize_login_identifier(username)
+            user = db.query(User).filter(
+                _sa_func.lower(User.username) == username_norm,
+                User.is_active == True,
+            ).first()
             if user:
                 query = query.filter(BiometricCredential.user_id == user.id)
             else:
@@ -1061,17 +1082,30 @@ def request_otp(data: dict, db: Session = Depends(get_db)):
     Step 1 — request a 6-digit OTP via phone or email.
     Spec: rate-limit 60s, hash stored, masked identifier in response.
     """
-    identifier: str = data.get("identifier", "").strip()
+    identifier_raw: str = data.get("identifier", "").strip()
     identifier_type: str = data.get("identifier_type", "email").strip().lower()
 
-    if not identifier:
-        raise HTTPException(status_code=400, detail="identifier is required")
+    if not identifier_raw:
+        raise HTTPException(status_code=400, detail="חובה לציין מזהה (מייל או טלפון)")
 
-    # Find user
+    # Find user — email is case-insensitive, phone is exact-match
+    from app.services.auth_service import normalize_login_identifier
+    from sqlalchemy import func as _sa_func
+
     if identifier_type == "phone":
-        user = db.query(User).filter(User.phone == identifier, User.is_active == True).first()
+        identifier = identifier_raw
+        user = (
+            db.query(User)
+            .filter(User.phone == identifier, User.is_active == True)
+            .first()
+        )
     else:
-        user = db.query(User).filter(User.email == identifier, User.is_active == True).first()
+        identifier = normalize_login_identifier(identifier_raw)
+        user = (
+            db.query(User)
+            .filter(_sa_func.lower(User.email) == identifier, User.is_active == True)
+            .first()
+        )
 
     if not user:
         raise HTTPException(status_code=404, detail="משתמש לא נמצא")
@@ -1141,18 +1175,22 @@ def verify_otp_v2(data: dict, db: Session = Depends(get_db)):
     Step 2 — verify OTP + register device.
     Spec: hash compare, max 3 attempts, device_token issued.
     """
-    identifier: str = data.get("identifier", "").strip()
+    identifier_raw: str = data.get("identifier", "").strip()
     code: str = str(data.get("code", "")).strip()
     device_id_raw: str = data.get("device_id", "")
     device_name: str = data.get("device_name", "Unknown device")
     device_os: str = data.get("device_os", "Unknown OS")
 
-    if not identifier or not code:
-        raise HTTPException(status_code=400, detail="identifier and code are required")
+    if not identifier_raw or not code:
+        raise HTTPException(status_code=400, detail="חובה לציין מזהה וקוד")
 
-    # Find user
+    # Find user — email lookup is case-insensitive, phone is exact
+    from app.services.auth_service import normalize_login_identifier
+    from sqlalchemy import func as _sa_func
+
+    identifier_norm = normalize_login_identifier(identifier_raw)
     user = db.query(User).filter(
-        (User.email == identifier) | (User.phone == identifier),
+        (_sa_func.lower(User.email) == identifier_norm) | (User.phone == identifier_raw),
         User.is_active == True,
     ).options(selectinload(User.role).selectinload(Role.permissions)).first()
 
@@ -1596,12 +1634,18 @@ async def webauthn_login_begin(
     if not _WN_OK:
         raise HTTPException(status_code=501, detail="WebAuthn library not available on server")
 
-    username: str = body.get("username", "").strip()
-    if not username:
-        raise HTTPException(status_code=400, detail="username required")
+    username_raw: str = body.get("username", "").strip()
+    if not username_raw:
+        raise HTTPException(status_code=400, detail="חובה לציין שם משתמש")
+
+    # Username/email lookup is case-insensitive (same as password login)
+    from app.services.auth_service import normalize_login_identifier
+    from sqlalchemy import func as _sa_func
+    username_norm = normalize_login_identifier(username_raw)
 
     user = db.query(User).filter(
-        (User.username == username) | (User.email == username),
+        (_sa_func.lower(User.username) == username_norm)
+        | (_sa_func.lower(User.email) == username_norm),
         User.is_active == True,
     ).first()
     if not user:
@@ -1646,14 +1690,19 @@ async def webauthn_login_complete(
     if not _WN_OK:
         raise HTTPException(status_code=501, detail="WebAuthn library not available on server")
 
-    username: str = body.get("username", "").strip()
-    if not username:
-        raise HTTPException(status_code=400, detail="username required")
+    username_raw: str = body.get("username", "").strip()
+    if not username_raw:
+        raise HTTPException(status_code=400, detail="חובה לציין שם משתמש")
+
+    from app.services.auth_service import normalize_login_identifier
+    from sqlalchemy import func as _sa_func
+    username_norm = normalize_login_identifier(username_raw)
 
     user = db.query(User).options(
         selectinload(User.role).selectinload(Role.permissions)
     ).filter(
-        (User.username == username) | (User.email == username),
+        (_sa_func.lower(User.username) == username_norm)
+        | (_sa_func.lower(User.email) == username_norm),
         User.is_active == True,
     ).first()
     if not user:

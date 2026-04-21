@@ -2,6 +2,8 @@
 Invoices Router
 """
 
+from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -580,25 +582,58 @@ def get_invoice_items(
 
 # 
 # POST /invoices/{invoice_id}/mark-paid
-# סמן חשבונית כשולמה
+# סמן חשבונית כשולמה — שומר אסמכתה, אמצעי תשלום וזמן
 # 
+class MarkPaidRequest(_BaseModel):
+    payment_method: Optional[str] = None
+    payment_reference: Optional[str] = None
+    paid_at: Optional[datetime] = None  # optional override; defaults to now()
+    paid_amount: Optional[Decimal] = None  # optional partial payment
+
+
 @router.post("/{invoice_id}/mark-paid")
 def mark_invoice_paid(
     invoice_id: int,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
+    body: Optional[MarkPaidRequest] = None,
 ):
-    """Mark invoice as paid."""
+    """Mark invoice as paid.
+
+    Accepts an optional body with `payment_method`, `payment_reference`,
+    `paid_at` (defaults to now), and `paid_amount` (defaults to total).
+    Records who marked it paid via `paid_by`.
+    """
     require_permission(current_user, "invoices.approve")
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.deleted_at.is_(None)).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="חשבונית לא נמצאה")
-    invoice.paid_amount = invoice.total_amount
+
+    if (invoice.status or "").upper() == "CANCELLED":
+        raise HTTPException(status_code=400, detail="לא ניתן לסמן חשבונית מבוטלת כשולמה")
+
+    now = datetime.utcnow()
+    body = body or MarkPaidRequest()
+
+    invoice.paid_amount = body.paid_amount if body.paid_amount is not None else invoice.total_amount
     invoice.status = "PAID"
-    from datetime import datetime
-    invoice.updated_at = datetime.utcnow()
+    invoice.paid_at = body.paid_at or now
+    invoice.paid_by = getattr(current_user, "id", None)
+    if body.payment_method:
+        invoice.payment_method = body.payment_method
+    if body.payment_reference:
+        invoice.payment_reference = body.payment_reference
+    invoice.updated_at = now
     db.commit()
-    return {"message": "החשבונית סומנה כשולמה", "invoice_id": invoice_id, "status": "PAID"}
+
+    return {
+        "message": "החשבונית סומנה כשולמה",
+        "invoice_id": invoice_id,
+        "status": "PAID",
+        "paid_at": invoice.paid_at.isoformat() if invoice.paid_at else None,
+        "payment_method": invoice.payment_method,
+        "payment_reference": invoice.payment_reference,
+    }
 
 
 #  Monthly Invoice Generation 

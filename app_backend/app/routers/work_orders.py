@@ -344,7 +344,7 @@ def delete_work_order(
             from sqlalchemy import text as sql_text
             db.execute(sql_text("""
                 INSERT INTO activity_logs (action, activity_type, entity_type, entity_id, user_id, description)
-                VALUES ('WORK_ORDER_DELETED', 'delete', 'work_order', :entity_id, :user_id, :description)
+                VALUES ('work_order.deleted', 'delete', 'work_order', :entity_id, :user_id, :description)
             """), {
                 "entity_id": work_order_id,
                 "user_id": current_user.id,
@@ -414,66 +414,18 @@ def approve_work_order(
     _require_order_coordinator_or_admin(current_user)
     
     try:
-        work_order = work_order_service.approve(db, work_order_id, request or WorkOrderApproveRequest(), current_user_id=current_user.id)
+        # Service handles: status transition + supplier email + work-manager email
+        # + project-manager in-app notification.
+        # Router adds: in-app notification to the creator (so they know their
+        # request was approved). No additional broadcast — the previous code
+        # spammed every coordinator/admin/area/work manager in the system with
+        # an "approved" email, which created notification fatigue.
+        work_order = work_order_service.approve(
+            db, work_order_id,
+            request or WorkOrderApproveRequest(),
+            current_user_id=current_user.id,
+        )
         notify_work_order_approved(db, work_order)
-        
-        # Send Email 4 — work order approved to all stakeholders
-        try:
-            from app.templates.email_worklog import work_order_approved
-            from app.core.email import send_email
-            from sqlalchemy import text as sa_text
-            
-            # All data via direct SQL — no lazy relationships
-            proj_row = db.execute(sa_text("""
-                SELECT p.name, p.code, p.area_id, a.name, r.name
-                FROM projects p
-                LEFT JOIN areas a ON p.area_id=a.id
-                LEFT JOIN regions r ON a.region_id=r.id
-                WHERE p.id=:pid
-            """), {"pid": work_order.project_id}).first() if work_order.project_id else None
-
-            supplier_row = db.execute(sa_text("SELECT name FROM suppliers WHERE id=:sid"),
-                                     {"sid": work_order.supplier_id}).first() if work_order.supplier_id else None
-
-            eq = db.execute(sa_text("SELECT equipment_type, license_plate FROM equipment WHERE id=:eid"),
-                           {"eid": work_order.equipment_id}).first() if work_order.equipment_id else None
-
-            creator_row = db.execute(sa_text("SELECT full_name FROM users WHERE id=:uid"),
-                                    {"uid": work_order.created_by_id}).first() if work_order.created_by_id else None
-
-            common = dict(
-                order_number=work_order.order_number or work_order.id,
-                project_name=proj_row[0] if proj_row else '',
-                project_code=proj_row[1] if proj_row else '',
-                supplier_name=supplier_row[0] if supplier_row else '',
-                equipment_type=eq[0] if eq else (work_order.equipment_type or ''),
-                license_plate=eq[1] if eq else '',
-                work_start=str(work_order.work_start_date or ''),
-                work_end=str(work_order.work_end_date or ''),
-                estimated_hours=work_order.estimated_hours or 0,
-                area_name=proj_row[3] if proj_row and proj_row[3] else '',
-                region_name=proj_row[4] if proj_row and proj_row[4] else '',
-                worker_name=creator_row[0] if creator_row else '',
-                lat=None,
-                lng=None,
-            )
-            
-            recipients = db.execute(sa_text("""
-                SELECT DISTINCT u.email, r.code FROM users u JOIN roles r ON u.role_id=r.id
-                WHERE r.code IN ('ORDER_COORDINATOR','ADMIN','AREA_MANAGER','WORK_MANAGER')
-                AND u.is_active=true AND u.email IS NOT NULL
-            """)).fetchall()
-            
-            role_labels = {'ORDER_COORDINATOR':'עותק למתאם הזמנות','ADMIN':'עותק למנהל מערכת',
-                          'AREA_MANAGER':'עותק למנהל אזור','WORK_MANAGER':'עותק למנהל עבודה'}
-            
-            for row in recipients:
-                tmpl = work_order_approved(**common, recipient_label=role_labels.get(row[1],''))
-                send_email(to=row[0], subject=tmpl["subject"], body="", html_body=tmpl["html"])
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Email 4 (WO approved) failed: {e}")
-        
         return work_order
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -921,6 +873,17 @@ def remove_equipment_from_project(
 # QR SCAN ENDPOINTS (Task 7) — 3 Scenarios
 # ============================================
 
+def _normalize_plate(value: Optional[str]) -> str:
+    """Canonical license-plate form: trimmed, upper-cased, single-space-collapsed.
+
+    Used everywhere a plate is compared or stored so that '123-45-678 ',
+    '123-45-678' and ' 123-45-678' all match.
+    """
+    if not value:
+        return ""
+    return " ".join(value.strip().upper().split())
+
+
 class ScanEquipmentRequest(BaseModel):
     license_plate: str = Field(..., description="מספר רישוי שנסרק")
 
@@ -1026,7 +989,7 @@ def scan_equipment(
     """
     require_permission(current_user, "work_orders.read")
 
-    license_plate = body.license_plate.strip()
+    license_plate = _normalize_plate(body.license_plate)
     if not license_plate:
         raise HTTPException(status_code=400, detail="מספר רישוי ריק")
 
@@ -1035,22 +998,28 @@ def scan_equipment(
         raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
 
     # Block scan if WO not yet approved for execution
-    scannable = {'APPROVED_AND_SENT', 'IN_PROGRESS', 'ACTIVE'}
-    if (wo.status or '').upper() not in scannable:
+    from app.core.enums import WO_EXECUTION
+    if (wo.status or '').upper() not in WO_EXECUTION:
         raise HTTPException(status_code=400, detail="לא ניתן לסרוק כלי — ההזמנה טרם אושרה ע״י מתאם הזמנות")
 
-    expected_plate = wo.equipment_license_plate
+    expected_plate = _normalize_plate(wo.equipment_license_plate)
     if not expected_plate and wo.equipment_id:
         eq = db.query(Equipment).filter(Equipment.id == wo.equipment_id).first()
         if eq:
-            expected_plate = eq.license_plate
+            expected_plate = _normalize_plate(eq.license_plate)
 
-    scanned_eq = db.query(Equipment).filter(Equipment.license_plate == license_plate).first()
+    scanned_eq = (
+        db.query(Equipment)
+        .filter(Equipment.license_plate.ilike(license_plate))
+        .first()
+    )
 
     # ── Scenario A: Full match ──
     if license_plate == expected_plate:
         if scanned_eq:
             wo.equipment_id = scanned_eq.id
+            # write back the canonical form to Equipment too
+            scanned_eq.license_plate = license_plate
         wo.equipment_license_plate = license_plate
         wo.updated_at = datetime.utcnow()
         if wo.status in ("APPROVED_AND_SENT",):
@@ -1101,15 +1070,64 @@ def scan_equipment(
             "old_project": old_project_info,
         }
 
-    # ── Scenario C: Wrong type → BLOCK ──
-    is_admin = current_user.role and current_user.role.code in ("ADMIN", "SUPER_ADMIN")
+    # ── Scenario C: Wrong type → BLOCK + return WO to coordinator ──
+    is_admin = bool(current_user.role and current_user.role.code in ("ADMIN", "SUPER_ADMIN"))
+    ordered_type = wo.equipment_type or "לא ידוע"
+    scanned_type_label = scanned_eq.equipment_type if scanned_eq else "לא ידוע"
+    previous_status = wo.status
+
+    # Move ownership back to the coordinator. Field operations (scan / worklog)
+    # are blocked until the coordinator re-decides (re-distribute / override / cancel).
+    wo.status = "NEEDS_RE_COORDINATION"
+    wo.updated_at = datetime.utcnow()
+
+    # Audit log — explain WHY the WO bounced back, with both types and the user.
+    audit_desc = (
+        f"קליטת כלי נחסמה — סוג הכלי שנסרק ({scanned_type_label}) "
+        f"שונה מהמוזמן ({ordered_type}). מספר רישוי שנסרק: {license_plate}. "
+        f"ההזמנה הוחזרה למתאם הזמנות (סטטוס קודם: {previous_status})."
+    )
+    try:
+        from sqlalchemy import text as _sql_text
+        db.execute(
+            _sql_text(
+                "INSERT INTO activity_logs"
+                " (action, activity_type, entity_type, entity_id, user_id, description, category)"
+                " VALUES ('WRONG_EQUIPMENT_BLOCKED', 'update', 'work_order', :eid, :uid, :desc, 'operational')"
+            ),
+            {"eid": work_order_id, "uid": current_user.id, "desc": audit_desc},
+        )
+    except Exception:
+        pass
+
+    db.commit()
+    db.refresh(wo)
+
+    # Notify coordinator(s) for this WO's region/area
+    try:
+        from app.services.notification_service import notify_users_by_role
+        notify_users_by_role(
+            db,
+            roles=["ORDER_COORDINATOR", "ADMIN"],
+            title="הזמנה הוחזרה לטיפול — סוג כלי שגוי",
+            body=audit_desc,
+            link=f"/work-orders/{work_order_id}",
+            region_id=getattr(wo, "region_id", None),
+            area_id=getattr(wo, "area_id", None),
+        )
+    except Exception:
+        # Notifications are best-effort — don't fail the request
+        pass
+
     return {
         "status": "wrong_type",
-        "message": "סוג הציוד שנסרק שונה מההזמנה — לא ניתן לשייך",
-        "ordered_type": wo.equipment_type or "לא ידוע",
-        "scanned_type": scanned_eq.equipment_type if scanned_eq else "לא ידוע",
+        "message": "סוג הציוד שנסרק שונה מההזמנה — ההזמנה הוחזרה למתאם הזמנות",
+        "ordered_type": ordered_type,
+        "scanned_type": scanned_type_label,
         "admin_can_override": is_admin,
         "equipment_id": scanned_eq.id if scanned_eq else None,
+        "wo_status": wo.status,
+        "previous_status": previous_status,
     }
 
 
@@ -1144,9 +1162,11 @@ def confirm_equipment(
     # Release from old project if needed
     released = _release_equipment_from_old_wo(db, eq, exclude_wo_id=work_order_id, actor_id=current_user.id)
 
-    # Assign to current WO
+    # Assign to current WO with normalized plate
+    canonical_plate = _normalize_plate(eq.license_plate)
+    eq.license_plate = canonical_plate
     wo.equipment_id = eq.id
-    wo.equipment_license_plate = eq.license_plate
+    wo.equipment_license_plate = canonical_plate
     wo.updated_at = datetime.utcnow()
     if wo.status in ("APPROVED_AND_SENT",):
         wo.status = "IN_PROGRESS"
@@ -1154,7 +1174,7 @@ def confirm_equipment(
     db.commit()
     db.refresh(wo)
 
-    msg = f"כלי {eq.license_plate} שויך להזמנה בהצלחה"
+    msg = f"כלי {canonical_plate} שויך להזמנה בהצלחה"
     if released:
         old_nums = ", ".join(str(r["old_wo_number"] or r["old_wo_id"]) for r in released)
         msg += f" (הוסר מהזמנות: {old_nums})"
@@ -1189,14 +1209,22 @@ def admin_override_equipment(
     if not wo:
         raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
 
-    license_plate = body.license_plate.strip()
-    eq = db.query(Equipment).filter(Equipment.license_plate == license_plate).first()
+    license_plate = _normalize_plate(body.license_plate)
+    if not license_plate:
+        raise HTTPException(status_code=400, detail="מספר רישוי ריק")
+
+    eq = (
+        db.query(Equipment)
+        .filter(Equipment.license_plate.ilike(license_plate))
+        .first()
+    )
 
     # Release from old project if needed
     released = []
     if eq:
         released = _release_equipment_from_old_wo(db, eq, exclude_wo_id=work_order_id, actor_id=current_user.id)
         wo.equipment_id = eq.id
+        eq.license_plate = license_plate  # canonicalize stored form
 
     wo.equipment_license_plate = license_plate
     wo.updated_at = datetime.utcnow()

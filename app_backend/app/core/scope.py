@@ -32,10 +32,11 @@ def enforce_scope_for_project(user, project, db: Session = None):
     """Ensure user has access to this project based on role and org scope.
 
     - ADMIN: always allowed
-    - REGION_MANAGER: project must be in user's region
-    - AREA_MANAGER / ACCOUNTANT: project must be in user's area
-    - WORK_MANAGER: project must be in user's area
-    - ORDER_COORDINATOR: project must be in user's region
+    - REGION_MANAGER / ORDER_COORDINATOR: project must be in user's region
+    - AREA_MANAGER: project must be in user's area
+    - ACCOUNTANT: project in user's area; if accountant has no area assignment,
+      fall back to region scope (regional accountant — F2.9)
+    - WORK_MANAGER / FIELD_WORKER: project must be in user's area
     """
     role = _role_code(user).upper()
     if role in GLOBAL_ROLES:
@@ -48,7 +49,16 @@ def enforce_scope_for_project(user, project, db: Session = None):
         return
 
     user_area = getattr(user, 'area_id', None)
+    user_region = getattr(user, 'region_id', None)
     proj_area = getattr(project, 'area_id', None)
+    proj_region = getattr(project, 'region_id', None)
+
+    # Regional accountant — no area assigned, scope to region instead.
+    if role == "ACCOUNTANT" and not user_area and user_region and proj_region:
+        if user_region != proj_region:
+            raise ForbiddenException("אין הרשאה לפרויקט מחוץ למרחב שלך")
+        return
+
     if user_area and proj_area and user_area != proj_area:
         raise ForbiddenException("אין הרשאה לפרויקט מחוץ לאזור שלך")
 

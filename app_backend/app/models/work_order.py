@@ -28,10 +28,26 @@ class WorkOrder(BaseModel):
     WorkOrder model - הזמנת עבודה
     Table: work_orders
     Category: CORE (has created_at, updated_at, deleted_at, is_active, version)
-    
-    Represents a work order in the system with state machine:
-PENDING APPROVED ACTIVE COMPLETED
-    Can be REJECTED or CANCELLED at various stages.
+
+    Live state machine:
+        PENDING                                    (created by Work Manager)
+          ↓ send-to-supplier
+        DISTRIBUTING                               (sent to Supplier via portal)
+          ↓ supplier accepts
+        SUPPLIER_ACCEPTED_PENDING_COORDINATOR      (Coordinator must approve)
+          ↓ coordinator approve
+        APPROVED_AND_SENT
+          ↓ scan-equipment / confirm-equipment
+        IN_PROGRESS
+          ↓ close
+        COMPLETED
+
+    Branch states:
+        REJECTED              — rejected by Coordinator or Supplier (terminal)
+        CANCELLED             — cancelled by Admin                  (terminal)
+        EXPIRED               — supplier didn't respond in 3h       (terminal)
+        STOPPED               — equipment removed mid-flight        (terminal)
+        NEEDS_RE_COORDINATION — wrong equipment scanned, back to coordinator
     """
     __tablename__ = "work_orders"
 
@@ -100,7 +116,12 @@ PENDING APPROVED ACTIVE COMPLETED
     # Status & Priority
     status: Mapped[Optional[str]] = mapped_column(
         Unicode(50), ForeignKey('work_order_statuses.code'), nullable=True, index=True,
-        comment="סטטוס: PENDING, APPROVED, ACTIVE, COMPLETED, REJECTED, CANCELLED"
+        comment=(
+            "סטטוס (UPPERCASE): PENDING, DISTRIBUTING, "
+            "SUPPLIER_ACCEPTED_PENDING_COORDINATOR, APPROVED_AND_SENT, "
+            "IN_PROGRESS, COMPLETED, REJECTED, CANCELLED, EXPIRED, STOPPED, "
+            "NEEDS_RE_COORDINATION"
+        )
     )
     
     priority: Mapped[Optional[str]] = mapped_column(
@@ -288,13 +309,19 @@ PENDING APPROVED ACTIVE COMPLETED
 
     @property
     def is_approved(self) -> bool:
-        """Check if status is APPROVED"""
-        return self.status == 'APPROVED'
+        """Check if status is APPROVED_AND_SENT (post-coordinator approval)."""
+        return self.status == 'APPROVED_AND_SENT'
+
+    @property
+    def is_in_progress(self) -> bool:
+        """Check if work has started (equipment scanned)."""
+        return self.status == 'IN_PROGRESS'
 
     @property
     def is_status_active(self) -> bool:
-        """Check if status is ACTIVE (renamed to avoid conflict with BaseModel.is_active)"""
-        return self.status == 'ACTIVE'
+        """DEPRECATED: legacy 'ACTIVE' status; use is_in_progress instead.
+        Kept temporarily for any caller still on the old name."""
+        return self.status in ('ACTIVE', 'IN_PROGRESS')
 
     @property
     def is_completed(self) -> bool:

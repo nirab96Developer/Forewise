@@ -6,6 +6,7 @@ import string
 from datetime import datetime, timedelta
 from typing import Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
@@ -19,6 +20,18 @@ from app.models.otp_token import OTPToken
 from app.models.session import Session as UserSession
 from app.models.user import User
 from app.models.role import Role
+
+
+def normalize_login_identifier(identifier: Optional[str]) -> str:
+    """Normalize a username or email for case-insensitive lookups.
+
+    Username/email comparisons must be case-insensitive (`nira == NIRA == Nira`)
+    while passwords stay case-sensitive. We trim whitespace and lower the entire
+    string. Empty input returns "".
+    """
+    if not identifier:
+        return ""
+    return identifier.strip().lower()
 
 
 class AuthService:
@@ -83,6 +96,52 @@ class AuthService:
         db.commit()
         return code
 
+    def _send_otp_email(self, user, otp_code: str) -> None:
+        """Send OTP code to user via email (best-effort, never raises)."""
+        try:
+            from app.core.email import send_email
+            full_name = user.full_name or user.username or "משתמש"
+            subject = "קוד אימות — כניסה למערכת Forewise"
+            body = (
+                f"שלום {full_name},\n\n"
+                f"קוד האימות שלך הוא:\n\n"
+                f"    {otp_code}\n\n"
+                f"הקוד תקף ל-10 דקות.\n\n"
+                "אם לא ביקשת להתחבר, התעלם מהודעה זו.\n\n"
+                "Forewise"
+            )
+            html_body = f"""
+<div dir="rtl" style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
+  <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
+<h2 style="margin:0;">קוד אימות — Forewise </h2>
+  </div>
+  <div style="padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
+    <p>שלום <strong>{full_name}</strong>,</p>
+    <p>קוד האימות שלך לכניסה למערכת:</p>
+    <div style="text-align:center;margin:24px 0;">
+      <span style="font-size:40px;font-weight:bold;letter-spacing:12px;color:#1a1a1a;font-family:monospace;">{otp_code}</span>
+    </div>
+    <p style="color:#6b7280;font-size:13px;">הקוד תקף ל-10 דקות בלבד.</p>
+    <p style="color:#6b7280;font-size:13px;">אם לא ביקשת להתחבר — התעלם מהודעה זו.</p>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
+    <p style="color:#9ca3af;font-size:12px;">Forewise — מערכת ניהול הזמנות</p>
+  </div>
+</div>"""
+            send_email(to=user.email, subject=subject, body=body, html_body=html_body)
+            import logging
+            logging.getLogger(__name__).info(f"OTP email sent to {user.email}")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to send OTP email to {user.email}: {e}")
+
+    def resend_otp_token(self, db: Session, user_id: int) -> None:
+        """Generate a new OTP and dispatch via email. The code is NEVER returned."""
+        user = self._load_user(db, user_id)
+        if not user:
+            raise ValueError("משתמש לא נמצא")
+        new_code = self._generate_otp_token(db, user_id)
+        self._send_otp_email(user, new_code)
+
 # public API 
 
     def lock_account(self, db: Session, user_id: int, reason: str = None, duration_hours: int = None) -> bool:
@@ -105,14 +164,18 @@ class AuthService:
         return True
 
     def login(self, db: Session, login_data, ip_address=None, user_agent=None) -> dict:
-        username = login_data.username.strip()
+        # Username / email are case-INSENSITIVE — `nira`, `NIRA`, `Nira` all
+        # resolve to the same user. Password remains case-sensitive
+        # (verify_password uses the original raw input).
+        username_norm = normalize_login_identifier(login_data.username)
         password = login_data.password
 
         user = (
             db.query(User)
             .options(selectinload(User.role).selectinload(Role.permissions))
             .filter(
-                (User.username == username) | (User.email == username),
+                (func.lower(User.username) == username_norm)
+                | (func.lower(User.email) == username_norm),
                 User.is_active == True,
             )
             .first()
@@ -136,7 +199,7 @@ class AuthService:
                     user.is_locked = True
                     user.locked_until = datetime.now() + timedelta(minutes=15)
                 db.commit()
-                lock_account_on_failure(username, user.failed_login_attempts)
+                lock_account_on_failure(username_norm, user.failed_login_attempts)
             raise ValueError("שם משתמש או סיסמה שגויים")
 
         remember_me = getattr(login_data, "remember_me", False)
@@ -145,43 +208,7 @@ class AuthService:
         is_first_login = bool(getattr(user, "must_change_password", False)) and not getattr(user, "last_login", None)
         if getattr(user, "two_factor_enabled", False) or is_first_login:
             otp_code = self._generate_otp_token(db, user.id)
-
-            # Send OTP via email (best-effort)
-            try:
-                from app.core.email import send_email
-                full_name = user.full_name or user.username or "משתמש"
-                subject = "קוד אימות — כניסה למערכת Forewise"
-                body = (
-                    f"שלום {full_name},\n\n"
-                    f"קוד האימות שלך הוא:\n\n"
-                    f"    {otp_code}\n\n"
-                    f"הקוד תקף ל-10 דקות.\n\n"
-                    "אם לא ביקשת להתחבר, התעלם מהודעה זו.\n\n"
-                    "Forewise"
-                )
-                html_body = f"""
-<div dir="rtl" style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;">
-  <div style="background:#2d6a2d;color:#fff;padding:20px 24px;border-radius:8px 8px 0 0;">
-<h2 style="margin:0;">קוד אימות — Forewise </h2>
-  </div>
-  <div style="padding:28px 24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px;">
-    <p>שלום <strong>{full_name}</strong>,</p>
-    <p>קוד האימות שלך לכניסה למערכת:</p>
-    <div style="text-align:center;margin:24px 0;">
-      <span style="font-size:40px;font-weight:bold;letter-spacing:12px;color:#1a1a1a;font-family:monospace;">{otp_code}</span>
-    </div>
-    <p style="color:#6b7280;font-size:13px;">הקוד תקף ל-10 דקות בלבד.</p>
-    <p style="color:#6b7280;font-size:13px;">אם לא ביקשת להתחבר — התעלם מהודעה זו.</p>
-    <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;"/>
-    <p style="color:#9ca3af;font-size:12px;">Forewise — מערכת ניהול הזמנות</p>
-  </div>
-</div>"""
-                send_email(to=user.email, subject=subject, body=body, html_body=html_body)
-                import logging
-                logging.getLogger(__name__).info(f"OTP email sent to {user.email}")
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).warning(f"Failed to send OTP email to {user.email}: {e}")
+            self._send_otp_email(user, otp_code)
 
             return {
                 "requires_2fa": True,
@@ -321,8 +348,12 @@ class AuthService:
         return code
 
     def request_password_reset(self, db: Session, reset_data) -> dict:
-        email = getattr(reset_data, "email", "")
-        user = db.query(User).filter(User.email == email, User.is_active == True).first()
+        email_norm = normalize_login_identifier(getattr(reset_data, "email", ""))
+        user = (
+            db.query(User)
+            .filter(func.lower(User.email) == email_norm, User.is_active == True)
+            .first()
+        )
         if user:
             token = self._generate_reset_token(db, user.id)
             try:

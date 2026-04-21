@@ -20,13 +20,21 @@ class UserService(BaseService[User]):
         super().__init__(User)
     
     def get_by_email(self, db: Session, email: str) -> Optional[User]:
-        """קבלת משתמש לפי email"""
-        query = self._base_query(db).where(User.email == email)
+        """קבלת משתמש לפי email — case-insensitive."""
+        from sqlalchemy import func as _sa_func
+        if not email:
+            return None
+        norm = email.strip().lower()
+        query = self._base_query(db).where(_sa_func.lower(User.email) == norm)
         return db.execute(query).scalar_one_or_none()
-    
+
     def get_by_username(self, db: Session, username: str) -> Optional[User]:
-        """קבלת משתמש לפי username"""
-        query = self._base_query(db).where(User.username == username)
+        """קבלת משתמש לפי username — case-insensitive."""
+        from sqlalchemy import func as _sa_func
+        if not username:
+            return None
+        norm = username.strip().lower()
+        query = self._base_query(db).where(_sa_func.lower(User.username) == norm)
         return db.execute(query).scalar_one_or_none()
     
     def list_with_filters(
@@ -109,17 +117,28 @@ class UserService(BaseService[User]):
         db: Session,
         user_data: UserCreate
     ) -> User:
-        """יצירת משתמש חדש + שליחת welcome email עם סיסמה זמנית"""
+        """יצירת משתמש חדש + שליחת welcome email עם סיסמה זמנית.
+
+        Username + email are persisted in **lowercase** to keep storage and
+        case-insensitive lookups in agreement. The password is NOT touched.
+        """
         import logging
         log = logging.getLogger(__name__)
 
-        # Validate email unique
+        # Normalise both identifiers up-front so duplicate checks and storage
+        # see the same value.
+        if user_data.email:
+            user_data.email = user_data.email.strip().lower()
+        if getattr(user_data, "username", None):
+            user_data.username = user_data.username.strip().lower()
+
+        # Validate email unique (case-insensitive — see get_by_email)
         if self.get_by_email(db, user_data.email):
-            raise DuplicateException("Email already exists")
-        
+            raise DuplicateException("משתמש עם מייל זה כבר קיים")
+
         # Validate username unique
         if user_data.username and self.get_by_username(db, user_data.username):
-            raise DuplicateException("Username already exists")
+            raise DuplicateException("שם משתמש זה כבר תפוס")
 
         plain_password = user_data.password  # save before hashing
 
@@ -213,19 +232,25 @@ class UserService(BaseService[User]):
         user_id: int,
         user_data: UserUpdate
     ) -> User:
-        """עדכון משתמש"""
+        """עדכון משתמש — username/email תמיד נשמרים כ-lowercase."""
         user = self.get_by_id_or_404(db, user_id)
-        
-        # Validate email unique (if changed)
-        if user_data.email and user_data.email != user.email:
+
+        # Normalise identifiers up-front (mirrors create_user)
+        if user_data.email:
+            user_data.email = user_data.email.strip().lower()
+        if getattr(user_data, "username", None):
+            user_data.username = user_data.username.strip().lower()
+
+        # Validate email unique (if changed) — case-insensitive
+        if user_data.email and user_data.email != (user.email or "").lower():
             if self.get_by_email(db, user_data.email):
-                raise DuplicateException("Email already exists")
-        
+                raise DuplicateException("משתמש עם מייל זה כבר קיים")
+
         # Validate username unique (if changed)
-        if user_data.username and user_data.username != user.username:
+        if user_data.username and user_data.username != (user.username or "").lower():
             if self.get_by_username(db, user_data.username):
-                raise DuplicateException("Username already exists")
-        
+                raise DuplicateException("שם משתמש זה כבר תפוס")
+
         # Update
         update_dict = user_data.model_dump(exclude_unset=True, exclude_none=True)
 

@@ -356,23 +356,53 @@ async def check_project_access(
             detail="Project not found"
         )
     
-    # ADMIN can access everything
-    if hasattr(current_user, 'role') and current_user.role and current_user.role.code == 'ADMIN':
+    role_code = (
+        current_user.role.code
+        if hasattr(current_user, 'role') and current_user.role
+        else None
+    )
+
+    # ADMIN bypass
+    if role_code == 'ADMIN':
         return current_user
-    
-    # REGION_MANAGER - check region
-    if hasattr(current_user, 'role') and current_user.role and current_user.role.code == 'REGION_MANAGER':
-        if hasattr(current_user, 'region_id') and project.region_id:
-            if current_user.region_id == project.region_id:
+
+    # REGION_MANAGER / ORDER_COORDINATOR - region match
+    if role_code in ('REGION_MANAGER', 'ORDER_COORDINATOR'):
+        user_region = getattr(current_user, 'region_id', None)
+        if user_region and project.region_id and user_region == project.region_id:
+            return current_user
+
+    # AREA_MANAGER / ACCOUNTANT / WORK_MANAGER / FIELD_WORKER - area match
+    if role_code in ('AREA_MANAGER', 'ACCOUNTANT', 'WORK_MANAGER', 'FIELD_WORKER'):
+        user_area = getattr(current_user, 'area_id', None)
+        if user_area and project.area_id and user_area == project.area_id:
+            return current_user
+        # fall back to region for accountants without area assignment
+        if role_code == 'ACCOUNTANT':
+            user_region = getattr(current_user, 'region_id', None)
+            if user_region and project.region_id and user_region == project.region_id:
                 return current_user
-    
-    # AREA_MANAGER - check area
-    if hasattr(current_user, 'role') and current_user.role and current_user.role.code == 'AREA_MANAGER':
-        if hasattr(current_user, 'area_id') and project.area_id:
-            if current_user.area_id == project.area_id:
+
+    # WORK_MANAGER assigned to project - explicit assignment check
+    if role_code in ('WORK_MANAGER', 'FIELD_WORKER'):
+        from sqlalchemy import text as _sql_text
+        try:
+            row = db.execute(
+                _sql_text(
+                    "SELECT 1 FROM project_assignments "
+                    "WHERE project_id = :pid AND user_id = :uid LIMIT 1"
+                ),
+                {"pid": project.id, "uid": current_user.id},
+            ).first()
+            if row:
                 return current_user
-    
-    return current_user
+        except Exception:
+            pass
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="אין הרשאה לגשת לפרויקט זה",
+    )
 
 
 # ============================================================

@@ -12,7 +12,10 @@ class WorklogBase(BaseModel):
     """Base worklog schema"""
     report_date: Optional[date] = Field(None, description="תאריך דיווח")
     work_date: Optional[date] = Field(None, description="תאריך עבודה (alias)")
-    work_hours: Optional[Decimal] = Field(None, gt=0, description="שעות עבודה")
+    # ge=0 (not gt=0): storage / overnight worklogs legitimately report 0 work hours
+    # while still incurring billing (e.g. 150 NIS per night). Service layer
+    # enforces "must be > 0 for non-storage" where appropriate.
+    work_hours: Optional[Decimal] = Field(None, ge=0, description="שעות עבודה")
     activity_description: Optional[str] = Field(None, description="תיאור פעילות")
     description: Optional[str] = Field(None, description="תיאור (alias)")
     notes: Optional[str] = None
@@ -53,7 +56,7 @@ class WorklogCreate(WorklogBase):
 class WorklogUpdate(BaseModel):
     """Update worklog"""
     report_date: Optional[date] = None
-    work_hours: Optional[Decimal] = Field(None, gt=0)
+    work_hours: Optional[Decimal] = Field(None, ge=0)
     break_hours: Optional[Decimal] = Field(None, ge=0)
     start_time: Optional[time] = None
     end_time: Optional[time] = None
@@ -83,20 +86,31 @@ class WorklogResponse(WorklogBase):
     break_hours: Optional[Decimal] = None
     total_hours: Optional[Decimal] = None
     
+    # Classification (תקן / לא תקן / חריגה)
+    is_standard: Optional[bool] = None
+    non_standard_reason: Optional[str] = None
+    rejection_reason: Optional[str] = None
+
     # Financial
     hourly_rate_snapshot: Optional[Decimal] = None
+    rate_source: Optional[str] = None
+    rate_source_name: Optional[str] = None
     cost_before_vat: Optional[Decimal] = None
     cost_with_vat: Optional[Decimal] = None
+    total_amount: Optional[Decimal] = None
     vat_rate: Decimal = Decimal('0.18')
-    
+
     # Approval
     approved_by_user_id: Optional[int] = None
     approved_at: Optional[datetime] = None
-    
+    submitted_at: Optional[datetime] = None
+    submitted_by_id: Optional[int] = None
+
     # Audit
     created_at: datetime
     updated_at: datetime
     is_active: Optional[bool] = None
+    metadata_json: Optional[str] = None
 
     # Overnight
     overnight_nights: Optional[int] = 0
@@ -114,6 +128,12 @@ class WorklogResponse(WorklogBase):
             year = self.created_at.year if self.created_at else dt.now().year
             self.report_number_formatted = f"WL-{year}-{str(self.report_number).zfill(4)}"
         return self
+
+
+class WorklogActionBody(BaseModel):
+    """Optional body payload for submit/approve/reject actions on a worklog."""
+    notes: Optional[str] = None
+    rejection_reason: Optional[str] = None
 
 
 class WorklogBrief(BaseModel):

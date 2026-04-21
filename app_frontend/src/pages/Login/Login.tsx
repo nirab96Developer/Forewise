@@ -488,7 +488,40 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
                     const result = await biometricService.authenticate(usernameVal);
 
                     if (result?.access_token) {
-                      const userObject = result.user;
+                      // WebAuthn endpoint returns role as a nested object
+                      // ({code, name, permissions}). Flatten it so role checks
+                      // (`role === 'ADMIN'`, `normalizeRole(...)`) work the
+                      // same as after password login. Without this, ProtectedRoute
+                      // and the whole permissions stack silently break.
+                      const rawUser: any = result.user || {};
+                      const roleCode = (typeof rawUser.role === 'object' && rawUser.role?.code)
+                        ? rawUser.role.code
+                        : (rawUser.role || rawUser.role_code || 'USER');
+
+                      let permissions: string[] = rawUser.permissions || [];
+                      if (typeof rawUser.role === 'object' && rawUser.role?.permissions) {
+                        permissions = rawUser.role.permissions.map((p: any) =>
+                          typeof p === 'object' ? p.code : p
+                        );
+                      }
+
+                      const fullName = rawUser.full_name || rawUser.username || '';
+                      const userObject = {
+                        id: rawUser.id?.toString() || '',
+                        name: fullName,
+                        first_name: rawUser.first_name || (fullName.split(' ')[0] || fullName),
+                        full_name: fullName,
+                        email: rawUser.email,
+                        role: roleCode,
+                        role_code: roleCode,
+                        roles: [roleCode],
+                        permissions,
+                        region_id: rawUser.region_id,
+                        area_id: rawUser.area_id,
+                        department_id: rawUser.department_id,
+                        last_login: rawUser.last_login || null,
+                      };
+
                       localStorage.setItem('access_token',    result.access_token);
                       localStorage.setItem('token',           result.access_token);
                       localStorage.setItem('user',            JSON.stringify(userObject));
@@ -501,7 +534,7 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
                         accessToken:  result.access_token,
                         refreshToken: result.refresh_token || '',
                         user:         userObject,
-                        userName:     userObject?.name || userObject?.full_name || userObject?.username || '',
+                        userName:     userObject.name || userObject.full_name || '',
                         rememberMe:   true,
                       });
 

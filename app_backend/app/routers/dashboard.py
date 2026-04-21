@@ -104,8 +104,9 @@ async def get_dashboard_summary(
         pending_work_orders = db.query(WorkOrder).filter(
             WorkOrder.status == "PENDING"
         ).count()
+        # After migration d2f3e4a5b6c7 all rows use UPPERCASE status values
         completed_work_orders = db.query(WorkOrder).filter(
-            or_(WorkOrder.status == "completed", WorkOrder.status == "COMPLETED")
+            WorkOrder.status == "COMPLETED"
         ).count()
     except:
         pass
@@ -1365,10 +1366,14 @@ async def get_coordinator_queue(
     rows = db.execute(text(f"""
         SELECT wo.id, wo.order_number, wo.title, wo.status, wo.priority,
                p.name as project_name, s.name as supplier_name,
-               wo.created_at, wo.updated_at, wo.equipment_license_plate
+               wo.created_at, wo.updated_at, wo.equipment_license_plate,
+               wo.project_id, wo.supplier_id, wo.equipment_type,
+               wo.is_forced_selection, wo.constraint_notes, wo.portal_expiry,
+               u.full_name as creator_name
         FROM work_orders wo
-        LEFT JOIN projects p ON p.id = wo.project_id
+        LEFT JOIN projects  p ON p.id = wo.project_id
         LEFT JOIN suppliers s ON s.id = wo.supplier_id
+        LEFT JOIN users     u ON u.id = wo.created_by_id
         WHERE {base_filter}
         ORDER BY
             CASE WHEN UPPER(wo.status) IN ('PENDING','EXPIRED') THEN 0 ELSE 1 END,
@@ -1377,11 +1382,14 @@ async def get_coordinator_queue(
     """), params).fetchall()
 
     work_orders = []
+    now_ts = datetime.now()
     for r in rows:
         wo_id = r[0]
+        # Supplier history with all fields the FE expects
         history = []
         hist_rows = db.execute(text("""
-            SELECT si.status, si.responded_at, si.response_notes, s.name as supplier_name
+            SELECT si.status, si.sent_at, si.responded_at, si.response_notes,
+                   si.decline_reason, s.name as supplier_name
             FROM supplier_invitations si
             LEFT JOIN suppliers s ON s.id = si.supplier_id
             WHERE si.work_order_id = :wid
@@ -1389,17 +1397,43 @@ async def get_coordinator_queue(
         """), {"wid": wo_id}).fetchall()
         for h in hist_rows:
             history.append({
-                "supplier_name": h[3], "status": h[0],
-                "responded_at": str(h[1]) if h[1] else None,
-                "decline_reason": h[2],
+                "supplier_name":  h[5],
+                "status":         h[0],
+                "sent_at":        str(h[1]) if h[1] else None,
+                "responded_at":   str(h[2]) if h[2] else None,
+                "notes":          h[3],
+                "decline_reason": h[4],
             })
 
+        portal_expiry = r[15]
+        # Treat <30min remaining as "expiring soon"
+        is_expired_soon = bool(
+            portal_expiry
+            and portal_expiry > now_ts
+            and (portal_expiry - now_ts).total_seconds() < 30 * 60
+        )
+
         work_orders.append({
-            "id": wo_id, "order_number": r[1], "title": r[2],
-            "status": r[3], "priority": r[4], "project_name": r[5],
-            "supplier_name": r[6], "created_at": str(r[7]) if r[7] else None,
-            "updated_at": str(r[8]) if r[8] else None,
-            "license_plate": r[9], "supplier_history": history,
+            "id":               wo_id,
+            "order_number":     r[1],
+            "title":            r[2],
+            "status":           r[3],
+            "priority":         r[4],
+            "project_name":     r[5],
+            "supplier_name":    r[6],
+            "created_at":       str(r[7]) if r[7] else None,
+            "updated_at":       str(r[8]) if r[8] else None,
+            # FE field name: equipment_plate (kept "license_plate" too for backwards compat)
+            "license_plate":    r[9],
+            "equipment_plate":  r[9],
+            "project_id":       r[10],
+            "supplier_id":      r[11],
+            "equipment_type":   r[12],
+            "is_forced":        bool(r[13]),
+            "constraint_notes": r[14],
+            "is_expired_soon":  is_expired_soon,
+            "creator_name":     r[16] or "",
+            "supplier_history": history,
         })
 
     kpi_filter = "wo.deleted_at IS NULL AND wo.is_active=true"
@@ -1485,7 +1519,8 @@ async def get_accountant_overview(
     rows = db.execute(text(f"""
         SELECT wl.id, wl.report_number, wl.report_date, wl.work_hours, wl.cost_with_vat,
                wl.status, wl.is_overnight, wl.hourly_rate_snapshot,
-               p.name as project_name, s.name as supplier_name, u.full_name as reporter_name
+               p.name as project_name, s.name as supplier_name, u.full_name as reporter_name,
+               wl.project_id, wl.supplier_id
         FROM worklogs wl
         LEFT JOIN projects p ON p.id = wl.project_id
         LEFT JOIN suppliers s ON s.id = wl.supplier_id
@@ -1508,6 +1543,7 @@ async def get_accountant_overview(
             "work_hours": float(r[3] or 0), "cost_with_vat": float(r[4] or 0),
             "status": r[5], "is_overnight": bool(r[6]),
             "project_name": r[8], "supplier_name": r[9], "reporter_name": r[10],
+            "project_id": r[11], "supplier_id": r[12],
             "flags": flags,
         })
 

@@ -104,6 +104,49 @@ def _find_users_by_role(db: Session, role_code, area_id: Optional[int] = None, r
     return q.all()
 
 
+def notify_users_by_role(
+    db: Session,
+    roles,
+    title: str,
+    body: str,
+    link: Optional[str] = None,
+    region_id: Optional[int] = None,
+    area_id: Optional[int] = None,
+    notification_type: str = "work_order",
+    entity_type: Optional[str] = None,
+    entity_id: Optional[int] = None,
+    priority: str = "medium",
+) -> int:
+    """Public broadcast helper — notify every active user matching any of `roles`,
+    optionally narrowed by `area_id` (preferred) or `region_id`.
+
+    Returns the number of users notified. Best-effort — never raises.
+    """
+    try:
+        users = _find_users_by_role(db, roles, area_id=area_id, region_id=region_id)
+    except Exception as exc:
+        log.warning(f"notify_users_by_role: lookup failed for roles={roles}: {exc}")
+        return 0
+    sent = 0
+    for u in users:
+        try:
+            notify(
+                db,
+                user_id=u.id,
+                title=title,
+                message=body,
+                notification_type=notification_type,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                priority=priority,
+                action_url=link,
+            )
+            sent += 1
+        except Exception:
+            continue
+    return sent
+
+
 # 
 # Business-event notification helpers
 # 

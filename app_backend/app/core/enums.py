@@ -19,6 +19,9 @@ class WorkOrderStatus(str, Enum):
     DISTRIBUTING = "DISTRIBUTING"
     SUPPLIER_ACCEPTED_PENDING_COORDINATOR = "SUPPLIER_ACCEPTED_PENDING_COORDINATOR"
     APPROVED_AND_SENT = "APPROVED_AND_SENT"
+    IN_PROGRESS = "IN_PROGRESS"
+    ACTIVE = "ACTIVE"
+    NEEDS_RE_COORDINATION = "NEEDS_RE_COORDINATION"
     COMPLETED = "COMPLETED"
     REJECTED = "REJECTED"
     CANCELLED = "CANCELLED"
@@ -32,6 +35,15 @@ WO_TERMINAL: FrozenSet[str] = frozenset({
     WorkOrderStatus.CANCELLED,
     WorkOrderStatus.EXPIRED,
     WorkOrderStatus.STOPPED,
+})
+
+# Statuses where the work is being executed in the field
+# (after coordinator approval, before completion). Any of these allows
+# field-side operations: equipment scan, worklog reporting.
+WO_EXECUTION: FrozenSet[str] = frozenset({
+    WorkOrderStatus.APPROVED_AND_SENT,
+    WorkOrderStatus.IN_PROGRESS,
+    WorkOrderStatus.ACTIVE,
 })
 
 WO_TRANSITIONS: Dict[str, FrozenSet[str]] = {
@@ -52,9 +64,34 @@ WO_TRANSITIONS: Dict[str, FrozenSet[str]] = {
         WorkOrderStatus.CANCELLED,
     }),
     WorkOrderStatus.APPROVED_AND_SENT: frozenset({
+        WorkOrderStatus.IN_PROGRESS,
+        WorkOrderStatus.ACTIVE,
+        WorkOrderStatus.NEEDS_RE_COORDINATION,
         WorkOrderStatus.COMPLETED,
         WorkOrderStatus.CANCELLED,
         WorkOrderStatus.STOPPED,
+    }),
+    WorkOrderStatus.IN_PROGRESS: frozenset({
+        WorkOrderStatus.ACTIVE,
+        WorkOrderStatus.NEEDS_RE_COORDINATION,
+        WorkOrderStatus.COMPLETED,
+        WorkOrderStatus.CANCELLED,
+        WorkOrderStatus.STOPPED,
+    }),
+    WorkOrderStatus.ACTIVE: frozenset({
+        WorkOrderStatus.IN_PROGRESS,
+        WorkOrderStatus.NEEDS_RE_COORDINATION,
+        WorkOrderStatus.COMPLETED,
+        WorkOrderStatus.CANCELLED,
+        WorkOrderStatus.STOPPED,
+    }),
+    # Coordinator must re-decide: send to next supplier, override with admin,
+    # or cancel. Field operations (scan / worklog) are blocked while here.
+    WorkOrderStatus.NEEDS_RE_COORDINATION: frozenset({
+        WorkOrderStatus.DISTRIBUTING,        # coordinator re-distributes
+        WorkOrderStatus.APPROVED_AND_SENT,    # admin override (different equipment OK)
+        WorkOrderStatus.IN_PROGRESS,          # admin override + already-scanned
+        WorkOrderStatus.CANCELLED,
     }),
     WorkOrderStatus.COMPLETED: frozenset(),
     WorkOrderStatus.REJECTED: frozenset(),
@@ -68,6 +105,9 @@ WO_LABELS: Dict[str, str] = {
     WorkOrderStatus.DISTRIBUTING: "בהפצה לספקים",
     WorkOrderStatus.SUPPLIER_ACCEPTED_PENDING_COORDINATOR: "ספק אישר - ממתין לאישור",
     WorkOrderStatus.APPROVED_AND_SENT: "אושר ונשלח",
+    WorkOrderStatus.IN_PROGRESS: "בביצוע",
+    WorkOrderStatus.ACTIVE: "פעיל בשטח",
+    WorkOrderStatus.NEEDS_RE_COORDINATION: "ממתין לבדיקת מתאם — סוג כלי שגוי",
     WorkOrderStatus.COMPLETED: "הושלם",
     WorkOrderStatus.REJECTED: "נדחה",
     WorkOrderStatus.CANCELLED: "בוטל",

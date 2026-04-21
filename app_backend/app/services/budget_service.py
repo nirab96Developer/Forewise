@@ -250,8 +250,9 @@ def freeze_budget_for_work_order(
         wo.remaining_frozen = Decimal(str(amount))
 
     from app.core.audit import log_business_event
+    # Canonical dotted action — translated client-side via strings/activity.ts
     log_business_event(
-        db, "BUDGET_FROZEN", "budget", budget.id,
+        db, "budget.frozen", "budget", budget.id,
         description=f"הוקפא {amount:,.0f} עבור הזמנה #{work_order_id}",
         metadata={"work_order_id": work_order_id, "amount": amount,
                   "available_after": float(budget.remaining_amount or 0)},
@@ -292,8 +293,9 @@ def release_budget_freeze(
     wo.remaining_frozen = Decimal(0)
 
     from app.core.audit import log_business_event
+    # Canonical dotted action — translated client-side via strings/activity.ts
     log_business_event(
-        db, "BUDGET_RELEASED", "budget", budget.id,
+        db, "budget.released", "budget", budget.id,
         description=f"שוחרר הקפאה {frozen:,.0f}, הוצאה {actual_amount:,.0f} (WO #{work_order_id})",
         metadata={"work_order_id": work_order_id, "frozen_released": frozen,
                   "actual_spent": actual_amount},

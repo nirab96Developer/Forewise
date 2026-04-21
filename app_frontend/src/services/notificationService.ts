@@ -22,31 +22,34 @@ export interface NotificationCreate {
 }
 
 export interface NotificationFilters {
-  user_id?: number;
-  type?: string;
-  is_read?: boolean;
+  unread_only?: boolean;
+  notification_type?: string;
   page?: number;
-  limit?: number;
+  page_size?: number;
 }
 
 export interface NotificationResponse {
-  notifications: Notification[];
+  items: Notification[];
   total: number;
   page: number;
-  limit: number;
-  total_pages: number;
-  unread_count: number;
+  page_size: number;
 }
 
 class NotificationService {
   /**
    * קבלת רשימת התראות
+   * Backend returns { items, total, page, page_size }.
    */
-  async getNotifications(filters: NotificationFilters = {}): Promise<Notification[] | NotificationResponse> {
+  async getNotifications(filters: NotificationFilters = {}): Promise<NotificationResponse> {
     try {
       const response = await api.get('/notifications/', { params: filters });
-      // API returns array directly, not wrapped in response object
-      return Array.isArray(response.data) ? response.data : response.data;
+      const data = response.data ?? {};
+      return {
+        items: data.items ?? (Array.isArray(data) ? data : []),
+        total: data.total ?? 0,
+        page: data.page ?? 1,
+        page_size: data.page_size ?? (filters.page_size ?? 50),
+      };
     } catch (error) {
       console.error('Error fetching notifications:', error);
       throw error;
@@ -71,7 +74,7 @@ class NotificationService {
    */
   async markAsRead(id: number): Promise<Notification> {
     try {
-      const response = await api.put(`/notifications/${id}/read`);
+      const response = await api.patch(`/notifications/${id}/read`);
       return response.data;
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -84,7 +87,7 @@ class NotificationService {
    */
   async markAllAsRead(): Promise<void> {
     try {
-      await api.put('/notifications/read-all');
+      await api.patch('/notifications/read-all');
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
       throw error;
@@ -130,12 +133,13 @@ class NotificationService {
   }
 
   /**
-   * קבלת התראות לפי סוג
+   * קבלת התראות לפי סוג — מסנן את הרשימה הכללית עם notification_type.
+   * (אין endpoint נפרד ב-BE; משתמש ב-`/notifications/?notification_type=...`.)
    */
   async getNotificationsByType(type: string): Promise<Notification[]> {
     try {
-      const response = await api.get(`/notifications/type/${type}`);
-      return response.data;
+      const r = await this.getNotifications({ notification_type: type });
+      return r.items ?? [];
     } catch (error) {
       console.error('Error fetching notifications by type:', error);
       throw error;

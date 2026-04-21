@@ -438,6 +438,16 @@ def accept_work_order(
                 resolved_equipment_id = new_eq.id
                 logger.info(f"WO {work_order.id}: auto-created equipment id={new_eq.id} for plate={effective_plate}")
 
+        # ── HARD VALIDATION: equipment is required to accept ────────
+        # A supplier acceptance without a concrete tool is meaningless and
+        # leaves the work order in a half-state where the coordinator can
+        # approve & scan with no equipment_id at all.
+        if not resolved_equipment_id and not effective_plate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="חובה לבחור כלי או להזין מספר רישוי לפני אישור ההזמנה",
+            )
+
         # ── Update work order ───────────────────────────────────────
         work_order.status = "SUPPLIER_ACCEPTED_PENDING_COORDINATOR"
         work_order.supplier_response_at = datetime.utcnow()
@@ -521,10 +531,15 @@ def reject_work_order(
             work_order.version += 1
         
         db.commit()
-        
+
+        # Capture the supplier_id of the rejecting supplier BEFORE we move to next.
+        # _move_to_next_supplier reassigns work_order.supplier_id, so without this
+        # snapshot the rotation update would credit the wrong supplier.
+        rejecting_supplier_id = work_order.supplier_id
+
         # Send notification to work manager
         _send_notification_to_manager(db, work_order, "rejected")
-        
+
         # If fair rotation, move to next supplier
         if not work_order.is_forced_selection:
             _move_to_next_supplier(db, work_order)
@@ -532,12 +547,14 @@ def reject_work_order(
             # Forced selection - mark as rejected
             work_order.status = "REJECTED"
             db.commit()
-        
-        # Fair Rotation — update rejected supplier's score
+
+        # Fair Rotation — update the SCORE of the supplier who rejected
         try:
-            if work_order.supplier_id:
+            if rejecting_supplier_id:
                 from app.services.supplier_rotation_service import SupplierRotationService
-                SupplierRotationService().update_rotation_after_rejection(db, supplier_id=work_order.supplier_id)
+                SupplierRotationService().update_rotation_after_rejection(
+                    db, supplier_id=rejecting_supplier_id
+                )
         except Exception as _re:
             logger.warning(f"Fair Rotation update on portal reject WO {work_order.id}: {_re}")
 
@@ -696,16 +713,26 @@ Hierarchy: area region REJECTED.
         
         from app.models.supplier_rotation import SupplierRotation
         from app.models.equipment import Equipment
-        
+        from app.models.equipment_model import EquipmentModel
+
         area_id = work_order.project.area_id
         region_id = work_order.project.region_id
-        
-        # Get equipment type ID
-        eq_type_id = getattr(work_order, 'equipment_type_id', None)
+
+        # Resolve equipment type id — primary source is the WO's
+        # requested_equipment_model.category_id (set at WO creation, never
+        # null for valid orders). Falls back to attached equipment.type_id
+        # only if a tool was already chosen.
+        eq_type_id = None
+        if work_order.requested_equipment_model_id:
+            eq_model = db.query(EquipmentModel).filter(
+                EquipmentModel.id == work_order.requested_equipment_model_id
+            ).first()
+            if eq_model:
+                eq_type_id = getattr(eq_model, 'category_id', None)
         if not eq_type_id and work_order.equipment_id:
             eq = db.query(Equipment).filter(Equipment.id == work_order.equipment_id).first()
             if eq:
-                eq_type_id = getattr(eq, 'type_id', None)
+                eq_type_id = getattr(eq, 'type_id', None) or getattr(eq, 'category_id', None)
         
         def find_supplier_with_equipment(filter_area_id=None, filter_region_id=None):
             """Find next supplier in rotation who actually has equipment with license plate."""

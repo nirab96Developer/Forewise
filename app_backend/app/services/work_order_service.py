@@ -350,12 +350,25 @@ class WorkOrderService:
             from app.core.exceptions import NotFoundException
             raise NotFoundException(f"Work order {work_order_id} not found")
 
-        allowed = {'pending', 'PENDING', 'DISTRIBUTING', 'distributing', 'draft', 'DRAFT'}
+        allowed = {
+            'pending', 'PENDING',
+            'DISTRIBUTING', 'distributing',
+            'draft', 'DRAFT',
+            'NEEDS_RE_COORDINATION',  # coordinator re-distributes after wrong-equipment block
+        }
         if work_order.status not in allowed:
             from app.core.exceptions import ValidationException
             raise ValidationException(
                 f"Work order must be in PENDING status to send to supplier (current: {work_order.status})"
             )
+
+        # When recovering from NEEDS_RE_COORDINATION the previous supplier likely
+        # cannot fulfill (wrong equipment was sent). Clear the assignment and any
+        # stale equipment binding so Fair Rotation picks a fresh supplier.
+        if (work_order.status or '').upper() == 'NEEDS_RE_COORDINATION':
+            work_order.supplier_id = None
+            work_order.equipment_id = None
+            work_order.equipment_license_plate = None
 
         # If no supplier assigned, use Fair Rotation to find one
         if not work_order.supplier_id:
@@ -383,11 +396,37 @@ class WorkOrderService:
 
         try:
             from app.services.supplier_rotation_service import SupplierRotationService
+            from app.models.equipment_model import EquipmentModel
+
+            # Resolve equipment_type_id correctly:
+            #   - PRIMARY: equipment_models.category_id from requested_equipment_model_id
+            #     (this is what the supplier rotation table actually keys on).
+            #   - FALLBACK: equipment_id is almost always None when we're in
+            #     DISTRIBUTING (the supplier hasn't picked a tool yet) so the
+            #     old code passed None and rotation degenerated to a global counter.
+            eq_type_id = None
+            if work_order.requested_equipment_model_id:
+                eq_model = db.query(EquipmentModel).filter(
+                    EquipmentModel.id == work_order.requested_equipment_model_id
+                ).first()
+                if eq_model:
+                    eq_type_id = getattr(eq_model, 'category_id', None)
+
+            # Area = project.area_id (not the WO location_id, which is an
+            # operational detail and isn't the rotation key).
+            area_id = None
+            try:
+                if work_order.project and work_order.project.area_id is not None:
+                    area_id = work_order.project.area_id
+            except Exception:
+                area_id = None
+
             rot_svc = SupplierRotationService()
             rot_svc.update_rotation_after_assignment(
-                db, supplier_id=work_order.supplier_id,
-                equipment_type_id=work_order.equipment_id,
-                area_id=work_order.location_id,
+                db,
+                supplier_id=work_order.supplier_id,
+                equipment_type_id=eq_type_id,
+                area_id=area_id,
             )
         except Exception:
             pass
@@ -560,50 +599,9 @@ class WorkOrderService:
             "equipment_type": equipment_type,
         }
 
-    def handle_supplier_response(
-        self, db: Session, portal_token: str, response: str, reason: Optional[str] = None
-    ) -> Optional[WorkOrder]:
-        """Handle supplier response to work order."""
-        work_order = (
-            db.query(WorkOrder)
-            .filter(
-                and_(
-                    WorkOrder.portal_token == portal_token,
-                    WorkOrder.status == "sent_to_supplier",
-                    WorkOrder.token_expires_at > datetime.utcnow()
-                )
-            )
-            .first()
-        )
-
-        if not work_order:
-            return None
-
-        if response.lower() == "accept":
-            work_order.status = "accepted"
-        elif response.lower() == "reject":
-            work_order.status = "rejected"
-        else:
-            raise ValueError("Response must be 'accept' or 'reject'")
-
-        work_order.response_received_at = datetime.utcnow()
-        work_order.updated_at = datetime.utcnow()
-        
-        if reason:
-            work_order.notes = reason
-
-        db.commit()
-        db.refresh(work_order)
-
-        if response.lower() == "reject" and work_order.supplier_id:
-            try:
-                from app.services.supplier_rotation_service import SupplierRotationService
-                rot_svc = SupplierRotationService()
-                rot_svc.update_rotation_after_rejection(db, supplier_id=work_order.supplier_id)
-            except Exception:
-                pass
-
-        return work_order
+    # NOTE: handle_supplier_response was removed — supplier responses are
+    # handled by app/routers/supplier_portal.py which uses the live UPPERCASE
+    # status values (DISTRIBUTING / SUPPLIER_ACCEPTED_PENDING_COORDINATOR / REJECTED).
 
     def force_supplier(
         self,
@@ -709,11 +707,13 @@ class WorkOrderService:
             try:
                 from sqlalchemy import text as sql_text
 
+                # Use a canonical action code so the FE's getActivityLabel()
+                # produces a Hebrew label without a hard-coded translation here.
                 db.execute(
                     sql_text(
                         """
                         INSERT INTO activity_logs (action, activity_type, entity_type, entity_id, description)
-                        VALUES ('SUPPLIER_FORCED', 'update', 'work_order', :wid, :desc)
+                        VALUES ('work_order.supplier_changed', 'update', 'work_order', :wid, :desc)
                         """
                     ),
                     {
@@ -732,159 +732,23 @@ class WorkOrderService:
 
         supplier.total_assignments = (supplier.total_assignments or 0) + 1
 
-        # Generate new portal token
+        # Generate new portal token + move to live state
         work_order.portal_token = secrets.token_urlsafe(32)
         work_order.token_expires_at = datetime.utcnow() + timedelta(hours=3)
-        work_order.status = "sent_to_supplier"
+        work_order.portal_expiry = work_order.token_expires_at
+        work_order.status = "DISTRIBUTING"
 
         db.commit()
         db.refresh(work_order)
         return work_order
 
-    def start_work(self, db: Session, work_order_id: int) -> Optional[WorkOrder]:
-        """Start work on work order."""
-        work_order = self.get_work_order(db, work_order_id)
-        if not work_order:
-            return None
-
-        if work_order.status != "accepted":
-            raise ValueError("Work order must be accepted to start work")
-
-        work_order.status = "in_progress"
-        work_order.updated_at = datetime.utcnow()
-        
-        db.commit()
-        db.refresh(work_order)
-        return work_order
-
-    def complete_work(
-        self, db: Session, work_order_id: int, actual_hours: Optional[float] = None
-    ) -> Optional[WorkOrder]:
-        """Complete work order."""
-        work_order = self.get_work_order(db, work_order_id)
-        if not work_order:
-            return None
-
-        if work_order.status != "in_progress":
-            raise ValueError("Work order must be in progress to complete")
-
-        work_order.status = "completed"
-        work_order.completed_at = datetime.utcnow()
-        work_order.updated_at = datetime.utcnow()
-        
-        if actual_hours:
-            work_order.actual_hours = actual_hours
-
-        db.commit()
-        db.refresh(work_order)
-
-        try:
-            from app.services.supplier_rotation_service import SupplierRotationService
-            rot_svc = SupplierRotationService()
-            rot_svc.update_rotation_after_completion(db, supplier_id=work_order.supplier_id)
-        except Exception as _rce:
-            log.warning(f"Fair Rotation update on complete WO {work_order.id}: {_rce}")
-
-        return work_order
-
-    def expire_work_orders(self, db: Session) -> List[WorkOrder]:
-        """Expire work orders that haven't been responded to (scheduled task)."""
-        expired_orders = (
-            db.query(WorkOrder)
-            .filter(
-                and_(
-                    WorkOrder.status == "sent_to_supplier",
-                    WorkOrder.token_expires_at < datetime.utcnow()
-                )
-            )
-            .all()
-        )
-
-        for order in expired_orders:
-            order.status = "expired"
-            order.updated_at = datetime.utcnow()
-
-        db.commit()
-        return expired_orders
-
-    def get_supplier_portal_view(self, db: Session, portal_token: str) -> Optional[dict]:
-        """Get work order view for supplier portal."""
-        work_order = (
-            db.query(WorkOrder)
-            .options(
-                joinedload(WorkOrder.project),
-                joinedload(WorkOrder.supplier)
-            )
-            .filter(
-                and_(
-                    WorkOrder.portal_token == portal_token,
-                    WorkOrder.status == "sent_to_supplier",
-                    WorkOrder.token_expires_at > datetime.utcnow()
-                )
-            )
-            .first()
-        )
-
-        if not work_order:
-            return None
-
-        return {
-            "order_number": f"WO-{work_order.id:06d}",
-            "title": work_order.title,
-            "description": work_order.description,
-            "equipment_type": work_order.equipment_type,
-            "equipment_count": getattr(work_order, "equipment_count", 0),
-            "start_date": work_order.work_start_date,
-            "end_date": work_order.work_end_date,
-            "hourly_rate": work_order.hourly_rate,
-            "estimated_hours": work_order.estimated_hours,
-            "location": work_order.project.location_name if work_order.project else None,
-            "contact_person": work_order.supplier.contact_person if work_order.supplier else None,
-            "contact_phone": work_order.supplier.phone if work_order.supplier else None,
-            "contact_email": work_order.supplier.email if work_order.supplier else None,
-            "portal_token": work_order.portal_token,
-            "expires_at": work_order.token_expires_at,
-            "is_forced": work_order.is_forced_selection,
-            "force_reason": work_order.constraint_notes,
-        }
-
-    def get_work_order_statistics(self, db: Session, project_id: Optional[int] = None) -> dict:
-        """Get work order statistics."""
-        query = db.query(WorkOrder)
-        
-        if project_id:
-            query = query.filter(WorkOrder.project_id == project_id)
-
-        total_orders = query.count()
-        
-        # Count by status
-        status_counts = {}
-        for status in ["pending", "sent_to_supplier", "accepted", "rejected", 
-                      "in_progress", "completed", "cancelled", "expired"]:
-            count = query.filter(WorkOrder.status == status).count()
-            status_counts[f"{status}_count"] = count
-
-        # Financial statistics
-        from sqlalchemy import func
-        total_estimated_cost = query.with_entities(
-            func.sum(WorkOrder.hourly_rate * WorkOrder.estimated_hours)
-        ).scalar() or 0
-
-        total_actual_cost = query.with_entities(
-            func.sum(WorkOrder.hourly_rate * WorkOrder.actual_hours)
-        ).scalar() or 0
-
-        avg_hourly_rate = query.with_entities(
-            func.avg(WorkOrder.hourly_rate)
-        ).scalar() or 0
-
-        return {
-            "total_orders": total_orders,
-            **status_counts,
-            "total_estimated_cost": total_estimated_cost,
-            "total_actual_cost": total_actual_cost,
-            "average_hourly_rate": avg_hourly_rate,
-        }
+    # NOTE: start_work / complete_work / expire_work_orders / get_supplier_portal_view
+    # were removed — they used obsolete lowercase statuses ("accepted",
+    # "in_progress", "completed", "sent_to_supplier") and were never wired up to
+    # the live HTTP layer. The live flow now uses the UPPERCASE state machine
+    # (APPROVED_AND_SENT / IN_PROGRESS / COMPLETED) implemented in
+    # app/routers/work_orders.py + app/routers/supplier_portal.py +
+    # app/tasks/portal_expiry.py.
 
     #  Alias/bridge methods for router compatibility 
     def list(self, db, search=None, current_user=None):
@@ -995,9 +859,66 @@ class WorkOrderService:
         """Alias  delete_work_order()"""
         return self.delete_work_order(db, wo_id)
 
-    def get_statistics(self, db, current_user=None):
-        """Alias  get_work_order_statistics()"""
-        return self.get_work_order_statistics(db)
+    def get_statistics(self, db, filters=None, current_user=None):
+        """Return work order statistics matching the WorkOrderStatistics schema.
+
+        Counts use the live UPPERCASE state machine
+        (PENDING / DISTRIBUTING / SUPPLIER_ACCEPTED_PENDING_COORDINATOR /
+         APPROVED_AND_SENT / IN_PROGRESS / COMPLETED / REJECTED / CANCELLED /
+         EXPIRED / STOPPED / NEEDS_RE_COORDINATION).
+        """
+        from sqlalchemy import func
+
+        query = db.query(WorkOrder).filter(
+            WorkOrder.deleted_at.is_(None),
+            WorkOrder.is_active == True,
+        )
+
+        f = filters or {}
+        if f.get('project_id'):
+            query = query.filter(WorkOrder.project_id == f['project_id'])
+        if f.get('supplier_id'):
+            query = query.filter(WorkOrder.supplier_id == f['supplier_id'])
+
+        total = query.count()
+
+        # by_status — group by normalized UPPERCASE status
+        by_status: dict = {}
+        rows = (
+            query.with_entities(WorkOrder.status, func.count(WorkOrder.id))
+            .group_by(WorkOrder.status)
+            .all()
+        )
+        for status, count in rows:
+            key = (status or 'UNKNOWN').upper()
+            by_status[key] = (by_status.get(key) or 0) + int(count)
+
+        # by_priority
+        by_priority: dict = {}
+        rows = (
+            query.with_entities(WorkOrder.priority, func.count(WorkOrder.id))
+            .group_by(WorkOrder.priority)
+            .all()
+        )
+        for priority, count in rows:
+            key = (priority or 'UNKNOWN').upper()
+            by_priority[key] = (by_priority.get(key) or 0) + int(count)
+
+        # active = anything that's still in flight
+        ACTIVE_STATES = (
+            'PENDING', 'DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR',
+            'APPROVED_AND_SENT', 'IN_PROGRESS', 'NEEDS_RE_COORDINATION',
+        )
+        active = sum(c for s, c in by_status.items() if s in ACTIVE_STATES)
+        completed = by_status.get('COMPLETED', 0)
+
+        return {
+            'total': total,
+            'by_status': by_status,
+            'by_priority': by_priority,
+            'active': active,
+            'completed': completed,
+        }
 
     def get_by_id_or_404(self, db, wo_id):
         """Get work order or raise 404."""
@@ -1032,6 +953,22 @@ class WorkOrderService:
             from fastapi import HTTPException
             raise HTTPException(status_code=403, detail="לא ניתן לאשר הזמנה שנוצרה על ידך")
 
+        # Only orders awaiting coordinator approval can be approved here
+        from fastapi import HTTPException as _HTTPExc
+        current_status = (wo.status or '').upper()
+        if current_status not in ('SUPPLIER_ACCEPTED_PENDING_COORDINATOR', 'APPROVED_AND_SENT'):
+            raise _HTTPExc(
+                status_code=400,
+                detail=f"לא ניתן לאשר הזמנה בסטטוס '{wo.status}'. נדרש אישור ספק תחילה.",
+            )
+
+        # HARD validation: must have an equipment selection (id or plate)
+        if not wo.equipment_id and not (wo.equipment_license_plate or '').strip():
+            raise _HTTPExc(
+                status_code=400,
+                detail="לא ניתן לאשר הזמנה ללא בחירת כלי. יש לחזור לספק או לציין כלי באופן ידני.",
+            )
+
         wo.status = 'APPROVED_AND_SENT'
         wo.updated_at = datetime.datetime.now()
         db.commit()
@@ -1041,12 +978,12 @@ class WorkOrderService:
         admin_name = (current_user.full_name or current_user.username) if current_user else 'מתאם'
         order_label = wo.order_number or str(wo_id)
 
-        #  Activity log 
+        #  Activity log — canonical dotted lowercase action code
         try:
             from sqlalchemy import text
             db.execute(text("""
                 INSERT INTO activity_logs (action, description, user_id, entity_type, entity_id)
-                VALUES ('WORK_ORDER_APPROVED', :desc, :uid, 'work_order', :wid)
+                VALUES ('work_order.approved', :desc, :uid, 'work_order', :wid)
             """), {
                 "desc": f"הזמנה מספר {order_label} אושרה לביצוע על ידי {admin_name}",
                 "uid": uid,
@@ -1165,26 +1102,17 @@ class WorkOrderService:
         except Exception as e:
             log.warning(f"Failed to send work manager approval email for WO {wo_id}: {e}")
 
-        #  In-app notification 
+        # In-app notification — project manager only (creator gets it via the
+        # router-level notify_work_order_approved). Centralising here avoids
+        # the duplicate-notifications issue from the audit.
         try:
-            from app.services.notification_service import notification_service
-            from app.schemas.notification import NotificationCreate
-
-            notif_user_ids = set()
-            if uid:
-                pass  # don't notify the approver themselves
-            if wo.created_by_id:
-                notif_user_ids.add(wo.created_by_id)
-            if wo.project and wo.project.manager_id:
-                notif_user_ids.add(wo.project.manager_id)
-
-            for nuid in notif_user_ids:
-                if nuid == uid:
-                    continue  # skip the person who approved
+            if wo.project and wo.project.manager_id and wo.project.manager_id not in (uid, wo.created_by_id):
+                from app.services.notification_service import notification_service
+                from app.schemas.notification import NotificationCreate
                 import json as _json
                 notif = NotificationCreate(
-                    user_id=nuid,
-                    title=f"הזמנה {order_label} אושרה ",
+                    user_id=wo.project.manager_id,
+                    title=f"הזמנה {order_label} אושרה",
                     message=f"הזמנת עבודה {order_label} אושרה לביצוע על ידי {admin_name}.",
                     notification_type="work_order_approved",
                     priority="high",
@@ -1290,12 +1218,16 @@ class WorkOrderService:
         return wo
 
     def start(self, db, wo_id, request=None, current_user=None, current_user_id=None):
-        """Start a work order  active."""
+        """Start a work order — moves to IN_PROGRESS (live state machine value).
+
+        Note: 'ACTIVE' was the legacy value and is no longer produced. Existing
+        rows with status='ACTIVE' are normalised by migration d2f3e4a5b6c7.
+        """
         from app.models.work_order import WorkOrder
         import datetime
         wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
         if wo:
-            wo.status = 'ACTIVE'
+            wo.status = 'IN_PROGRESS'
             wo.updated_at = datetime.datetime.now()
             db.commit()
             db.refresh(wo)
@@ -1312,7 +1244,8 @@ class WorkOrderService:
         if not wo:
             return wo
 
-        wo.status = 'completed'
+        wo.status = 'COMPLETED'
+        wo.completed_at = _dt.datetime.now()
         wo.updated_at = _dt.datetime.now()
         if actual_hours is not None:
             wo.actual_hours = actual_hours
