@@ -336,11 +336,94 @@ class WorkOrderService:
         db.commit()
         return True
 
+    def _dispatch_portal_email(self, db: Session, work_order, portal_url: str, expires_at) -> tuple:
+        """Send the supplier-portal invitation email. Returns (sent: bool, supplier_name: str).
+
+        Single source of truth for portal-token emails. Used by send_to_supplier,
+        move_to_next_supplier and resend_to_supplier so all three actually
+        notify the supplier (previously only send_to_supplier did).
+        """
+        import logging
+        log = logging.getLogger(__name__)
+        supplier_name = "ספק"
+
+        if not work_order.supplier_id:
+            log.warning(f"WO {work_order.id}: cannot send email — no supplier_id")
+            return False, supplier_name
+
+        from app.models.supplier import Supplier
+        from datetime import date
+        supplier = db.query(Supplier).filter(Supplier.id == work_order.supplier_id).first()
+        if not supplier:
+            log.warning(f"WO {work_order.id}: supplier {work_order.supplier_id} not found")
+            return False, supplier_name
+        supplier_name = supplier.name or supplier_name
+
+        to_email = supplier.email or supplier.contact_email
+        if not to_email:
+            log.warning(
+                f"Supplier {supplier.id} ({supplier.name}) has no email address — portal link not sent"
+            )
+            return False, supplier_name
+
+        try:
+            from app.core.email import send_email
+            expires_str = expires_at.strftime('%d/%m/%Y %H:%M')
+            wo_title = work_order.equipment_type or work_order.title or f"הזמנה #{work_order.order_number}"
+            project_name = ""
+            if work_order.project_id:
+                try:
+                    from app.models.project import Project
+                    proj = db.query(Project).filter(Project.id == work_order.project_id).first()
+                    if proj:
+                        project_name = proj.name
+                except Exception:
+                    pass
+            html_body = f"""
+<div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden;border:1px solid #ddd">
+  <div style="background:#1a3a1a;padding:28px;text-align:center">
+    <h1 style="color:white;font-size:26px;letter-spacing:3px;margin:0">FOREWISE</h1>
+    <p style="color:#a8d5a2;margin:6px 0 0;font-size:13px">מערכת לניהול פרויקטים ויערות</p>
+  </div>
+  <div style="padding:30px;background:#fff">
+    <h2 style="color:#1a3a1a">שלום {supplier_name},</h2>
+    <p style="color:#444">קיבלת <strong>הזמנת עבודה חדשה</strong> ממערכת Forewise.</p>
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:20px;margin:20px 0">
+      <p style="margin:6px 0"><strong>סוג ציוד:</strong> {wo_title}</p>
+      {f'<p style="margin:6px 0"><strong>פרויקט:</strong> {project_name}</p>' if project_name else ''}
+      <p style="margin:6px 0"><strong>מספר הזמנה:</strong> #{work_order.order_number}</p>
+    </div>
+    <div style="text-align:center;margin:30px 0">
+      <a href="{portal_url}" style="background:#2d5a27;color:white;padding:15px 35px;text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block">
+        לצפייה ואישור / דחייה
+      </a>
+    </div>
+    <p style="color:#888;font-size:12px;text-align:center;border-top:1px solid #eee;padding-top:15px">
+       הקישור תקף עד {expires_str}<br>
+      אי מענה תוך 3 שעות — ההזמנה תועבר לספק הבא אוטומטית
+    </p>
+  </div>
+  <div style="background:#1a3a1a;padding:15px;text-align:center">
+    <p style="color:#a8d5a2;margin:0;font-size:12px">Forewise — מערכת ניהול יערות | {date.today().strftime('%d/%m/%Y')}</p>
+  </div>
+</div>"""
+            send_email(
+                to=to_email,
+                subject=f"הזמנת עבודה #{work_order.order_number} — נדרשת תגובה",
+                body=f"שלום {supplier_name},\nקיבלת הזמנת עבודה חדשה.\nלצפייה: {portal_url}\nתוקף: {expires_str}",
+                html_body=html_body,
+            )
+            log.info(f"WO {work_order.id}: portal email sent to {to_email} (supplier {supplier.id})")
+            return True, supplier_name
+        except Exception as e:
+            log.error(f"WO {work_order.id}: failed to send portal email to {to_email}: {e}")
+            return False, supplier_name
+
     def send_to_supplier(self, db: Session, work_order_id: int, current_user_id: int = None) -> dict:
         """
         Send work order to supplier — generates portal token and sends email.
         If no supplier is assigned, uses Fair Rotation to select one.
-        Returns dict with { work_order, portal_token, portal_url, expires_at }.
+        Returns dict with { work_order, portal_token, portal_url, expires_at, email_sent, supplier_name }.
         """
         import secrets
         from datetime import timedelta
@@ -431,72 +514,10 @@ class WorkOrderService:
         except Exception:
             pass
 
-        # Send email to supplier
-        email_sent = False
-        supplier_name = "ספק"
-        try:
-            from app.models.supplier import Supplier
-            supplier = db.query(Supplier).filter(Supplier.id == work_order.supplier_id).first()
-            if supplier:
-                supplier_name = supplier.name
-                to_email = supplier.email or supplier.contact_email
-                if to_email:
-                    from app.core.email import send_email
-                    from datetime import date
-                    expires_str = expires_at.strftime('%d/%m/%Y %H:%M')
-                    wo_title = work_order.equipment_type or work_order.title or f"הזמנה #{work_order.order_number}"
-                    project_name = ""
-                    if work_order.project_id:
-                        try:
-                            from app.models.project import Project
-                            proj = db.query(Project).filter(Project.id == work_order.project_id).first()
-                            if proj:
-                                project_name = proj.name
-                        except Exception:
-                            pass
-                    html_body = f"""
-<div dir="rtl" style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#f9f9f9;border-radius:12px;overflow:hidden;border:1px solid #ddd">
-  <div style="background:#1a3a1a;padding:28px;text-align:center">
-    <h1 style="color:white;font-size:26px;letter-spacing:3px;margin:0">FOREWISE</h1>
-    <p style="color:#a8d5a2;margin:6px 0 0;font-size:13px">מערכת לניהול פרויקטים ויערות</p>
-  </div>
-  <div style="padding:30px;background:#fff">
-    <h2 style="color:#1a3a1a">שלום {supplier.name},</h2>
-    <p style="color:#444">קיבלת <strong>הזמנת עבודה חדשה</strong> ממערכת Forewise.</p>
-    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:20px;margin:20px 0">
-      <p style="margin:6px 0"><strong>סוג ציוד:</strong> {wo_title}</p>
-      {f'<p style="margin:6px 0"><strong>פרויקט:</strong> {project_name}</p>' if project_name else ''}
-      <p style="margin:6px 0"><strong>מספר הזמנה:</strong> #{work_order.order_number}</p>
-    </div>
-    <div style="text-align:center;margin:30px 0">
-      <a href="{portal_url}" style="background:#2d5a27;color:white;padding:15px 35px;text-decoration:none;border-radius:8px;font-size:16px;font-weight:bold;display:inline-block">
-        לצפייה ואישור / דחייה 
-      </a>
-    </div>
-    <p style="color:#888;font-size:12px;text-align:center;border-top:1px solid #eee;padding-top:15px">
-       הקישור תקף עד {expires_str}<br>
-      אי מענה תוך 3 שעות — ההזמנה תועבר לספק הבא אוטומטית
-    </p>
-  </div>
-  <div style="background:#1a3a1a;padding:15px;text-align:center">
-    <p style="color:#a8d5a2;margin:0;font-size:12px">Forewise — מערכת ניהול יערות | {date.today().strftime('%d/%m/%Y')}</p>
-  </div>
-</div>"""
-                    send_email(
-                        to=to_email,
-                        subject=f" הזמנת עבודה #{work_order.order_number} — נדרשת תגובה",
-                        body=f"שלום {supplier.name},\nקיבלת הזמנת עבודה חדשה.\nלצפייה: {portal_url}\nתוקף: {expires_str}",
-                        html_body=html_body,
-                    )
-                    email_sent = True
-                else:
-                    import logging
-                    logging.getLogger(__name__).warning(
-                        f"Supplier {supplier.id} ({supplier.name}) has no email address"
-                    )
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to send portal email: {e}")
+        # Send invitation email via the shared helper
+        email_sent, supplier_name = self._dispatch_portal_email(
+            db, work_order, portal_url, expires_at,
+        )
 
         return {
             "work_order": work_order,
@@ -1365,29 +1386,63 @@ class WorkOrderService:
         return wo
 
     def move_to_next_supplier(self, db, wo_id, current_user=None, current_user_id=None):
-        """Move to next supplier in rotation."""
+        """Move to next supplier in rotation AND send the portal email.
+
+        Previous version just rotated the supplier_id and updated the token —
+        but never notified the new supplier. Coordinator clicked "next supplier",
+        got HTTP 200, and the supplier never knew anything was sent.
+        """
         wo = self.get_work_order(db, wo_id)
         if not wo:
             return None
-        
+
         next_sid = self._select_supplier_by_rotation(db, wo)
-        if next_sid:
-            wo.supplier_id = next_sid
-            wo.portal_token = secrets.token_urlsafe(32)
-            wo.token_expires_at = datetime.utcnow() + timedelta(hours=3)
-            wo.portal_expiry = wo.token_expires_at
-            wo.status = "DISTRIBUTING"
-            wo.updated_at = datetime.utcnow()
-            db.commit()
-            db.refresh(wo)
-        else:
+        if not next_sid:
             wo.status = "REJECTED"
             wo.updated_at = datetime.utcnow()
             db.commit()
+            return wo
+
+        wo.supplier_id = next_sid
+        wo.portal_token = secrets.token_urlsafe(32)
+        wo.token_expires_at = datetime.utcnow() + timedelta(hours=3)
+        wo.portal_expiry = wo.token_expires_at
+        wo.status = "DISTRIBUTING"
+        wo.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(wo)
+
+        portal_url = f"https://forewise.co/supplier-portal/{wo.portal_token}"
+        self._dispatch_portal_email(db, wo, portal_url, wo.portal_expiry)
         return wo
 
     def resend_to_supplier(self, db, wo_id, current_user=None, current_user_id=None):
-        """Resend work order to supplier."""
-        return self.get_work_order(db, wo_id)
+        """Resend the portal invitation to the SAME supplier with a fresh token.
+
+        Used when a token expired and the coordinator wants to give the same
+        supplier another shot (without rotating to the next one). Generates a
+        new 3-hour token and sends a fresh email — the previous version was a
+        no-op and just returned the WO unchanged.
+        """
+        wo = self.get_work_order(db, wo_id)
+        if not wo:
+            return None
+        if not wo.supplier_id:
+            from app.core.exceptions import ValidationException
+            raise ValidationException("אין ספק משויך — השתמש ב'שלח לספק' כדי להקצות אחד.")
+
+        wo.portal_token = secrets.token_urlsafe(32)
+        wo.token_expires_at = datetime.utcnow() + timedelta(hours=3)
+        wo.portal_expiry = wo.token_expires_at
+        # Bump back to DISTRIBUTING in case the WO was EXPIRED
+        if (wo.status or '').upper() in ('EXPIRED', 'REJECTED'):
+            wo.status = "DISTRIBUTING"
+        wo.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(wo)
+
+        portal_url = f"https://forewise.co/supplier-portal/{wo.portal_token}"
+        self._dispatch_portal_email(db, wo, portal_url, wo.portal_expiry)
+        return wo
 
 
