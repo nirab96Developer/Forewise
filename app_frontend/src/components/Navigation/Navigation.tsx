@@ -73,6 +73,14 @@ const Navigation: React.FC = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Lock body scroll while the mobile drawer is open — keeps the page behind
+  // the overlay from scrolling on touch (iOS/Android both honour this).
+  useEffect(() => {
+    if (!isMobile) return;
+    document.body.classList.toggle('is-mobile-menu-open', isMobileMenuOpen);
+    return () => document.body.classList.remove('is-mobile-menu-open');
+  }, [isMobile, isMobileMenuOpen]);
+
   // קבלת פריטי תפריט לפי תפקיד המשתמש
   const menuItems = useMemo(() => {
     return getMenuItemsForRole(userRole);
