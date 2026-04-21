@@ -14,6 +14,7 @@ import api from "../../services/api";
 import authService from "../../services/authService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
 import { normalizeRole, UserRole } from "../../utils/permissions";
+import { getWorkOrderStatusLabel, getWorkOrderStatusTone, toneClasses } from "../../strings";
 
 interface CoordinationOrder extends Omit<WorkOrder, 'status'> {
   status: string;
@@ -37,6 +38,12 @@ interface EquipmentCategory {
   name: string;
 }
 
+interface EquipmentModel {
+  id: number;
+  name: string;
+  category_id?: number;
+}
+
 const OrderCoordination: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -48,6 +55,7 @@ const OrderCoordination: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [_invitations, setInvitations] = useState<any[]>([]);
   const [categories, setCategories] = useState<Record<number, string>>({});
+  const [equipmentModels, setEquipmentModels] = useState<Record<number, EquipmentModel>>({});
   const [cancelModal, setCancelModal] = useState<{ orderId: number; orderNumber: string | number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [bulkDeleteModal, setBulkDeleteModal] = useState(false);
@@ -64,17 +72,29 @@ const OrderCoordination: React.FC = () => {
     pending: 0,
     distributing: 0,
     accepted: 0,
+    needsReCoordination: 0,
+    expired: 0,
     completed: 0,
   });
 
-  // Load equipment categories for name lookup
+  // Load equipment categories AND models for name lookup
+  // (orders carry requested_equipment_model_id, not category_id, so we need both)
   const loadCategories = useCallback(async () => {
     try {
-      const resp = await api.get('/equipment-categories');
-      const items: EquipmentCategory[] = resp.data?.items || resp.data || [];
-      const map: Record<number, string> = {};
-      items.forEach(c => { map[c.id] = c.name; });
-      setCategories(map);
+      const [catResp, modelResp] = await Promise.all([
+        api.get('/equipment-categories'),
+        api.get('/suppliers/equipment-models/active').catch(() => ({ data: [] })),
+      ]);
+
+      const categoryItems: EquipmentCategory[] = catResp.data?.items || catResp.data || [];
+      const catMap: Record<number, string> = {};
+      categoryItems.forEach(c => { catMap[c.id] = c.name; });
+      setCategories(catMap);
+
+      const modelItems: EquipmentModel[] = modelResp.data?.items || modelResp.data || [];
+      const modelMap: Record<number, EquipmentModel> = {};
+      modelItems.forEach(m => { modelMap[m.id] = m; });
+      setEquipmentModels(modelMap);
     } catch {
       // non-critical
     }
@@ -93,7 +113,16 @@ const OrderCoordination: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const statuses = ['PENDING', 'DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', 'APPROVED_AND_SENT'];
+      const statuses = [
+        'PENDING',
+        'DISTRIBUTING',
+        'SUPPLIER_ACCEPTED_PENDING_COORDINATOR',
+        'NEEDS_RE_COORDINATION',
+        'APPROVED_AND_SENT',
+        // Expired tokens still belong on the coordinator queue — they need a
+        // resend or a manual decision (move-next-supplier).
+        'EXPIRED',
+      ];
       const allOrders: CoordinationOrder[] = [];
 
       for (const status of statuses) {
@@ -114,9 +143,15 @@ const OrderCoordination: React.FC = () => {
         setInvitations(invItems.map((o: any) => ({ id: o.id, work_order_id: o.id, status: 'ACCEPTED' })));
       } catch {}
 
+      // Re-coordination + expired items go FIRST (most urgent — coordinator
+      // owns the decision and the SLA clock is already running)
       const statusOrder: Record<string, number> = {
-        'PENDING': 1, 'DISTRIBUTING': 2,
-        'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': 3, 'APPROVED_AND_SENT': 4
+        'NEEDS_RE_COORDINATION': 0,
+        'EXPIRED': 0,
+        'PENDING': 1,
+        'DISTRIBUTING': 2,
+        'SUPPLIER_ACCEPTED_PENDING_COORDINATOR': 3,
+        'APPROVED_AND_SENT': 4,
       };
       allOrders.sort((a, b) => (statusOrder[a.status] || 9) - (statusOrder[b.status] || 9));
 
@@ -125,6 +160,8 @@ const OrderCoordination: React.FC = () => {
         pending: allOrders.filter(o => o.status === 'PENDING').length,
         distributing: allOrders.filter(o => o.status === 'DISTRIBUTING').length,
         accepted: allOrders.filter(o => o.status === 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR').length,
+        needsReCoordination: allOrders.filter(o => o.status === 'NEEDS_RE_COORDINATION').length,
+        expired: allOrders.filter(o => o.status === 'EXPIRED').length,
         completed: allOrders.filter(o => o.status === 'APPROVED_AND_SENT').length,
       });
     } catch (err: any) {
@@ -134,11 +171,20 @@ const OrderCoordination: React.FC = () => {
     }
   };
 
-  // Resolve equipment type name
+  // Resolve equipment type name. Priority:
+  //   1. equipment_type string straight off the order (if BE supplied it)
+  //   2. equipment-model lookup (requested_equipment_model_id is the model PK,
+  //      NOT a category id — earlier code mixed them up and printed "לא צוין")
+  //   3. category name fallback (model.category_id → categories map)
   const resolveEquipmentType = (order: CoordinationOrder): string => {
     if (order.equipment_type) return order.equipment_type;
-    if (order.requested_equipment_model_id && categories[order.requested_equipment_model_id]) {
-      return categories[order.requested_equipment_model_id];
+    const modelId = order.requested_equipment_model_id;
+    if (modelId) {
+      const model = equipmentModels[modelId];
+      if (model?.name) return model.name;
+      if (model?.category_id && categories[model.category_id]) {
+        return categories[model.category_id];
+      }
     }
     return 'לא צוין';
   };
@@ -189,6 +235,44 @@ const OrderCoordination: React.FC = () => {
     } catch (err: any) {
       if ((window as any).showToast) {
         (window as any).showToast(err.response?.data?.detail || 'שגיאה בהעברה', 'error');
+      }
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  // Coordinator-side rejection with mandatory reason (e.g. ספק לא מתאים, שינוי דרישה)
+  const handleCoordinatorReject = async (orderId: number) => {
+    const reason = prompt('סיבת דחיית ההזמנה (חובה):');
+    if (!reason || !reason.trim()) {
+      if ((window as any).showToast) (window as any).showToast('חובה לציין סיבה לדחייה', 'warning');
+      return;
+    }
+    try {
+      setProcessing(orderId);
+      await api.post(`/work-orders/${orderId}/reject`, { reason: reason.trim() });
+      if ((window as any).showToast) (window as any).showToast('ההזמנה נדחתה', 'success');
+      await loadOrders();
+    } catch (err: any) {
+      if ((window as any).showToast) {
+        (window as any).showToast(err.response?.data?.detail || 'שגיאה בדחייה', 'error');
+      }
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  // Resend an EXPIRED invitation — re-issues a fresh portal token (3h TTL) to
+  // the current supplier without rotating to the next one.
+  const handleResend = async (orderId: number) => {
+    try {
+      setProcessing(orderId);
+      await api.post(`/work-orders/${orderId}/send-to-supplier`);
+      if ((window as any).showToast) (window as any).showToast('ההזמנה נשלחה מחדש לספק', 'success');
+      await loadOrders();
+    } catch (err: any) {
+      if ((window as any).showToast) {
+        (window as any).showToast(err.response?.data?.detail || 'שגיאה בשליחה מחדש', 'error');
       }
     } finally {
       setProcessing(null);
@@ -278,20 +362,15 @@ const OrderCoordination: React.FC = () => {
     return statusMatch && searchMatch;
   });
 
-  // Status config
-  const STATUS_CONFIG: Record<string, { text: string; color: string; dot: string }> = {
-    'PENDING':                            { text: 'ממתין לשליחה',    color: 'bg-yellow-100 text-yellow-800 border-yellow-200',  dot: 'bg-yellow-500' },
-    'DISTRIBUTING':                        { text: 'בהפצה לספק',     color: 'bg-blue-100 text-blue-800 border-blue-200',        dot: 'bg-blue-500'   },
-'SUPPLIER_ACCEPTED_PENDING_COORDINATOR':{ text: 'ספק אישר — ממתין לאישור מתאם', color: 'bg-purple-100 text-purple-800 border-purple-200', dot: 'bg-purple-500' },
-    'APPROVED_AND_SENT':                  { text: 'אושר ונשלח',     color: 'bg-green-100 text-green-800 border-green-200',     dot: 'bg-green-500'  },
-  };
-
+  // Status badge — labels and tones live in `src/strings`, never hard-coded
+  // here. Adding/renaming a status only ever requires editing `statuses.ts`.
   const getStatusBadge = (status: string) => {
-    const cfg = STATUS_CONFIG[status] || { text: status, color: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-400' };
+    const label = getWorkOrderStatusLabel(status);
+    const cls = toneClasses(getWorkOrderStatusTone(status));
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cfg.color}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-        {cfg.text}
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cls.bg} ${cls.text} ${cls.border}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
+        {label}
       </span>
     );
   };
@@ -372,12 +451,14 @@ const OrderCoordination: React.FC = () => {
         </div>
 
         {/* ===== STATS ===== */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
           {[
             { key: 'all',       label: 'סה"כ',             count: orders.length, color: 'border-gray-400',   icon: <ClipboardList className="w-5 h-5 text-gray-400" /> },
+            { key: 'NEEDS_RE_COORDINATION', label: 'דורש החלטה — סוג כלי שגוי', count: stats.needsReCoordination, color: 'border-red-500', icon: <AlertTriangle className="w-5 h-5 text-red-500" /> },
+            { key: 'EXPIRED',   label: 'פג תוקף',           count: stats.expired, color: 'border-orange-400', icon: <AlertTriangle className="w-5 h-5 text-orange-500" /> },
             { key: 'PENDING',   label: 'ממתינות לשליחה',    count: stats.pending, color: 'border-yellow-400', icon: <Clock className="w-5 h-5 text-yellow-500" /> },
             { key: 'DISTRIBUTING', label: 'בהפצה לספקים',   count: stats.distributing, color: 'border-blue-400', icon: <Send className="w-5 h-5 text-blue-500" /> },
-            { key: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין לאישור מתאם', count: stats.accepted, color: 'border-purple-400', icon: <CheckCircle className="w-5 h-5 text-purple-500" /> },
+            { key: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין', count: stats.accepted, color: 'border-purple-400', icon: <CheckCircle className="w-5 h-5 text-purple-500" /> },
           ].map(stat => (
             <button
               key={stat.key}
@@ -408,6 +489,8 @@ const OrderCoordination: React.FC = () => {
           <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
             {[
               { key: 'all', label: 'הכל' },
+              { key: 'NEEDS_RE_COORDINATION', label: 'דורש החלטה' },
+              { key: 'EXPIRED', label: 'פג תוקף' },
               { key: 'PENDING', label: 'ממתינות' },
               { key: 'DISTRIBUTING', label: 'בהפצה' },
               { key: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר' },
@@ -681,17 +764,60 @@ const OrderCoordination: React.FC = () => {
                           )}
 
                           {order.status === 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR' && (
-                            <button
-                              onClick={() => handleCoordinatorApprove(order.id)}
-                              disabled={processing === order.id}
-                              className="col-span-2 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors text-sm font-semibold disabled:opacity-50 shadow-sm animate-pulse"
-                            >
-                              {processing === order.id
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <CheckCircle className="w-4 h-4" />
-                              }
-                              אשר ושלח לביצוע
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleCoordinatorApprove(order.id)}
+                                disabled={processing === order.id}
+                                className="col-span-2 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors text-sm font-semibold disabled:opacity-50 shadow-sm animate-pulse"
+                              >
+                                {processing === order.id
+                                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                                  : <CheckCircle className="w-4 h-4" />
+                                }
+                                אשר ושלח לביצוע
+                              </button>
+                              <button
+                                onClick={() => handleCoordinatorReject(order.id)}
+                                disabled={processing === order.id}
+                                className="col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 text-red-700 rounded-xl hover:bg-red-100 transition-colors text-sm font-medium disabled:opacity-50"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                דחה (עם סיבה)
+                              </button>
+                            </>
+                          )}
+
+                          {order.status === 'EXPIRED' && (
+                            <>
+                              <div className="col-span-2 flex items-start gap-2 px-3 py-2.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-xl text-sm">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="font-semibold">פג תוקף הקישור לספק</p>
+                                  <p className="text-xs mt-0.5 leading-snug">
+                                    אפשר לשלוח שוב לאותו ספק או להעביר לספק הבא בתור.
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleResend(order.id)}
+                                disabled={processing === order.id}
+                                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-semibold disabled:opacity-50"
+                              >
+                                {processing === order.id
+                                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                                  : <Send className="w-4 h-4" />
+                                }
+                                שלח שוב לאותו ספק
+                              </button>
+                              <button
+                                onClick={() => handleMoveToNextSupplier(order.id)}
+                                disabled={processing === order.id}
+                                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-orange-50 border border-orange-200 text-orange-700 rounded-xl hover:bg-orange-100 transition-colors text-sm font-medium disabled:opacity-50"
+                              >
+                                <ArrowLeftRight className="w-4 h-4" />
+                                לספק הבא
+                              </button>
+                            </>
                           )}
 
                           {order.status === 'APPROVED_AND_SENT' && (
@@ -699,6 +825,33 @@ const OrderCoordination: React.FC = () => {
                               <CheckCircle className="w-4 h-4 flex-shrink-0" />
                               הזמנה אושרה ונשלחה לביצוע
                             </div>
+                          )}
+
+                          {order.status === 'NEEDS_RE_COORDINATION' && (
+                            <>
+                              <div className="col-span-2 flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-200 text-red-800 rounded-xl text-sm">
+                                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <div className="flex-1">
+                                  <p className="font-semibold">סוג כלי שגוי דווח בשטח</p>
+                                  <p className="text-xs mt-0.5 leading-snug">
+                                    מנהל העבודה ניסה לקלוט כלי שאינו תואם להזמנה.
+                                    קליטה בשטח חסומה. נדרשת החלטה: הפצה מחדש לספק חדש,
+                                    אישור חריג (אדמין), או ביטול.
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleSendToSupplier(order.id)}
+                                disabled={processing === order.id}
+                                className="col-span-2 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-semibold disabled:opacity-50 shadow-sm"
+                              >
+                                {processing === order.id
+                                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                                  : <Send className="w-4 h-4" />
+                                }
+                                הפץ מחדש (סבב הוגן — ספק אחר)
+                              </button>
+                            </>
                           )}
 
                           {/* Admin-only cancel button */}

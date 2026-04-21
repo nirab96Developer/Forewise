@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ChevronLeft, Truck, Clock, Wallet } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { getBudgetStatusLabel, getWorkOrderStatusLabel, getWorklogStatusLabel } from "../../strings";
 
 const BudgetDetail: React.FC = () => {
   const { id } = useParams();
@@ -58,7 +59,7 @@ const BudgetDetail: React.FC = () => {
             <div className="flex gap-3 mt-1">
               {budget.region_name && <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">{budget.region_name}</span>}
               {budget.area_name && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">{budget.area_name}</span>}
-              <span className={`px-2 py-0.5 rounded text-xs ${budget.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{budget.status === 'ACTIVE' ? 'פעיל' : budget.status}</span>
+              <span className={`px-2 py-0.5 rounded text-xs ${budget.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{getBudgetStatusLabel(budget.status)}</span>
             </div>
           </div>
         </div>
@@ -157,7 +158,7 @@ const BudgetDetail: React.FC = () => {
                       <tr key={wo.work_order_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/work-orders/${wo.work_order_id}`)}>
                         <td className="px-4 py-3 text-sm"><span className="font-medium text-blue-600">{wo.order_number || `#${wo.work_order_id}`}</span><br/><span className="text-xs text-gray-500">{wo.title}</span></td>
                         <td className="px-4 py-3 text-sm text-gray-700">{wo.supplier_name}</td>
-                        <td className="px-4 py-3"><span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">{wo.status}</span></td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">{getWorkOrderStatusLabel(wo.status)}</span></td>
 <td className="px-4 py-3 text-sm font-medium text-orange-600">{fmt(wo.committed_amount)}</td>
                       </tr>
                     ))}
@@ -192,7 +193,13 @@ const BudgetDetail: React.FC = () => {
 <td className="px-4 py-3 text-sm text-gray-700">{fmt(wl.hourly_rate)}</td>
 <td className="px-4 py-3 text-sm font-medium text-gray-900">{fmt(wl.amount)}</td>
 <td className="px-4 py-3 text-sm text-gray-700">{fmt(wl.total_with_vat)}</td>
-                        <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded text-xs ${wl.status === 'approved' ? 'bg-green-100 text-green-700' : wl.status === 'submitted' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{wl.status || '—'}</span></td>
+                        <td className="px-4 py-3">{(() => {
+                          const upper = (wl.status || '').toUpperCase();
+                          const cls = upper === 'APPROVED' ? 'bg-green-100 text-green-700'
+                            : upper === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-gray-100 text-gray-600';
+                          return <span className={`px-2 py-0.5 rounded text-xs ${cls}`}>{getWorklogStatusLabel(wl.status)}</span>;
+                        })()}</td>
                       </tr>
                     ))}
                   </tbody>

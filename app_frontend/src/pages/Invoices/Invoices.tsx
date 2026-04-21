@@ -13,6 +13,7 @@ import {
 import invoiceService, { Invoice } from "../../services/invoiceService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
 import api from "../../services/api";
+import { getInvoiceStatusLabel, getInvoiceStatusTone, toneClasses } from "../../strings";
 
 const Invoices: React.FC = () => {
   const navigate = useNavigate();
@@ -66,22 +67,10 @@ const Invoices: React.FC = () => {
   }
 
   const getStatusColor = (status: string) => {
-    const upper = (status || '').toUpperCase();
-    if (upper === 'DRAFT') return 'bg-gray-100 text-gray-700';
-    if (upper === 'APPROVED') return 'bg-green-100 text-green-700';
-    if (upper === 'SENT') return 'bg-blue-100 text-blue-700';
-    if (upper === 'PAID') return 'bg-purple-100 text-purple-700';
-    if (upper === 'CANCELLED') return 'bg-red-100 text-red-700';
-    return 'bg-gray-100 text-gray-700';
+    const cls = toneClasses(getInvoiceStatusTone(status));
+    return `${cls.bg} ${cls.text}`;
   };
-
-  const getStatusText = (status: string) => {
-    const map: Record<string, string> = {
-      DRAFT: 'טיוטה', APPROVED: 'מאושר', SENT: 'נשלח',
-      PAID: 'שולם', CANCELLED: 'בוטל',
-    };
-    return map[(status || '').toUpperCase()] || status || 'לא ידוע';
-  };
+  const getStatusText = (status: string) => getInvoiceStatusLabel(status);
 
   const handleExportExcel = async () => {
     try {

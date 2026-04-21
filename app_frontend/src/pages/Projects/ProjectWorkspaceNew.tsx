@@ -8,13 +8,15 @@ import {
   Calendar, User, TreeDeciduous, MapPin, ExternalLink, Package,
   FileText, Plus, Calculator, Activity,
   LogIn, CheckCircle, XCircle, Send, FilePlus, FileCheck, Info,
-  Camera, X, ScanLine, Wrench, ShieldAlert, AlertTriangle
+  Camera, X, Wrench
 } from 'lucide-react';
 import projectService from '../../services/projectService';
 import workOrderService, { WorkOrder } from '../../services/workOrderService';
 import workLogService, { WorkLog } from '../../services/workLogService';
 import api from '../../services/api';
 import TreeLoader from '../../components/common/TreeLoader';
+import ScanEquipmentModal from '../../components/equipment/ScanEquipmentModal';
+import { getWorkOrderStatusLabel, getWorklogStatusLabel, getActivityLabel } from '../../strings';
 // locationService available if needed
 
 interface ProjectLocation {
@@ -750,6 +752,9 @@ const MapTab: React.FC<{ project: Project; userRole?: string }> = ({ project, us
 const APPROVED_STATUSES = ['APPROVED', 'APPROVED_AND_SENT', 'COORDINATOR_APPROVED', 'ACTIVE', 'IN_PROGRESS'];
 
 function woStatusBadge(status: string): { label: string; cls: string } {
+  // Use the project-workspace flavour (work-manager phrasing) when applicable,
+  // and fall back to the system-wide work-order label so any missing case
+  // still renders Hebrew (never the raw English code).
   const s = (status || '').toUpperCase();
   if (['PENDING', 'DISTRIBUTING'].includes(s))
     return { label: 'ממתין לתיאום', cls: 'bg-yellow-100 text-yellow-700' };
@@ -761,7 +766,7 @@ function woStatusBadge(status: string): { label: string; cls: string } {
     return { label: 'הושלם', cls: 'bg-gray-100 text-gray-500' };
   if (['REJECTED', 'CANCELLED'].includes(s))
     return { label: 'נדחה', cls: 'bg-red-100 text-red-700' };
-  return { label: status || '—', cls: 'bg-gray-100 text-gray-600' };
+  return { label: getWorkOrderStatusLabel(status), cls: 'bg-gray-100 text-gray-600' };
 }
 
 function safeWODate(dateStr?: string | null, fallback?: string | null): string {
@@ -772,274 +777,9 @@ function safeWODate(dateStr?: string | null, fallback?: string | null): string {
   return d.toLocaleDateString('he-IL');
 }
 
-// Scan Equipment Modal — 3 scenarios
-type ScanPhase = 'input' | 'loading' | 'different_plate' | 'wrong_type' | 'done';
-interface ScanResult {
-  status: string;
-  message: string;
-  question?: string;
-  equipment_id?: number;
-  equipment_type?: string;
-  old_project?: { wo_id: number; wo_number: string; project_name: string; remaining_hours: number } | null;
-  ordered_type?: string;
-  scanned_type?: string;
-  admin_can_override?: boolean;
-}
+// Equipment intake — see 
+// (single source of truth for the 3-state scan flow).
 
-const ScanEquipmentModal: React.FC<{
-  orderId: number;
-  orderNumber: string | number;
-  onClose: () => void;
-  onScanned: (orderId: number, equipmentNum: string) => void;
-}> = ({ orderId, orderNumber, onClose, onScanned }) => {
-  const [value, setValue] = useState('');
-  const [phase, setPhase] = useState<ScanPhase>('input');
-  const [err, setErr] = useState('');
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
-  const [adminReason, setAdminReason] = useState('');
-
-  const handleScan = async () => {
-    const trimmed = value.trim();
-    if (!trimmed) { setErr('יש להזין מספר רישוי'); return; }
-    setPhase('loading');
-    setErr('');
-    try {
-      const res = await api.post(`/work-orders/${orderId}/scan-equipment`, { license_plate: trimmed });
-      const data: ScanResult = res.data;
-      setScanResult(data);
-
-      if (data.status === 'ok') {
-        onScanned(orderId, trimmed);
-        setPhase('done');
-        setTimeout(() => { onClose(); window.location.reload(); }, 1200);
-      } else if (data.status === 'different_plate') {
-        setPhase('different_plate');
-      } else if (data.status === 'wrong_type') {
-        setPhase('wrong_type');
-      } else {
-        setErr(data.message || 'שגיאה לא צפויה');
-        setPhase('input');
-      }
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail || 'שגיאת שרת');
-      setPhase('input');
-    }
-  };
-
-  const handleConfirmDifferentPlate = async () => {
-    if (!scanResult?.equipment_id) return;
-    setPhase('loading');
-    try {
-      const res = await api.post(`/work-orders/${orderId}/confirm-equipment`, {
-        equipment_id: scanResult.equipment_id,
-      });
-      if (res.data.status === 'ok') {
-        onScanned(orderId, value.trim());
-        setPhase('done');
-        setTimeout(() => { onClose(); window.location.reload(); }, 1200);
-      }
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail || 'שגיאה באישור');
-      setPhase('different_plate');
-    }
-  };
-
-  const handleAdminOverride = async () => {
-    if (!adminReason.trim()) { setErr('חובה לציין סיבה לאישור חריג'); return; }
-    setPhase('loading');
-    try {
-      const res = await api.post(`/work-orders/${orderId}/admin-override-equipment`, {
-        license_plate: value.trim(),
-        reason: adminReason.trim(),
-      });
-      if (res.data.status === 'ok') {
-        onScanned(orderId, value.trim());
-        setPhase('done');
-        setTimeout(() => { onClose(); window.location.reload(); }, 1200);
-      }
-    } catch (e: any) {
-      setErr(e?.response?.data?.detail || 'שגיאה באישור חריג');
-      setPhase('wrong_type');
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className={`p-4 rounded-t-xl flex items-center justify-between ${
-          phase === 'wrong_type' ? 'bg-red-600' :
-          phase === 'different_plate' ? 'bg-amber-500' :
-          phase === 'done' ? 'bg-green-600' : 'bg-green-600'
-        }`}>
-          <div className="flex items-center gap-2">
-            {phase === 'wrong_type' ? <ShieldAlert className="w-5 h-5 text-white" /> :
-             phase === 'different_plate' ? <AlertTriangle className="w-5 h-5 text-white" /> :
-             <Camera className="w-5 h-5 text-white" />}
-            <h3 className="font-bold text-white">
-              {phase === 'wrong_type' ? 'חריגת סוג כלי' :
-               phase === 'different_plate' ? 'לוחית שונה' :
-               phase === 'done' ? 'כלי אושר' :
-               `סריקת כלי — דרישה #${orderNumber}`}
-            </h3>
-          </div>
-          <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-lg">
-            <X className="w-4 h-4 text-white" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4">
-          {/* ── Phase: Input ── */}
-          {phase === 'input' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">מספר רישוי</label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={value}
-                  onChange={e => { setValue(e.target.value); setErr(''); }}
-                  onKeyDown={e => e.key === 'Enter' && handleScan()}
-                  placeholder="לדוגמה: 12-345-67"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-lg font-mono tracking-wider"
-                />
-                {err && <p className="text-red-500 text-xs mt-1">{err}</p>}
-              </div>
-              <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg p-3 text-sm text-green-700">
-                <ScanLine className="w-4 h-4 flex-shrink-0" />
-                <span>הזן את מספר הרישוי של הכלי שהגיע לאתר</span>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium">ביטול</button>
-                <button
-                  onClick={handleScan}
-                  disabled={!value.trim()}
-                  className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1.5"
-                >
-                  <ScanLine className="w-4 h-4" /> סרוק
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* ── Phase: Loading ── */}
-          {phase === 'loading' && (
-            <div className="flex flex-col items-center py-8 gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-green-600" />
-              <p className="text-sm text-gray-500">בודק התאמה...</p>
-            </div>
-          )}
-
-          {/* ── Phase: Done (Scenario A success) ── */}
-          {phase === 'done' && (
-            <div className="flex flex-col items-center py-6 gap-3">
-              <CheckCircle className="w-12 h-12 text-green-500" />
-              <p className="text-base font-medium text-green-700">{scanResult?.message || 'כלי אושר בהצלחה'}</p>
-            </div>
-          )}
-
-          {/* ── Phase: Different Plate (Scenario B) ── */}
-          {phase === 'different_plate' && scanResult && (
-            <>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-amber-800">{scanResult.message}</p>
-                    <p className="text-sm text-amber-700 mt-1">{scanResult.question}</p>
-                  </div>
-                </div>
-              </div>
-
-              {scanResult.old_project && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                  <p className="font-medium text-blue-800 mb-1">שים לב — הכלי נמצא בפרויקט אחר:</p>
-                  <p className="text-blue-700">
-                    פרויקט: {scanResult.old_project.project_name || `הזמנה #${scanResult.old_project.wo_number}`}
-                  </p>
-                  <p className="text-blue-700">
-                    באישור — הכלי יוסר מהפרויקט הקודם ויתרת התקציב תשוחרר
-                  </p>
-                </div>
-              )}
-
-              {err && <p className="text-red-500 text-xs">{err}</p>}
-
-              <div className="flex gap-2 pt-1">
-                <button onClick={() => { setPhase('input'); setScanResult(null); setErr(''); }}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium">
-                  חזרה
-                </button>
-                <button onClick={handleConfirmDifferentPlate}
-                  className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-1.5">
-                  <CheckCircle className="w-4 h-4" /> כן, שייך לפרויקט
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* ── Phase: Wrong Type (Scenario C) ── */}
-          {phase === 'wrong_type' && scanResult && (
-            <>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-2">
-                <div className="flex items-start gap-2">
-                  <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm font-bold text-red-800">סוג הכלי שנסרק שונה מההזמנה</p>
-                    <div className="mt-2 text-sm text-red-700 space-y-1">
-                      <p>סוג בהזמנה: <span className="font-medium">{scanResult.ordered_type}</span></p>
-                      <p>סוג שנסרק: <span className="font-medium">{scanResult.scanned_type}</span></p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {scanResult.admin_can_override ? (
-                <>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <ShieldAlert className="w-4 h-4 text-yellow-700" />
-                      <p className="text-sm font-medium text-yellow-800">אישור חריג (מנהל מערכת בלבד)</p>
-                    </div>
-                    <textarea
-                      value={adminReason}
-                      onChange={e => { setAdminReason(e.target.value); setErr(''); }}
-                      placeholder="ציין סיבה לאישור חריגת סוג כלי..."
-                      rows={2}
-                      className="w-full px-3 py-2 border border-yellow-300 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400"
-                    />
-                  </div>
-                  {err && <p className="text-red-500 text-xs">{err}</p>}
-                  <div className="flex gap-2 pt-1">
-                    <button onClick={onClose}
-                      className="flex-1 py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium">
-                      ביטול
-                    </button>
-                    <button onClick={handleAdminOverride}
-                      disabled={!adminReason.trim()}
-                      className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-1.5">
-                      <ShieldAlert className="w-4 h-4" /> אשר חריגה
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm text-gray-600">
-                    <p>הפעולה חסומה. פנה למנהל מערכת לאישור חריג.</p>
-                  </div>
-                  <button onClick={onClose}
-                    className="w-full py-2.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 text-sm font-medium">
-                    סגור
-                  </button>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // OrdersTab 
 const OrdersTab: React.FC<{
@@ -1235,10 +975,10 @@ const OrdersTab: React.FC<{
 
       {scanModal && (
         <ScanEquipmentModal
-          orderId={scanModal.orderId}
-          orderNumber={scanModal.orderNumber}
+          isOpen={true}
+          workOrderId={scanModal.orderId}
           onClose={() => setScanModal(null)}
-          onScanned={handleScanned}
+          onSuccess={(_eqId, plate) => handleScanned(scanModal.orderId, plate)}
         />
       )}
     </div>
@@ -1325,15 +1065,15 @@ const WorklogsTab: React.FC<{
     return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('he-IL');
   };
 
+  // Worklog colour ladder (case-insensitive). Labels via `src/strings`.
   const statusColor = (s: string) => ({
     draft: 'bg-gray-100 text-gray-800', pending: 'bg-yellow-100 text-yellow-800',
     submitted: 'bg-blue-100 text-blue-800', approved: 'bg-green-100 text-green-800',
     rejected: 'bg-red-100 text-red-800', invoiced: 'bg-indigo-100 text-indigo-800',
+    cancelled: 'bg-gray-100 text-gray-600',
   }[s?.toLowerCase()] ?? 'bg-gray-100 text-gray-800');
 
-  const statusLabel = (s: string) => ({
-    draft: 'טיוטה', pending: 'ממתין', submitted: 'הוגש', approved: 'מאושר', rejected: 'נדחה', invoiced: 'חשבונית',
-  }[s?.toLowerCase()] ?? s);
+  const statusLabel = (s: string) => getWorklogStatusLabel(s);
 
 
   return (
@@ -1615,27 +1355,27 @@ interface ActivityEntry {
   user_name?: string;
 }
 
-const ACTION_META: Record<string, { icon: React.FC<{ className?: string }>; label: string; color: string }> = {
-  user_login: { icon: LogIn, label: 'כניסה למערכת', color: 'text-blue-500' },
-  work_order_created: { icon: FilePlus, label: 'הזמנת עבודה נוצרה', color: 'text-green-600' },
-  work_order_approved: { icon: FileCheck, label: 'הזמנת עבודה אושרה', color: 'text-emerald-600' },
-  work_order_rejected: { icon: XCircle, label: 'הזמנת עבודה נדחתה', color: 'text-red-500' },
-  work_order_sent: { icon: Send, label: 'הזמנה נשלחה לספק', color: 'text-purple-500' },
-  worklog_created: { icon: FilePlus, label: 'דיווח שעות נוצר', color: 'text-blue-500' },
-  worklog_approved: { icon: CheckCircle, label: 'דיווח שעות אושר', color: 'text-emerald-600' },
-  worklog_rejected: { icon: XCircle, label: 'דיווח שעות נדחה', color: 'text-red-500' },
-  invoice_created: { icon: FileText, label: 'חשבונית הופקה', color: 'text-orange-500' },
-  invoice_approved: { icon: CheckCircle, label: 'חשבונית אושרה', color: 'text-emerald-600' },
-  supplier_accepted: { icon: CheckCircle, label: 'ספק אישר הזמנה', color: 'text-green-500' },
-  supplier_rejected: { icon: XCircle, label: 'ספק דחה הזמנה', color: 'text-red-500' },
+// Icon + colour are a UI choice and stay local; the label always comes from
+// the central activity dictionary (`src/strings/activity.ts`).
+const ACTION_VISUAL: Record<string, { icon: React.FC<{ className?: string }>; color: string }> = {
+  'user.login':              { icon: LogIn,        color: 'text-blue-500' },
+  'work_order.created':      { icon: FilePlus,     color: 'text-green-600' },
+  'work_order.approved':     { icon: FileCheck,    color: 'text-emerald-600' },
+  'work_order.rejected':     { icon: XCircle,      color: 'text-red-500' },
+  'work_order.sent_to_supplier': { icon: Send,     color: 'text-purple-500' },
+  'worklog.created':         { icon: FilePlus,     color: 'text-blue-500' },
+  'worklog.submitted':       { icon: FilePlus,     color: 'text-blue-500' },
+  'worklog.approved':        { icon: CheckCircle,  color: 'text-emerald-600' },
+  'worklog.rejected':        { icon: XCircle,      color: 'text-red-500' },
+  'invoice.created':         { icon: FileText,     color: 'text-orange-500' },
+  'invoice.approved':        { icon: CheckCircle,  color: 'text-emerald-600' },
+  'supplier.confirmed':      { icon: CheckCircle,  color: 'text-green-500' },
+  'supplier.declined':       { icon: XCircle,      color: 'text-red-500' },
 };
 
 function getActivityMeta(action: string) {
-  const key = Object.keys(ACTION_META).find(k =>
-    action?.toLowerCase().includes(k.replace(/_/g, '')) ||
-    action?.toLowerCase() === k
-  );
-  return ACTION_META[key || ''] || { icon: Info, label: action || 'פעילות', color: 'text-gray-500' };
+  const visual = ACTION_VISUAL[action] || ACTION_VISUAL[(action || '').toLowerCase()] || { icon: Info, color: 'text-gray-500' };
+  return { ...visual, label: getActivityLabel(action) };
 }
 
 function formatActivityDate(iso: string) {

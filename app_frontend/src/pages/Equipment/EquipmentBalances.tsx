@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import equipmentService, { Equipment } from "../../services/equipmentService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { getEquipmentStatusLabel } from "../../strings";
 
 interface EquipmentBalance {
   id: number;
@@ -93,34 +94,17 @@ const EquipmentBalances: React.FC = () => {
     return new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 0 }).format(value);
   };
 
+  // Equipment status badge — labels and colours via `src/strings`. Keeps
+  // legacy "active/maintenance/inactive" compatibility because the backend
+  // still emits those exact lowercase values on this endpoint.
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-      case "פעיל":
-        return "bg-green-100 text-green-800";
-      case "maintenance":
-      case "תחזוקה":
-        return "bg-yellow-100 text-yellow-800";
-      case "inactive":
-      case "לא פעיל":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+    const upper = (status || '').toUpperCase();
+    if (['ACTIVE', 'AVAILABLE', 'IN_USE', 'BUSY'].includes(upper)) return 'bg-green-100 text-green-800';
+    if (['MAINTENANCE', 'RESERVED'].includes(upper))                return 'bg-yellow-100 text-yellow-800';
+    if (['INACTIVE', 'OUT_OF_SERVICE', 'RETIRED'].includes(upper))  return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
   };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "active":
-        return "פעיל";
-      case "maintenance":
-        return "תחזוקה";
-      case "inactive":
-        return "לא פעיל";
-      default:
-        return status;
-    }
-  };
+  const getStatusText = (status: string) => getEquipmentStatusLabel(status);
 
   if (loading) return <UnifiedLoader size="full" />;
 

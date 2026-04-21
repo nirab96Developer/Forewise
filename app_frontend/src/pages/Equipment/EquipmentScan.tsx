@@ -11,6 +11,7 @@ import {
 import api from '../../services/api';
 import { saveOfflineScan } from '../../utils/offlineStorage';
 import { showToast } from '../../components/common/Toast';
+import { getEquipmentStatusLabel } from '../../strings';
 
 interface EquipmentResult {
   id: number;
@@ -264,6 +265,19 @@ showToast(' האימות נשמר — יסונכרן כשיחזור חיבור',
       </div>
 
       <div className="max-w-lg mx-auto px-4 py-6">
+        {/* Read-only validator disclaimer (Q10): this page only validates a
+            plate exists. To attach equipment to a Work Order — open the WO
+            and use "סרוק כלי" (the unified intake flow). */}
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-900 flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600" />
+          <div>
+            <p className="font-semibold">אימות בלבד — לא משייך כלי להזמנה.</p>
+            <p className="text-xs mt-0.5 leading-snug">
+              לקליטת כלי להזמנת עבודה — פתח את ההזמנה ולחץ "סרוק כלי" (זרימה אחידה עם בדיקת תאימות).
+            </p>
+          </div>
+        </div>
+
         {/* Mode Toggle — plate first */}
         {!equipment && (
           <div className="flex gap-2 mb-4">
@@ -406,17 +420,21 @@ showToast(' האימות נשמר — יסונכרן כשיחזור חיבור',
               <div className="text-center mb-4">
                 <div className="text-2xl font-bold text-gray-900 mb-1">{equipment.name || equipment.equipment_type}</div>
                 <div className="text-lg text-green-600 font-medium">{equipment.license_plate || equipment.code}</div>
-                {equipment.status && (
-                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium ${
-                    equipment.status === 'in_use' || equipment.status === 'active' || equipment.status === 'פעיל'
-                      ? 'bg-green-100 text-green-800'
-                      : equipment.status === 'maintenance' || equipment.status === 'תחזוקה'
+                {equipment.status && (() => {
+                  const upper = String(equipment.status).toUpperCase();
+                  const cls = ['ACTIVE', 'AVAILABLE', 'IN_USE', 'BUSY'].includes(upper)
+                    ? 'bg-green-100 text-green-800'
+                    : ['MAINTENANCE', 'RESERVED'].includes(upper)
                       ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {equipment.status}
-                  </span>
-                )}
+                      : ['INACTIVE', 'OUT_OF_SERVICE', 'RETIRED'].includes(upper)
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800';
+                  return (
+                    <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-medium ${cls}`}>
+                      {getEquipmentStatusLabel(equipment.status)}
+                    </span>
+                  );
+                })()}
               </div>
 
               <div className="space-y-3 border-t border-gray-100 pt-4">

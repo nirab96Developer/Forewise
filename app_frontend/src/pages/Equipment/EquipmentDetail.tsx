@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowRight, Calendar, MapPin, Wrench, Clock } from 'lucide-react';
 import equipmentService from '../../services/equipmentService';
+import { getEquipmentStatusLabel } from '../../strings';
 
 interface EquipmentDetail {
   id: number;
@@ -72,16 +73,11 @@ const EquipmentDetail: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'פעיל':
-        return 'bg-green-100 text-green-800';
-      case 'תחזוקה':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'לא פעיל':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    const upper = (status || '').toUpperCase();
+    if (['ACTIVE', 'AVAILABLE', 'IN_USE', 'BUSY'].includes(upper)) return 'bg-green-100 text-green-800';
+    if (['MAINTENANCE', 'RESERVED'].includes(upper))                return 'bg-yellow-100 text-yellow-800';
+    if (['INACTIVE', 'OUT_OF_SERVICE', 'RETIRED'].includes(upper))  return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
   if (loading) {
@@ -117,7 +113,7 @@ const EquipmentDetail: React.FC = () => {
               <p className="text-gray-600 mt-2">{equipment.description}</p>
             </div>
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(equipment.status)}`}>
-              {equipment.status}
+              {getEquipmentStatusLabel(equipment.status)}
             </span>
           </div>
         </div>
@@ -217,7 +213,7 @@ const EquipmentDetail: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">סטטוס:</span>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(equipment.status)}`}>
-                    {equipment.status}
+                    {getEquipmentStatusLabel(equipment.status)}
                   </span>
                 </div>
                 <div className="flex justify-between">

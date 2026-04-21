@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { getWorkOrderStatusLabel, getSupplierResponseLabel } from "../../strings";
 
 interface WOItem {
   id: number; order_number: number; title: string; status: string;
@@ -33,14 +34,30 @@ interface QueueData {
   };
 }
 
-const STATUS_CFG: Record<string, { label: string; cls: string; actionLabel?: string }> = {
-  PENDING:        { label: "ממתין לשליחה", cls: "bg-yellow-100 text-yellow-800", actionLabel: "שלח לספק" },
-  DISTRIBUTING:   { label: "בהפצה", cls: "bg-blue-100 text-blue-800", actionLabel: "ספק הבא" },
-  SUPPLIER_ACCEPTED_PENDING_COORDINATOR: { label: "ספק אישר — ממתין לאישור מתאם", cls: "bg-emerald-100 text-emerald-800", actionLabel: "אשר סופית" },
-  APPROVED_AND_SENT: { label: "אושר ונשלח", cls: "bg-green-100 text-green-800" },
-  EXPIRED:        { label: "פג תוקף", cls: "bg-red-100 text-red-700", actionLabel: "שלח שוב" },
-  STOPPED:        { label: "הופסק", cls: "bg-gray-100 text-gray-600" },
-  REJECTED:       { label: "נדחה", cls: "bg-red-100 text-red-700" },
+// Status visuals — labels via `src/strings/statuses.ts`. Local map only
+// holds the action label (which is UI workflow, not text).
+const STATUS_ACTION: Record<string, string | undefined> = {
+  PENDING:                                "שלח לספק",
+  DISTRIBUTING:                           "ספק הבא",
+  SUPPLIER_ACCEPTED_PENDING_COORDINATOR:  "אשר סופית",
+  EXPIRED:                                "שלח שוב",
+};
+const STATUS_CLS: Record<string, string> = {
+  PENDING:                                "bg-yellow-100 text-yellow-800",
+  DISTRIBUTING:                           "bg-blue-100 text-blue-800",
+  SUPPLIER_ACCEPTED_PENDING_COORDINATOR:  "bg-emerald-100 text-emerald-800",
+  APPROVED_AND_SENT:                      "bg-green-100 text-green-800",
+  EXPIRED:                                "bg-red-100 text-red-700",
+  STOPPED:                                "bg-gray-100 text-gray-600",
+  REJECTED:                               "bg-red-100 text-red-700",
+};
+const statusCfg = (status: string) => {
+  const upper = (status || '').toUpperCase();
+  return {
+    label: getWorkOrderStatusLabel(status),
+    cls: STATUS_CLS[upper] || 'bg-gray-100 text-gray-600',
+    actionLabel: STATUS_ACTION[upper],
+  };
 };
 
 const timeAgo = (d: string | null) => {
@@ -195,7 +212,7 @@ const OrderCoordinatorDashboard: React.FC = () => {
               <p className="text-sm text-gray-400">כל ההזמנות טופלו. המערכת תתעדכן אוטומטית כשיגיעו הזמנות חדשות.</p>
             </div>
           ) : (data.work_orders || []).map(wo => {
-            const st = STATUS_CFG[wo.status] || { label: wo.status, cls: "bg-gray-100 text-gray-600" };
+            const st = statusCfg(wo.status);
             const isExpanded = expandedId === wo.id;
             const isBusy = actionBusy === wo.id;
 
@@ -273,7 +290,7 @@ const OrderCoordinatorDashboard: React.FC = () => {
                           <span className={`text-[10px] font-bold ${
                             h.status === "ACCEPTED" ? "text-green-600" :
                             h.status === "REJECTED" ? "text-red-600" : "text-gray-500"}`}>
-                            {h.status === "ACCEPTED" ? "אישר" : h.status === "REJECTED" ? "דחה" : h.status}
+                            {getSupplierResponseLabel(h.status)}
                           </span>
                           {h.decline_reason && <span className="text-gray-400">— {h.decline_reason}</span>}
                           {h.responded_at && <span className="text-gray-400 mr-auto">{timeAgo(h.responded_at)}</span>}

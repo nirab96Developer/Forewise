@@ -9,20 +9,16 @@ import {
 import workOrderService, { WorkOrder, WorkOrderFilters } from '../../services/workOrderService';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
 import { getUserRole, normalizeRole, UserRole } from '../../utils/permissions';
+import { getWorkOrderStatusLabel, getWorkOrderStatusTone, toneClasses } from '../../strings';
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  PENDING:                                { label: 'ממתין',            bg: 'bg-amber-50',  text: 'text-amber-700',  dot: 'bg-amber-400' },
-  DISTRIBUTING:                           { label: 'בהפצה לספקים',    bg: 'bg-blue-50',   text: 'text-blue-700',   dot: 'bg-blue-400' },
-  SUPPLIER_ACCEPTED_PENDING_COORDINATOR:  { label: 'ספק אישר — ממתין לאישור מתאם', bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-400' },
-  APPROVED_AND_SENT:                      { label: 'אושר ונשלח',      bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  COMPLETED:                              { label: 'הושלם',           bg: 'bg-gray-100',  text: 'text-gray-600',   dot: 'bg-gray-400' },
-  REJECTED:                               { label: 'נדחה',            bg: 'bg-red-50',    text: 'text-red-700',    dot: 'bg-red-500' },
-  CANCELLED:                              { label: 'בוטל',            bg: 'bg-red-50',    text: 'text-red-600',    dot: 'bg-red-400' },
-  EXPIRED:                                { label: 'פג תוקף',         bg: 'bg-orange-50', text: 'text-orange-700', dot: 'bg-orange-400' },
-  STOPPED:                                { label: 'הופסק',           bg: 'bg-gray-100',  text: 'text-gray-700',   dot: 'bg-gray-500' },
+// Single-line replacement of the old hard-coded STATUS_CONFIG map. Labels and
+// tones come from `src/strings/` so a missing/new status will never leak the
+// raw English code to the badge again — see the Hebrew audit fix.
+const getStatus = (s: string) => {
+  const tone = getWorkOrderStatusTone(s);
+  const cls = toneClasses(tone);
+  return { label: getWorkOrderStatusLabel(s), bg: cls.bg, text: cls.text, dot: cls.dot };
 };
-
-const getStatus = (s: string) => STATUS_CONFIG[(s || '').toUpperCase()] || { label: s || '—', bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-300' };
 
 const WorkOrders: React.FC = () => {
   const navigate = useNavigate();
@@ -52,15 +48,19 @@ const WorkOrders: React.FC = () => {
     return () => { cancelled = true; };
   }, [filterStatus]);
 
-  // Stats
+  // Stats — counters cover the whole UPPERCASE state machine so nothing
+  // disappears from the dashboard (e.g. an order in IN_PROGRESS is now counted
+  // under "בביצוע" instead of vanishing from every category).
   const stats = useMemo(() => {
+    const norm = (s: any) => (s || '').toString().toUpperCase();
     const all = workOrders;
     return {
-      total: all.length,
-      pending: all.filter(o => (o.status || '').toUpperCase() === 'PENDING').length,
-      distributing: all.filter(o => ['DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes((o.status || '').toUpperCase())).length,
-      approved: all.filter(o => (o.status || '').toUpperCase() === 'APPROVED_AND_SENT').length,
-      terminal: all.filter(o => ['EXPIRED', 'STOPPED', 'REJECTED', 'CANCELLED', 'COMPLETED'].includes((o.status || '').toUpperCase())).length,
+      total:        all.length,
+      pending:      all.filter(o => norm(o.status) === 'PENDING').length,
+      distributing: all.filter(o => ['DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(norm(o.status))).length,
+      approved:     all.filter(o => norm(o.status) === 'APPROVED_AND_SENT').length,
+      inProgress:   all.filter(o => ['IN_PROGRESS', 'ACTIVE'].includes(norm(o.status))).length,
+      terminal:     all.filter(o => ['EXPIRED', 'STOPPED', 'REJECTED', 'CANCELLED', 'COMPLETED'].includes(norm(o.status))).length,
     };
   }, [workOrders]);
 
@@ -110,7 +110,7 @@ const WorkOrders: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
 
         {/* Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
           <button onClick={() => setFilterStatus('PENDING')}
             className={`p-3 rounded-xl border text-center transition-all ${filterStatus === 'PENDING' ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-200' : 'border-gray-200 bg-white hover:border-amber-200'}`}>
             <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
@@ -125,6 +125,11 @@ const WorkOrders: React.FC = () => {
             className={`p-3 rounded-xl border text-center transition-all ${filterStatus === 'APPROVED_AND_SENT' ? 'border-green-400 bg-green-50 ring-2 ring-green-200' : 'border-gray-200 bg-white hover:border-green-200'}`}>
             <div className="text-2xl font-bold text-green-600">{stats.approved}</div>
             <div className="text-xs text-gray-500 mt-0.5">מאושרים</div>
+          </button>
+          <button onClick={() => setFilterStatus('IN_PROGRESS')}
+            className={`p-3 rounded-xl border text-center transition-all ${filterStatus === 'IN_PROGRESS' ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200' : 'border-gray-200 bg-white hover:border-emerald-200'}`}>
+            <div className="text-2xl font-bold text-emerald-600">{stats.inProgress}</div>
+            <div className="text-xs text-gray-500 mt-0.5">בביצוע</div>
           </button>
           <button onClick={() => setFilterStatus('all')}
             className={`p-3 rounded-xl border text-center transition-all ${filterStatus === 'all' ? 'border-gray-400 bg-gray-50 ring-2 ring-gray-200' : 'border-gray-200 bg-white hover:border-gray-300'}`}>

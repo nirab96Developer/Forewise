@@ -17,6 +17,7 @@ import {
 import workLogService, { WorkLog } from "../../services/workLogService";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
 import { useRoleAccess } from "../../hooks/useRoleAccess";
+import { getWorklogStatusLabel, getWorklogStatusTone, toneClasses } from "../../strings";
 
 const WorklogDetail: React.FC = () => {
   const navigate = useNavigate();
@@ -103,55 +104,20 @@ const WorklogDetail: React.FC = () => {
     }
   };
 
+  // Centralised through `src/strings/`. The previous switch was lowercase-only,
+  // so every UPPERCASE worklog status (the actual backend canonical form) fell
+  // through the default and rendered raw English (`PENDING`, `SUBMITTED`, ...).
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "approved":
-        return "bg-green-100 text-green-800";
-      case "rejected":
-        return "bg-red-100 text-red-800";
-      case "pending":
-      case "submitted":
-        return "bg-yellow-100 text-yellow-800";
-      case "draft":
-        return "bg-gray-100 text-gray-800";
-      case "invoiced":
-        return "bg-blue-100 text-blue-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+    const cls = toneClasses(getWorklogStatusTone(status));
+    return `${cls.bg} ${cls.text}`;
   };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "approved":
-        return "אושר";
-      case "rejected":
-        return "נדחה";
-      case "pending":
-        return "ממתין לאישור";
-      case "submitted":
-        return "הוגש";
-      case "draft":
-        return "טיוטה";
-      case "invoiced":
-        return "חשבונית";
-      default:
-        return status;
-    }
-  };
-
+  const getStatusText = (status: string) => getWorklogStatusLabel(status);
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "approved":
-        return <CheckCircle className="w-5 h-5" />;
-      case "rejected":
-        return <XCircle className="w-5 h-5" />;
-      case "pending":
-      case "submitted":
-        return <Clock className="w-5 h-5" />;
-      default:
-        return <FileText className="w-5 h-5" />;
-    }
+    const upper = (status || '').toUpperCase();
+    if (upper === 'APPROVED') return <CheckCircle className="w-5 h-5" />;
+    if (upper === 'REJECTED') return <XCircle className="w-5 h-5" />;
+    if (upper === 'PENDING' || upper === 'SUBMITTED') return <Clock className="w-5 h-5" />;
+    return <FileText className="w-5 h-5" />;
   };
 
   const formatDate = (dateStr: string) => {

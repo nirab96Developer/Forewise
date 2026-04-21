@@ -1,5 +1,9 @@
 // src/services/workOrderService.ts
 import api from './api';
+import {
+  getWorkOrderStatusLabel, getWorkOrderStatusTone, toneClasses,
+  getPriorityLabel,
+} from '../strings';
 
 export interface WorkOrder {
   id: number;
@@ -14,7 +18,9 @@ export interface WorkOrder {
   work_start_date: string;
   work_end_date: string;
   status: string;
-  priority: 'low' | 'medium' | 'high';
+  // Backend stores uppercase ('LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'); legacy
+  // lowercase values are still accepted by the helpers (case-insensitive).
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' | 'low' | 'medium' | 'high';
   estimated_hours?: number;
   hourly_rate?: number;
   total_amount?: number;
@@ -41,7 +47,7 @@ export interface WorkOrderCreate {
   requested_equipment_model_id?: number;
   work_start_date: string;
   work_end_date: string;
-  priority: 'low' | 'medium' | 'high';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' | 'low' | 'medium' | 'high';
   estimated_hours?: number;
   hourly_rate?: number;
   is_forced_selection?: boolean;
@@ -212,46 +218,29 @@ class WorkOrderService {
     return response.data;
   }
 
-  // Helper methods
+  // All visible strings live in `src/strings/` — these wrappers stay only for
+  // historical call-site ergonomics. Adding a new status NEVER requires
+  // touching this file.
   getStatusColor(status: string): string {
-    const upper = (status || '').toUpperCase();
-    if (['APPROVED_AND_SENT'].includes(upper)) return 'bg-green-100 text-green-800 border-green-200';
-    if (['DISTRIBUTING', 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR'].includes(upper)) return 'bg-blue-100 text-blue-800 border-blue-200';
-    if (['PENDING'].includes(upper)) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    if (['COMPLETED'].includes(upper)) return 'bg-gray-100 text-gray-800 border-gray-200';
-    if (['REJECTED', 'CANCELLED', 'EXPIRED', 'STOPPED'].includes(upper)) return 'bg-red-100 text-red-800 border-red-200';
-    return 'bg-gray-100 text-gray-800 border-gray-200';
+    const cls = toneClasses(getWorkOrderStatusTone(status));
+    return `${cls.bg} ${cls.text} ${cls.border}`;
   }
 
   getPriorityColor(priority: string): string {
     const upper = (priority || '').toUpperCase();
-    if (upper === 'HIGH') return 'bg-red-100 text-red-800';
+    if (upper === 'URGENT') return 'bg-red-200 text-red-900';
+    if (upper === 'HIGH')   return 'bg-red-100 text-red-800';
     if (upper === 'MEDIUM') return 'bg-yellow-100 text-yellow-800';
-    if (upper === 'LOW') return 'bg-green-100 text-green-800';
+    if (upper === 'LOW')    return 'bg-green-100 text-green-800';
     return 'bg-gray-100 text-gray-800';
   }
 
   getStatusText(status: string): string {
-    const map: Record<string, string> = {
-      PENDING: 'ממתין', DISTRIBUTING: 'בהפצה לספקים',
-      SUPPLIER_ACCEPTED_PENDING_COORDINATOR: 'ספק אישר — ממתין לאישור מתאם',
-      APPROVED_AND_SENT: 'אושר ונשלח', COMPLETED: 'הושלם',
-      REJECTED: 'נדחה', CANCELLED: 'בוטל', EXPIRED: 'פג תוקף', STOPPED: 'הופסק',
-    };
-    return map[(status || '').toUpperCase()] || status || 'לא ידוע';
+    return getWorkOrderStatusLabel(status);
   }
 
   getPriorityText(priority: WorkOrder['priority']): string {
-    switch (priority) {
-      case 'high':
-        return 'גבוהה';
-      case 'medium':
-        return 'בינונית';
-      case 'low':
-        return 'נמוכה';
-      default:
-        return 'לא ידועה';
-    }
+    return getPriorityLabel(priority as string);
   }
 }
 

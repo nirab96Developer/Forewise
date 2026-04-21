@@ -6,6 +6,7 @@ import { Plus, Search, Eye, Edit, Calendar, Clock, User, CheckCircle, XCircle, A
 import workLogService, { WorkLog, WorkLogFilters } from '../../services/workLogService';
 import UnifiedLoader from '../../components/common/UnifiedLoader';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
+import { getWorklogStatusLabel, getWorklogStatusTone, toneClasses } from '../../strings';
 
 const WorkLogs: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -62,23 +63,12 @@ const WorkLogs: React.FC = () => {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, filterStatus]);
 
+  // Centralised through `src/strings/` — no local maps, no English fallbacks.
   const getStatusColor = (status: string) => {
-    const upper = (status || '').toUpperCase();
-    if (upper === 'APPROVED') return 'bg-green-100 text-green-800';
-    if (upper === 'REJECTED') return 'bg-red-100 text-red-800';
-    if (upper === 'SUBMITTED') return 'bg-blue-100 text-blue-800';
-    if (upper === 'INVOICED') return 'bg-purple-100 text-purple-800';
-    if (upper === 'PENDING') return 'bg-yellow-100 text-yellow-800';
-    return 'bg-gray-100 text-gray-800';
+    const cls = toneClasses(getWorklogStatusTone(status));
+    return `${cls.bg} ${cls.text}`;
   };
-
-  const getStatusText = (status: string) => {
-    const map: Record<string, string> = {
-      PENDING: 'ממתין', SUBMITTED: 'הוגש', APPROVED: 'אושר',
-      REJECTED: 'נדחה', INVOICED: 'הופק חשבון',
-    };
-    return map[(status || '').toUpperCase()] || status;
-  };
+  const getStatusText = (status: string) => getWorklogStatusLabel(status);
 
   const getStatusIcon = (status: string) => {
     const upper = (status || '').toUpperCase();

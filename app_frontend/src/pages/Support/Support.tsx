@@ -6,10 +6,11 @@ import {
   Send, RefreshCw, ChevronRight, X, User, Shield,
 } from 'lucide-react';
 import api from '../../services/api';
+import { getSupportTicketStatusLabel } from '../../strings';
 
 // Types 
 
-type TicketStatus = 'open' | 'in_progress' | 'resolved';
+type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'pending' | 'closed' | 'escalated';
 
 interface Ticket {
   id: number;
@@ -36,24 +37,26 @@ interface Comment {
   created_at: string;
 }
 
-// Helpers 
+// Helpers — labels live in `src/strings/statuses.ts`. Local maps here are
+// only colour and dot tone, never text.
+const STATUS_LABEL = (s: TicketStatus | string) => getSupportTicketStatusLabel(s);
 
-const STATUS_LABEL: Record<TicketStatus, string> = {
-  open: 'פתוחה',
-  in_progress: 'בטיפול',
-  resolved: 'טופלה',
-};
-
-const STATUS_COLOR: Record<TicketStatus, string> = {
-  open: 'bg-red-100 text-red-700',
+const STATUS_COLOR: Record<string, string> = {
+  open:        'bg-red-100 text-red-700',
   in_progress: 'bg-yellow-100 text-yellow-700',
-  resolved: 'bg-gray-100 text-gray-500',
+  pending:     'bg-amber-100 text-amber-700',
+  resolved:    'bg-gray-100 text-gray-500',
+  closed:      'bg-gray-100 text-gray-500',
+  escalated:   'bg-purple-100 text-purple-700',
 };
 
-const STATUS_DOT: Record<TicketStatus, string> = {
-  open: 'bg-red-500',
+const STATUS_DOT: Record<string, string> = {
+  open:        'bg-red-500',
   in_progress: 'bg-yellow-400',
-  resolved: 'bg-gray-300',
+  pending:     'bg-amber-400',
+  resolved:    'bg-gray-300',
+  closed:      'bg-gray-300',
+  escalated:   'bg-purple-500',
 };
 
 const fmtDate = (iso: string) => {
@@ -106,9 +109,11 @@ const Support: React.FC = () => {
         : res.data?.items || res.data?.tickets || [];
       // Sort: open first, then by updated_at desc
       items.sort((a, b) => {
-        const statusOrder: Record<TicketStatus, number> = { open: 0, in_progress: 1, resolved: 2 };
-        const sa = statusOrder[a.status as TicketStatus] ?? 3;
-        const sb = statusOrder[b.status as TicketStatus] ?? 3;
+        const statusOrder: Record<string, number> = {
+          open: 0, in_progress: 1, pending: 2, escalated: 2, resolved: 3, closed: 4,
+        };
+        const sa = statusOrder[String(a.status).toLowerCase()] ?? 9;
+        const sb = statusOrder[String(b.status).toLowerCase()] ?? 9;
         if (sa !== sb) return sa - sb;
         return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       });
@@ -225,7 +230,7 @@ showToast(newStatus === 'resolved' ? ' הקריאה סומנה כטופלה' : '
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${STATUS_DOT[ticket.status as TicketStatus] || 'bg-gray-400'}`} />
+                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${STATUS_DOT[String(ticket.status).toLowerCase()] || 'bg-gray-400'}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="text-xs font-mono text-gray-400">{ticket.ticket_number}</span>
@@ -236,8 +241,8 @@ showToast(newStatus === 'resolved' ? ' הקריאה סומנה כטופלה' : '
                       <p className={`font-medium text-sm truncate ${isResolved ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{ticket.title}</p>
                       <p className="text-xs text-gray-500 truncate mt-0.5">{ticket.description}</p>
                       <div className="flex items-center justify-between mt-1.5">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[ticket.status as TicketStatus] || 'bg-gray-100 text-gray-600'}`}>
-                          {STATUS_LABEL[ticket.status as TicketStatus] || ticket.status}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[String(ticket.status).toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                          {STATUS_LABEL(ticket.status)}
                         </span>
                         {ticket.user_name && (
                           <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -270,8 +275,8 @@ showToast(newStatus === 'resolved' ? ' הקריאה סומנה כטופלה' : '
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-mono text-gray-400">{selected.ticket_number}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[selected.status as TicketStatus] || 'bg-gray-100 text-gray-600'}`}>
-                    {STATUS_LABEL[selected.status as TicketStatus] || selected.status}
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[String(selected.status).toLowerCase()] || 'bg-gray-100 text-gray-600'}`}>
+                    {STATUS_LABEL(selected.status)}
                   </span>
                 </div>
                 <p className="font-semibold text-gray-900 text-sm truncate mt-0.5">{selected.title}</p>

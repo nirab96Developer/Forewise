@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeftRight, Plus, X } from 'lucide-react';
 import api from '../../services/api';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
+import { getBudgetTransferStatusLabel } from '../../strings';
 
 interface Transfer {
   id: number;
@@ -25,12 +26,8 @@ const STATUS_BADGE: Record<string, string> = {
   REJECTED: 'bg-red-100 text-red-700',
   COMPLETED:'bg-blue-100 text-blue-700',
 };
-const STATUS_LABEL: Record<string, string> = {
-PENDING: ' ממתין',
-APPROVED: ' מאושר',
-REJECTED: ' נדחה',
-COMPLETED:' הושלם',
-};
+// Labels live in `src/strings/statuses.ts` — see BUDGET_TRANSFER_STATUS_LABELS.
+const STATUS_LABEL = (s: string) => getBudgetTransferStatusLabel(s);
 
 // Request Modal 
 interface RequestModalProps {
@@ -247,7 +244,7 @@ const BudgetTransfers: React.FC = () => {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 filterStatus === s ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
               }`}>
-              {s === '' ? 'הכל' : STATUS_LABEL[s] || s}
+              {s === '' ? 'הכל' : STATUS_LABEL(s)}
             </button>
           ))}
         </div>
@@ -306,7 +303,7 @@ const TransferRow: React.FC<{ t: Transfer; onApprove?: () => void }> = ({ t, onA
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2 flex-wrap">
         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[t.status] || 'bg-gray-100 text-gray-600'}`}>
-          {STATUS_LABEL[t.status] || t.status}
+          {STATUS_LABEL(t.status)}
         </span>
 <span className="text-sm font-semibold text-gray-900">{t.amount.toLocaleString()}</span>
         <span className="text-xs text-gray-400">{t.transfer_type}</span>

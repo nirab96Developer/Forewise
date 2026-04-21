@@ -13,6 +13,7 @@ import {
 // Services
 import workOrderService, { CalendarEvent as WorkOrderEvent } from '../../services/workOrderService';
 import activityLogService, { ActivityLog } from '../../services/activityLogService';
+import { getActivityLabel } from '../../strings';
 
 // Types
 interface ActivityEvent {
@@ -52,36 +53,10 @@ interface PersonalNote {
   createdAt: string;
 }
 
-// Helper functions for activity log formatting
-const getActivityTitle = (action: string): string => {
-  const actionTitles: Record<string, string> = {
-    'work_order.created': 'הזמנת עבודה נוצרה',
-    'work_order.approved': 'הזמנת עבודה אושרה',
-    'work_order.rejected': 'הזמנת עבודה נדחתה',
-    'work_order.started': 'עבודה החלה',
-    'work_order.completed': 'עבודה הושלמה',
-    'work_order.cancelled': 'הזמנה בוטלה',
-    'work_order.sent_to_supplier': 'נשלח לספק',
-    'work_order.supplier_changed': 'ספק שונה',
-    'worklog.created': 'דיווח שעות נוצר',
-    'worklog.submitted': 'דיווח נשלח לאישור',
-    'worklog.approved': 'דיווח אושר',
-    'worklog.rejected': 'דיווח נדחה',
-    'invoice.created': 'חשבונית נוצרה',
-    'invoice.approved': 'חשבונית אושרה',
-    'equipment.scanned': 'ציוד נסרק',
-    'equipment.mismatch_detected': 'אי התאמה בסריקה',
-    'supplier.confirmed': 'ספק אישר',
-    'supplier.declined': 'ספק דחה',
-    'user.login': 'כניסה למערכת',
-    'user.logout': 'יציאה מהמערכת',
-    // Support ticket activities
-'support_ticket.created': ' פנייה חדשה נפתחה',
-'support_ticket.replied': ' תגובה חדשה בפנייה',
-'support_ticket.status_changed': ' סטטוס פנייה השתנה',
-  };
-  return actionTitles[action] || action.replace(/[._]/g, ' ');
-};
+// Single source of truth for activity titles is `src/strings/activity.ts`.
+// This wrapper exists only because the rest of the file refers to
+// `getActivityTitle` by that name.
+const getActivityTitle = (action: string): string => getActivityLabel(action);
 
 const getActivityDescription = (item: ActivityLog): string => {
   if (item.details?.description_he) {

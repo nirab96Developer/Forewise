@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { getWorklogStatusLabel, getInvoiceStatusLabel } from "../../strings";
 
 interface WLRow {
   id: number; report_number: number | null; report_date: string | null;
@@ -14,6 +15,7 @@ interface WLRow {
   hourly_rate: number; cost_before_vat: number; cost_with_vat: number;
   report_type: string | null; is_overnight: boolean; overnight_nights: number;
   project_name: string; supplier_name: string | null;
+  project_id: number | null; supplier_id: number | null;
   reporter_name: string; equipment_type: string | null;
   approved_at: string | null; license_plate: string | null;
   flags: string[];
@@ -52,29 +54,30 @@ interface WLDetail {
 
 const fmtILS = (n: number) => `${n.toLocaleString("he-IL", { maximumFractionDigits: 0 })}`;
 
-const WL_STATUS: Record<string, { label: string; cls: string }> = {
-  PENDING: { label: "טיוטה", cls: "bg-gray-100 text-gray-700" },
-  SUBMITTED: { label: "ממתין לאישור", cls: "bg-yellow-100 text-yellow-800" },
-  APPROVED: { label: "מאושר", cls: "bg-green-100 text-green-800" },
-  REJECTED: { label: "נדחה", cls: "bg-red-100 text-red-700" },
-  INVOICED: { label: "הופק חשבון", cls: "bg-purple-100 text-purple-800" },
+// Worklog status badge — labels via `src/strings`, only colours stay local.
+const WL_STATUS_CLS: Record<string, string> = {
+  PENDING:   "bg-gray-100 text-gray-700",
+  SUBMITTED: "bg-yellow-100 text-yellow-800",
+  APPROVED:  "bg-green-100 text-green-800",
+  REJECTED:  "bg-red-100 text-red-700",
+  INVOICED:  "bg-purple-100 text-purple-800",
+  DRAFT:     "bg-gray-100 text-gray-700",
+  CANCELLED: "bg-gray-100 text-gray-600",
 };
+const wlStatus = (s: string) => ({
+  label: getWorklogStatusLabel(s),
+  cls: WL_STATUS_CLS[(s || '').toUpperCase()] || 'bg-gray-100 text-gray-600',
+});
 
 const FLAG_LABELS: Record<string, { label: string; cls: string }> = {
-  duplicate: { label: "כפול", cls: "bg-red-100 text-red-700" },
-  high_hours: { label: "שעות חריגות", cls: "bg-amber-100 text-amber-700" },
-  low_hours: { label: "שעות נמוכות", cls: "bg-gray-100 text-gray-600" },
-  no_rate: { label: "ללא תעריף", cls: "bg-red-100 text-red-700" },
+  duplicate:   { label: "כפול", cls: "bg-red-100 text-red-700" },
+  high_hours:  { label: "שעות חריגות", cls: "bg-amber-100 text-amber-700" },
+  low_hours:   { label: "שעות נמוכות", cls: "bg-gray-100 text-gray-600" },
+  no_rate:     { label: "ללא תעריף", cls: "bg-red-100 text-red-700" },
+  // Catch-all so unknown server flags render a neutral Hebrew label
+  // instead of the raw code (e.g. 'overtime' → "התראה").
 };
-
-const DASHBOARD_STATUS_LABELS: Record<string, string> = {
-  SUBMITTED: "ממתין לאישור",
-  APPROVED: "מאושר",
-  REJECTED: "נדחה",
-  PENDING: "טיוטה",
-  DRAFT: "טיוטה",
-  INVOICED: "הופק חשבון",
-};
+const flagLabel = (f: string) => FLAG_LABELS[f] || { label: 'התראה', cls: 'bg-gray-100 text-gray-600' };
 
 const AccountantDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -137,12 +140,56 @@ const AccountantDashboard: React.FC = () => {
 
   const createInvoice = async () => {
     if (invoiceSelection.size === 0) return;
+
+    const selectedRows = (data?.worklogs || []).filter(wl => invoiceSelection.has(wl.id));
+    if (selectedRows.length === 0) return;
+
+    // Validate: all selected worklogs must have supplier_id and project_id
+    const missing = selectedRows.filter(wl => !wl.supplier_id || !wl.project_id);
+    if (missing.length > 0) {
+      const nums = missing.map(wl => wl.report_number || wl.id).join(", ");
+      alert(`לא ניתן ליצור חשבונית — דיווחים ללא ספק/פרויקט: ${nums}`);
+      return;
+    }
+
+    // Group by (supplier_id, project_id) — one invoice per group
+    const groups = new Map<string, { supplier_id: number; project_id: number; ids: number[] }>();
+    for (const wl of selectedRows) {
+      const key = `${wl.supplier_id}-${wl.project_id}`;
+      if (!groups.has(key)) {
+        groups.set(key, { supplier_id: wl.supplier_id!, project_id: wl.project_id!, ids: [] });
+      }
+      groups.get(key)!.ids.push(wl.id);
+    }
+
+    if (groups.size > 1) {
+      const ok = window.confirm(
+        `הבחירה כוללת ${groups.size} צירופי ספק/פרויקט שונים. תיווצרנה ${groups.size} חשבוניות נפרדות. להמשיך?`
+      );
+      if (!ok) return;
+    }
+
     try {
-      await api.post("/invoices/from-worklogs", { worklog_ids: Array.from(invoiceSelection) });
+      const results = await Promise.allSettled(
+        Array.from(groups.values()).map(g =>
+          api.post("/invoices/from-worklogs", {
+            supplier_id: g.supplier_id,
+            project_id: g.project_id,
+            worklog_ids: g.ids,
+          })
+        )
+      );
+      const failed = results.filter(r => r.status === "rejected");
       setInvoiceSelection(new Set());
       loadData();
-      alert("חשבונית נוצרה בהצלחה");
-    } catch (e: any) { alert(e?.response?.data?.detail || "שגיאה ביצירת חשבונית"); }
+      if (failed.length === 0) {
+        alert(`נוצרו ${results.length} חשבוניות בהצלחה`);
+      } else {
+        alert(`נוצרו ${results.length - failed.length} מתוך ${results.length} חשבוניות. ${failed.length} נכשלו.`);
+      }
+    } catch (e: any) {
+      alert(e?.response?.data?.detail || "שגיאה ביצירת חשבונית");
+    }
   };
 
   if (loading && !data) return <UnifiedLoader size="full" />;
@@ -151,7 +198,7 @@ const AccountantDashboard: React.FC = () => {
   const k = data.kpis;
   const approvedWLs = data.worklogs.filter(wl => wl.status === "APPROVED" && !actioned[wl.id]);
   const statusOptions = (data.filter_options.statuses || []).map((s) =>
-    typeof s === "string" ? { value: s, label: DASHBOARD_STATUS_LABELS[s] || s } : s
+    typeof s === "string" ? { value: s, label: getWorklogStatusLabel(s) } : s
   );
 
   return (
@@ -269,7 +316,7 @@ const AccountantDashboard: React.FC = () => {
                 {data.worklogs.length === 0 ? (
                   <tr><td colSpan={11} className="p-8 text-center text-gray-400">אין דיווחים</td></tr>
                 ) : data.worklogs.map(wl => {
-                  const st = WL_STATUS[wl.status] || { label: wl.status, cls: "bg-gray-100 text-gray-600" };
+                  const st = wlStatus(wl.status);
                   const done = actioned[wl.id];
                   const isBusy = actionBusy === wl.id;
                   const isSubmitted = wl.status === "SUBMITTED" && !done;
@@ -303,7 +350,7 @@ const AccountantDashboard: React.FC = () => {
                         {wl.flags.length > 0 && (
                           <div className="flex flex-wrap gap-0.5 justify-center">
                             {wl.flags.map(f => {
-                              const fl = FLAG_LABELS[f] || { label: f, cls: "bg-gray-100 text-gray-600" };
+                              const fl = flagLabel(f);
                               return <span key={f} className={`px-1 py-0.5 rounded text-[8px] font-bold ${fl.cls}`}>{fl.label}</span>;
                             })}
                           </div>
@@ -418,7 +465,7 @@ const AccountantDashboard: React.FC = () => {
                   {/* Invoice */}
                   {detail.invoice && (
                     <div className="bg-purple-50 border border-purple-200 rounded-xl p-3">
-                      <p className="text-xs font-bold text-purple-800">חשבונית: {detail.invoice.invoice_number} ({detail.invoice.status})</p>
+                      <p className="text-xs font-bold text-purple-800">חשבונית: {detail.invoice.invoice_number} ({getInvoiceStatusLabel(detail.invoice.status)})</p>
                     </div>
                   )}
 

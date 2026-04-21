@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, XCircle, AlertTriangle, Calendar, User } from 'lucide-react';
 import api from '../../services/api';
+import { getEquipmentRequestStatusLabel } from '../../strings';
 
 interface EquipmentRequest {
   id: number;
@@ -81,48 +82,25 @@ const EquipmentRequestsStatus: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    const upper = (status || '').toUpperCase();
+    if (upper === 'APPROVED') return 'bg-green-100 text-green-800';
+    if (upper === 'REJECTED') return 'bg-red-100 text-red-800';
+    if (upper === 'PENDING')  return 'bg-yellow-100 text-yellow-800';
+    return 'bg-gray-100 text-gray-800';
   };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'אושר';
-      case 'rejected':
-        return 'נדחה';
-      case 'pending':
-        return 'ממתין לאישור';
-      default:
-        return status;
-    }
-  };
+  const getStatusText = (status: string) => getEquipmentRequestStatusLabel(status);
 
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-red-100 text-red-800';
-      case 'high':
-        return 'bg-orange-100 text-orange-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+    const upper = (priority || '').toUpperCase();
+    if (upper === 'URGENT') return 'bg-red-100 text-red-800';
+    if (upper === 'HIGH')   return 'bg-orange-100 text-orange-800';
+    if (upper === 'MEDIUM') return 'bg-yellow-100 text-yellow-800';
+    if (upper === 'LOW')    return 'bg-green-100 text-green-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
   const getPriorityText = (priority: string) => {
-    switch (priority) {
+    switch ((priority || '').toLowerCase()) {
       case 'urgent':
         return 'דחופה';
       case 'high':

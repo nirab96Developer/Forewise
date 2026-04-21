@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
+import { getWorklogStatusLabel, getWorklogStatusTone, toneClasses } from '../../strings';
 
 interface WorklogRow {
   id: number;
@@ -33,18 +34,24 @@ interface WorklogRow {
   report_number: number;
 }
 
-const STATUS_LABEL: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  PENDING:     { label: 'ממתין',           color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: <Clock className="w-3.5 h-3.5" /> },
-  SUBMITTED:   { label: 'הוגש לאישור',    color: 'bg-yellow-100 text-yellow-800 border-yellow-300', icon: <Clock className="w-3.5 h-3.5" /> },
-  APPROVED:    { label: 'מאושר',          color: 'bg-green-100 text-green-800 border-green-300',  icon: <CheckCircle className="w-3.5 h-3.5" /> },
-  INVOICED:    { label: 'נוצרה חשבונית',  color: 'bg-blue-100 text-blue-800 border-blue-300',    icon: <ReceiptText className="w-3.5 h-3.5" /> },
-  REJECTED:    { label: 'נדחה',           color: 'bg-red-100 text-red-800 border-red-300',        icon: <XCircle className="w-3.5 h-3.5" /> },
+// Status visuals — labels/tones come from `src/strings`. Icons are local
+// because they're a UI choice, not text.
+const STATUS_ICON: Record<string, React.ReactNode> = {
+  PENDING:   <Clock className="w-3.5 h-3.5" />,
+  SUBMITTED: <Clock className="w-3.5 h-3.5" />,
+  APPROVED:  <CheckCircle className="w-3.5 h-3.5" />,
+  INVOICED:  <ReceiptText className="w-3.5 h-3.5" />,
+  REJECTED:  <XCircle className="w-3.5 h-3.5" />,
 };
-const normStatus = (s: string | null | undefined) => (s || '').toUpperCase();
-const getStatus = (s: string | null) => STATUS_LABEL[normStatus(s)] || {
-  label: s || 'לא ידוע',
-  color: 'bg-gray-100 text-gray-700 border-gray-300',
-  icon: <Clock className="w-3.5 h-3.5" />,
+const getStatus = (s: string | null) => {
+  const upper = (s || '').toUpperCase();
+  const tone = getWorklogStatusTone(s);
+  const cls = toneClasses(tone);
+  return {
+    label: getWorklogStatusLabel(s),
+    color: `${cls.bg} ${cls.text} ${cls.border}`,
+    icon: STATUS_ICON[upper] || <Clock className="w-3.5 h-3.5" />,
+  };
 };
 
 function openExportPdf(title: string, headers: string[], rows: string[][]) {
@@ -354,7 +361,7 @@ const AccountantInbox: React.FC = () => {
   });
 
   const pendingCount = worklogs.filter(w => {
-    const st = normStatus(w.status);
+    const st = (w.status || '').toUpperCase();
     return !st || st === 'SUBMITTED' || st === 'PENDING';
   }).length;
 
@@ -597,7 +604,7 @@ w.cost_with_vat ? `${parseFloat(String(w.cost_with_vat)).toLocaleString('he-IL')
                 <tbody>
                   {filtered.map(w => {
                     const st = getStatus(w.status);
-                    const ns = normStatus(w.status);
+                    const ns = (w.status || '').toUpperCase();
                     const isPending = !ns || ns === 'SUBMITTED' || ns === 'PENDING';
                     const isApproved = ns === 'APPROVED';
                     const isInvoiced = ns === 'INVOICED';

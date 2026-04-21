@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
+import { getActivityLabel } from "../../strings";
 
 interface AdminData {
   kpis: {
@@ -33,15 +34,29 @@ const timeAgo = (d: string) => {
   return `לפני ${Math.floor(hrs / 24)} ימים`;
 };
 
-const ACTION_CFG: Record<string, { label: string; dot: string }> = {
-  WORK_ORDER_CREATED: { label: "הזמנה חדשה", dot: "bg-green-500" },
-  WORK_ORDER_APPROVED: { label: "הזמנה אושרה", dot: "bg-green-600" },
-  STATUS_CHANGE_WORK_ORDER: { label: "שינוי סטטוס הזמנה", dot: "bg-blue-400" },
-  STATUS_CHANGE_WORKLOG: { label: "שינוי סטטוס דיווח", dot: "bg-emerald-400" },
-  INVOICE_CREATED: { label: "חשבונית נוצרה", dot: "bg-orange-500" },
-  BUDGET_FROZEN: { label: "תקציב הוקפא", dot: "bg-amber-500" },
-  BUDGET_RELEASED: { label: "תקציב שוחרר", dot: "bg-emerald-400" },
-  user_login: { label: "התחברות משתמש", dot: "bg-gray-400" },
+// The dot colour is a UI choice and stays here; the label always comes from
+// the central activity dictionary so a new backend action never leaks raw.
+const ACTION_DOT: Record<string, string> = {
+  'work_order.created':   'bg-green-500',
+  'work_order.approved':  'bg-green-600',
+  'work_order.deleted':   'bg-red-500',
+  'work_order.cancelled': 'bg-red-400',
+  'work_order.updated':   'bg-blue-400',
+  'worklog.created':      'bg-emerald-400',
+  'worklog.approved':     'bg-emerald-500',
+  'worklog.rejected':     'bg-red-400',
+  'invoice.created':      'bg-orange-500',
+  'invoice.paid':         'bg-purple-500',
+  'budget.frozen':        'bg-amber-500',
+  'budget.released':      'bg-emerald-400',
+  'user.login':           'bg-gray-400',
+  'user.logout':          'bg-gray-400',
+};
+const actionDot = (action: string) => {
+  if (!action) return 'bg-gray-400';
+  // Try direct, then alias (legacy SCREAMING_SNAKE / underscore variants)
+  const lower = action.toLowerCase();
+  return ACTION_DOT[action] || ACTION_DOT[lower] || 'bg-gray-400';
 };
 
 const AdminDashboard: React.FC = () => {
@@ -149,13 +164,14 @@ const AdminDashboard: React.FC = () => {
               {(data.recent_events || []).length === 0 ? (
                 <div className="p-10 text-center text-sm text-gray-400">אין פעולות אחרונות</div>
               ) : data.recent_events.map(ev => {
-                const cfg = ACTION_CFG[ev.action] || { label: ev.action, dot: "bg-gray-400" };
+                const label = getActivityLabel(ev.action);
+                const dot = actionDot(ev.action);
                 return (
                   <div key={ev.id} className="px-4 py-3 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full ${cfg.dot} mt-2 flex-shrink-0`} />
+                      <div className={`w-2 h-2 rounded-full ${dot} mt-2 flex-shrink-0`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800">{cfg.label}</p>
+                        <p className="text-sm font-medium text-gray-800">{label}</p>
                         <p className="text-xs text-gray-500 truncate mt-0.5">{ev.description}</p>
                         <div className="flex items-center gap-2 mt-1">
                           {ev.user_name && <span className="text-[10px] text-gray-500">{ev.user_name}</span>}
