@@ -47,7 +47,14 @@ jobs:
             bash /root/backups/db/backup.sh
             echo ">> Backup complete"
 
-            # 4. Build frontend
+            # 4. Apply database migrations (idempotent — alembic skips already-applied revisions)
+            echo ">> Running alembic migrations..."
+            cd app_backend
+            .venv/bin/alembic upgrade head 2>&1 | tail -20
+            echo ">> Migrations complete"
+            cd ..
+
+            # 5. Build frontend
             echo ">> Building frontend..."
             cd app_frontend
             rm -rf dist
@@ -55,17 +62,17 @@ jobs:
             npm run build
             cd ..
 
-            # 5. Ensure gunicorn is available in .venv (symlink if needed)
+            # 6. Ensure gunicorn is available in .venv (symlink if needed)
             if [ ! -f "app_backend/.venv/bin/gunicorn" ]; then
               echo ">> Linking gunicorn into .venv..."
               ln -sf "$(which gunicorn)" app_backend/.venv/bin/gunicorn
             fi
 
-            # 5b. Restart backend
+            # 6b. Restart backend
             echo ">> Restarting backend..."
             systemctl restart forewise.service
 
-            # 6. Verify deployment — wait up to 90 seconds for 16 gunicorn workers to come up
+            # 7. Verify deployment — wait up to 90 seconds for 16 gunicorn workers to come up
             echo ">> Waiting for backend to start..."
             HEALTH=""
             for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18; do
@@ -87,7 +94,7 @@ jobs:
             systemctl is-active forewise.service || { echo "DEPLOY FAILED: service not active after 90s"; systemctl status forewise.service --no-pager -l || true; exit 1; }
             echo "$HEALTH" | grep -q '"status":"ok"' || { echo "DEPLOY FAILED: health check failed"; exit 1; }
 
-            # 7. Reload nginx
+            # 8. Reload nginx
             systemctl reload nginx
 
             echo "=== Forewise Deploy Complete ==="

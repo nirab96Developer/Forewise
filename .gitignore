@@ -105,7 +105,10 @@ Thumbs.db
 *.backup
 *.bak
 *.sql.gz
+*.dump
 deployment/backups/
+backups/
+/backups/
 
 # ──────────────────────────────────────────
 # DATABASE FILES
