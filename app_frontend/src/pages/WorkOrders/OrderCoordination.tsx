@@ -83,7 +83,9 @@ const OrderCoordination: React.FC = () => {
     try {
       const [catResp, modelResp] = await Promise.all([
         api.get('/equipment-categories'),
-        api.get('/suppliers/equipment-models/active').catch(() => ({ data: [] })),
+        // Endpoint moved out of /suppliers/* (it has nothing to do with a
+        // specific supplier — it's the global active equipment-model lookup).
+        api.get('/equipment-models/active').catch(() => ({ data: { items: [] } })),
       ]);
 
       const categoryItems: EquipmentCategory[] = catResp.data?.items || catResp.data || [];
@@ -416,33 +418,34 @@ const OrderCoordination: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-6 pb-10 px-3 md:px-6 " dir="rtl">
+    <div className="min-h-screen bg-gray-50 pt-4 sm:pt-6 pb-10 px-3 md:px-6" dir="rtl">
       <div className="max-w-6xl mx-auto">
 
         {/* ===== HEADER ===== */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <ClipboardList className="w-6 h-6 text-green-600" />
-              <h1 className="text-2xl font-bold text-gray-900">תיאום הזמנות</h1>
+              <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 flex-shrink-0" />
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">תיאום הזמנות</h1>
             </div>
-            <p className="text-sm text-gray-500 mt-0.5 mr-8">ניהול ותיאום הזמנות עבודה מול ספקים — סבב הוגן ואילוצים</p>
+            <p className="hidden sm:block text-sm text-gray-500 mt-0.5 mr-8">ניהול ותיאום הזמנות עבודה מול ספקים — סבב הוגן ואילוצים</p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+          <div className="flex items-center gap-2 flex-wrap self-stretch sm:self-auto">
             {/* Bulk delete button - admin only, shown when items selected */}
             {isAdmin && selectedIds.length > 0 && (
               <button
                 onClick={() => setBulkDeleteModal(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-xl shadow-sm hover:bg-red-700 transition-colors text-sm font-semibold"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-red-600 text-white rounded-xl shadow-sm hover:bg-red-700 transition-colors text-sm font-semibold"
               >
                 <Trash2 className="w-4 h-4" />
-                מחק נבחרים ({selectedIds.length})
+                <span className="sm:hidden">מחק ({selectedIds.length})</span>
+                <span className="hidden sm:inline">מחק נבחרים ({selectedIds.length})</span>
               </button>
             )}
             <button
               onClick={loadOrders}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
             >
               <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               רענן
@@ -451,42 +454,45 @@ const OrderCoordination: React.FC = () => {
         </div>
 
         {/* ===== STATS ===== */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
           {[
-            { key: 'all',       label: 'סה"כ',             count: orders.length, color: 'border-gray-400',   icon: <ClipboardList className="w-5 h-5 text-gray-400" /> },
-            { key: 'NEEDS_RE_COORDINATION', label: 'דורש החלטה — סוג כלי שגוי', count: stats.needsReCoordination, color: 'border-red-500', icon: <AlertTriangle className="w-5 h-5 text-red-500" /> },
-            { key: 'EXPIRED',   label: 'פג תוקף',           count: stats.expired, color: 'border-orange-400', icon: <AlertTriangle className="w-5 h-5 text-orange-500" /> },
-            { key: 'PENDING',   label: 'ממתינות לשליחה',    count: stats.pending, color: 'border-yellow-400', icon: <Clock className="w-5 h-5 text-yellow-500" /> },
-            { key: 'DISTRIBUTING', label: 'בהפצה לספקים',   count: stats.distributing, color: 'border-blue-400', icon: <Send className="w-5 h-5 text-blue-500" /> },
-            { key: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין', count: stats.accepted, color: 'border-purple-400', icon: <CheckCircle className="w-5 h-5 text-purple-500" /> },
+            { key: 'all',       label: 'סה"כ',             shortLabel: 'סה"כ',          count: orders.length, color: 'border-gray-400',   icon: <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" /> },
+            { key: 'NEEDS_RE_COORDINATION', label: 'דורש החלטה — סוג כלי שגוי', shortLabel: 'דורש החלטה', count: stats.needsReCoordination, color: 'border-red-500', icon: <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" /> },
+            { key: 'EXPIRED',   label: 'פג תוקף',           shortLabel: 'פג תוקף',        count: stats.expired, color: 'border-orange-400', icon: <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" /> },
+            { key: 'PENDING',   label: 'ממתינות לשליחה',    shortLabel: 'ממתינות',        count: stats.pending, color: 'border-yellow-400', icon: <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" /> },
+            { key: 'DISTRIBUTING', label: 'בהפצה לספקים',   shortLabel: 'בהפצה',          count: stats.distributing, color: 'border-blue-400', icon: <Send className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" /> },
+            { key: 'SUPPLIER_ACCEPTED_PENDING_COORDINATOR', label: 'ספק אישר — ממתין', shortLabel: 'ספק אישר', count: stats.accepted, color: 'border-purple-400', icon: <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" /> },
           ].map(stat => (
             <button
               key={stat.key}
               onClick={() => setFilterStatus(stat.key)}
-              className={`bg-white rounded-xl shadow-sm p-4 border-r-4 ${stat.color} text-right hover:shadow-md transition-shadow ${filterStatus === stat.key ? 'ring-2 ring-offset-1 ring-green-500' : ''}`}
+              className={`bg-white rounded-xl shadow-sm p-2.5 sm:p-4 border-r-4 ${stat.color} text-right hover:shadow-md transition-shadow min-w-0 ${filterStatus === stat.key ? 'ring-2 ring-offset-1 ring-green-500' : ''}`}
             >
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                 {stat.icon}
               </div>
-              <p className="text-2xl font-bold text-gray-900">{stat.count}</p>
-              <p className="text-xs text-gray-500 mt-0.5 leading-tight">{stat.label}</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 leading-none">{stat.count}</p>
+              <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-tight break-words">
+                <span className="sm:hidden">{stat.shortLabel}</span>
+                <span className="hidden sm:inline">{stat.label}</span>
+              </p>
             </button>
           ))}
         </div>
 
         {/* ===== SEARCH + FILTER ===== */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4 sm:mb-5">
           <div className="relative flex-1">
             <Search className="absolute top-1/2 -translate-y-1/2 right-3 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="חיפוש לפי מספר הזמנה, פרויקט, ספק, ציוד..."
+              placeholder="חיפוש: מספר / פרויקט / ספק / ציוד"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pr-9 pl-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0 tabs-row">
             {[
               { key: 'all', label: 'הכל' },
               { key: 'NEEDS_RE_COORDINATION', label: 'דורש החלטה' },
@@ -574,11 +580,13 @@ const OrderCoordination: React.FC = () => {
               >
                 {/* ---- Card Header (always visible) ---- */}
                 <div
-                  className="px-4 py-3 cursor-pointer"
+                  className="px-3 sm:px-4 py-3 cursor-pointer"
                   onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
                 >
-                  {/* Row 1: Checkbox (admin) + Order number + status + tags */}
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                  {/* Row 1: Checkbox (admin) + Order number + chevron + status + tags
+                       On mobile: anchor row holds checkbox/#/chevron; badges wrap below.
+                       On desktop: everything inline. */}
+                  <div className="flex items-start gap-2 mb-2">
                     {isAdmin && (
                       <button
                         onClick={e => { e.stopPropagation(); toggleSelect(order.id); }}
@@ -591,24 +599,26 @@ const OrderCoordination: React.FC = () => {
                         }
                       </button>
                     )}
-                    <span className="text-xs text-gray-400 font-mono">#{order.order_number}</span>
-                    {getStatusBadge(order.status)}
-                    {getSelectionTag(order)}
-                    {order.is_urgent && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium animate-pulse">
-                        <AlertTriangle className="w-3 h-3" />
-                        דחוף!
-                      </span>
-                    )}
-                    {order.time_remaining_display && (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        order.is_urgent ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        <Timer className="w-3 h-3" />
-                        {order.time_remaining_display}
-                      </span>
-                    )}
-                    <div className="mr-auto">
+                    <span className="text-xs text-gray-400 font-mono pt-1 flex-shrink-0">#{order.order_number}</span>
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                      {getStatusBadge(order.status)}
+                      {getSelectionTag(order)}
+                      {order.is_urgent && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium animate-pulse">
+                          <AlertTriangle className="w-3 h-3" />
+                          דחוף!
+                        </span>
+                      )}
+                      {order.time_remaining_display && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          order.is_urgent ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          <Timer className="w-3 h-3" />
+                          {order.time_remaining_display}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 pt-1">
                       {isExpanded
                         ? <ChevronUp className="w-4 h-4 text-gray-400" />
                         : <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -616,12 +626,13 @@ const OrderCoordination: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Row 2: Main info grid */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-1 text-sm">
-{/* Project Area Region breadcrumb */}
-                    <div className="flex items-start gap-1.5 text-gray-700 col-span-2 sm:col-span-1">
+                  {/* Row 2: Main info — single column on phones for readability,
+                       4-up on desktop. */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-x-4 gap-y-1.5 text-sm">
+                    {/* Project Area Region breadcrumb */}
+                    <div className="flex items-start gap-1.5 text-gray-700 sm:col-span-1 min-w-0">
                       <Building2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <span className="font-medium block truncate">{order.project_name || '—'}</span>
                         {(order.area_name || order.region_name) && (
                           <span className="text-xs text-gray-400 block truncate">
@@ -630,28 +641,28 @@ const OrderCoordination: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-gray-700">
+                    <div className="flex items-center gap-1.5 text-gray-700 min-w-0">
                       <Truck className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                       <span className="truncate">{equipmentType}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-gray-700">
+                    <div className="flex items-center gap-1.5 text-gray-700 min-w-0">
                       <User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                       {order.supplier_name
                         ? <span className="truncate text-green-700 font-medium">{order.supplier_name}</span>
                         : <span className="truncate text-gray-400 italic">טרם נבחר</span>
                       }
                     </div>
-                    <div className="flex items-center gap-1.5 text-gray-700">
+                    <div className="flex items-center gap-1.5 text-gray-700 min-w-0">
                       <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                      <span>{formatDate(order.work_start_date)} – {formatDate(order.work_end_date)}</span>
+                      <span className="truncate">{formatDate(order.work_start_date)} – {formatDate(order.work_end_date)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* ---- Expanded Details ---- */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="border-t border-gray-100 bg-gray-50/50 px-3 sm:px-4 py-3 sm:py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
 
                       {/* Details */}
                       <div>
@@ -716,23 +727,24 @@ const OrderCoordination: React.FC = () => {
                       {/* Actions */}
                       <div>
                         <h4 className="text-sm font-semibold text-gray-700 mb-3">פעולות</h4>
+                        {/* Mobile: 2-col for short utility buttons, primary actions span both. */}
                         <div className="grid grid-cols-2 gap-2">
 
                           <button
                             onClick={() => navigate(`/work-orders/${order.id}`)}
-                            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium"
+                            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors text-sm font-medium min-h-[44px]"
                           >
                             <Eye className="w-4 h-4" />
-                            צפה בפרטים
+                            <span className="truncate">צפה בפרטים</span>
                           </button>
 
                           <button
                             onClick={() => handleLogCall(order.id)}
                             disabled={processing === order.id}
-                            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl hover:bg-purple-100 transition-colors text-sm font-medium disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-50 border border-purple-200 text-purple-700 rounded-xl hover:bg-purple-100 transition-colors text-sm font-medium disabled:opacity-50 min-h-[44px]"
                           >
                             <Phone className="w-4 h-4" />
-                            תעד שיחה
+                            <span className="truncate">תעד שיחה</span>
                           </button>
 
                           {order.status === 'PENDING' && (
@@ -801,21 +813,21 @@ const OrderCoordination: React.FC = () => {
                               <button
                                 onClick={() => handleResend(order.id)}
                                 disabled={processing === order.id}
-                                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-semibold disabled:opacity-50"
+                                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors text-sm font-semibold disabled:opacity-50 min-h-[44px]"
                               >
                                 {processing === order.id
                                   ? <Loader2 className="w-4 h-4 animate-spin" />
                                   : <Send className="w-4 h-4" />
                                 }
-                                שלח שוב לאותו ספק
+                                <span className="truncate">שלח שוב לאותו ספק</span>
                               </button>
                               <button
                                 onClick={() => handleMoveToNextSupplier(order.id)}
                                 disabled={processing === order.id}
-                                className="flex items-center justify-center gap-2 px-3 py-2.5 bg-orange-50 border border-orange-200 text-orange-700 rounded-xl hover:bg-orange-100 transition-colors text-sm font-medium disabled:opacity-50"
+                                className="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-orange-50 border border-orange-200 text-orange-700 rounded-xl hover:bg-orange-100 transition-colors text-sm font-medium disabled:opacity-50 min-h-[44px]"
                               >
                                 <ArrowLeftRight className="w-4 h-4" />
-                                לספק הבא
+                                <span className="truncate">לספק הבא</span>
                               </button>
                             </>
                           )}
@@ -892,9 +904,12 @@ const OrderCoordination: React.FC = () => {
         </>
         )}
 
-        {/* Loading overlay */}
+        {/* Loading overlay — sits above iOS home-indicator on phones */}
         {loading && orders.length > 0 && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-lg text-sm text-gray-600">
+          <div
+            className="fixed left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-lg text-sm text-gray-600 z-30"
+            style={{ bottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem))' }}
+          >
             <Loader2 className="w-4 h-4 animate-spin text-green-600" />
             מרענן...
           </div>
@@ -903,8 +918,8 @@ const OrderCoordination: React.FC = () => {
 
       {/* Bulk Delete Modal - Admin Only */}
       {bulkDeleteModal && isAdmin && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-3 sm:p-4" dir="rtl">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 rounded-full">
                 <Trash2 className="w-6 h-6 text-red-600" />
@@ -947,8 +962,8 @@ const OrderCoordination: React.FC = () => {
 
       {/* Cancel Confirmation Modal */}
       {cancelModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" dir="rtl">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4" dir="rtl">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-red-100 rounded-full">
                 <XCircle className="w-6 h-6 text-red-600" />

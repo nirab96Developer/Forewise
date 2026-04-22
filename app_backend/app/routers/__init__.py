@@ -43,6 +43,7 @@ ROUTER_MODULES = [
     "supplier_constraint_reasons",
     "supplier_rotations",
     "equipment_categories",
+    "equipment_models",
     "invoices",
     "suppliers",
     "notifications",

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 
 router = APIRouter(prefix="/reports/export", tags=["Excel Export"])
@@ -369,6 +369,18 @@ TYPE_LABELS_HE = {
     "equipment": "ציוד",
 }
 
+# Required permission per export type. Any authenticated user could
+# previously download every dataset (worklogs, invoices, …) regardless of
+# role. Now we gate each type behind the same permission used for the
+# corresponding "read" UI screen.
+_EXPORT_PERMISSIONS = {
+    "worklogs":  "worklogs.read",
+    "invoices":  "invoices.read",
+    "projects":  "projects.read",
+    "equipment": "equipment.read",
+}
+
+
 @router.get("/excel")
 def export_excel(
     type: Annotated[EXPORT_TYPES, Query(description="סוג הייצוא")],
@@ -379,6 +391,10 @@ def export_excel(
     ייצוא נתונים לקובץ Excel.
     type: worklogs | invoices | projects | equipment
     """
+    perm = _EXPORT_PERMISSIONS.get(type)
+    if perm:
+        require_permission(current_user, perm)
+
     today = date.today().strftime("%Y-%m-%d")
     label_he = TYPE_LABELS_HE.get(type, type)
     filename = f"forewise_{label_he}_{today}.xlsx"

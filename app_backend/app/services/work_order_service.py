@@ -481,19 +481,23 @@ class WorkOrderService:
             from app.services.supplier_rotation_service import SupplierRotationService
             from app.models.equipment_model import EquipmentModel
 
-            # Resolve equipment_type_id correctly:
-            #   - PRIMARY: equipment_models.category_id from requested_equipment_model_id
-            #     (this is what the supplier rotation table actually keys on).
-            #   - FALLBACK: equipment_id is almost always None when we're in
-            #     DISTRIBUTING (the supplier hasn't picked a tool yet) so the
-            #     old code passed None and rotation degenerated to a global counter.
-            eq_type_id = None
+            # Resolve the rotation key correctly:
+            #   - equipment_models.category_id is a FK to equipment_categories,
+            #     NOT equipment_types. Earlier code passed it as
+            #     equipment_type_id which violated
+            #     `supplier_rotations_equipment_type_id_fkey` and caused a
+            #     production 500 on send-to-supplier. We now pass it under the
+            #     correct column (equipment_category_id).
+            #   - equipment_id is almost always None at DISTRIBUTING (supplier
+            #     hasn't picked a tool yet), so we don't try to derive the
+            #     specific equipment_type_id from it here.
+            eq_category_id = None
             if work_order.requested_equipment_model_id:
                 eq_model = db.query(EquipmentModel).filter(
                     EquipmentModel.id == work_order.requested_equipment_model_id
                 ).first()
                 if eq_model:
-                    eq_type_id = getattr(eq_model, 'category_id', None)
+                    eq_category_id = getattr(eq_model, 'category_id', None)
 
             # Area = project.area_id (not the WO location_id, which is an
             # operational detail and isn't the rotation key).
@@ -508,11 +512,20 @@ class WorkOrderService:
             rot_svc.update_rotation_after_assignment(
                 db,
                 supplier_id=work_order.supplier_id,
-                equipment_type_id=eq_type_id,
+                equipment_category_id=eq_category_id,
                 area_id=area_id,
             )
-        except Exception:
-            pass
+        except Exception as rot_err:
+            # Don't let rotation bookkeeping break send-to-supplier. The portal
+            # token + email is already committed above; just log and move on.
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Rotation tracking failed for WO {work_order.id}: {rot_err}"
+            )
+            try:
+                db.rollback()
+            except Exception:
+                pass
 
         # Send invitation email via the shared helper
         email_sent, supplier_name = self._dispatch_portal_email(

@@ -615,7 +615,11 @@ def mark_invoice_paid(
     now = datetime.utcnow()
     body = body or MarkPaidRequest()
 
-    invoice.paid_amount = body.paid_amount if body.paid_amount is not None else invoice.total_amount
+    # Detect re-pays so we don't release the budget freeze twice.
+    was_already_paid = (invoice.status or "").upper() == "PAID"
+
+    paid_amount = body.paid_amount if body.paid_amount is not None else invoice.total_amount
+    invoice.paid_amount = paid_amount
     invoice.status = "PAID"
     invoice.paid_at = body.paid_at or now
     invoice.paid_by = getattr(current_user, "id", None)
@@ -625,6 +629,37 @@ def mark_invoice_paid(
         invoice.payment_reference = body.payment_reference
     invoice.updated_at = now
     db.commit()
+
+    # Release any frozen budgets and record actual spend. Distribute the
+    # invoice's paid_amount proportionally across the work orders feeding
+    # this invoice (via worklog→work_order). Best-effort — never blocks the
+    # mark-paid response if budget tables are misconfigured.
+    if not was_already_paid:
+        try:
+            from sqlalchemy import distinct
+            from app.models.invoice_item import InvoiceItem
+            from app.models.worklog import Worklog
+            from app.services.budget_service import release_budget_freeze
+
+            wo_ids = [
+                row[0]
+                for row in db.query(distinct(Worklog.work_order_id))
+                .join(InvoiceItem, InvoiceItem.worklog_id == Worklog.id)
+                .filter(InvoiceItem.invoice_id == invoice_id,
+                        Worklog.work_order_id.isnot(None))
+                .all()
+            ]
+            if wo_ids:
+                # Split spend evenly across linked work orders. Fine-grained
+                # split-by-actual-cost-per-WO would require richer per-line data.
+                share = float(paid_amount or 0) / len(wo_ids)
+                for wo_id in wo_ids:
+                    release_budget_freeze(wo_id, share, db)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Budget release failed for invoice {invoice_id}: {e}"
+            )
 
     return {
         "message": "החשבונית סומנה כשולמה",

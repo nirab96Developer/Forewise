@@ -152,14 +152,17 @@ async def lifespan(app: FastAPI):
     import asyncio as _asyncio
     from app.tasks.user_lifecycle import schedule_nightly_cleanup
     from app.tasks.portal_expiry import schedule_portal_expiry_check
+    from app.tasks.otp_cleanup import schedule_otp_cleanup
     _cleanup_task = _asyncio.create_task(schedule_nightly_cleanup())
     _expiry_task = _asyncio.create_task(schedule_portal_expiry_check())
+    _otp_cleanup_task = _asyncio.create_task(schedule_otp_cleanup())
 
     yield
 
     # Shutdown
     _cleanup_task.cancel()
     _expiry_task.cancel()
+    _otp_cleanup_task.cancel()
     logger.info("Shutting down...")
     try:
         engine.dispose()

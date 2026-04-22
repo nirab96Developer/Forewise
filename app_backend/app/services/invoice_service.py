@@ -522,15 +522,11 @@ def generate_monthly_invoice(
         for wl in wls:
             wl.status = "INVOICED"
 
-    # שחרר הקפאת תקציב
-    try:
-        from app.services.budget_service import release_budget_freeze
-        # מחפש work_order_id מהראשון שיש לו
-        wo_ids = list({wl.work_order_id for wl in worklogs if wl.work_order_id})
-        for wo_id in wo_ids:
-            release_budget_freeze(wo_id, 0, db)  # actual amount יחושב מהחשבונית
-    except Exception:
-        pass
+    # ⚠️ Budget release moved to mark_invoice_paid. Releasing on invoice
+    # CREATE with actual_amount=0 was a bug: it freed the frozen amount but
+    # never recorded the spend, so the budget started showing the funds as
+    # available again even though we still owed the supplier. The release
+    # must happen at PAYMENT time with the real paid_amount.
 
     db.commit()
     db.refresh(invoice)

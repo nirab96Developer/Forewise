@@ -98,7 +98,9 @@ class ActivityLogService {
    */
   async getUserActivities(userId: number, filters: Omit<ActivityLogFilters, 'user_id'> = {}): Promise<ActivityLog[]> {
     try {
-      const response = await api.get(`/activity-logs/user/${userId}`, { params: filters });
+      // Was /activity-logs/user/{userId} (404 — no such BE route).
+      // The list endpoint accepts user_id as a query filter.
+      const response = await api.get('/activity-logs/', { params: { ...filters, user_id: userId } });
       return Array.isArray(response.data) ? response.data : (response.data.items || []);
     } catch (error) {
       console.error('Error fetching user activities:', error);

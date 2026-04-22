@@ -102,6 +102,19 @@ def update_reason(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+# PATCH alias — same handler, semantically more correct for partial updates
+# (e.g. the FE "toggle is_active" button which only sends one field).
+@router.patch("/{item_id}", response_model=SupplierConstraintReasonResponse)
+def patch_reason(
+    item_id: int,
+    data: SupplierConstraintReasonUpdate,
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)]
+):
+    """Partially update a supplier constraint reason (alias of PUT)."""
+    return update_reason(item_id, data, db, current_user)
+
+
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_reason(
     item_id: int,

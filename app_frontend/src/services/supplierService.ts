@@ -206,8 +206,11 @@ class SupplierService {
 
   async getActiveEquipmentModels(): Promise<EquipmentModel[]> {
     try {
-      const response = await api.get('/suppliers/equipment-models/active');
-      return response.data || [];
+      // Was /suppliers/equipment-models/active (404 — no such BE route);
+      // moved to a dedicated /equipment-models/* router that returns
+      // { items: [{id, name, category_id}], total }.
+      const response = await api.get('/equipment-models/active');
+      return response.data?.items || response.data || [];
     } catch (error) {
       console.error('Error fetching equipment models:', error);
       throw error;
@@ -224,28 +227,21 @@ class SupplierService {
     }
   }
 
-  async addSupplierEquipment(supplierId: number, payload: SupplierEquipmentCreate): Promise<SupplierEquipmentItem> {
-    try {
-      const response = await api.post(`/suppliers/${supplierId}/equipment`, payload);
-      return response.data;
-    } catch (error) {
-      console.error('Error adding supplier equipment:', error);
-      throw error;
-    }
+  // ⚠️ The following two methods (addSupplierEquipment / updateSupplierEquipment)
+  // hit endpoints that don't exist on the backend (POST /suppliers/:id/equipment,
+  // PATCH /suppliers/:id/equipment/:eid). They are kept as stubs that throw a
+  // clear error so any future caller fails loudly instead of silently posting
+  // to a 404/405. If you need them, add the BE route first.
+  async addSupplierEquipment(_supplierId: number, _payload: SupplierEquipmentCreate): Promise<SupplierEquipmentItem> {
+    throw new Error('addSupplierEquipment: BE endpoint not implemented — add POST /suppliers/{id}/equipment first');
   }
 
   async updateSupplierEquipment(
-    supplierId: number,
-    supplierEquipmentId: number,
-    payload: SupplierEquipmentUpdate
+    _supplierId: number,
+    _supplierEquipmentId: number,
+    _payload: SupplierEquipmentUpdate
   ): Promise<SupplierEquipmentItem> {
-    try {
-      const response = await api.patch(`/suppliers/${supplierId}/equipment/${supplierEquipmentId}`, payload);
-      return response.data;
-    } catch (error) {
-      console.error('Error updating supplier equipment:', error);
-      throw error;
-    }
+    throw new Error('updateSupplierEquipment: BE endpoint not implemented — add PATCH /suppliers/{id}/equipment/{eid} first');
   }
 
   /**
@@ -269,72 +265,31 @@ class SupplierService {
     }
   }
 
-  /**
-   * קבלת ספקים לפי סוג ציוד
-   */
-  async getSuppliersByEquipmentType(equipmentType: string): Promise<Supplier[]> {
-    try {
-      const response = await api.get(`/suppliers/equipment/${equipmentType}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching suppliers by equipment type:', error);
-      throw error;
-    }
-  }
+  // ─────────────────────────────────────────────────────────────────────
+  // The following methods previously called BE endpoints that do not exist
+  // and were producing 404/405 responses (or worse, unhandled rejections):
+  //   GET   /suppliers/equipment/{type}   → use /suppliers/active?equipment_category_id=…
+  //   GET   /suppliers/next/{type}        → fair-rotation lives in BE work_order_service
+  //   PUT   /suppliers/{id}/rotation      → use /supplier-rotations/{id} (different shape)
+  //   GET   /suppliers/{id}/stats         → not implemented on BE
+  //   GET   /suppliers/search             → use /suppliers?q=… (existing endpoint)
+  //
+  // They had ZERO call sites in the FE codebase — confirmed by audit on
+  // 2026-04-22. Removed to prevent future regressions. If you need any of
+  // them, add the BE route first and reintroduce a properly-typed method.
+  // ─────────────────────────────────────────────────────────────────────
 
   /**
-   * קבלת הספק הבא בתור (Rotation)
-   */
-  async getNextSupplier(equipmentType: string): Promise<Supplier> {
-    try {
-      const response = await api.get(`/suppliers/next/${equipmentType}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching next supplier:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * עדכון סדר הסבב
-   */
-  async updateRotationOrder(supplierId: number, newOrder: number): Promise<Supplier> {
-    try {
-      const response = await api.put(`/suppliers/${supplierId}/rotation`, { order: newOrder });
-      return response.data;
-    } catch (error) {
-      console.error('Error updating rotation order:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * קבלת סטטיסטיקות ספק
-   */
-  async getSupplierStats(id: number): Promise<{
-    total_work_orders: number;
-    completed_work_orders: number;
-    response_rate: number;
-    average_response_time: number;
-    total_hours: number;
-    last_work_order?: string;
-  }> {
-    try {
-      const response = await api.get(`/suppliers/${id}/stats`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching supplier stats:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * חיפוש ספקים
+   * חיפוש ספקים — uses the standard list endpoint with `q` filter.
    */
   async searchSuppliers(query: string): Promise<Supplier[]> {
     try {
-      const response = await api.get('/suppliers/search', { params: { q: query } });
-      return response.data;
+      const response = await api.get('/suppliers', { params: { q: query, page: 1, page_size: 50 } });
+      const data = response.data;
+      if (Array.isArray(data)) return data;
+      if (data?.items && Array.isArray(data.items)) return data.items;
+      if (data?.suppliers && Array.isArray(data.suppliers)) return data.suppliers;
+      return [];
     } catch (error) {
       console.error('Error searching suppliers:', error);
       throw error;
