@@ -217,44 +217,48 @@ def freeze_budget_for_work_order(
     amount: float,
     db: "Session",
 ) -> None:
-    """Freeze budget for a new work order. Raises ValueError if insufficient."""
+    """Freeze budget for a new work order. Raises ValueError if insufficient.
+
+    Phase 1.1: delegates the bookkeeping to budget_commitment_service which
+    owns the new ledger model. The legacy `committed_amount` mutation is
+    handled by the new service via dual-write so downstream readers don't
+    need to change yet. The legacy `wo.frozen_amount` write is preserved
+    until Phase 3 cutover.
+    """
     from app.models.budget import Budget
     from app.models.work_order import WorkOrder
     from decimal import Decimal
+    from app.services.budget_commitment_service import freeze as alloc_freeze
 
     budget = (
         db.query(Budget)
-        .filter(Budget.project_id == project_id, Budget.is_active == True, Budget.deleted_at.is_(None))
+        .filter(Budget.project_id == project_id, Budget.is_active == True,
+                Budget.deleted_at.is_(None))
         .first()
     )
     if not budget:
         raise ValueError("אין תקציב פעיל לפרויקט")
 
-    total = float(budget.total_amount or 0)
-    committed = float(budget.committed_amount or 0)
-    spent = float(budget.spent_amount or 0)
-    available = total - committed - spent
-
-    if available < amount:
-        raise ValueError(
-            f"אין מספיק תקציב. זמין: {available:,.0f}, נדרש: {amount:,.0f}"
-        )
-
-    budget.committed_amount = Decimal(str(committed + amount))
-    _sync_remaining(budget)
+    # New service raises ValueError on insufficient funds with the same
+    # Hebrew message format the old code produced.
+    allocation = alloc_freeze(db, budget.id, work_order_id, Decimal(str(amount)))
     _assert_invariants(budget, "freeze")
 
+    # Legacy field on work_orders — kept for now so existing readers
+    # (PDF reports, dashboards) don't break. Phase 3 will compute these
+    # on the fly from budget_allocations and drop the columns.
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if wo:
         wo.frozen_amount = Decimal(str(amount))
         wo.remaining_frozen = Decimal(str(amount))
+        db.commit()
 
     from app.core.audit import log_business_event
-    # Canonical dotted action — translated client-side via strings/activity.ts
     log_business_event(
         db, "budget.frozen", "budget", budget.id,
         description=f"הוקפא {amount:,.0f} עבור הזמנה #{work_order_id}",
         metadata={"work_order_id": work_order_id, "amount": amount,
+                  "allocation_id": allocation.id,
                   "available_after": float(budget.remaining_amount or 0)},
         category="financial",
     )
@@ -266,10 +270,22 @@ def release_budget_freeze(
     actual_amount: float,
     db: "Session",
 ) -> None:
-    """Release frozen budget. actual_amount goes to spent; remainder returns to available."""
+    """Settle a frozen budget on payment.
+
+    Semantics (kept exactly the same as before):
+      * if actual_amount > 0  → frozen amount is consumed, actual_amount
+        is recorded as spent.
+      * if actual_amount == 0 → frozen amount is released (no spend).
+
+    Delegates to budget_commitment_service for the actual ledger work.
+    """
     from app.models.budget import Budget
     from app.models.work_order import WorkOrder
     from decimal import Decimal
+    from app.services.budget_commitment_service import (
+        mark_spent as alloc_mark_spent,
+        release as alloc_release,
+    )
 
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if not wo or not wo.project_id:
@@ -277,28 +293,36 @@ def release_budget_freeze(
 
     budget = (
         db.query(Budget)
-        .filter(Budget.project_id == wo.project_id, Budget.is_active == True, Budget.deleted_at.is_(None))
+        .filter(Budget.project_id == wo.project_id, Budget.is_active == True,
+                Budget.deleted_at.is_(None))
         .first()
     )
     if not budget:
         return
 
     frozen = float(wo.frozen_amount or 0)
-    budget.committed_amount = max(Decimal(0), (budget.committed_amount or Decimal(0)) - Decimal(str(frozen)))
-    budget.spent_amount = (budget.spent_amount or Decimal(0)) + Decimal(str(actual_amount))
-    _sync_remaining(budget)
+
+    if actual_amount and float(actual_amount) > 0:
+        rows = alloc_mark_spent(db, work_order_id, Decimal(str(actual_amount)))
+        action = "budget.spent"
+    else:
+        rows = alloc_release(db, work_order_id, reason="release on payment with 0 actual")
+        action = "budget.released"
+
     _assert_invariants(budget, "release")
 
+    # Legacy fields on work_orders — kept until Phase 3.
     wo.frozen_amount = Decimal(0)
     wo.remaining_frozen = Decimal(0)
+    db.commit()
 
     from app.core.audit import log_business_event
-    # Canonical dotted action — translated client-side via strings/activity.ts
     log_business_event(
-        db, "budget.released", "budget", budget.id,
+        db, action, "budget", budget.id,
         description=f"שוחרר הקפאה {frozen:,.0f}, הוצאה {actual_amount:,.0f} (WO #{work_order_id})",
         metadata={"work_order_id": work_order_id, "frozen_released": frozen,
-                  "actual_spent": actual_amount},
+                  "actual_spent": actual_amount,
+                  "allocation_ids": [r.id for r in rows]},
         category="financial",
     )
     db.commit()

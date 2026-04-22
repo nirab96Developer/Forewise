@@ -41,6 +41,7 @@ import app.models.supplier_constraint_log  # Must be imported before supplier_co
 import app.models.supplier_constraint_reason
 import app.models.supplier_rejection_reason
 import app.models.budget_item  # After budget
+import app.models.budget_commitment  # After budget, work_order, invoice
 import app.models.budget_transfer
 import app.models.supplier_invitation  # Fair rotation invitations
 import app.models.forest  # PostGIS forest polygons
@@ -78,6 +79,7 @@ from app.models.worklog_status import WorklogStatus
 from app.models.work_order_status import WorkOrderStatus
 from app.models.budget import Budget
 from app.models.budget_item import BudgetItem
+from app.models.budget_commitment import BudgetCommitment
 from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
 from app.models.supplier_constraint_log import SupplierConstraintLog  # Must be imported before SupplierConstraintReason
@@ -123,6 +125,7 @@ __all__ = [
     'WorkOrderStatus',
     'Budget',
     'BudgetItem',
+    'BudgetCommitment',
     'Invoice',
     'InvoiceItem',
     'SupplierConstraintReason',
