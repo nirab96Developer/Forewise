@@ -2,7 +2,7 @@
 // src/pages/WorkOrders/OrderCoordination.tsx
 // מסך תיאום הזמנות
 import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   RefreshCcw, CheckCircle, AlertTriangle, Phone, Send,
   ArrowLeftRight, Eye, Loader2, User, Truck, Calendar,
@@ -46,9 +46,11 @@ interface EquipmentModel {
 
 const OrderCoordination: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusedFromUrl = Number(searchParams.get("focus")) || null;
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<CoordinationOrder[]>([]);
-  const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
+  const [expandedOrder, setExpandedOrder] = useState<number | null>(focusedFromUrl);
   const [processing, setProcessing] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -109,6 +111,20 @@ const OrderCoordination: React.FC = () => {
     const interval = setInterval(loadOrders, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // When the dashboard sends us here with ?focus=<woId>, scroll the row
+  // into view and clear the param so a manual refresh later doesn't keep
+  // re-focusing on a stale WO. Runs once after the first load completes.
+  useEffect(() => {
+    if (!focusedFromUrl || loading) return;
+    const el = document.querySelector(
+      `[data-wo-id="${focusedFromUrl}"]`
+    ) as HTMLElement | null;
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setSearchParams({}, { replace: true });
+    }
+  }, [focusedFromUrl, loading]);
 
   const loadOrders = async () => {
     try {
@@ -576,6 +592,7 @@ const OrderCoordination: React.FC = () => {
             return (
               <div
                 key={order.id}
+                data-wo-id={order.id}
                 className={`bg-white rounded-2xl shadow-sm border-2 overflow-hidden transition-all hover:shadow-md ${isSelected ? 'border-red-400 bg-red-50/20' : borderColor}`}
               >
                 {/* ---- Card Header (always visible) ---- */}

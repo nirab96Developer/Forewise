@@ -1,9 +1,16 @@
+// Phase 2.3: this dashboard is the COORDINATOR'S READ-ONLY OVERVIEW.
+// All action buttons (send-to-supplier, approve, reject, move-to-next-supplier,
+// resend) used to live here AND in /order-coordination, and the two flows
+// drifted (different toasts, different confirmations, different role gates).
+// All write actions now happen ONLY in /order-coordination. From here you
+// can jump to that page (with the queue already filtered to the WO you
+// were looking at) or open the WO's detail page.
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertTriangle, Send, CheckCircle, XCircle,
-  Search, Filter, ChevronDown, ChevronUp,
-  ShieldAlert, Info, RefreshCw, Clock, Inbox, ArrowLeftRight
+  AlertTriangle, ChevronDown, ChevronUp, ShieldAlert, Info,
+  RefreshCw, Clock, Inbox, ArrowLeftRight, Send, CheckCircle, ExternalLink,
+  Search, Filter,
 } from "lucide-react";
 import api from "../../services/api";
 import UnifiedLoader from "../../components/common/UnifiedLoader";
@@ -34,14 +41,9 @@ interface QueueData {
   };
 }
 
-// Status visuals — labels via `src/strings/statuses.ts`. Local map only
-// holds the action label (which is UI workflow, not text).
-const STATUS_ACTION: Record<string, string | undefined> = {
-  PENDING:                                "שלח לספק",
-  DISTRIBUTING:                           "ספק הבא",
-  SUPPLIER_ACCEPTED_PENDING_COORDINATOR:  "אשר סופית",
-  EXPIRED:                                "שלח שוב",
-};
+// Status visuals — labels via `src/strings/statuses.ts`. Action labels were
+// removed in Phase 2.3 (the dashboard no longer fires actions; see file
+// header).
 const STATUS_CLS: Record<string, string> = {
   PENDING:                                "bg-yellow-100 text-yellow-800",
   DISTRIBUTING:                           "bg-blue-100 text-blue-800",
@@ -56,8 +58,17 @@ const statusCfg = (status: string) => {
   return {
     label: getWorkOrderStatusLabel(status),
     cls: STATUS_CLS[upper] || 'bg-gray-100 text-gray-600',
-    actionLabel: STATUS_ACTION[upper],
   };
+};
+
+// Per-status hint shown next to the "טפל" CTA so the coordinator knows
+// what they're being sent to do in /order-coordination.
+const STATUS_HINT: Record<string, string> = {
+  PENDING:                                "ממתין לשליחה",
+  DISTRIBUTING:                           "ממתין לתגובת ספק",
+  SUPPLIER_ACCEPTED_PENDING_COORDINATOR:  "דורש אישור",
+  EXPIRED:                                "פג תוקף — דורש החלטה",
+  NEEDS_RE_COORDINATION:                  "סוג כלי שגוי — דורש החלטה",
 };
 
 const timeAgo = (d: string | null) => {
@@ -85,7 +96,6 @@ const OrderCoordinatorDashboard: React.FC = () => {
   const [projectFilter, setProjectFilter] = useState("");
   const [searchText, setSearchText] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [actionBusy, setActionBusy] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -102,20 +112,11 @@ const OrderCoordinatorDashboard: React.FC = () => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const doAction = async (woId: number, action: string) => {
-    setActionBusy(woId);
-    try {
-      if (action === "send") await api.post(`/work-orders/${woId}/send-to-supplier`);
-      else if (action === "approve") await api.post(`/work-orders/${woId}/approve`);
-      else if (action === "reject") await api.post(`/work-orders/${woId}/reject`, { reason: "נדחה ע״י מתאם" });
-      else if (action === "next") await api.post(`/work-orders/${woId}/move-to-next-supplier`);
-      else if (action === "resend") await api.post(`/work-orders/${woId}/send-to-supplier`);
-      await loadData();
-    } catch (e: any) {
-      alert(e?.response?.data?.detail || "שגיאה בביצוע פעולה");
-    }
-    setActionBusy(null);
-  };
+  // Phase 2.3: instead of doAction(...), the dashboard now only navigates
+  // to the action screen. The query string lets the action page focus on
+  // the WO the coordinator clicked (handled there via ?focus=).
+  const goToCoordinationFor = (woId: number) =>
+    navigate(`/order-coordination?focus=${woId}`);
 
   if (loading && !data) return <UnifiedLoader size="full" />;
   if (!data) return <div className="p-8 text-center text-gray-500">שגיאה בטעינת נתונים</div>;
@@ -214,7 +215,8 @@ const OrderCoordinatorDashboard: React.FC = () => {
           ) : (data.work_orders || []).map(wo => {
             const st = statusCfg(wo.status);
             const isExpanded = expandedId === wo.id;
-            const isBusy = actionBusy === wo.id;
+            const upper = (wo.status || "").toUpperCase();
+            const hint = STATUS_HINT[upper];
 
             return (
               <div key={wo.id} className={`bg-white rounded-xl shadow-sm border transition-all ${
@@ -227,6 +229,9 @@ const OrderCoordinatorDashboard: React.FC = () => {
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${st.cls}`}>{st.label}</span>
                       {wo.is_forced && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-100 text-orange-700">אילוץ</span>}
                       {wo.is_expired_soon && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 animate-pulse">עומד לפוג</span>}
+                      {hint && (
+                        <span className="text-[10px] text-gray-500 italic">— {hint}</span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-700 font-medium truncate">{wo.title}</p>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-500 mt-1">
@@ -238,31 +243,17 @@ const OrderCoordinatorDashboard: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {/* Read-only navigation buttons (no actions — those live
+                      in /order-coordination so we don't have two copies of
+                      the dispatch flow drifting). */}
                   <div className="flex gap-1.5 flex-shrink-0 flex-wrap">
-                    {wo.status === "PENDING" && (
-                      <ActionBtn label="שלח לספק" icon={<Send className="w-3.5 h-3.5" />}
-                        cls="bg-blue-600 text-white hover:bg-blue-700"
-                        busy={isBusy} onClick={() => doAction(wo.id, "send")} />
-                    )}
-                    {wo.status === "DISTRIBUTING" && (
-                      <ActionBtn label="ספק הבא" icon={<RefreshCw className="w-3.5 h-3.5" />}
-                        cls="bg-amber-100 text-amber-800 hover:bg-amber-200"
-                        busy={isBusy} onClick={() => doAction(wo.id, "next")} />
-                    )}
-                    {wo.status === "SUPPLIER_ACCEPTED_PENDING_COORDINATOR" && (<>
-                      <ActionBtn label="אשר" icon={<CheckCircle className="w-3.5 h-3.5" />}
-                        cls="bg-green-600 text-white hover:bg-green-700"
-                        busy={isBusy} onClick={() => doAction(wo.id, "approve")} />
-                      <ActionBtn label="דחה" icon={<XCircle className="w-3.5 h-3.5" />}
-                        cls="bg-red-50 text-red-700 hover:bg-red-100"
-                        busy={isBusy} onClick={() => doAction(wo.id, "reject")} />
-                    </>)}
-                    {wo.status === "EXPIRED" && (
-                      <ActionBtn label="שלח שוב" icon={<Send className="w-3.5 h-3.5" />}
-                        cls="bg-blue-600 text-white hover:bg-blue-700"
-                        busy={isBusy} onClick={() => doAction(wo.id, "resend")} />
-                    )}
+                    <button
+                      onClick={() => goToCoordinationFor(wo.id)}
+                      className="flex items-center gap-1 px-2.5 min-h-[36px] text-[11px] font-bold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+                      title="פתיחת מסך התיאום עם הזמנה זו במוקד"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> טפל
+                    </button>
                     <button onClick={() => navigate(`/work-orders/${wo.id}`)}
                       className="px-2.5 min-h-[36px] text-[11px] text-gray-500 hover:text-blue-600 transition-colors">
                       פרטים
@@ -339,15 +330,5 @@ const MiniKPI: React.FC<{ label: string; value: number; color: string; pulse?: b
     </div>
   );
 };
-
-const ActionBtn: React.FC<{
-  label: string; icon: React.ReactNode; cls: string;
-  busy: boolean; onClick: () => void;
-}> = ({ label, icon, cls, busy, onClick }) => (
-  <button disabled={busy} onClick={onClick}
-    className={`flex items-center gap-1 px-2.5 min-h-[36px] text-[11px] font-bold rounded-lg transition-colors disabled:opacity-50 ${cls}`}>
-    {icon} {label}
-  </button>
-);
 
 export default OrderCoordinatorDashboard;
