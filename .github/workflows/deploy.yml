@@ -35,26 +35,36 @@ jobs:
             echo ">> Pulling latest code..."
             git pull origin main
 
-            # 2. Run backend tests BEFORE deploy
+            # 2. Sync Python dependencies BEFORE running tests, so any new
+            #    packages added in requirements.txt are present when pytest
+            #    and the alembic migrations import them. Without this step a
+            #    "git pull" with new requirements would let the deploy "succeed"
+            #    and then 500 on the first request that touches the new dep.
+            echo ">> Syncing Python dependencies..."
+            cd app_backend
+            .venv/bin/pip install -r requirements.txt
+            cd ..
+
+            # 3. Run backend tests BEFORE deploy
             echo ">> Running backend tests..."
             cd app_backend
             .venv/bin/python3 -m pytest tests/test_health_and_auth.py tests/test_status_transitions.py tests/test_scope_enforcement.py tests/test_flow_validation.py tests/test_budget_integrity.py -v --tb=short
             echo ">> All tests passed"
             cd ..
 
-            # 3. Pre-deploy DB backup
+            # 4. Pre-deploy DB backup
             echo ">> Creating pre-deploy backup..."
             bash /root/backups/db/backup.sh
             echo ">> Backup complete"
 
-            # 4. Apply database migrations (idempotent — alembic skips already-applied revisions)
+            # 5. Apply database migrations (idempotent — alembic skips already-applied revisions)
             echo ">> Running alembic migrations..."
             cd app_backend
             .venv/bin/alembic upgrade head 2>&1 | tail -20
             echo ">> Migrations complete"
             cd ..
 
-            # 5. Build frontend
+            # 6. Build frontend
             echo ">> Building frontend..."
             cd app_frontend
             rm -rf dist
@@ -62,17 +72,17 @@ jobs:
             npm run build
             cd ..
 
-            # 6. Ensure gunicorn is available in .venv (symlink if needed)
+            # 7. Ensure gunicorn is available in .venv (symlink if needed)
             if [ ! -f "app_backend/.venv/bin/gunicorn" ]; then
               echo ">> Linking gunicorn into .venv..."
               ln -sf "$(which gunicorn)" app_backend/.venv/bin/gunicorn
             fi
 
-            # 6b. Restart backend
+            # 7b. Restart backend
             echo ">> Restarting backend..."
             systemctl restart forewise.service
 
-            # 7. Verify deployment — wait up to 90 seconds for 16 gunicorn workers to come up
+            # 8. Verify deployment — wait up to 90 seconds for 16 gunicorn workers to come up
             echo ">> Waiting for backend to start..."
             HEALTH=""
             for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18; do
@@ -94,7 +104,7 @@ jobs:
             systemctl is-active forewise.service || { echo "DEPLOY FAILED: service not active after 90s"; systemctl status forewise.service --no-pager -l || true; exit 1; }
             echo "$HEALTH" | grep -q '"status":"ok"' || { echo "DEPLOY FAILED: health check failed"; exit 1; }
 
-            # 8. Reload nginx
+            # 9. Reload nginx
             systemctl reload nginx
 
             echo "=== Forewise Deploy Complete ==="
