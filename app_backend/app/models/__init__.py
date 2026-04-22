@@ -37,6 +37,7 @@ import app.models.worklog_segment  # Must be before worklog
 import app.models.worklog
 import app.models.invoice
 import app.models.invoice_item  # Invoice line items
+import app.models.invoice_work_order  # N:N invoice ↔ work_order
 import app.models.supplier_constraint_log  # Must be imported before supplier_constraint_reason
 import app.models.supplier_constraint_reason
 import app.models.supplier_rejection_reason
@@ -82,6 +83,7 @@ from app.models.budget_item import BudgetItem
 from app.models.budget_commitment import BudgetCommitment
 from app.models.invoice import Invoice
 from app.models.invoice_item import InvoiceItem
+from app.models.invoice_work_order import InvoiceWorkOrder
 from app.models.supplier_constraint_log import SupplierConstraintLog  # Must be imported before SupplierConstraintReason
 from app.models.supplier_constraint_reason import SupplierConstraintReason
 from app.models.supplier_rejection_reason import SupplierRejectionReason
@@ -128,6 +130,7 @@ __all__ = [
     'BudgetCommitment',
     'Invoice',
     'InvoiceItem',
+    'InvoiceWorkOrder',
     'SupplierConstraintReason',
     'SupplierConstraintLog',
     'SupplierRejectionReason',

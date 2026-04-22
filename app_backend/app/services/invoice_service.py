@@ -2,6 +2,7 @@
 Invoice Service
 """
 
+import logging
 from typing import Optional, List, Tuple
 from decimal import Decimal
 from datetime import date as dt_date
@@ -530,6 +531,17 @@ def generate_monthly_invoice(
 
     db.commit()
     db.refresh(invoice)
+
+    # Phase 1.2: persist the explicit invoice→WO link rows so payment
+    # splitting and dashboards don't have to re-derive them every time.
+    try:
+        from app.services.invoice_work_order_service import link_invoice_to_work_orders
+        link_invoice_to_work_orders(db, invoice.id)
+        db.commit()
+    except Exception as e:
+        logging.getLogger(__name__).warning(
+            f"link_invoice_to_work_orders failed for invoice {invoice.id}: {e}"
+        )
 
     # Stage 3 emails — notify supplier + work managers
     try:

@@ -630,31 +630,25 @@ def mark_invoice_paid(
     invoice.updated_at = now
     db.commit()
 
-    # Release any frozen budgets and record actual spend. Distribute the
-    # invoice's paid_amount proportionally across the work orders feeding
-    # this invoice (via worklog→work_order). Best-effort — never blocks the
-    # mark-paid response if budget tables are misconfigured.
+    # Release any frozen budgets and record actual spend, splitting the
+    # paid_amount across linked WOs using the explicit invoice_work_orders
+    # link (Phase 1.2). Best-effort — never blocks the mark-paid response.
     if not was_already_paid:
         try:
-            from sqlalchemy import distinct
-            from app.models.invoice_item import InvoiceItem
-            from app.models.worklog import Worklog
+            from app.services.invoice_work_order_service import (
+                link_invoice_to_work_orders,
+                split_payment_across_work_orders,
+            )
             from app.services.budget_service import release_budget_freeze
 
-            wo_ids = [
-                row[0]
-                for row in db.query(distinct(Worklog.work_order_id))
-                .join(InvoiceItem, InvoiceItem.worklog_id == Worklog.id)
-                .filter(InvoiceItem.invoice_id == invoice_id,
-                        Worklog.work_order_id.isnot(None))
-                .all()
-            ]
-            if wo_ids:
-                # Split spend evenly across linked work orders. Fine-grained
-                # split-by-actual-cost-per-WO would require richer per-line data.
-                share = float(paid_amount or 0) / len(wo_ids)
-                for wo_id in wo_ids:
-                    release_budget_freeze(wo_id, share, db)
+            # Make sure the link rows exist for legacy invoices that pre-date
+            # the explicit table — backfill on first mark-paid.
+            link_invoice_to_work_orders(db, invoice_id)
+            db.commit()
+
+            shares = split_payment_across_work_orders(db, invoice_id, paid_amount)
+            for wo_id, share in shares:
+                release_budget_freeze(wo_id, float(share), db)
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(
