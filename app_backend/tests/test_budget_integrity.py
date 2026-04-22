@@ -100,10 +100,36 @@ class TestAssertInvariants:
 class TestFreezeValidation:
 
     def test_freeze_rejects_insufficient(self):
+        # Phase 1.1 split the freeze flow across two services:
+        #   budget_service.freeze_budget_for_work_order
+        #     → budget_commitment_service.freeze (which adds an extra DB
+        #       query for an existing BudgetCommitment row before INSERT).
+        # The naive `db.query().filter().first()` MagicMock returned the
+        # same Budget object for the BudgetCommitment lookup, breaking
+        # _to_dec(existing.frozen_amount). We now route queries by model
+        # so the test reflects the real shape of the new code.
         from app.services.budget_service import freeze_budget_for_work_order
+        from app.models.budget import Budget
+        from app.models.budget_commitment import BudgetCommitment
+
         db = MagicMock()
         budget = _mock_budget(10000, 5000, 4000, 1000)
-        db.query.return_value.filter.return_value.first.return_value = budget
+
+        def query_side_effect(model):
+            m = MagicMock()
+            if model is Budget:
+                # Both the project-level lookup and the FOR UPDATE lock
+                # need to return the same Budget row.
+                m.filter.return_value.first.return_value = budget
+                m.filter.return_value.with_for_update.return_value.first.return_value = budget
+            elif model is BudgetCommitment:
+                # No existing FROZEN commitment for this WO yet.
+                m.filter.return_value.first.return_value = None
+            else:
+                m.filter.return_value.first.return_value = None
+            return m
+
+        db.query.side_effect = query_side_effect
 
         with pytest.raises(ValueError, match="אין מספיק"):
             freeze_budget_for_work_order(1, 1, 2000, db)
