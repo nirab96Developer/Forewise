@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { User, Lock, Fingerprint, ScanFace, Monitor, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react';
 import { getBiometricLabel } from '../../utils/deviceDetector';
 import api from '../../services/api';
+import authService from '../../services/authService';
 import biometricService from '../../services/biometricService';
 import { setAuthSession, setRememberPreference } from '../../utils/authStorage';
 
@@ -229,7 +230,15 @@ const Login: React.FC<LoginProps> = ({ setGlobalLoading }) => {
           // עדכון הסטטוס של ההתחברות
           window.dispatchEvent(new Event('auth-change'));
           window.dispatchEvent(new Event('storage'));
-          
+
+          // Phase 2.2: pull canonical user record from BE so role /
+          // permissions / region / area always reflect DB truth, not the
+          // payload that login happened to return. Best-effort — if it
+          // fails we still proceed with the cached data.
+          try {
+            await authService.refreshCurrentUser();
+          } catch { /* keep cached */ }
+
           // המתנה קצרה כדי לוודא שה-localStorage עודכן וה-ProtectedRoute מזהה את זה
           await new Promise(resolve => setTimeout(resolve, 100));
           

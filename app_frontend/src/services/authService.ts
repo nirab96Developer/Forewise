@@ -117,6 +117,68 @@ const getCurrentUser = (): User | null => {
   }
 };
 
+// Refresh the cached user from the BE (`GET /users/me`).
+//
+// Phase 2.2 — until now `getCurrentUser()` only ever read localStorage.
+// If an admin changed someone's role/region/area while they were logged
+// in, the user kept their stale permissions until logout. After every
+// successful login (and on demand from the UI) we re-pull the canonical
+// user record so the FE caches reflect DB truth.
+//
+// Returns the freshly-fetched user, or null if the request fails (we
+// keep the existing cached user on failure rather than wiping it).
+const refreshCurrentUser = async (): Promise<User | null> => {
+  try {
+    const response = await api.get('/users/me');
+    const data = response.data || {};
+
+    // Backend returns role as either a string code or an object with .code
+    // (depending on whether the relationship was eager-loaded). Normalise
+    // here so callers always see a flat string.
+    const roleCode =
+      (typeof data.role === 'object' && data.role?.code) ||
+      data.role_code ||
+      data.role ||
+      'USER';
+
+    // Permissions can come from `data.permissions` or nested under role.
+    let permissions: string[] = data.permissions || [];
+    if (typeof data.role === 'object' && Array.isArray(data.role?.permissions)) {
+      permissions = data.role.permissions.map((p: any) =>
+        typeof p === 'object' && p?.code ? p.code : p
+      );
+    }
+
+    // Preserve the existing cached `name` if BE doesn't echo full_name back
+    // (some role-only updates strip it out of the response payload).
+    const cached = getCurrentUser();
+    const user: User = {
+      id: String(data.id ?? cached?.id ?? ''),
+      name: data.full_name || data.username || cached?.name || '',
+      email: data.email ?? cached?.email,
+      role: roleCode,
+      roles: data.roles || [roleCode],
+      permissions,
+      region_id: data.region_id ?? cached?.region_id,
+      area_id: data.area_id ?? cached?.area_id,
+    };
+
+    localStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
+    if (user.name) {
+      localStorage.setItem(USER_NAME_KEY, user.name);
+    }
+
+    // Notify any listeners (Navigation, route guards) that the cached
+    // user just refreshed.
+    window.dispatchEvent(new Event('auth-change'));
+
+    return user;
+  } catch (error) {
+    console.error('refreshCurrentUser failed:', error);
+    return null;
+  }
+};
+
 // קבלת שם המשתמש הנוכחי - לנוחות
 const getUserName = (): string => {
   return localStorage.getItem(USER_NAME_KEY) || '';
@@ -138,6 +200,7 @@ export default {
   logout,
   isAuthenticated,
   getCurrentUser,
+  refreshCurrentUser,
   getUserName,
   isRememberMeActive,
   getSavedUsername

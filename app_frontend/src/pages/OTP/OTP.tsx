@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Fingerprint, ArrowRight, AlertCircle, Mail, Clock, ScanFace, KeyRound } from 'lucide-react';
 import otpService from '../../services/otpService';
+import authService from '../../services/authService';
 import biometricService from '../../services/biometricService';
 import { getBiometricLabel } from '../../utils/deviceDetector';
 import { getRememberPreference, setAuthSession } from '../../utils/authStorage';
@@ -252,6 +253,12 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         window.dispatchEvent(new Event('auth-change'));
         window.dispatchEvent(new Event('storage'));
 
+        // Phase 2.2: refresh from /users/me so role/permissions reflect
+        // the DB and not the cached snapshot inside the verify-otp payload.
+        try {
+          await authService.refreshCurrentUser();
+        } catch { /* keep cached */ }
+
         if (result.user?.must_change_password) {
           navigate('/change-password', { replace: true });
         } else {
@@ -364,6 +371,12 @@ const OTP: React.FC<OTPProps> = ({ setGlobalLoading }) => {
         localStorage.removeItem('otp_sent_via_login');
 
         window.dispatchEvent(new Event('storage'));
+
+        // Phase 2.2 — same canonical refresh as the standard OTP path.
+        try {
+          await authService.refreshCurrentUser();
+        } catch { /* keep cached */ }
+
         hasNavigated.current = true;
         setGlobalLoading(false);
         navigate('/welcome', { replace: true });
