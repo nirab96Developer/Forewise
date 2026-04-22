@@ -26,9 +26,9 @@ class SupplierRotation(BaseModel):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     supplier_id: Mapped[int] = mapped_column(Integer, ForeignKey("suppliers.id"), nullable=False)
     
-    # Equipment classification
+    # Equipment classification — single key (Phase 1.3 dropped the redundant
+    # equipment_category_id column; rotation uniformly keys on type).
     equipment_type_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    equipment_category_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     
     # Geography
     region_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

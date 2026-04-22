@@ -28,7 +28,15 @@ class EquipmentModel(BaseModel):
 
     category_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("equipment_categories.id"), nullable=True, index=True,
-        comment="קטגוריית ציוד"
+        comment="קטגוריית ציוד (legacy — נשמר עד Phase 3)",
+    )
+
+    # Direct link to equipment_types — added in Phase 1.3 so dispatch logic
+    # doesn't have to traverse equipment_categories → name → equipment_types.
+    equipment_type_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("equipment_types.id", ondelete="SET NULL"),
+        nullable=True, index=True,
+        comment="סוג ציוד לצורך סבב הוגן",
     )
 
     is_active: Mapped[bool] = mapped_column(

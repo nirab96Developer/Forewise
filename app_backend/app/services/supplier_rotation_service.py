@@ -15,16 +15,16 @@ class SupplierRotationService:
     def get_rotation(
         self, db: Session, supplier_id: int,
         equipment_type_id: Optional[int] = None,
-        equipment_category_id: Optional[int] = None,
     ) -> Optional[SupplierRotation]:
+        # Phase 1.3: rotation now keys solely on equipment_type_id.
+        # The equipment_category_id parameter that briefly existed during
+        # the dual-key transition was removed.
         query = db.query(SupplierRotation).filter(
             SupplierRotation.supplier_id == supplier_id,
             SupplierRotation.is_active == True,
         )
         if equipment_type_id:
             query = query.filter(SupplierRotation.equipment_type_id == equipment_type_id)
-        if equipment_category_id:
-            query = query.filter(SupplierRotation.equipment_category_id == equipment_category_id)
         return query.first()
 
     def get_rotation_queue(
@@ -102,7 +102,6 @@ class SupplierRotationService:
         self, db: Session, supplier_id: int,
         equipment_type_id: Optional[int] = None,
         area_id: Optional[int] = None,
-        equipment_category_id: Optional[int] = None,
     ) -> SupplierRotation:
         # Defensive: validate FK targets BEFORE we attempt to insert. Bad data
         # used to surface as a hard 500 from PostgreSQL FK violation
@@ -118,13 +117,6 @@ class SupplierRotationService:
             ).fetchone()
             if not ok:
                 equipment_type_id = None
-        if equipment_category_id is not None:
-            ok = db.execute(
-                sa_text("SELECT 1 FROM equipment_categories WHERE id = :i"),
-                {"i": equipment_category_id},
-            ).fetchone()
-            if not ok:
-                equipment_category_id = None
         if area_id is not None:
             ok = db.execute(
                 sa_text("SELECT 1 FROM areas WHERE id = :i"),
@@ -134,16 +126,13 @@ class SupplierRotationService:
                 area_id = None
 
         rotation = self.get_rotation(
-            db, supplier_id,
-            equipment_type_id=equipment_type_id,
-            equipment_category_id=equipment_category_id,
+            db, supplier_id, equipment_type_id=equipment_type_id,
         )
 
         if not rotation:
             rotation = SupplierRotation(
                 supplier_id=supplier_id,
                 equipment_type_id=equipment_type_id,
-                equipment_category_id=equipment_category_id,
                 area_id=area_id,
                 last_assignment_date=date.today(),
                 total_assignments=1,
