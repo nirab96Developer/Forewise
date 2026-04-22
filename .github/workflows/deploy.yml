@@ -40,10 +40,12 @@ jobs:
             #    and the alembic migrations import them. Without this step a
             #    "git pull" with new requirements would let the deploy "succeed"
             #    and then 500 on the first request that touches the new dep.
+            #    Uses an explicit absolute path so the step doesn't depend on
+            #    cwd state inherited from earlier blocks.
             echo ">> Syncing Python dependencies..."
-            cd app_backend
-            .venv/bin/pip install -r requirements.txt
-            cd ..
+            /root/forewise/app_backend/.venv/bin/pip install \
+                --disable-pip-version-check \
+                -r /root/forewise/app_backend/requirements.txt
 
             # 3. Run backend tests BEFORE deploy
             echo ">> Running backend tests..."
