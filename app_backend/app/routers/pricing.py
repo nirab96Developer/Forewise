@@ -60,7 +60,7 @@ async def compute_cost(
     - סוג כלי
     - דריסות מחיר (אם קיימות)
     
-    מחזיר את מקור התעריף (equipment_type/pricing_override/system_rate)
+    מחזיר את מקור התעריף (equipment_type/system_rate)
     """
     rate_service = get_rate_service(db)
     
