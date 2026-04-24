@@ -143,6 +143,7 @@ const OrderCoordination: React.FC = () => {
       ];
       const allOrders: CoordinationOrder[] = [];
 
+      const fetchErrors: string[] = [];
       for (const status of statuses) {
         try {
           const response = await workOrderService.getWorkOrders(1, 50, { status });
@@ -150,7 +151,18 @@ const OrderCoordination: React.FC = () => {
           items.forEach((order: WorkOrder) => {
             allOrders.push({ ...order } as CoordinationOrder);
           });
-        } catch {}
+        } catch (e) {
+          // A single status failing shouldn't block the whole queue, but the
+          // coordinator MUST know the list is partial — otherwise WOs simply
+          // disappear from the screen with no explanation.
+          console.warn(`[OrderCoordination] failed to load status=${status}:`, e);
+          fetchErrors.push(status);
+        }
+      }
+      if (fetchErrors.length) {
+        console.warn(
+          `[OrderCoordination] partial load — missing statuses: ${fetchErrors.join(', ')}`
+        );
       }
 
       // Load invitations - use work-orders endpoint with SUPPLIER_ACCEPTED status
@@ -159,7 +171,9 @@ const OrderCoordination: React.FC = () => {
         const invItems = invResp.data?.items || invResp.data || [];
         // Map work orders to invitation-like structure for coordinator approval flow
         setInvitations(invItems.map((o: any) => ({ id: o.id, work_order_id: o.id, status: 'ACCEPTED' })));
-      } catch {}
+      } catch (e) {
+        console.warn('[OrderCoordination] failed to load supplier-accepted invitations:', e);
+      }
 
       // Re-coordination + expired items go FIRST (most urgent — coordinator
       // owns the decision and the SLA clock is already running)

@@ -191,33 +191,6 @@ class WorkOrderService {
     } catch { return []; }
   }
 
-  async getPendingWorkOrders(): Promise<WorkOrder[]> {
-    const response = await api.get(`${this.baseUrl}/pending`);
-    return response.data;
-  }
-
-  async getWorkOrdersByProject(projectId: number): Promise<WorkOrder[]> {
-    const response = await api.get(`${this.baseUrl}/project/${projectId}`);
-    return response.data;
-  }
-
-  async getWorkOrdersBySupplier(supplierId: number): Promise<WorkOrder[]> {
-    const response = await api.get(`${this.baseUrl}/supplier/${supplierId}`);
-    return response.data;
-  }
-
-  async getWorkOrderStats(): Promise<{
-    total: number;
-    pending: number;
-    approved: number;
-    in_progress: number;
-    completed: number;
-    cancelled: number;
-  }> {
-    const response = await api.get(`${this.baseUrl}/stats`);
-    return response.data;
-  }
-
   // All visible strings live in `src/strings/` — these wrappers stay only for
   // historical call-site ergonomics. Adding a new status NEVER requires
   // touching this file.

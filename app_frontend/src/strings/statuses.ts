@@ -87,10 +87,15 @@ export const INVOICE_STATUS_TONE: Record<string, Tone> = {
 };
 
 // ─── Project ──────────────────────────────────────────────────────────────
+// Backend currently stores `active` / `inactive` (lowercase) plus the formal
+// uppercase enum below. Lookup is case-insensitive (see strings/index.ts) so
+// 'inactive' resolves to 'INACTIVE' here. Without the INACTIVE entry the UI
+// silently falls back to '—' for ~70% of projects.
 export const PROJECT_STATUS_LABELS: Record<string, string> = {
   DRAFT:      'טיוטה',
   PLANNING:   'בתכנון',
   ACTIVE:     'פעיל',
+  INACTIVE:   'לא פעיל',
   ON_HOLD:    'מושהה',
   SUSPENDED:  'מושהה',
   COMPLETED:  'הושלם',
@@ -121,7 +126,11 @@ export const EQUIPMENT_REQUEST_STATUS_LABELS: Record<string, string> = {
 };
 
 // ─── Budget ───────────────────────────────────────────────────────────────
+// CHECK constraint on `budgets.status` (Phase 2.1) accepts:
+//   DRAFT, ACTIVE, FROZEN, CLOSED, EXHAUSTED, ARCHIVED
+// All six must be mapped here so a budget created in DRAFT never shows '—'.
 export const BUDGET_STATUS_LABELS: Record<string, string> = {
+  DRAFT:     'טיוטה',
   ACTIVE:    'פעיל',
   FROZEN:    'מוקפא',
   CLOSED:    'סגור',

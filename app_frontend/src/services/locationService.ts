@@ -126,23 +126,6 @@ const locationService = {
     }
   },
 
-  /**
-   * קבלת מיקומים קרובים
-   */
-  async getNearby(params: {
-    latitude: number;
-    longitude: number;
-    radius_km?: number;
-    limit?: number;
-  }): Promise<any[]> {
-    try {
-      const response = await api.get('/locations/nearby', { params });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching nearby locations:', error);
-      throw error;
-    }
-  },
 };
 
 export default locationService;
