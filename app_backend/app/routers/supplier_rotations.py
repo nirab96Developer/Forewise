@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.models.supplier_rotation import SupplierRotation
 from app.models.supplier import Supplier
 from app.models.user import User
@@ -18,6 +18,70 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/supplier-rotations", tags=["Supplier Rotations"])
+
+
+# ---------------------------------------------------------------------------
+# Wave 7.D — scope helpers
+# ---------------------------------------------------------------------------
+
+def _is_global_scope(user: User) -> bool:
+    """ADMIN and ORDER_COORDINATOR see/manage rotations across all regions
+    and areas. Other roles (REGION/AREA managers) are scoped down."""
+    code = (user.role.code if user.role else "").upper()
+    return code in ("ADMIN", "SUPER_ADMIN", "ORDER_COORDINATOR")
+
+
+def _check_rotation_scope(user: User, rotation) -> None:
+    """Raise 403 if `user` is not allowed to access this specific rotation row.
+
+    - Global-scope roles (ADMIN, ORDER_COORDINATOR) always pass.
+    - REGION_MANAGER passes only when rotation.region_id matches the
+      user's region_id. Rotations with NULL region_id are treated as
+      global config and are NOT exposed to non-global roles (a NULL row
+      could refer to any region; safer to hide than to leak).
+    - AREA_MANAGER: same logic with area_id.
+    - All other roles are blocked by `require_permission` higher up; if
+      they ever reach this helper we still 403 defensively.
+    """
+    if _is_global_scope(user):
+        return
+
+    forbidden = HTTPException(
+        status_code=http_status.HTTP_403_FORBIDDEN,
+        detail="אין הרשאה לרשומת סבב זו",
+    )
+    code = (user.role.code if user.role else "").upper()
+
+    if code == "REGION_MANAGER":
+        if not user.region_id or rotation.region_id != user.region_id:
+            raise forbidden
+        return
+    if code == "AREA_MANAGER":
+        if not user.area_id or rotation.area_id != user.area_id:
+            raise forbidden
+        return
+
+    raise forbidden
+
+
+def _apply_rotation_scope_filter(query, user: User):
+    """Return `query` narrowed to the rows the user is allowed to read.
+
+    For global-scope roles the query is returned unchanged.
+    For region/area managers we add a WHERE so the COUNT and the page
+    both reflect what the user can actually see.
+    """
+    if _is_global_scope(user):
+        return query
+
+    code = (user.role.code if user.role else "").upper()
+    if code == "REGION_MANAGER" and user.region_id:
+        return query.filter(SupplierRotation.region_id == user.region_id)
+    if code == "AREA_MANAGER" and user.area_id:
+        return query.filter(SupplierRotation.area_id == user.area_id)
+    # Defensive: any role that somehow got here without a scope —
+    # show nothing rather than everything.
+    return query.filter(False)
 
 
 class SupplierRotationCreate(BaseModel):
@@ -55,16 +119,25 @@ async def get_supplier_rotations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Get list of supplier rotations."""
+    """Get list of supplier rotations.
+
+    Wave 7.D — gated by `supplier_rotations.list` (ADMIN +
+    ORDER_COORDINATOR + AREA_MANAGER + REGION_MANAGER per Wave 7.A
+    matrix). Result set is then narrowed via _apply_rotation_scope_filter
+    so AREA/REGION managers only see rotations in their own area/region;
+    global-scope roles see everything.
+    """
+    require_permission(current_user, "supplier_rotations.list")
     try:
         query = db.query(SupplierRotation)
-        
+        query = _apply_rotation_scope_filter(query, current_user)
+
         if is_active is not None:
             query = query.filter(SupplierRotation.is_active == is_active)
-        
+
         if equipment_type:
             query = query.filter(SupplierRotation.equipment_type_id == int(equipment_type) if equipment_type.isdigit() else True)
-        
+
         query = query.order_by(SupplierRotation.rotation_position)
         total = query.count()
         rotations = query.offset((page - 1) * page_size).limit(page_size).all()
@@ -121,18 +194,24 @@ async def get_supplier_rotation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Get a specific supplier rotation by ID."""
+    """Get a specific supplier rotation by ID.
+
+    Wave 7.D — `supplier_rotations.read` + per-row scope check.
+    """
+    require_permission(current_user, "supplier_rotations.read")
     try:
         rotation = db.query(SupplierRotation).filter(
             SupplierRotation.id == rotation_id
         ).first()
-        
+
         if not rotation:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="רשומת סבב לא נמצאה"
             )
-        
+
+        _check_rotation_scope(current_user, rotation)
+
         # Get supplier name
         supplier = db.query(Supplier).filter(Supplier.id == rotation.supplier_id).first()
         
@@ -173,7 +252,12 @@ async def create_supplier_rotation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Create a new supplier rotation entry."""
+    """Create a new supplier rotation entry.
+
+    Wave 7.D — `supplier_rotations.create` (ADMIN, ORDER_COORDINATOR).
+    Both global-scope roles, so no per-row scope check needed.
+    """
+    require_permission(current_user, "supplier_rotations.create")
     try:
         # Check if supplier exists
         supplier = db.query(Supplier).filter(Supplier.id == data.supplier_id).first()
@@ -235,18 +319,26 @@ async def update_supplier_rotation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Update a supplier rotation entry."""
+    """Update a supplier rotation entry.
+
+    Wave 7.D — `supplier_rotations.update` (ADMIN, ORDER_COORDINATOR).
+    Both global-scope; per-row scope check is a no-op for them but
+    kept defensively in case the role matrix grows later.
+    """
+    require_permission(current_user, "supplier_rotations.update")
     try:
         rotation = db.query(SupplierRotation).filter(
             SupplierRotation.id == rotation_id
         ).first()
-        
+
         if not rotation:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="רשומת סבב לא נמצאה"
             )
-        
+
+        _check_rotation_scope(current_user, rotation)
+
         # Update fields
         update_data = data.dict(exclude_unset=True)
         for field, value in update_data.items():
@@ -286,18 +378,22 @@ async def delete_supplier_rotation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Delete a supplier rotation entry."""
+    """Delete a supplier rotation entry.
+
+    Wave 7.D — `supplier_rotations.delete` (ADMIN only).
+    """
+    require_permission(current_user, "supplier_rotations.delete")
     try:
         rotation = db.query(SupplierRotation).filter(
             SupplierRotation.id == rotation_id
         ).first()
-        
+
         if not rotation:
             raise HTTPException(
                 status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="רשומת סבב לא נמצאה"
             )
-        
+
         db.delete(rotation)
         db.commit()
         
