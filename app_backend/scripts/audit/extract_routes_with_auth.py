@@ -74,14 +74,14 @@ def parse_router_file(path: str):
         ))
         # Self-service scope filter — handler forces queries to current_user.id
         # before any DB read. Examples:
-        #   search.user_id = current_user.id
-        #   filters["user_id"] = current_user.id
-        # This is the pattern that makes /my-worklogs, /my-orders, etc. safe
-        # without an explicit require_permission. Treat as enforcement.
+        #   search.user_id = current_user.id           ← attribute assignment
+        #   filters["user_id"] = current_user.id       ← dict-key assignment
+        # We do NOT match `kwarg=current_user.id` (logging helpers,
+        # service calls etc.) because those are not query filters and
+        # were producing false 🟢 on /equipment/{id}/scan and /release.
         scope_self_filter = bool(re.search(
             r"(\.user_id\s*=\s*current_user\.id"
-            r"|\[\s*['\"]user_id['\"]\s*\]\s*=\s*current_user\.id"
-            r"|user_id\s*=\s*current_user\.id\b)",
+            r"|\[\s*['\"]user_id['\"]\s*\]\s*=\s*current_user\.id)",
             body_src,
         ))
         func_enforcement[node.name] = {
