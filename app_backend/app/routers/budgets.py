@@ -20,6 +20,78 @@ router = APIRouter(prefix="/budgets", tags=["Budgets"])
 budget_service = BudgetService()
 
 
+def _check_budget_scope(db: Session, user: User, budget) -> None:
+    """Verify the authenticated user is allowed to read this specific budget.
+
+    Phase 2 Wave 5 — financial-data scope enforcement on /budgets/{id}/detail,
+    /committed and /spent. Each one of those endpoints used to return budget
+    totals, supplier names, hourly rates and worklog amounts to ANY
+    authenticated user (including SUPPLIER), regardless of whether the
+    budget belonged to their region/area/project. This helper closes the
+    gap.
+
+    Scope rules per role:
+      - ADMIN / SUPER_ADMIN  → bypass (sees all budgets)
+      - REGION_MANAGER       → budget.region_id must equal user.region_id
+      - AREA_MANAGER         → budget.area_id must equal user.area_id
+      - ACCOUNTANT           → budget.area_id == user.area_id
+                                OR budget.region_id == user.region_id
+      - WORK_MANAGER         → budget.project_id must be in the user's
+                                active project_assignments
+      - any other role (incl. SUPPLIER, FIELD_WORKER) → 403
+
+    require_permission("budgets.read") is called first by the route handler;
+    this function only runs after that gate, so it never has to handle
+    "user has no role" — get_current_active_user has already loaded one.
+    """
+    role_code = (user.role.code if user.role else "").upper()
+
+    if role_code in ("ADMIN", "SUPER_ADMIN"):
+        return
+
+    forbidden = HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="אין הרשאה לתקציב זה",
+    )
+
+    if role_code == "REGION_MANAGER":
+        if not user.region_id or budget.region_id != user.region_id:
+            raise forbidden
+        return
+
+    if role_code == "AREA_MANAGER":
+        if not user.area_id or budget.area_id != user.area_id:
+            raise forbidden
+        return
+
+    if role_code == "ACCOUNTANT":
+        if user.area_id and budget.area_id == user.area_id:
+            return
+        if user.region_id and budget.region_id == user.region_id:
+            return
+        raise forbidden
+
+    if role_code == "WORK_MANAGER":
+        if not budget.project_id:
+            raise forbidden
+        from app.models.project_assignment import ProjectAssignment
+        assigned = (
+            db.query(ProjectAssignment)
+            .filter(
+                ProjectAssignment.user_id == user.id,
+                ProjectAssignment.project_id == budget.project_id,
+                ProjectAssignment.is_active == True,
+            )
+            .first()
+        )
+        if not assigned:
+            raise forbidden
+        return
+
+    # Any other role (SUPPLIER, FIELD_WORKER, …) is denied.
+    raise forbidden
+
+
 @router.get("", response_model=BudgetList)
 def list_budgets(
     search: Annotated[BudgetSearch, Depends()],
@@ -321,21 +393,15 @@ def get_budget_detail(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """Budget detail with project/region/area info + KPIs."""
+    require_permission(current_user, "budgets.read")
     from app.models import Budget, Project, Region, Area
     from sqlalchemy import text
-    
+
     budget = db.query(Budget).filter(Budget.id == budget_id, Budget.is_active == True).first()
     if not budget:
         raise HTTPException(status_code=404, detail="תקציב לא נמצא")
-    
-    # Scope check
-    if hasattr(current_user, 'role') and current_user.role:
-        if current_user.role.code == "REGION_MANAGER" and current_user.region_id:
-            if budget.region_id and budget.region_id != current_user.region_id:
-                raise HTTPException(status_code=403, detail="אין הרשאה לתקציב זה")
-        elif current_user.role.code == "AREA_MANAGER" and current_user.area_id:
-            if budget.area_id and budget.area_id != current_user.area_id:
-                raise HTTPException(status_code=403, detail="אין הרשאה לתקציב זה")
+
+    _check_budget_scope(db, current_user, budget)
     
     project = db.query(Project).filter(Project.id == budget.project_id).first() if budget.project_id else None
     region = db.query(Region).filter(Region.id == budget.region_id).first() if budget.region_id else None
@@ -381,10 +447,16 @@ def get_budget_committed(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """Work Orders holding budget (committed amounts)."""
+    require_permission(current_user, "budgets.read")
     from app.models import Budget, WorkOrder, Supplier
-    
+
     budget = db.query(Budget).filter(Budget.id == budget_id, Budget.is_active == True).first()
-    if not budget or not budget.project_id:
+    if not budget:
+        return {"total": 0, "sum": 0, "items": []}
+
+    _check_budget_scope(db, current_user, budget)
+
+    if not budget.project_id:
         return {"total": 0, "sum": 0, "items": []}
     
     wos = db.query(WorkOrder).filter(
@@ -427,10 +499,16 @@ def get_budget_spent(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """Worklogs that consumed budget (spent amounts)."""
+    require_permission(current_user, "budgets.read")
     from app.models import Budget, Worklog
-    
+
     budget = db.query(Budget).filter(Budget.id == budget_id, Budget.is_active == True).first()
-    if not budget or not budget.project_id:
+    if not budget:
+        return {"total": 0, "sum": 0, "vat_sum": 0, "items": []}
+
+    _check_budget_scope(db, current_user, budget)
+
+    if not budget.project_id:
         return {"total": 0, "sum": 0, "vat_sum": 0, "items": []}
     
     wls = db.query(Worklog).filter(

@@ -11,9 +11,9 @@
 | מטריקה | מספר |
 |---|---|
 | סך הכל endpoints | 418 |
-| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 66 |
+| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 63 |
 | 🟡 בינוניים — auth-only על read endpoints | 29 |
-| 🟢 תקינים — יש require_permission או public legitimate | 323 |
+| 🟢 תקינים — יש require_permission או public legitimate | 326 |
 | Permissions ב-DB | 169 |
 | Permissions שמוזכרים בקוד | 127 |
 | Permissions בקוד שאין ב-DB (בעיה) | 52 |
@@ -168,27 +168,27 @@
 
 ```
   budgets.create / BUDGETS.CREATE
-  BUDGETS.UPDATE / budgets.update
-  invoices.approve / INVOICES.APPROVE
+  budgets.update / BUDGETS.UPDATE
+  INVOICES.APPROVE / invoices.approve
   invoices.create / INVOICES.CREATE
-  invoices.update / INVOICES.UPDATE
-  PROJECTS.CREATE / projects.create
-  projects.update / PROJECTS.UPDATE
+  INVOICES.UPDATE / invoices.update
+  projects.create / PROJECTS.CREATE
+  PROJECTS.UPDATE / projects.update
   roles.create / ROLES.CREATE
   roles.update / ROLES.UPDATE
-  SUPPLIERS.CREATE / suppliers.create
+  suppliers.create / SUPPLIERS.CREATE
   suppliers.delete / SUPPLIERS.DELETE
   SUPPLIERS.UPDATE / suppliers.update
   USERS.CREATE / users.create
-  users.delete / USERS.DELETE
-  USERS.UPDATE / users.update
+  USERS.DELETE / users.delete
+  users.update / USERS.UPDATE
 ```
 
 ---
 
 ## 4. Endpoints קריטיים בלי enforcement (🔴)
 
-סה"כ 66 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
+סה"כ 63 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
 
 ### לפי domain (top 15)
 
@@ -201,7 +201,6 @@
 | `notifications` | 4 |
 | `pricing` | 4 |
 | `project_assignments` | 4 |
-| `budgets` | 3 |
 | `system_rates` | 3 |
 | `journal` | 2 |
 | `work_order_statuses` | 2 |
@@ -209,6 +208,7 @@
 | `activity_logs` | 1 |
 | `otp` | 1 |
 | `excel_export` | 1 |
+| `suppliers` | 1 |
 
 ### דוגמאות בולטות (top 30 by sensitivity)
 
@@ -227,9 +227,6 @@
 | `DELETE` | `/api/v1/auth/sessions` | delete | `auth.delete` | no |
 | `DELETE` | `/api/v1/auth/sessions/{session_id}` | delete | `auth.delete` | no |
 | `POST` | `/api/v1/auth/webauthn/register/begin` | create | `auth.create` | no |
-| `GET` | `/api/v1/budgets/{budget_id}/committed` | read | `budgets.read` | yes |
-| `GET` | `/api/v1/budgets/{budget_id}/detail` | read | `budgets.read` | yes |
-| `GET` | `/api/v1/budgets/{budget_id}/spent` | read | `budgets.read` | yes |
 | `GET` | `/api/v1/dashboard/accountant-overview` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/activity` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/alerts` | list | `dashboard.list` | yes |
@@ -244,8 +241,11 @@
 | `GET` | `/api/v1/dashboard/projects` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/region-areas` | list | `dashboard.list` | no |
 | `GET` | `/api/v1/dashboard/region-overview` | list | `dashboard.list` | yes |
+| `GET` | `/api/v1/dashboard/statistics` | list | `dashboard.list` | no |
+| `GET` | `/api/v1/dashboard/summary` | list | `dashboard.list` | yes |
+| `GET` | `/api/v1/dashboard/work-manager-summary` | list | `dashboard.list` | no |
 
-_ועוד 36 ב-CSV._
+_ועוד 33 ב-CSV._
 
 ---
 
@@ -321,7 +321,7 @@ _ועוד 36 ב-CSV._
 
 ### 🔴 דחוף — אכיפת הרשאות בendpoints קריטיים
 
-להוסיף `require_permission` ל-66 endpoints. הכי קריטי לפי החתכים האלה:
+להוסיף `require_permission` ל-63 endpoints. הכי קריטי לפי החתכים האלה:
 
 - **`dashboard`** (18 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
 - **`auth`** (7 endpoints) — endpoints של 2FA/biometric/WebAuthn — אין UI, אבל אם API נחשף משתמש מאומת יכול register passkey לחשבון אחר. דורש חידוד.
@@ -330,9 +330,9 @@ _ועוד 36 ב-CSV._
 - **`notifications`** (4 endpoints) — bulk-action, cleanup, read-all — user יכול לסמן הודעות של אחרים כנקראו.
 - **`pricing`** (4 endpoints) — endpoints מציגים תעריפים — דליפה ל-supplier אם הוא מאומת.
 - **`project_assignments`** (4 endpoints) — כל ה-CRUD בלי בדיקה. user יכול לשנות הקצאת פרויקטים של אחרים.
-- **`budgets`** (3 endpoints) — 3 mutations חופשיות מתוך כלל ה-budget endpoints. למצוא ולהשלים.
 - **`system_rates`** (3 endpoints) — תעריפי מערכת — שינוי משפיע על כל worklog חדש.
 - **`journal`** (2 endpoints) — להחליט פר-endpoint לפי לוגיקה עסקית.
+- **`work_order_statuses`** (2 endpoints) — להחליט פר-endpoint לפי לוגיקה עסקית.
 
 ### 🔴 דחוף — לתקן permissions שלא קיימים ב-DB
 
