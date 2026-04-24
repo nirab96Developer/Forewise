@@ -11,9 +11,9 @@
 | מטריקה | מספר |
 |---|---|
 | סך הכל endpoints | 418 |
-| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 126 |
-| 🟡 בינוניים — auth-only על read endpoints | 36 |
-| 🟢 תקינים — יש require_permission או public legitimate | 256 |
+| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 105 |
+| 🟡 בינוניים — auth-only על read endpoints | 33 |
+| 🟢 תקינים — יש require_permission או public legitimate | 280 |
 | Permissions ב-DB | 169 |
 | Permissions שמוזכרים בקוד | 127 |
 | Permissions בקוד שאין ב-DB (בעיה) | 52 |
@@ -172,15 +172,15 @@
   INVOICES.APPROVE / invoices.approve
   INVOICES.CREATE / invoices.create
   INVOICES.UPDATE / invoices.update
-  projects.create / PROJECTS.CREATE
+  PROJECTS.CREATE / projects.create
   PROJECTS.UPDATE / projects.update
-  roles.create / ROLES.CREATE
+  ROLES.CREATE / roles.create
   ROLES.UPDATE / roles.update
-  SUPPLIERS.CREATE / suppliers.create
-  suppliers.delete / SUPPLIERS.DELETE
+  suppliers.create / SUPPLIERS.CREATE
+  SUPPLIERS.DELETE / suppliers.delete
   suppliers.update / SUPPLIERS.UPDATE
-  USERS.CREATE / users.create
-  USERS.DELETE / users.delete
+  users.create / USERS.CREATE
+  users.delete / USERS.DELETE
   USERS.UPDATE / users.update
 ```
 
@@ -188,27 +188,27 @@
 
 ## 4. Endpoints קריטיים בלי enforcement (🔴)
 
-סה"כ 126 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
+סה"כ 105 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
 
 ### לפי domain (top 15)
 
 | Domain | מספר 🔴 |
 |---|---|
-| `dashboard` | 19 |
 | `auth` | 18 |
-| `admin` | 12 |
+| `dashboard` | 18 |
 | `project_assignments` | 12 |
 | `notifications` | 9 |
-| `support_tickets` | 8 |
 | `supplier_rotations` | 6 |
 | `activity_types` | 5 |
 | `work_orders` | 5 |
 | `pricing` | 4 |
-| `admin_projects` | 3 |
 | `budgets` | 3 |
 | `otp` | 3 |
+| `support_tickets` | 3 |
 | `system_rates` | 3 |
 | `journal` | 3 |
+| `equipment` | 2 |
+| `work_order_statuses` | 2 |
 
 ### דוגמאות בולטות (top 30 by sensitivity)
 
@@ -220,21 +220,6 @@
 | `DELETE` | `/api/v1/activity-types/{activity_type_id}` | delete | `activity_types.delete` | no |
 | `GET` | `/api/v1/activity-types/{activity_type_id}` | read | `activity_types.read` | yes |
 | `PUT` | `/api/v1/activity-types/{activity_type_id}` | update | `activity_types.update` | no |
-| `PUT` | `/api/v1/admin/areas/{area_id}/manager` | update | `admin.update` | no |
-| `GET` | `/api/v1/admin/dashboard` | list | `admin.list` | no |
-| `PUT` | `/api/v1/admin/projects/assign-area/{project_id}` | update | `projects.update` | no |
-| `PUT` | `/api/v1/admin/projects/batch-assign` | update | `admin.update` | no |
-| `PUT` | `/api/v1/admin/projects/batch-assign` | update | `projects.update` | no |
-| `GET` | `/api/v1/admin/projects/unassigned` | list | `projects.list` | no |
-| `PUT` | `/api/v1/admin/projects/{project_id}/assign` | update | `admin.update` | no |
-| `PUT` | `/api/v1/admin/regions/{region_id}/manager` | update | `admin.update` | no |
-| `GET` | `/api/v1/admin/roles` | list | `admin.list` | no |
-| `POST` | `/api/v1/admin/system/sync-database` | create | `admin.create` | no |
-| `GET` | `/api/v1/admin/users` | list | `admin.list` | no |
-| `POST` | `/api/v1/admin/users` | create | `admin.create` | no |
-| `DELETE` | `/api/v1/admin/users/{user_id}` | delete | `admin.delete` | no |
-| `PUT` | `/api/v1/admin/users/{user_id}` | update | `admin.update` | no |
-| `PUT` | `/api/v1/admin/users/{user_id}/role` | update | `admin.update` | no |
 | `POST` | `/api/v1/auth/2fa/disable` | create | `auth.create` | no |
 | `POST` | `/api/v1/auth/2fa/setup` | create | `auth.create` | no |
 | `POST` | `/api/v1/auth/admin/lock-account` | create | `auth.create` | no |
@@ -244,14 +229,29 @@
 | `DELETE` | `/api/v1/auth/biometric/credentials/{credential_id}` | delete | `auth.delete` | no |
 | `POST` | `/api/v1/auth/biometric/register` | create | `auth.create` | no |
 | `POST` | `/api/v1/auth/biometric/verify` | create | `auth.create` | no |
+| `POST` | `/api/v1/auth/change-password` | create | `auth.create` | no |
+| `POST` | `/api/v1/auth/check-permission` | create | `auth.create` | no |
+| `DELETE` | `/api/v1/auth/devices/{device_id}` | delete | `auth.delete` | no |
+| `POST` | `/api/v1/auth/logout` | create | `auth.create` | no |
+| `DELETE` | `/api/v1/auth/sessions` | delete | `auth.delete` | no |
+| `DELETE` | `/api/v1/auth/sessions/{session_id}` | delete | `auth.delete` | no |
+| `GET` | `/api/v1/auth/status` | list | `auth.list` | no |
+| `POST` | `/api/v1/auth/webauthn/register/begin` | create | `auth.create` | no |
+| `POST` | `/api/v1/auth/webauthn/register/complete` | complete | `auth.complete` | no |
+| `GET` | `/api/v1/budgets/{budget_id}/committed` | read | `budgets.read` | yes |
+| `GET` | `/api/v1/budgets/{budget_id}/detail` | read | `budgets.read` | yes |
+| `GET` | `/api/v1/budgets/{budget_id}/spent` | read | `budgets.read` | yes |
+| `GET` | `/api/v1/dashboard/accountant-overview` | list | `dashboard.list` | yes |
+| `GET` | `/api/v1/dashboard/activity` | list | `dashboard.list` | yes |
+| `GET` | `/api/v1/dashboard/alerts` | list | `dashboard.list` | yes |
 
-_ועוד 96 ב-CSV._
+_ועוד 75 ב-CSV._
 
 ---
 
 ## 5. Endpoints בינוניים (🟡)
 
-סה"כ 36 — בעיקר read/list בלי `require_permission`. פחות חמור מ-🔴 (אין side effect) אבל עדיין דליפת מידע אם משתמש לא מורשה ניגש.
+סה"כ 33 — בעיקר read/list בלי `require_permission`. פחות חמור מ-🔴 (אין side effect) אבל עדיין דליפת מידע אם משתמש לא מורשה ניגש.
 
 דוגמאות (10 ראשונות):
 
@@ -259,14 +259,14 @@ _ועוד 96 ב-CSV._
 |---|---|---|
 | `GET` | `/api/v1/activity-logs/{log_id}` | `activity_logs.read` |
 | `GET` | `/api/v1/admin/projects/by-area/{area_id}` | `projects.read` |
-| `GET` | `/api/v1/admin/projects/unassigned` | `admin.list` |
-| `GET` | `/api/v1/admin/regions` | `admin.list` |
-| `GET` | `/api/v1/admin/system/health` | `admin.list` |
 | `GET` | `/api/v1/auth/biometric/credentials` | `auth.list` |
 | `GET` | `/api/v1/auth/devices` | `auth.list` |
 | `GET` | `/api/v1/auth/sessions` | `auth.list` |
 | `GET` | `/api/v1/dashboard/equipment/active` | `dashboard.list` |
 | `GET` | `/api/v1/dashboard/stats` | `dashboard.list` |
+| `GET` | `/api/v1/dashboard/suppliers/active` | `dashboard.list` |
+| `GET` | `/api/v1/dashboard/work-manager-overview` | `dashboard.list` |
+| `GET` | `/api/v1/equipment-models` | `equipment_models.list` |
 
 ---
 
@@ -295,7 +295,7 @@ _ועוד 96 ב-CSV._
 | `budgets` | 5 |
 | `report_runs` | 5 |
 | `worklogs` | 5 |
-| `admin_projects` | 4 |
+| `equipment` | 4 |
 
 ראה CSV לרשימה מלאה (סינון: `ui_exposed=no`).
 
@@ -321,18 +321,18 @@ _ועוד 96 ב-CSV._
 
 ### 🔴 דחוף — אכיפת הרשאות בendpoints קריטיים
 
-להוסיף `require_permission` ל-126 endpoints. הכי קריטי לפי החתכים האלה:
+להוסיף `require_permission` ל-105 endpoints. הכי קריטי לפי החתכים האלה:
 
-- **`dashboard`** (19 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
 - **`auth`** (18 endpoints) — endpoints של 2FA/biometric/WebAuthn — אין UI, אבל אם API נחשף משתמש מאומת יכול register passkey לחשבון אחר. דורש חידוד.
-- **`admin`** (12 endpoints) — כל ה-`/admin/*` ל-admin בלבד אבל אין enforcement. כל user מאומת יכול לקרוא רשימת users, regions, dashboard admin וכו'.
+- **`dashboard`** (18 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
 - **`project_assignments`** (12 endpoints) — כל ה-CRUD בלי בדיקה. user יכול לשנות הקצאת פרויקטים של אחרים.
 - **`notifications`** (9 endpoints) — bulk-action, cleanup, read-all — user יכול לסמן הודעות של אחרים כנקראו.
-- **`support_tickets`** (8 endpoints) — create/update/list — user יכול לערוך טיקטים של אחרים.
 - **`supplier_rotations`** (6 endpoints) — מנגנון הסבב ההוגן. mutation שלו = שיבוש החלוקה לספקים.
 - **`activity_types`** (5 endpoints) — lookup table. mutation = החלפת activity codes שמתעדים worklogs.
 - **`work_orders`** (5 endpoints) — 5 mutations חופשיות (כל השאר תחת require_permission). למצוא ולהשלים.
 - **`pricing`** (4 endpoints) — endpoints מציגים תעריפים — דליפה ל-supplier אם הוא מאומת.
+- **`budgets`** (3 endpoints) — 3 mutations חופשיות מתוך כלל ה-budget endpoints. למצוא ולהשלים.
+- **`otp`** (3 endpoints) — להחליט פר-endpoint לפי לוגיקה עסקית.
 
 ### 🔴 דחוף — לתקן permissions שלא קיימים ב-DB
 

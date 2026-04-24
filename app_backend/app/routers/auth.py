@@ -8,7 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.models.role import Role
 from app.models.otp_token import OTPToken
@@ -57,10 +57,11 @@ def register(
     current_user: User = Depends(get_current_active_user),
 ):
     """יצירת משתמש חדש — דורש הרשאת Admin בלבד"""
-    from app.core.dependencies import require_permission
     require_permission(current_user, "users.create")
-
-    # רק ADMIN יכול ליצור משתמשים
+    # ADMIN bypass is built into require_permission, but we keep the
+    # explicit role check as a defensive layer because users.create is
+    # currently assigned to non-admin roles (legacy) and we want hard
+    # admin-only enforcement on registration.
     if not current_user.role or current_user.role.code != "ADMIN":
         raise HTTPException(status_code=403, detail="רק מנהל מערכת יכול ליצור משתמשים")
 
@@ -465,6 +466,7 @@ def lock_account(
     db: Session = Depends(get_db),
 ):
     """Lock user account (admin only)."""
+    require_permission(current_user, "users.lock")
     try:
         success = auth_service.lock_account(
             db=db, 
@@ -497,6 +499,7 @@ def unlock_account(
     db: Session = Depends(get_db),
 ):
     """Unlock user account (admin only)."""
+    require_permission(current_user, "users.unlock")
     try:
         success = auth_service.unlock_account(
             db=db, 
@@ -528,6 +531,7 @@ def get_security_audit(
     db: Session = Depends(get_db),
 ):
     """Get security audit for user (admin only)."""
+    require_permission(current_user, "users.read")
     # This would be implemented to get security audit data
     return SecurityAuditResponse(
         user_id=user_id,
@@ -547,6 +551,7 @@ def get_login_attempts(
     db: Session = Depends(get_db),
 ):
     """Get login attempts for user (admin only)."""
+    require_permission(current_user, "users.read")
     # This would be implemented to get login attempts
     return LoginAttemptsResponse(
         attempts=[],
