@@ -381,10 +381,14 @@ def scan_equipment(
     location: Optional[str] = None
 ):
     """
-    Record an equipment scan
-    
-    Permissions: equipment.scan or equipment.read
+    Record an equipment scan.
+
+    Permission: equipment.read (suppliers + all internal roles).
+    Suppliers DO need to scan in the field — ADMIN, AREA/REGION/WORK
+    managers, ORDER_COORDINATOR and SUPPLIER all hold equipment.read.
+    Roles that don't (e.g. ACCOUNTANT) get 403.
     """
+    require_permission(current_user, "equipment.read")
     from app.models.equipment import Equipment
     from datetime import datetime
     
@@ -456,15 +460,21 @@ def release_equipment(
 ):
     """
     Release/Return equipment from work order.
-    
+
+    Permission: work_orders.update — release flips a WO to COMPLETED
+    and frees the equipment, which is a state mutation only authorized
+    roles should perform. ADMIN, AREA/REGION/WORK managers and
+    ORDER_COORDINATOR have it; SUPPLIER, ACCOUNTANT and others do not.
+
     Business rules:
-    1. Equipment status  AVAILABLE
-    2. Work Order status  COMPLETED (if provided)
+    1. Equipment status → AVAILABLE
+    2. Work Order status → COMPLETED (if provided)
     3. Budget release triggered
     4. Activity log recorded
-    
-    This is NOT delete - history is preserved.
+
+    This is NOT delete — history is preserved.
     """
+    require_permission(current_user, "work_orders.update")
     from app.models.equipment import Equipment
     from app.models.work_order import WorkOrder
     from datetime import datetime as dt

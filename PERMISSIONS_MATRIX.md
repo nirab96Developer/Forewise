@@ -11,9 +11,9 @@
 | מטריקה | מספר |
 |---|---|
 | סך הכל endpoints | 418 |
-| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 92 |
+| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 90 |
 | 🟡 בינוניים — auth-only על read endpoints | 33 |
-| 🟢 תקינים — יש require_permission או public legitimate | 293 |
+| 🟢 תקינים — יש require_permission או public legitimate | 295 |
 | Permissions ב-DB | 169 |
 | Permissions שמוזכרים בקוד | 127 |
 | Permissions בקוד שאין ב-DB (בעיה) | 52 |
@@ -168,27 +168,27 @@
 
 ```
   BUDGETS.CREATE / budgets.create
-  BUDGETS.UPDATE / budgets.update
+  budgets.update / BUDGETS.UPDATE
   invoices.approve / INVOICES.APPROVE
   INVOICES.CREATE / invoices.create
-  invoices.update / INVOICES.UPDATE
-  PROJECTS.CREATE / projects.create
+  INVOICES.UPDATE / invoices.update
+  projects.create / PROJECTS.CREATE
   PROJECTS.UPDATE / projects.update
   ROLES.CREATE / roles.create
-  ROLES.UPDATE / roles.update
+  roles.update / ROLES.UPDATE
   suppliers.create / SUPPLIERS.CREATE
   suppliers.delete / SUPPLIERS.DELETE
-  SUPPLIERS.UPDATE / suppliers.update
-  users.create / USERS.CREATE
-  users.delete / USERS.DELETE
-  users.update / USERS.UPDATE
+  suppliers.update / SUPPLIERS.UPDATE
+  USERS.CREATE / users.create
+  USERS.DELETE / users.delete
+  USERS.UPDATE / users.update
 ```
 
 ---
 
 ## 4. Endpoints קריטיים בלי enforcement (🔴)
 
-סה"כ 92 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
+סה"כ 90 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
 
 ### לפי domain (top 15)
 
@@ -205,10 +205,10 @@
 | `support_tickets` | 3 |
 | `system_rates` | 3 |
 | `journal` | 3 |
-| `equipment` | 2 |
 | `work_order_statuses` | 2 |
 | `worklog_statuses` | 2 |
 | `activity_logs` | 1 |
+| `excel_export` | 1 |
 
 ### דוגמאות בולטות (top 30 by sensitivity)
 
@@ -245,7 +245,7 @@
 | `GET` | `/api/v1/dashboard/live-counts` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/map` | list | `dashboard.list` | yes |
 
-_ועוד 62 ב-CSV._
+_ועוד 60 ב-CSV._
 
 ---
 
@@ -295,7 +295,7 @@ _ועוד 62 ב-CSV._
 | `budgets` | 5 |
 | `report_runs` | 5 |
 | `worklogs` | 5 |
-| `equipment` | 4 |
+| `suppliers` | 4 |
 
 ראה CSV לרשימה מלאה (סינון: `ui_exposed=no`).
 
@@ -321,7 +321,7 @@ _ועוד 62 ב-CSV._
 
 ### 🔴 דחוף — אכיפת הרשאות בendpoints קריטיים
 
-להוסיף `require_permission` ל-92 endpoints. הכי קריטי לפי החתכים האלה:
+להוסיף `require_permission` ל-90 endpoints. הכי קריטי לפי החתכים האלה:
 
 - **`dashboard`** (18 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
 - **`auth`** (15 endpoints) — endpoints של 2FA/biometric/WebAuthn — אין UI, אבל אם API נחשף משתמש מאומת יכול register passkey לחשבון אחר. דורש חידוד.
