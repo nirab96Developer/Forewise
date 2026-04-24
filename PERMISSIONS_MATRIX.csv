@@ -1,10 +1,7 @@
 method,path,domain,action,summary,func,file,auth_status,enforcement,current_perms,ui_exposed,recommended_perm,recommended_scope,severity,is_mutation,sensitive_kw,roles_with_current_perm
 GET,/api/v1/activity-logs,activity_logs,list,Get activity logs with role-based scoping.,get_activity_logs,activity_logs.py,authenticated,NONE,,yes,activity_logs.list,?,🔴,no,role,
 GET,/api/v1/activity-types,activity_types,list,קבלת רשימת סוגי פעולות,get_activity_types,activity_types.py,anonymous,NONE,,yes,activity_types.list,all,🔴,no,,
-POST,/api/v1/activity-types,activity_types,create,יצירת סוג פעולה חדש,create_activity_type,activity_types.py,anonymous,NONE,,no,activity_types.create,global,🔴,yes,,
-DELETE,/api/v1/activity-types/{activity_type_id},activity_types,delete,מחיקת סוג פעולה (soft delete),delete_activity_type,activity_types.py,anonymous,NONE,,no,activity_types.delete,global,🔴,yes,delete,
 GET,/api/v1/activity-types/{activity_type_id},activity_types,read,קבלת סוג פעולה לפי ID,get_activity_type,activity_types.py,anonymous,NONE,,yes,activity_types.read,all,🔴,no,,
-PUT,/api/v1/activity-types/{activity_type_id},activity_types,update,עדכון סוג פעולה,update_activity_type,activity_types.py,anonymous,NONE,,no,activity_types.update,global,🔴,yes,,
 POST,/api/v1/auth/2fa/disable,auth,create,Disable two-factor authentication.,disable_2fa,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
 POST,/api/v1/auth/2fa/setup,auth,create,Setup two-factor authentication — self-service.,setup_2fa,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
 POST,/api/v1/auth/2fa/verify-setup,auth,create,Verify 2FA setup with code — self-service.,verify_2fa_setup,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
@@ -119,6 +116,9 @@ GET,/api/v1/system-rates/by-code/{code},system_rates,read,קבלת תעריף ג
 GET,/api/v1/system-rates/{rate_id},system_rates,read,קבלת תעריף גלובלי לפי ID,get_system_rate,system_rates.py,authenticated,NONE,,no,system_rates.read,global,🟡,no,,
 GET,/api/v1/users/me,users,list,פרופיל המשתמש הנוכחי,get_current_user_profile,users.py,authenticated,NONE,,yes,users.list,global (admin) or scoped (managers see their own area users),🟡,no,,
 GET,/api/v1/worklogs/activity-codes,worklogs,list,Get list of activity codes for worklog creation.,get_activity_codes_endpoint,worklogs.py,authenticated,NONE,,yes,worklogs.list,scoped (region/area/project per role),🟡,no,,
+POST,/api/v1/activity-types,activity_types,create,יצירת סוג פעולה חדש (מנהל בלבד).,create_activity_type,activity_types.py,permission,require_permission(activity_types.create),activity_types.create,no,activity_types.create,global,🟢,yes,permission,ADMIN
+DELETE,/api/v1/activity-types/{activity_type_id},activity_types,delete,מחיקת סוג פעולה (soft delete) — מנהל בלבד.,delete_activity_type,activity_types.py,permission,require_permission(activity_types.delete),activity_types.delete,no,activity_types.delete,global,🟢,yes,delete;permission,ADMIN
+PUT,/api/v1/activity-types/{activity_type_id},activity_types,update,עדכון סוג פעולה (מנהל בלבד).,update_activity_type,activity_types.py,permission,require_permission(activity_types.update),activity_types.update,no,activity_types.update,global,🟢,yes,permission,ADMIN
 PUT,/api/v1/admin/areas/{area_id}/manager,admin,update,Update area manager,update_area_manager,admin.py,authenticated,verify_admin(),,no,admin.update,global,🟢,yes,role,
 GET,/api/v1/admin/dashboard,admin,list,Get comprehensive admin dashboard data,get_admin_dashboard,admin.py,authenticated,verify_admin(),,no,admin.list,global,🟢,no,role,
 PUT,/api/v1/admin/projects/assign-area/{project_id},admin_projects,update,Assign a project to an area,assign_project_to_area,admin_projects.py,authenticated,inline_role_check,,no,projects.update,global,🟢,yes,role,

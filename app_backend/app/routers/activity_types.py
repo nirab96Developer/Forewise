@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_active_user, require_permission
 from app.models.activity_type import ActivityType
+from app.models.user import User
 
 router = APIRouter(prefix="/activity-types", tags=["Activity Types"])
 
@@ -69,9 +71,18 @@ def get_activity_type(
 @router.post("", response_model=ActivityTypeResponse, status_code=status.HTTP_201_CREATED)
 def create_activity_type(
     data: ActivityTypeCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """יצירת סוג פעולה חדש"""
+    """יצירת סוג פעולה חדש (מנהל בלבד).
+
+    Wave 7.C — previously this endpoint had NO authentication at all
+    (not even get_current_active_user). Anyone on the internet could
+    insert activity_types rows that downstream worklogs would then
+    reference. Now requires `activity_types.create` (ADMIN only per
+    Wave 7.A migration).
+    """
+    require_permission(current_user, "activity_types.create")
     # Check if code exists
     existing = db.query(ActivityType).filter(ActivityType.code == data.code).first()
     if existing:
@@ -88,9 +99,15 @@ def create_activity_type(
 def update_activity_type(
     activity_type_id: int,
     data: ActivityTypeCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """עדכון סוג פעולה"""
+    """עדכון סוג פעולה (מנהל בלבד).
+
+    Wave 7.C — previously unauthenticated. Now requires
+    `activity_types.update` (ADMIN only).
+    """
+    require_permission(current_user, "activity_types.update")
     activity_type = db.query(ActivityType).filter(ActivityType.id == activity_type_id).first()
     if not activity_type:
         raise HTTPException(status_code=404, detail="סוג פעולה לא נמצא")
@@ -106,9 +123,15 @@ def update_activity_type(
 @router.delete("/{activity_type_id}")
 def delete_activity_type(
     activity_type_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """מחיקת סוג פעולה (soft delete)"""
+    """מחיקת סוג פעולה (soft delete) — מנהל בלבד.
+
+    Wave 7.C — previously unauthenticated. Now requires
+    `activity_types.delete` (ADMIN only).
+    """
+    require_permission(current_user, "activity_types.delete")
     activity_type = db.query(ActivityType).filter(ActivityType.id == activity_type_id).first()
     if not activity_type:
         raise HTTPException(status_code=404, detail="סוג פעולה לא נמצא")
