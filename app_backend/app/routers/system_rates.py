@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.models.system_rate import SystemRate
 from app.schemas.system_rate import (
     SystemRateCreate,
@@ -97,8 +97,15 @@ async def create_system_rate(
     current_user=Depends(get_current_active_user)
 ):
     """
-    יצירת תעריף גלובלי חדש (מנהל בלבד)
+    יצירת תעריף גלובלי חדש (מנהל בלבד).
+
+    Wave 7.B — locked behind `system.settings` (case-insensitive
+    matches the existing `SYSTEM.SETTINGS` perm in the DB which is
+    assigned to ADMIN only). Without this, any authenticated user could
+    create/override system-wide hourly rates that affect every new
+    worklog cost calculation.
     """
+    require_permission(current_user, "system.settings")
     # Check if code already exists
     existing = db.query(SystemRate).filter(SystemRate.code == data.code.upper()).first()
     if existing:
@@ -125,8 +132,11 @@ async def update_system_rate(
     current_user=Depends(get_current_active_user)
 ):
     """
-    עדכון תעריף גלובלי (מנהל בלבד)
+    עדכון תעריף גלובלי (מנהל בלבד).
+
+    Wave 7.B — locked behind `system.settings` (ADMIN only).
     """
+    require_permission(current_user, "system.settings")
     rate = db.query(SystemRate).filter(SystemRate.id == rate_id).first()
     if not rate:
         raise HTTPException(
@@ -153,8 +163,11 @@ async def delete_system_rate(
     current_user=Depends(get_current_active_user)
 ):
     """
-    מחיקת תעריף (soft delete)
+    מחיקת תעריף (soft delete).
+
+    Wave 7.B — locked behind `system.settings` (ADMIN only).
     """
+    require_permission(current_user, "system.settings")
     rate = db.query(SystemRate).filter(SystemRate.id == rate_id).first()
     if not rate:
         raise HTTPException(

@@ -78,9 +78,6 @@ GET,/api/v1/support-tickets,support_tickets,list,Get support tickets with option
 POST,/api/v1/support-tickets,support_tickets,create,Create a new support ticket.,create_support_ticket,support_tickets.py,authenticated,NONE,,no,support_tickets.create,?,🔴,yes,,
 POST,/api/v1/support-tickets/from-widget,support_tickets,create,Create a support ticket from the smart help widget.,create_ticket_from_widget,support_tickets.py,authenticated,NONE,,no,support_tickets.create,?,🔴,yes,role,
 POST,/api/v1/sync/batch,sync,create,Process batch sync operations,sync_batch,sync.py,authenticated,NONE,,no,,?,🔴,yes,,
-POST,/api/v1/system-rates,system_rates,create,יצירת תעריף גלובלי חדש (מנהל בלבד),create_system_rate,system_rates.py,authenticated,NONE,,no,system_rates.create,global,🔴,yes,,
-DELETE,/api/v1/system-rates/{rate_id},system_rates,delete,מחיקת תעריף (soft delete),delete_system_rate,system_rates.py,authenticated,NONE,,no,system_rates.delete,global,🔴,yes,delete,
-PATCH,/api/v1/system-rates/{rate_id},system_rates,update,עדכון תעריף גלובלי (מנהל בלבד),update_system_rate,system_rates.py,authenticated,NONE,,no,system_rates.update,global,🔴,yes,,
 GET,/api/v1/users/me/journal,journal,list,Return the current user's journal: activity log entries + personal notes.,get_journal,journal.py,authenticated,NONE,,no,journal.list,?,🔴,no,role,
 POST,/api/v1/users/me/journal/note,journal,create,Add a personal note to the journal.,add_note,journal.py,authenticated,NONE,,yes,journal.create,?,🔴,yes,,
 DELETE,/api/v1/users/me/journal/note/{note_id},journal,delete,Delete a personal note (only if it belongs to the current user).,delete_note,journal.py,authenticated,NONE,,no,journal.delete,?,🔴,yes,delete,
@@ -363,6 +360,9 @@ PUT,/api/v1/support-tickets/{ticket_id},support_tickets,update,Update a support 
 GET,/api/v1/support-tickets/{ticket_id}/comments,support_tickets,read,Get all comments/messages for a ticket.,get_ticket_comments,support_tickets.py,authenticated,inline_role_check,,yes,support_tickets.read,?,🟢,no,role,
 POST,/api/v1/support-tickets/{ticket_id}/comments,support_tickets,create,Add a comment/message to a ticket. Auto-updates status.,add_ticket_comment,support_tickets.py,authenticated,inline_role_check,,yes,support_tickets.create,?,🟢,yes,role,
 PATCH,/api/v1/support-tickets/{ticket_id}/status,support_tickets,update,Admin-only: change ticket status and notify owner.,patch_ticket_status,support_tickets.py,authenticated,inline_role_check,,yes,support_tickets.update,?,🟢,yes,role,
+POST,/api/v1/system-rates,system_rates,create,יצירת תעריף גלובלי חדש (מנהל בלבד).,create_system_rate,system_rates.py,permission,require_permission(system.settings),system.settings=MISSING_IN_DB,no,system_rates.create,global,🟢,yes,lock;permission,
+DELETE,/api/v1/system-rates/{rate_id},system_rates,delete,מחיקת תעריף (soft delete).,delete_system_rate,system_rates.py,permission,require_permission(system.settings),system.settings=MISSING_IN_DB,no,system_rates.delete,global,🟢,yes,lock;delete;permission,
+PATCH,/api/v1/system-rates/{rate_id},system_rates,update,עדכון תעריף גלובלי (מנהל בלבד).,update_system_rate,system_rates.py,permission,require_permission(system.settings),system.settings=MISSING_IN_DB,no,system_rates.update,global,🟢,yes,lock;permission,
 GET,/api/v1/users,users,list,רשימת משתמשים,list_users,users.py,permission,require_permission(users.list),users.list,yes,users.list,global (admin) or scoped (managers see their own area users),🟢,no,permission,ADMIN;AREA_MANAGER;REGION_MANAGER
 POST,/api/v1/users,users,create,יצירת משתמש חדש,create_user,users.py,permission,require_permission(users.create),users.create,yes,users.create,global (admin) or scoped (managers see their own area users),🟢,yes,permission,ADMIN
 DELETE,/api/v1/users/{user_id},users,delete,מחיקת משתמש (soft delete),delete_user,users.py,permission,require_permission(users.delete),users.delete,no,users.delete,global (admin) or scoped (managers see their own area users),🟢,yes,delete;permission,ADMIN
