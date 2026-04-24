@@ -24,6 +24,7 @@ app_frontend/cypress.env.json
 # ──────────────────────────────────────────
 app_backend/.venv/
 app_backend/venv/
+app_backend/venv
 app_backend/__pycache__/
 app_backend/**/__pycache__/
 app_backend/**/*.pyc
