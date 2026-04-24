@@ -11,9 +11,9 @@
 | מטריקה | מספר |
 |---|---|
 | סך הכל endpoints | 418 |
-| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 105 |
+| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 102 |
 | 🟡 בינוניים — auth-only על read endpoints | 33 |
-| 🟢 תקינים — יש require_permission או public legitimate | 280 |
+| 🟢 תקינים — יש require_permission או public legitimate | 283 |
 | Permissions ב-DB | 169 |
 | Permissions שמוזכרים בקוד | 127 |
 | Permissions בקוד שאין ב-DB (בעיה) | 52 |
@@ -169,33 +169,33 @@
 ```
   BUDGETS.CREATE / budgets.create
   BUDGETS.UPDATE / budgets.update
-  INVOICES.APPROVE / invoices.approve
-  INVOICES.CREATE / invoices.create
-  INVOICES.UPDATE / invoices.update
-  PROJECTS.CREATE / projects.create
-  PROJECTS.UPDATE / projects.update
+  invoices.approve / INVOICES.APPROVE
+  invoices.create / INVOICES.CREATE
+  invoices.update / INVOICES.UPDATE
+  projects.create / PROJECTS.CREATE
+  projects.update / PROJECTS.UPDATE
   ROLES.CREATE / roles.create
   ROLES.UPDATE / roles.update
   suppliers.create / SUPPLIERS.CREATE
   SUPPLIERS.DELETE / suppliers.delete
-  suppliers.update / SUPPLIERS.UPDATE
-  users.create / USERS.CREATE
-  users.delete / USERS.DELETE
-  USERS.UPDATE / users.update
+  SUPPLIERS.UPDATE / suppliers.update
+  USERS.CREATE / users.create
+  USERS.DELETE / users.delete
+  users.update / USERS.UPDATE
 ```
 
 ---
 
 ## 4. Endpoints קריטיים בלי enforcement (🔴)
 
-סה"כ 105 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
+סה"כ 102 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
 
 ### לפי domain (top 15)
 
 | Domain | מספר 🔴 |
 |---|---|
-| `auth` | 18 |
 | `dashboard` | 18 |
+| `auth` | 15 |
 | `project_assignments` | 12 |
 | `notifications` | 9 |
 | `supplier_rotations` | 6 |
@@ -222,10 +222,7 @@
 | `PUT` | `/api/v1/activity-types/{activity_type_id}` | update | `activity_types.update` | no |
 | `POST` | `/api/v1/auth/2fa/disable` | create | `auth.create` | no |
 | `POST` | `/api/v1/auth/2fa/setup` | create | `auth.create` | no |
-| `POST` | `/api/v1/auth/admin/lock-account` | create | `auth.create` | no |
-| `GET` | `/api/v1/auth/admin/login-attempts/{user_id}` | read | `auth.read` | no |
-| `GET` | `/api/v1/auth/admin/security-audit/{user_id}` | read | `auth.read` | no |
-| `POST` | `/api/v1/auth/admin/unlock-account` | create | `auth.create` | no |
+| `POST` | `/api/v1/auth/2fa/verify-setup` | create | `auth.create` | no |
 | `DELETE` | `/api/v1/auth/biometric/credentials/{credential_id}` | delete | `auth.delete` | no |
 | `POST` | `/api/v1/auth/biometric/register` | create | `auth.create` | no |
 | `POST` | `/api/v1/auth/biometric/verify` | create | `auth.create` | no |
@@ -244,8 +241,11 @@
 | `GET` | `/api/v1/dashboard/accountant-overview` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/activity` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/alerts` | list | `dashboard.list` | yes |
+| `GET` | `/api/v1/dashboard/area-overview` | list | `dashboard.list` | yes |
+| `GET` | `/api/v1/dashboard/coordinator-queue` | list | `dashboard.list` | yes |
+| `GET` | `/api/v1/dashboard/financial-summary` | list | `dashboard.list` | no |
 
-_ועוד 75 ב-CSV._
+_ועוד 72 ב-CSV._
 
 ---
 
@@ -321,10 +321,10 @@ _ועוד 75 ב-CSV._
 
 ### 🔴 דחוף — אכיפת הרשאות בendpoints קריטיים
 
-להוסיף `require_permission` ל-105 endpoints. הכי קריטי לפי החתכים האלה:
+להוסיף `require_permission` ל-102 endpoints. הכי קריטי לפי החתכים האלה:
 
-- **`auth`** (18 endpoints) — endpoints של 2FA/biometric/WebAuthn — אין UI, אבל אם API נחשף משתמש מאומת יכול register passkey לחשבון אחר. דורש חידוד.
 - **`dashboard`** (18 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
+- **`auth`** (15 endpoints) — endpoints של 2FA/biometric/WebAuthn — אין UI, אבל אם API נחשף משתמש מאומת יכול register passkey לחשבון אחר. דורש חידוד.
 - **`project_assignments`** (12 endpoints) — כל ה-CRUD בלי בדיקה. user יכול לשנות הקצאת פרויקטים של אחרים.
 - **`notifications`** (9 endpoints) — bulk-action, cleanup, read-all — user יכול לסמן הודעות של אחרים כנקראו.
 - **`supplier_rotations`** (6 endpoints) — מנגנון הסבב ההוגן. mutation שלו = שיבוש החלוקה לספקים.

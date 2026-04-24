@@ -6,20 +6,17 @@ DELETE,/api/v1/activity-types/{activity_type_id},activity_types,delete,מחיק�
 GET,/api/v1/activity-types/{activity_type_id},activity_types,read,קבלת סוג פעולה לפי ID,get_activity_type,activity_types.py,anonymous,NONE,,yes,activity_types.read,all,🔴,no,,
 PUT,/api/v1/activity-types/{activity_type_id},activity_types,update,עדכון סוג פעולה,update_activity_type,activity_types.py,anonymous,NONE,,no,activity_types.update,global,🔴,yes,,
 POST,/api/v1/auth/2fa/disable,auth,create,Disable two-factor authentication.,disable_2fa,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
-POST,/api/v1/auth/2fa/setup,auth,create,Setup two-factor authentication.,setup_2fa,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
-POST,/api/v1/auth/admin/lock-account,auth,create,Lock user account (admin only).,lock_account,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,lock,
-GET,/api/v1/auth/admin/login-attempts/{user_id},auth,read,Get login attempts for user (admin only).,get_login_attempts,auth.py,authenticated,NONE,,no,auth.read,global,🔴,no,lock,
-GET,/api/v1/auth/admin/security-audit/{user_id},auth,read,Get security audit for user (admin only).,get_security_audit,auth.py,authenticated,NONE,,no,auth.read,global,🔴,no,lock,
-POST,/api/v1/auth/admin/unlock-account,auth,create,Unlock user account (admin only).,unlock_account,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,lock;unlock,
+POST,/api/v1/auth/2fa/setup,auth,create,Setup two-factor authentication — self-service.,setup_2fa,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
+POST,/api/v1/auth/2fa/verify-setup,auth,create,Verify 2FA setup with code — self-service.,verify_2fa_setup,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
 DELETE,/api/v1/auth/biometric/credentials/{credential_id},auth,delete,Delete a biometric credential.,delete_biometric_credential,auth.py,authenticated,NONE,,no,auth.delete,global,🔴,yes,delete,
 POST,/api/v1/auth/biometric/register,auth,create,Start biometric registration - return challenge for WebAuthn.,biometric_register_start,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
 POST,/api/v1/auth/biometric/verify,auth,create,Verify and store biometric credential.,biometric_register_verify,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
-POST,/api/v1/auth/change-password,auth,create,Change user password.,change_password,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
+POST,/api/v1/auth/change-password,auth,create,Change user password — self-service.,change_password,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
 POST,/api/v1/auth/check-permission,auth,create,Check if user has specific permission.,check_permission,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,permission;role,
 DELETE,/api/v1/auth/devices/{device_id},auth,delete,Revoke a trusted device. Only the owning user can remove it.,revoke_device,auth.py,authenticated,NONE,,no,auth.delete,global,🔴,yes,delete,
 POST,/api/v1/auth/logout,auth,create,Logout user.,logout,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
-DELETE,/api/v1/auth/sessions,auth,delete,Revoke all user sessions.,revoke_all_sessions,auth.py,authenticated,NONE,,no,auth.delete,global,🔴,yes,delete,
-DELETE,/api/v1/auth/sessions/{session_id},auth,delete,Revoke specific session.,revoke_session,auth.py,authenticated,NONE,,no,auth.delete,global,🔴,yes,delete,
+DELETE,/api/v1/auth/sessions,auth,delete,Revoke ALL of the current user's active sessions.,revoke_all_sessions,auth.py,authenticated,NONE,,no,auth.delete,global,🔴,yes,delete,
+DELETE,/api/v1/auth/sessions/{session_id},auth,delete,Revoke a specific session — owner-only.,revoke_session,auth.py,authenticated,NONE,,no,auth.delete,global,🔴,yes,delete,
 GET,/api/v1/auth/status,auth,list,Get authentication status.,get_auth_status,auth.py,authenticated,NONE,,no,auth.list,global,🔴,no,permission;role,
 POST,/api/v1/auth/webauthn/register/begin,auth,create,Step 1 of registration: generate PublicKeyCredentialCreationOptions.,webauthn_register_begin,auth.py,authenticated,NONE,,no,auth.create,global,🔴,yes,,
 POST,/api/v1/auth/webauthn/register/complete,auth,complete,Step 2 of registration: verify attestation and store credential.,webauthn_register_complete,auth.py,authenticated,NONE,,no,auth.complete,global,🔴,yes,delete,
@@ -108,7 +105,7 @@ GET,/api/v1/activity-logs/{log_id},activity_logs,read,Get a specific activity lo
 GET,/api/v1/admin/projects/by-area/{area_id},admin_projects,read,Get all projects in a specific area,get_projects_by_area,admin_projects.py,authenticated,NONE,,no,projects.read,global,🟡,no,,
 GET,/api/v1/auth/biometric/credentials,auth,list,Get user's registered biometric credentials.,get_biometric_credentials,auth.py,authenticated,NONE,,no,auth.list,global,🟡,no,,
 GET,/api/v1/auth/devices,auth,list,List all active trusted devices for the current user.,list_devices,auth.py,authenticated,NONE,,no,auth.list,global,🟡,no,,
-GET,/api/v1/auth/sessions,auth,list,Get user sessions.,get_user_sessions,auth.py,authenticated,NONE,,no,auth.list,global,🟡,no,,
+GET,/api/v1/auth/sessions,auth,list,List the current user's active sessions.,get_user_sessions,auth.py,authenticated,NONE,,no,auth.list,global,🟡,no,,
 GET,/api/v1/dashboard/equipment/active,dashboard,list,Active equipment for dashboard widget.,get_dashboard_active_equipment,dashboard.py,authenticated,NONE,,yes,dashboard.list,?,🟡,no,,
 GET,/api/v1/dashboard/stats,dashboard,list,Alias for /summary — frontend calls /dashboard/stats.,get_dashboard_stats,dashboard.py,authenticated,NONE,,yes,dashboard.list,?,🟡,no,,
 GET,/api/v1/dashboard/suppliers/active,dashboard,list,Active suppliers for dashboard widget.,get_dashboard_active_suppliers,dashboard.py,authenticated,NONE,,yes,dashboard.list,?,🟡,no,,
@@ -164,7 +161,10 @@ GET,/api/v1/areas/{area_id},areas,read,Get area,get_area,areas.py,permission,req
 PUT,/api/v1/areas/{area_id},areas,update,Update area,update_area,areas.py,permission,require_permission(areas.update),areas.update,no,areas.update,global,🟢,yes,permission,ADMIN
 POST,/api/v1/areas/{area_id}/restore,areas,restore,Restore area,restore_area,areas.py,permission,require_permission(areas.restore),areas.restore,no,areas.restore,global,🟢,yes,permission,ADMIN
 POST,/api/v1/auth/2fa/verify,auth,create,Verify two-factor authentication.,verify_2fa,auth.py,anonymous,NONE,,no,auth.create,global,🟢,yes,,
-POST,/api/v1/auth/2fa/verify-setup,auth,create,Verify 2FA setup with code.,verify_2fa_setup,auth.py,anonymous,NONE,,no,auth.create,global,🟢,yes,,
+POST,/api/v1/auth/admin/lock-account,auth,create,Lock user account (admin only).,lock_account,auth.py,permission,require_permission(users.lock),users.lock,no,auth.create,global,🟢,yes,lock;permission,ADMIN
+GET,/api/v1/auth/admin/login-attempts/{user_id},auth,read,Get login attempts for user (admin only).,get_login_attempts,auth.py,permission,require_permission(users.read),users.read,no,auth.read,global,🟢,no,lock;permission,ADMIN;AREA_MANAGER;REGION_MANAGER
+GET,/api/v1/auth/admin/security-audit/{user_id},auth,read,Get security audit for user (admin only).,get_security_audit,auth.py,permission,require_permission(users.read),users.read,no,auth.read,global,🟢,no,lock;permission,ADMIN;AREA_MANAGER;REGION_MANAGER
+POST,/api/v1/auth/admin/unlock-account,auth,create,Unlock user account (admin only).,unlock_account,auth.py,permission,require_permission(users.unlock),users.unlock,no,auth.create,global,🟢,yes,lock;unlock;permission,ADMIN
 POST,/api/v1/auth/biometric/authenticate,auth,create,Authenticate using biometric credential.,biometric_authenticate,auth.py,anonymous,NONE,,no,auth.create,global,🟢,yes,permission;role,
 POST,/api/v1/auth/biometric/challenge,auth,create,Get challenge for biometric authentication.,biometric_get_challenge,auth.py,anonymous,NONE,,no,auth.create,global,🟢,yes,,
 POST,/api/v1/auth/device-login,auth,create,Biometric re-login — client already has device_token in Keychain.,device_login,auth.py,anonymous,NONE,,no,auth.create,global,🟢,yes,permission;role,

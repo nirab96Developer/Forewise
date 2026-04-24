@@ -237,7 +237,13 @@ def change_password(
     current_user=Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Change user password."""
+    """Change user password — self-service.
+
+    Always operates on `current_user.id`. There is no body field that
+    lets the caller target another user; an admin who needs to reset
+    someone else's password must use `/auth/reset-password` (which
+    issues a token to the user's email).
+    """
     try:
         success = auth_service.change_password(
             db=db, 
@@ -306,7 +312,10 @@ def setup_2fa(
     current_user=Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Setup two-factor authentication."""
+    """Setup two-factor authentication — self-service.
+
+    Always operates on `current_user.id`. Pairs with `/2fa/verify-setup`.
+    """
     try:
         result = auth_service.setup_2fa(
             db=db, 
@@ -332,14 +341,27 @@ def setup_2fa(
 
 @router.post("/2fa/verify-setup")
 def verify_2fa_setup(
-    user_id: int = Body(..., embed=True),
     code: str = Body(..., embed=True),
+    user_id: int | None = Body(None, embed=True),
+    current_user=Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Verify 2FA setup with code."""
+    """Verify 2FA setup with code — self-service.
+
+    Wave 1.C audit fix: previously this took `user_id` from the request
+    body with NO authentication, allowing an unauthenticated attacker to
+    enable 2FA on another user's account by guessing user ids and codes.
+    Now requires authentication and forces the action to operate on
+    `current_user.id`. The legacy `user_id` body field is still accepted
+    for backwards compatibility but MUST match the authenticated user.
+    """
+    if user_id is not None and user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="2FA setup can only be verified for the authenticated user",
+        )
     try:
-        success = auth_service.verify_2fa_setup(db, user_id, code)
-        
+        success = auth_service.verify_2fa_setup(db, current_user.id, code)
         if success:
             return {"message": "2FA setup verified successfully"}
         else:
@@ -384,21 +406,59 @@ def get_user_sessions(
     current_user=Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Get user sessions."""
-    # This would be implemented to get user sessions
-    # For now, return a simple response
+    """List the current user's active sessions.
+
+    Self-service — never reads sessions for any other user. Admin needing
+    to inspect another user's sessions should use a future
+    `/admin/users/{id}/sessions` endpoint (not implemented yet).
+    """
+    sessions = (
+        db.query(UserSession)
+        .filter(
+            UserSession.user_id == current_user.id,
+            UserSession.is_active == True,
+            UserSession.is_revoked == False,
+        )
+        .order_by(UserSession.created_at.desc())
+        .all()
+    )
+
+    def _to_info(s):
+        return {
+            "session_id": s.session_id,
+            "device_info": None,
+            "ip_address": s.ip_address,
+            "user_agent": s.user_agent,
+            "created_at": s.created_at,
+            "last_activity": s.updated_at or s.created_at,
+            "is_active": s.is_active and not s.is_revoked,
+        }
+
+    if not sessions:
+        # Schema requires a current_session — synthesize a placeholder
+        # for the case where the user has no live session row.
+        from datetime import datetime as _dt
+        now = _dt.utcnow()
+        return UserSessionsResponse(
+            current_session={
+                "session_id": "no-session",
+                "device_info": None,
+                "ip_address": None,
+                "user_agent": None,
+                "created_at": now,
+                "last_activity": now,
+                "is_active": False,
+            },
+            other_sessions=[],
+            total_sessions=0,
+        )
+
+    current = _to_info(sessions[0])
+    other = [_to_info(s) for s in sessions[1:]]
     return UserSessionsResponse(
-        current_session={
-            "session_id": "current_session_id",
-            "device_info": "Current Device",
-            "ip_address": "127.0.0.1",
-            "user_agent": "Mozilla/5.0",
-            "created_at": "2024-01-01T00:00:00Z",
-            "last_activity": "2024-01-01T00:00:00Z",
-            "is_active": True
-        },
-        other_sessions=[],
-        total_sessions=1
+        current_session=current,
+        other_sessions=other,
+        total_sessions=len(sessions),
     )
 
 
@@ -408,8 +468,27 @@ def revoke_session(
     current_user=Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Revoke specific session."""
-    # This would be implemented to revoke a specific session
+    """Revoke a specific session — owner-only.
+
+    Looks up by `session_id` (the opaque token, not the integer PK) AND
+    `user_id == current_user.id`. Anything else returns 404 so an
+    attacker can't probe for valid session ids belonging to other users.
+    """
+    session = (
+        db.query(UserSession)
+        .filter(
+            UserSession.session_id == session_id,
+            UserSession.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session.is_revoked = True
+    session.is_active = False
+    db.commit()
+    logger.info(f"[auth] session {session_id[:12]}... revoked by user {current_user.id}")
     return {"message": "Session revoked successfully"}
 
 
@@ -418,9 +497,23 @@ def revoke_all_sessions(
     current_user=Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Revoke all user sessions."""
-    # This would be implemented to revoke all user sessions
-    return {"message": "All sessions revoked successfully"}
+    """Revoke ALL of the current user's active sessions.
+
+    Self-service. Returns a count so the caller can display it. The
+    bulk UPDATE only touches rows where `user_id == current_user.id`.
+    """
+    revoked = (
+        db.query(UserSession)
+        .filter(
+            UserSession.user_id == current_user.id,
+            UserSession.is_active == True,
+            UserSession.is_revoked == False,
+        )
+        .update({"is_revoked": True, "is_active": False})
+    )
+    db.commit()
+    logger.info(f"[auth] {revoked} sessions revoked by user {current_user.id}")
+    return {"message": "All sessions revoked successfully", "revoked_count": revoked}
 
 
 @router.get("/status", response_model=AuthStatusResponse)
