@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.services.otp_service import otp_service
 from app.core.logging import logger
@@ -98,9 +98,14 @@ async def cleanup_expired_tokens(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Clean up expired OTP tokens (admin only)"""
-    if not (current_user.role and current_user.role.code == "ADMIN"):
-        raise HTTPException(status_code=403, detail="Admin access required")
+    """Clean up expired OTP tokens (admin only).
+
+    Wave 7.J — replaced inline role-code check with the
+    `system.settings` permission gate for consistency with other
+    admin-only operations across the codebase. Behavior identical
+    for ADMIN; cleaner audit and aligns with Wave 7.G/H pattern.
+    """
+    require_permission(current_user, "system.settings")
     try:
         count = otp_service.cleanup_expired_tokens(db)
         return {

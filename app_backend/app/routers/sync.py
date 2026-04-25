@@ -54,7 +54,22 @@ async def sync_batch(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Process batch sync operations"""
+    """Process batch sync operations — self-service.
+
+    Wave 7.J — verified safe-by-design without an explicit
+    require_permission. Every sub-operation routes through
+    process_sync_operation -> per-type handler (create_worklog /
+    update_worklog / create_work_order / update_work_order /
+    update_equipment) and forwards `current_user.id` as the
+    actor. Each underlying service applies its own ownership /
+    permission rules. The batch wrapper itself can never escalate
+    privileges — it just iterates over the operations the caller
+    sent and enforces auth on every one of them.
+
+    A future change that adds a new operation_type MUST verify the
+    same contract: forward current_user, do not trust any user_id
+    in the operation payload.
+    """
     try:
         results = []
         conflicts = []

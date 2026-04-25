@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
 from app.models.work_order import WorkOrder
 from app.models.work_order_coordination_log import WorkOrderCoordinationLog
@@ -29,7 +29,15 @@ def create_coordination_log(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
-    """Create a coordination log entry for a work order."""
+    """Create a coordination log entry for a work order.
+
+    Wave 7.J — locked behind `WORK_ORDERS.COORDINATE` (assigned to
+    ADMIN, ORDER_COORDINATOR, REGION_MANAGER in DB). Without the gate
+    any authenticated user (including SUPPLIER and WORK_MANAGER) could
+    spam coordination notes onto any WO, polluting the coordinator's
+    activity feed.
+    """
+    require_permission(current_user, "work_orders.coordinate")
     wo = db.query(WorkOrder).filter(
         WorkOrder.id == data.work_order_id,
         WorkOrder.deleted_at.is_(None),
