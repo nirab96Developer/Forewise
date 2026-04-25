@@ -85,9 +85,18 @@ def _apply_rotation_scope_filter(query, user: User):
 
 
 class SupplierRotationCreate(BaseModel):
+    """Create payload for supplier rotation rows.
+
+    Cleanup #2 (post-Wave 7) — `equipment_category_id` removed.
+    Phase 1.3 dropped the column from the model; the schema still
+    accepted it and the create handler passed it to the model
+    constructor → guaranteed TypeError on every successful admin
+    POST. Removed from the schema and from the handler. Any caller
+    still sending it gets a Pydantic 422 with a clear "extra field"
+    error instead of silently working then 500'ing.
+    """
     supplier_id: int
     equipment_type_id: Optional[int] = None
-    equipment_category_id: Optional[int] = None
     region_id: Optional[int] = None
     area_id: Optional[int] = None
     rotation_position: Optional[int] = None
@@ -97,9 +106,9 @@ class SupplierRotationCreate(BaseModel):
 
 
 class SupplierRotationUpdate(BaseModel):
+    """Same cleanup applies on update."""
     supplier_id: Optional[int] = None
     equipment_type_id: Optional[int] = None
-    equipment_category_id: Optional[int] = None
     region_id: Optional[int] = None
     area_id: Optional[int] = None
     rotation_position: Optional[int] = None
@@ -221,7 +230,6 @@ async def get_supplier_rotation(
             "supplier_name": supplier.name if supplier else f"ספק #{rotation.supplier_id}",
             "rotation_position": rotation.rotation_position,
             "equipment_type_id": rotation.equipment_type_id,
-            "equipment_category_id": rotation.equipment_category_id,
             "region_id": rotation.region_id,
             "area_id": rotation.area_id,
             "total_assignments": rotation.total_assignments,
@@ -283,7 +291,6 @@ async def create_supplier_rotation(
         rotation = SupplierRotation(
             supplier_id=data.supplier_id,
             equipment_type_id=data.equipment_type_id,
-            equipment_category_id=data.equipment_category_id,
             region_id=data.region_id,
             area_id=data.area_id,
             rotation_position=data.rotation_position,

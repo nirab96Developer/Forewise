@@ -11,12 +11,12 @@
 | מטריקה | מספר |
 |---|---|
 | סך הכל endpoints | 418 |
-| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 56 |
+| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 54 |
 | 🟡 בינוניים — auth-only על read endpoints | 33 |
-| 🟢 תקינים — יש require_permission או public legitimate | 329 |
+| 🟢 תקינים — יש require_permission או public legitimate | 331 |
 | Permissions ב-DB | 184 |
-| Permissions שמוזכרים בקוד | 145 |
-| Permissions בקוד שאין ב-DB (בעיה) | 52 |
+| Permissions שמוזכרים בקוד | 146 |
+| Permissions בקוד שאין ב-DB (בעיה) | 53 |
 | Permissions ב-DB שלא משמשים בקוד (יתומים) | 91 |
 | Permissions עם duplicate case (UPPER + lower) | 15 |
 
@@ -86,6 +86,7 @@
 - `system.settings`
 - `work_orders.cancel`
 - `work_orders.close`
+- `work_orders.coordinate`
 - `work_orders.create`
 - `work_orders.delete`
 - `work_orders.restore`
@@ -168,18 +169,18 @@
 
 ```
   BUDGETS.CREATE / budgets.create
-  budgets.update / BUDGETS.UPDATE
-  invoices.approve / INVOICES.APPROVE
+  BUDGETS.UPDATE / budgets.update
+  INVOICES.APPROVE / invoices.approve
   INVOICES.CREATE / invoices.create
-  invoices.update / INVOICES.UPDATE
-  projects.create / PROJECTS.CREATE
-  projects.update / PROJECTS.UPDATE
+  INVOICES.UPDATE / invoices.update
+  PROJECTS.CREATE / projects.create
+  PROJECTS.UPDATE / projects.update
   roles.create / ROLES.CREATE
-  ROLES.UPDATE / roles.update
+  roles.update / ROLES.UPDATE
   suppliers.create / SUPPLIERS.CREATE
-  suppliers.delete / SUPPLIERS.DELETE
+  SUPPLIERS.DELETE / suppliers.delete
   suppliers.update / SUPPLIERS.UPDATE
-  users.create / USERS.CREATE
+  USERS.CREATE / users.create
   users.delete / USERS.DELETE
   users.update / USERS.UPDATE
 ```
@@ -188,7 +189,7 @@
 
 ## 4. Endpoints קריטיים בלי enforcement (🔴)
 
-סה"כ 56 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
+סה"כ 54 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
 
 ### לפי domain (top 15)
 
@@ -197,10 +198,10 @@
 | `dashboard` | 18 |
 | `auth` | 15 |
 | `notifications` | 4 |
-| `otp` | 3 |
 | `support_tickets` | 3 |
 | `journal` | 3 |
 | `activity_types` | 2 |
+| `otp` | 2 |
 | `activity_logs` | 1 |
 | `pricing` | 1 |
 | `project_assignments` | 1 |
@@ -208,7 +209,6 @@
 | `supplier_rotations` | 1 |
 | `suppliers` | 1 |
 | `sync` | 1 |
-| `work_order_coordination_logs` | 1 |
 
 ### דוגמאות בולטות (top 30 by sensitivity)
 
@@ -245,7 +245,7 @@
 | `GET` | `/api/v1/dashboard/my-tasks` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/projects` | list | `dashboard.list` | yes |
 
-_ועוד 26 ב-CSV._
+_ועוד 24 ב-CSV._
 
 ---
 
@@ -321,22 +321,22 @@ _ועוד 26 ב-CSV._
 
 ### 🔴 דחוף — אכיפת הרשאות בendpoints קריטיים
 
-להוסיף `require_permission` ל-56 endpoints. הכי קריטי לפי החתכים האלה:
+להוסיף `require_permission` ל-54 endpoints. הכי קריטי לפי החתכים האלה:
 
 - **`dashboard`** (18 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
 - **`auth`** (15 endpoints) — endpoints של 2FA/biometric/WebAuthn — אין UI, אבל אם API נחשף משתמש מאומת יכול register passkey לחשבון אחר. דורש חידוד.
 - **`notifications`** (4 endpoints) — bulk-action, cleanup, read-all — user יכול לסמן הודעות של אחרים כנקראו.
-- **`otp`** (3 endpoints) — להחליט פר-endpoint לפי לוגיקה עסקית.
 - **`support_tickets`** (3 endpoints) — create/update/list — user יכול לערוך טיקטים של אחרים.
 - **`journal`** (3 endpoints) — להחליט פר-endpoint לפי לוגיקה עסקית.
 - **`activity_types`** (2 endpoints) — lookup table. mutation = החלפת activity codes שמתעדים worklogs.
+- **`otp`** (2 endpoints) — להחליט פר-endpoint לפי לוגיקה עסקית.
 - **`activity_logs`** (1 endpoints) — להחליט פר-endpoint לפי לוגיקה עסקית.
 - **`pricing`** (1 endpoints) — endpoints מציגים תעריפים — דליפה ל-supplier אם הוא מאומת.
 - **`project_assignments`** (1 endpoints) — כל ה-CRUD בלי בדיקה. user יכול לשנות הקצאת פרויקטים של אחרים.
 
 ### 🔴 דחוף — לתקן permissions שלא קיימים ב-DB
 
-52 permissions בקוד שלא יוגדרו לעולם → 403 קבוע.
+53 permissions בקוד שלא יוגדרו לעולם → 403 קבוע.
 
 ### 🟡 חוב טכני — duplicate UPPER/lower
 

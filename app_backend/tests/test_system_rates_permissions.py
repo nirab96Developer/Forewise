@@ -91,24 +91,24 @@ class _DBStub:
 
 
 def _create_payload():
-    # Build a SystemRateCreate via the schema constructor so the test
-    # tracks any future field changes.
+    # Cleanup #1 — schema now has rate_code/rate_name to match the model.
     return SystemRateCreate(
-        code="TEST_RATE",
-        name="Test Rate",
+        rate_code="TEST_RATE",
+        rate_name="Test Rate",
         rate_type="hourly",
         rate_value=100.0,
     )
 
 
 def _update_payload():
-    return SystemRateUpdate(name="Updated Test Rate")
+    return SystemRateUpdate(rate_name="Updated Test Rate")
 
 
 def _existing_rate():
     rate = MagicMock()
     rate.id = 7
-    rate.code = "TEST_RATE"
+    rate.rate_code = "TEST_RATE"
+    rate.rate_name = "Test"
     rate.is_active = True
     return rate
 
@@ -119,18 +119,18 @@ def _existing_rate():
 
 class TestCreateSystemRate:
 
-    def test_admin_passes_permission_gate(self):
-        """Admin must NOT get 403. The handler itself has a pre-existing
-        bug (it accesses `SystemRate.code` but the model field is named
-        `rate_code`), so an admin call eventually raises AttributeError
-        — but only AFTER the require_permission gate passes. That's the
-        proof we need: a 403 here would mean Wave 7.B broke admin."""
-        with pytest.raises(AttributeError):
-            asyncio.run(create_system_rate(
-                data=_create_payload(),
-                db=_DBStub(),
-                current_user=_admin(),
-            ))
+    def test_admin_passes(self):
+        """Cleanup #1 — schema field-name bug is fixed. Admin should
+        now get a real success rather than the AttributeError the
+        previous version expected."""
+        result = asyncio.run(create_system_rate(
+            data=_create_payload(),
+            db=_DBStub(),
+            current_user=_admin(),
+        ))
+        # Stub returns the SystemRate instance the handler built;
+        # only that we got a real object proves the gate + handler ran.
+        assert result is not None
 
     def test_accountant_blocked_403(self):
         with pytest.raises(HTTPException) as exc:

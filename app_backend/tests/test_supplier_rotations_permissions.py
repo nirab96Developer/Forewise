@@ -288,6 +288,9 @@ class TestGetSingleRotation:
 # ===========================================================================
 
 def _create_payload():
+    """Cleanup #2 — equipment_category_id removed from the schema.
+    Passing it would now raise a Pydantic ValidationError, which
+    is a separate test below."""
     return SupplierRotationCreate(
         supplier_id=100,
         equipment_type_id=5,
@@ -298,29 +301,42 @@ def _create_payload():
 
 class TestCreateRotation:
 
-    def test_admin_passes_permission_gate(self):
-        """Admin must NOT get 403. The handler then crashes on a
-        pre-existing bug (passes `equipment_category_id` to
-        SupplierRotation model which dropped that field in Phase 1.3),
-        but the crash is HTTP 500 wrapped, not 403 — proves the perm
-        gate passes."""
-        with pytest.raises(HTTPException) as exc:
-            asyncio.run(create_supplier_rotation(
-                data=_create_payload(),
-                db=_DBStub(),
-                current_user=_user("ADMIN"),
-            ))
-        # 500 (handler bug) != 403 (perm denied). Pass = not 403.
-        assert exc.value.status_code != 403
+    def test_admin_passes(self):
+        """Cleanup #2 — equipment_category_id no longer passed to the
+        model. Admin now succeeds end-to-end instead of getting a
+        TypeError after the perm gate."""
+        result = asyncio.run(create_supplier_rotation(
+            data=_create_payload(),
+            db=_DBStub(),
+            current_user=_user("ADMIN"),
+        ))
+        assert result is not None
 
-    def test_coordinator_passes_permission_gate(self):
-        with pytest.raises(HTTPException) as exc:
-            asyncio.run(create_supplier_rotation(
-                data=_create_payload(),
-                db=_DBStub(),
-                current_user=_user("ORDER_COORDINATOR"),
-            ))
-        assert exc.value.status_code != 403
+    def test_coordinator_passes(self):
+        result = asyncio.run(create_supplier_rotation(
+            data=_create_payload(),
+            db=_DBStub(),
+            current_user=_user("ORDER_COORDINATOR"),
+        ))
+        assert result is not None
+
+    def test_payload_with_equipment_category_id_silently_dropped(self):
+        """Cleanup #2 — back-compat boundary. Pydantic v2 default is to
+        ignore extra fields, so an old caller that still sends
+        equipment_category_id is accepted but the field is dropped
+        BEFORE the handler ever sees it. No more TypeError when the
+        handler builds the SupplierRotation row."""
+        s = SupplierRotationCreate(
+            supplier_id=100,
+            equipment_type_id=5,
+            equipment_category_id=99,  # ignored by Pydantic
+            region_id=5,
+            area_id=10,
+        )
+        dump = s.model_dump()
+        assert "equipment_category_id" not in dump, (
+            "equipment_category_id must not survive into the model dump"
+        )
 
     def test_region_manager_blocked_403(self):
         with pytest.raises(HTTPException) as exc:

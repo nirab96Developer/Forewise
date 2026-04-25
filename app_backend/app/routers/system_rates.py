@@ -53,7 +53,7 @@ async def get_system_rate_by_code(
     קבלת תעריף גלובלי לפי קוד
     """
     rate = db.query(SystemRate).filter(
-        SystemRate.code == code.upper(),
+        SystemRate.rate_code == code.upper(),
         SystemRate.is_active == True
     ).first()
     
@@ -106,17 +106,20 @@ async def create_system_rate(
     worklog cost calculation.
     """
     require_permission(current_user, "system.settings")
-    # Check if code already exists
-    existing = db.query(SystemRate).filter(SystemRate.code == data.code.upper()).first()
+    # Check if code already exists. Cleanup #1 — model uses `rate_code`,
+    # not `code`; the previous version was a guaranteed AttributeError.
+    existing = db.query(SystemRate).filter(
+        SystemRate.rate_code == data.rate_code.upper()
+    ).first()
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"תעריף עם קוד '{data.code}' כבר קיים"
+            detail=f"תעריף עם קוד '{data.rate_code}' כבר קיים"
         )
-    
+
     rate_data = data.model_dump()
-    rate_data['code'] = rate_data['code'].upper()
-    
+    rate_data["rate_code"] = rate_data["rate_code"].upper()
+
     rate = SystemRate(**rate_data)
     db.add(rate)
     db.commit()
@@ -145,9 +148,10 @@ async def update_system_rate(
         )
     
     update_data = data.model_dump(exclude_unset=True)
-    if 'code' in update_data:
-        update_data['code'] = update_data['code'].upper()
-    
+    # Cleanup #1 — same field-name fix as create_system_rate above.
+    if "rate_code" in update_data and update_data["rate_code"]:
+        update_data["rate_code"] = update_data["rate_code"].upper()
+
     for key, value in update_data.items():
         setattr(rate, key, value)
     
