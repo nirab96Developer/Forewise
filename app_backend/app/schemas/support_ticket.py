@@ -65,9 +65,19 @@ class SupportTicketBase(PydanticBaseModel):
 
 
 class SupportTicketCreate(SupportTicketBase):
-    """Create support ticket schema."""
+    """Create support ticket schema.
 
-    user_id: int = Field(..., gt=0, description="User creating ticket")
+    Wave 7.I — `user_id` is now Optional and **ignored by the handler**.
+    The router unconditionally sets `user_id=current_user.id` so a caller
+    can never spoof another user. The field stays in the schema only
+    for backwards-compat with any client that still sends it; new
+    callers should omit it.
+    """
+
+    user_id: Optional[int] = Field(
+        None, gt=0,
+        description="DEPRECATED — ignored by server, always overridden with current_user.id",
+    )
     status: TicketStatus = TicketStatus.OPEN
     custom_metadata_json: Optional[Dict[str, Any]] = None
 

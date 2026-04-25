@@ -220,7 +220,13 @@ async def create_support_ticket(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Create a new support ticket."""
+    """Create a new support ticket — self-service.
+
+    Wave 7.I — `ticket.user_id` from the request body is IGNORED.
+    The new ticket is always owned by `current_user.id`. This protects
+    against a caller opening a ticket on someone else's behalf to
+    impersonate them in support correspondence.
+    """
     ticket_number = _generate_ticket_number(db)
     
     new_ticket = SupportTicket(
@@ -277,8 +283,12 @@ async def create_ticket_from_widget(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Create a support ticket from the smart help widget.
-    Includes all context information for faster resolution.
+    Create a support ticket from the smart help widget — self-service.
+
+    Wave 7.I — `data.userId` / `data.userName` from the widget payload
+    are NOT trusted. The ticket is always owned by `current_user.id`
+    (line below); the widget fields stay for context (logging, email
+    body) but cannot influence ownership.
     """
     # Build steps walked summary
     steps_summary = []

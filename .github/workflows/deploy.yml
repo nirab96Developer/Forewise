@@ -50,7 +50,7 @@ jobs:
             # 3. Run backend tests BEFORE deploy
             echo ">> Running backend tests..."
             cd app_backend
-            .venv/bin/python3 -m pytest tests/test_health_and_auth.py tests/test_status_transitions.py tests/test_scope_enforcement.py tests/test_flow_validation.py tests/test_budget_integrity.py tests/test_auth_admin_permissions.py tests/test_auth_self_service_permissions.py tests/test_budgets_scope_permissions.py tests/test_equipment_scan_release_permissions.py tests/test_system_rates_permissions.py tests/test_activity_types_permissions.py tests/test_supplier_rotations_permissions.py tests/test_project_assignments_permissions_seed.py tests/test_notifications_permissions.py tests/test_pricing_permissions.py -v --tb=short
+            .venv/bin/python3 -m pytest tests/test_health_and_auth.py tests/test_status_transitions.py tests/test_scope_enforcement.py tests/test_flow_validation.py tests/test_budget_integrity.py tests/test_auth_admin_permissions.py tests/test_auth_self_service_permissions.py tests/test_budgets_scope_permissions.py tests/test_equipment_scan_release_permissions.py tests/test_system_rates_permissions.py tests/test_activity_types_permissions.py tests/test_supplier_rotations_permissions.py tests/test_project_assignments_permissions_seed.py tests/test_notifications_permissions.py tests/test_pricing_permissions.py tests/test_support_tickets_permissions.py -v --tb=short
             echo ">> All tests passed"
             cd ..
 
