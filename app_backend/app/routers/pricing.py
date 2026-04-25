@@ -12,7 +12,7 @@ from sqlalchemy import func, text as _text
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.services.rate_service import get_rate_service
 from app.models.worklog import Worklog
 from app.models.project import Project
@@ -125,10 +125,16 @@ async def simulate_days_cost(
     current_user=Depends(get_current_active_user)
 ):
     """
-    סימולציה: חישוב עלות לפי ימים
-    
-דוגמה: 5 ימים × 9 שעות × 120 = 5,400
+    סימולציה: חישוב עלות לפי ימים.
+
+    Wave 7.H — locked behind `budgets.read`. Even though it doesn't
+    return budget rows, it exposes the live rate × days × hours math
+    that lets a caller back-derive supplier rates and forecast project
+    costs — same sensitivity tier as the reports below. SUPPLIER and
+    other roles without budgets.read get 403.
     """
+    require_permission(current_user, "budgets.read")
+
     rate_service = get_rate_service(db)
     
     total_hours = Decimal(days * hours_per_day)
@@ -207,14 +213,15 @@ async def get_pricing_report_by_project(
     current_user=Depends(get_current_active_user)
 ):
     """
-    דוח תמחור לפי פרויקט
-    
+    דוח תמחור לפי פרויקט (Wave 7.H — `budgets.read`).
+
     מסכם את כל הדיווחים לפי פרויקט:
     - סה״כ שעות
     - סה״כ עלות לפני מע״מ
     - סה״כ עלות כולל מע״מ
     - מספר דיווחים
     """
+    require_permission(current_user, "budgets.read")
     query = db.query(
         Project.id,
         Project.name,
@@ -376,14 +383,15 @@ async def get_pricing_report_by_supplier(
     current_user=Depends(get_current_active_user)
 ):
     """
-    דוח תמחור לפי ספק
-    
+    דוח תמחור לפי ספק (Wave 7.H — `budgets.read`).
+
     מסכם את כל הדיווחים לפי ספק:
     - סה״כ שעות
     - סה״כ עלות לפני מע״מ
     - סה״כ עלות כולל מע״מ
     - מספר דיווחים
     """
+    require_permission(current_user, "budgets.read")
     query = db.query(
         Supplier.id,
         Supplier.name,
