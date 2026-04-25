@@ -6,8 +6,26 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_active_user
+from app.core.dependencies import get_current_active_user, require_permission
 from app.models.user import User
+
+
+# Wave 7.G — ownership helper for the per-id endpoints
+def _check_notification_ownership(user: User, notification) -> None:
+    """Raise 403 if the notification doesn't belong to this user.
+
+    ADMIN bypasses (matches require_permission behavior elsewhere). Other
+    roles must be the notification.user_id to proceed. Used by the
+    per-id read/mutate endpoints so users can never poke at someone
+    else's notifications by guessing IDs.
+    """
+    if user.role and user.role.code in ("ADMIN", "SUPER_ADMIN"):
+        return
+    if notification.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="התראה לא שייכת למשתמש",
+        )
 from app.schemas.notification import (
     NotificationCreate,
     NotificationUpdate,
@@ -129,8 +147,14 @@ def create_notification(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Create new notification."""
-    # Only allow creating notifications for the current user or if user is admin
+    """Create new notification.
+
+    Wave 7.G — locked behind `notifications.manage` (ADMIN only per
+    Wave 7.A migration). Even before this gate, the existing
+    role-code check below ensured non-admins could only create
+    notifications for themselves; we keep that defensive layer.
+    """
+    require_permission(current_user, "notifications.manage")
     if notification.user_id != current_user.id and not (current_user.role and current_user.role.code == "ADMIN"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -148,7 +172,13 @@ def update_notification(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Update notification."""
+    """Update notification.
+
+    Wave 7.G — admin-only mutation. Suppliers and rank-and-file users
+    don't need to PUT-edit notification rows; the few attributes they
+    touch (read flag) flow through the dedicated /read endpoints.
+    """
+    require_permission(current_user, "notifications.manage")
     notification = notification_service.get_notification(db, notification_id)
     if not notification or notification.user_id != current_user.id:
         raise HTTPException(
@@ -167,18 +197,26 @@ def update_notification(
 
 
 def _mark_one_as_read(notification_id: int, db: Session, current_user: User):
-    """Internal helper — mark a single notification as read."""
-    notification = notification_service.mark_as_read(
-        db=db,
-        notification_id=notification_id,
-        user_id=current_user.id
-    )
+    """Internal helper — mark a single notification as read.
+
+    Wave 7.G — explicit ownership check via _check_notification_ownership
+    BEFORE the service call. Previously the service silently filtered by
+    user_id, which conflated "doesn't exist" with "belongs to someone
+    else" — both returned 404. Now a non-owner gets a clean 403, matching
+    the behavior the rest of Phase 2 settled on.
+    """
+    notification = notification_service.get_notification(db, notification_id)
     if not notification:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notification not found"
         )
-    return notification
+    _check_notification_ownership(current_user, notification)
+    return notification_service.mark_as_read(
+        db=db,
+        notification_id=notification_id,
+        user_id=current_user.id,
+    )
 
 
 # POST (original) + PATCH (frontend expects PATCH)
@@ -231,7 +269,13 @@ def bulk_notification_action(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Perform bulk action on notifications."""
+    """Perform bulk action on notifications.
+
+    Wave 7.G — admin-only. The per-id user-facing actions
+    (mark single read / unread) are still self-service via the
+    /{id}/read endpoints below.
+    """
+    require_permission(current_user, "notifications.manage")
     updated_count = 0
     
     for notification_id in bulk_action.notification_ids:
@@ -262,7 +306,12 @@ def delete_notification(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Delete notification."""
+    """Delete notification.
+
+    Wave 7.G — admin-only. Service layer additionally scopes the delete
+    to user_id, but the perm gate is the primary control.
+    """
+    require_permission(current_user, "notifications.manage")
     success = notification_service.delete_notification(
         db=db,
         notification_id=notification_id,
@@ -294,12 +343,13 @@ def cleanup_old_notifications(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Clean up old notifications (admin only)."""
-    if not (current_user.role and current_user.role.code == "ADMIN"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
+    """Clean up old notifications (admin only).
+
+    Wave 7.G — replaced the inline role-code check with the
+    `notifications.manage` permission gate (admin-only assignment in
+    Wave 7.A migration). Behavior identical for ADMIN; cleaner audit.
+    """
+    require_permission(current_user, "notifications.manage")
     
     deleted_count = notification_service.cleanup_old_notifications(db, days_old)
     

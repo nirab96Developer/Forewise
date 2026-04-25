@@ -11,13 +11,13 @@
 | מטריקה | מספר |
 |---|---|
 | סך הכל endpoints | 418 |
-| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 64 |
+| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 59 |
 | 🟡 בינוניים — auth-only על read endpoints | 33 |
-| 🟢 תקינים — יש require_permission או public legitimate | 321 |
+| 🟢 תקינים — יש require_permission או public legitimate | 326 |
 | Permissions ב-DB | 184 |
-| Permissions שמוזכרים בקוד | 144 |
+| Permissions שמוזכרים בקוד | 145 |
 | Permissions בקוד שאין ב-DB (בעיה) | 52 |
-| Permissions ב-DB שלא משמשים בקוד (יתומים) | 92 |
+| Permissions ב-DB שלא משמשים בקוד (יתומים) | 91 |
 | Permissions עם duplicate case (UPPER + lower) | 15 |
 
 ---
@@ -97,7 +97,7 @@
 
 ### 3.2 Permissions ב-DB שלא משמשים בקוד
 
-סה"כ 92 permissions יתומים ב-DB. ייתכן שיש להם שימושים שאני לא תפסתי, או שהם dead. להלן קטגוריזציה לפי convention:
+סה"כ 91 permissions יתומים ב-DB. ייתכן שיש להם שימושים שאני לא תפסתי, או שהם dead. להלן קטגוריזציה לפי convention:
 
 - **UPPERCASE legacy** (50): נראים legacy, יש להם duplicates lowercase ב-DB.
 
@@ -125,7 +125,7 @@
   ... (30 נוספים)
   ```
 
-- **lowercase יתומים** (42): permissions לישויות שאין להן endpoint, או לפעולות שלא נאכפות.
+- **lowercase יתומים** (41): permissions לישויות שאין להן endpoint, או לפעולות שלא נאכפות.
 
   ```
   activity_logs.read
@@ -150,7 +150,6 @@
   invoices.list
   invoices.read_own
   lookups.manage
-  notifications.manage
   permissions.manage
   projects.list
   reports.run
@@ -158,7 +157,8 @@
   settings.update
   supplier_constraints.approve
   supplier_constraints.create
-  ... (12 נוספים)
+  supplier_constraints.read
+  ... (11 נוספים)
   ```
 
 ### 3.3 Duplicate case (UPPER vs lower)
@@ -167,28 +167,28 @@
 דוגמה: `BUDGETS.VIEW` ו-`budgets.view` — שניהם מוקצים לתפקידים, חלקם רק UPPER, חלקם רק lower.
 
 ```
-  budgets.create / BUDGETS.CREATE
-  BUDGETS.UPDATE / budgets.update
-  invoices.approve / INVOICES.APPROVE
-  invoices.create / INVOICES.CREATE
-  INVOICES.UPDATE / invoices.update
-  PROJECTS.CREATE / projects.create
+  BUDGETS.CREATE / budgets.create
+  budgets.update / BUDGETS.UPDATE
+  INVOICES.APPROVE / invoices.approve
+  INVOICES.CREATE / invoices.create
+  invoices.update / INVOICES.UPDATE
+  projects.create / PROJECTS.CREATE
   projects.update / PROJECTS.UPDATE
   ROLES.CREATE / roles.create
-  ROLES.UPDATE / roles.update
-  suppliers.create / SUPPLIERS.CREATE
+  roles.update / ROLES.UPDATE
+  SUPPLIERS.CREATE / suppliers.create
   SUPPLIERS.DELETE / suppliers.delete
   suppliers.update / SUPPLIERS.UPDATE
   users.create / USERS.CREATE
-  USERS.DELETE / users.delete
-  USERS.UPDATE / users.update
+  users.delete / USERS.DELETE
+  users.update / USERS.UPDATE
 ```
 
 ---
 
 ## 4. Endpoints קריטיים בלי enforcement (🔴)
 
-סה"כ 64 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
+סה"כ 59 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
 
 ### לפי domain (top 15)
 
@@ -196,7 +196,7 @@
 |---|---|
 | `dashboard` | 18 |
 | `auth` | 15 |
-| `notifications` | 9 |
+| `notifications` | 4 |
 | `pricing` | 4 |
 | `otp` | 3 |
 | `support_tickets` | 3 |
@@ -245,7 +245,7 @@
 | `GET` | `/api/v1/dashboard/my-tasks` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/projects` | list | `dashboard.list` | yes |
 
-_ועוד 34 ב-CSV._
+_ועוד 29 ב-CSV._
 
 ---
 
@@ -321,11 +321,11 @@ _ועוד 34 ב-CSV._
 
 ### 🔴 דחוף — אכיפת הרשאות בendpoints קריטיים
 
-להוסיף `require_permission` ל-64 endpoints. הכי קריטי לפי החתכים האלה:
+להוסיף `require_permission` ל-59 endpoints. הכי קריטי לפי החתכים האלה:
 
 - **`dashboard`** (18 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
 - **`auth`** (15 endpoints) — endpoints של 2FA/biometric/WebAuthn — אין UI, אבל אם API נחשף משתמש מאומת יכול register passkey לחשבון אחר. דורש חידוד.
-- **`notifications`** (9 endpoints) — bulk-action, cleanup, read-all — user יכול לסמן הודעות של אחרים כנקראו.
+- **`notifications`** (4 endpoints) — bulk-action, cleanup, read-all — user יכול לסמן הודעות של אחרים כנקראו.
 - **`pricing`** (4 endpoints) — endpoints מציגים תעריפים — דליפה ל-supplier אם הוא מאומת.
 - **`otp`** (3 endpoints) — להחליט פר-endpoint לפי לוגיקה עסקית.
 - **`support_tickets`** (3 endpoints) — create/update/list — user יכול לערוך טיקטים של אחרים.
@@ -344,7 +344,7 @@ _ועוד 34 ב-CSV._
 
 ### 🟡 חוב טכני — permissions יתומים
 
-92 permissions ב-DB שאין להם שימוש. ניתן למחוק אחרי איחוד case.
+91 permissions ב-DB שאין להם שימוש. ניתן למחוק אחרי איחוד case.
 
 ### 🟡 בינוני — להגדיר scope
 
