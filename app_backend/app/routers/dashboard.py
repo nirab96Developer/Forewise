@@ -6,7 +6,18 @@ from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func, and_, or_, desc, extract, text
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, require_permission
+
+
+# Wave Dashboard — single shared dependency injected on every dashboard
+# route. The migration a3b4c5d6e7f8 just removed DASHBOARD.VIEW from
+# SUPPLIER, so a supplier hitting any /dashboard/* now gets 403 here
+# BEFORE the handler runs its own scope filter. Rationale: the dashboard
+# returns merged financial / KPI / activity data; "scope filter to empty"
+# is not the same as "permission denied" — we want the latter on principle.
+def _dashboard_view(current_user=Depends(get_current_user)):
+    require_permission(current_user, "dashboard.view")
+    return current_user
 from app.models import User, Project, Budget, WorkOrder, Region, Area, Location, Invoice, Supplier
 
 router = APIRouter(
@@ -23,7 +34,7 @@ _pending_engine = PendingTasksEngine()
 @router.get("/my-tasks")
 async def get_my_tasks(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(_dashboard_view)
 ) -> Dict[str, Any]:
     """
     Get pending tasks, KPIs, actions, and alerts for current user.
@@ -48,7 +59,7 @@ async def get_my_tasks(
 @router.get("/summary")
 async def get_dashboard_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(_dashboard_view)
 ) -> Dict[str, Any]:
     """Get dashboard summary data"""
     
@@ -237,7 +248,7 @@ async def get_dashboard_summary(
 @router.get("/admin-overview")
 async def get_admin_overview(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(_dashboard_view)
 ) -> Dict[str, Any]:
     """Admin dashboard overview — aggregates KPIs, financial, alerts, charts, events."""
     if not current_user.role or current_user.role.code not in ("ADMIN", "SUPER_ADMIN"):
@@ -356,7 +367,7 @@ async def get_admin_overview(
 @router.get("/map")
 async def get_dashboard_map(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(_dashboard_view)
 ) -> Dict[str, Any]:
     """Get map data for dashboard."""
     from app.models import Location, Project
@@ -412,7 +423,7 @@ async def get_dashboard_map(
 @router.get("/projects")
 async def get_dashboard_projects(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
     limit: int = 10
 ) -> List[Dict[str, Any]]:
     """Get recent projects for dashboard"""
@@ -502,7 +513,7 @@ async def get_dashboard_projects(
 @router.get("/alerts")
 async def get_dashboard_alerts(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
     limit: int = 5
 ) -> List[Dict[str, Any]]:
     """Get system alerts for dashboard"""
@@ -557,7 +568,7 @@ async def get_dashboard_alerts(
 @router.get("/statistics")
 async def get_dashboard_statistics(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(_dashboard_view)
 ) -> Dict[str, Any]:
     """Get detailed statistics for dashboard"""
     
@@ -618,7 +629,7 @@ async def get_dashboard_statistics(
 @router.get("/live-counts")
 async def get_live_counts(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(_dashboard_view)
 ) -> Dict[str, Any]:
     """
     Live counts for badges across all settings/admin pages.
@@ -716,7 +727,7 @@ async def get_live_counts(
 @router.get("/financial-summary")
 async def get_financial_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(_dashboard_view)
 ) -> Dict[str, Any]:
     """
     Financial summary for dashboard: budgets, invoices, costs.
@@ -776,7 +787,7 @@ async def get_financial_summary(
 @router.get("/stats")
 async def get_dashboard_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(_dashboard_view)
 ) -> Dict[str, Any]:
     """Alias for /summary — frontend calls /dashboard/stats."""
     return await get_dashboard_summary(db=db, current_user=current_user)
@@ -785,7 +796,7 @@ async def get_dashboard_stats(
 @router.get("/activity")
 async def get_dashboard_activity(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
     limit: int = 20
 ) -> List[Dict[str, Any]]:
     """Recent activity feed for dashboard."""
@@ -815,7 +826,7 @@ async def get_dashboard_activity(
 @router.get("/hours")
 async def get_dashboard_hours(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
     period: str = "month"
 ) -> Dict[str, Any]:
     """Work-hours summary for dashboard."""
@@ -855,7 +866,7 @@ async def get_dashboard_hours(
 @router.get("/equipment/active")
 async def get_dashboard_active_equipment(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
     limit: int = 20
 ) -> List[Dict[str, Any]]:
     """Active equipment for dashboard widget."""
@@ -883,7 +894,7 @@ async def get_dashboard_active_equipment(
 @router.get("/suppliers/active")
 async def get_dashboard_active_suppliers(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
     limit: int = 20
 ) -> List[Dict[str, Any]]:
     """Active suppliers for dashboard widget."""
@@ -911,7 +922,7 @@ async def get_dashboard_active_suppliers(
 @router.get("/monthly-costs")
 async def get_monthly_costs(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
     months: int = 6
 ) -> List[Dict[str, Any]]:
     """Monthly cost breakdown for dashboard chart."""
@@ -957,7 +968,7 @@ async def get_monthly_costs(
 @router.get("/region-areas")
 async def get_region_areas_breakdown(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
 ) -> List[Dict[str, Any]]:
     """Area breakdown for region manager dashboard."""
     from app.models import Worklog
@@ -1004,7 +1015,7 @@ async def get_region_areas_breakdown(
 @router.get("/work-manager-summary")
 async def get_work_manager_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
     """
     Weekly summary for WORK_MANAGER dashboard.
@@ -1136,7 +1147,7 @@ async def get_work_manager_summary(
 @router.get("/work-manager-overview")
 async def get_work_manager_overview(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
     """Alias — frontend calls this name."""
     return await get_work_manager_summary(db=db, current_user=current_user)
@@ -1148,7 +1159,7 @@ async def get_work_manager_overview(
 @router.get("/region-overview")
 async def get_region_overview(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
     """Region Manager dashboard — scoped to the user's region."""
     rid = current_user.region_id
@@ -1250,7 +1261,7 @@ async def get_region_overview(
 @router.get("/area-overview")
 async def get_area_overview(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
     """Area Manager dashboard — scoped to the user's area."""
     aid = current_user.area_id
@@ -1342,7 +1353,7 @@ async def get_coordinator_queue(
     project_id: str = "",
     search: str = "",
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
     """Order coordinator work order queue with filters."""
     base_filter = "wo.deleted_at IS NULL AND wo.is_active = true"
@@ -1487,7 +1498,7 @@ async def get_accountant_overview(
     supplier_id: str = "",
     search: str = "",
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
     """Accountant dashboard — worklogs for review, KPIs, filters."""
     now = datetime.now()
@@ -1569,7 +1580,7 @@ async def get_accountant_overview(
 async def get_worklog_detail(
     worklog_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
     """Detailed worklog view for accountant modal."""
     row = db.execute(text("""

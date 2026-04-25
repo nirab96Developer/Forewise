@@ -11,8 +11,8 @@
 | מטריקה | מספר |
 |---|---|
 | סך הכל endpoints | 418 |
-| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 54 |
-| 🟡 בינוניים — auth-only על read endpoints | 33 |
+| 🔴 קריטיים — אין enforcement (mutation/sensitive) | 58 |
+| 🟡 בינוניים — auth-only על read endpoints | 29 |
 | 🟢 תקינים — יש require_permission או public legitimate | 331 |
 | Permissions ב-DB | 184 |
 | Permissions שמוזכרים בקוד | 146 |
@@ -32,7 +32,7 @@
 | `ORDER_COORDINATOR` (מתאם הזמנות) | 38 | תיאום הזמנות (region/area) |
 | `WORK_MANAGER` (מנהל עבודה) | 43 | פרויקטים שלו |
 | `ACCOUNTANT` (מנהלת חשבונות) | 20 | אזור/מרחב לפי שיוך |
-| `SUPPLIER` (ספק) | 15 | טוקן ספק (חיצוני) |
+| `SUPPLIER` (ספק) | 14 | טוקן ספק (חיצוני) |
 
 ---
 
@@ -168,19 +168,19 @@
 דוגמה: `BUDGETS.VIEW` ו-`budgets.view` — שניהם מוקצים לתפקידים, חלקם רק UPPER, חלקם רק lower.
 
 ```
-  BUDGETS.CREATE / budgets.create
+  budgets.create / BUDGETS.CREATE
   BUDGETS.UPDATE / budgets.update
   INVOICES.APPROVE / invoices.approve
   INVOICES.CREATE / invoices.create
-  INVOICES.UPDATE / invoices.update
-  PROJECTS.CREATE / projects.create
+  invoices.update / INVOICES.UPDATE
+  projects.create / PROJECTS.CREATE
   PROJECTS.UPDATE / projects.update
-  roles.create / ROLES.CREATE
+  ROLES.CREATE / roles.create
   roles.update / ROLES.UPDATE
-  suppliers.create / SUPPLIERS.CREATE
+  SUPPLIERS.CREATE / suppliers.create
   SUPPLIERS.DELETE / suppliers.delete
-  suppliers.update / SUPPLIERS.UPDATE
-  USERS.CREATE / users.create
+  SUPPLIERS.UPDATE / suppliers.update
+  users.create / USERS.CREATE
   users.delete / USERS.DELETE
   users.update / USERS.UPDATE
 ```
@@ -189,13 +189,13 @@
 
 ## 4. Endpoints קריטיים בלי enforcement (🔴)
 
-סה"כ 54 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
+סה"כ 58 endpoints מבצעים פעולות רגישות ללא בדיקת הרשאה. כל משתמש מאומת (כולל ספק עם session גנוב) יכול לקרוא להם בהצלחה.
 
 ### לפי domain (top 15)
 
 | Domain | מספר 🔴 |
 |---|---|
-| `dashboard` | 18 |
+| `dashboard` | 22 |
 | `auth` | 15 |
 | `notifications` | 4 |
 | `support_tickets` | 3 |
@@ -237,21 +237,21 @@
 | `GET` | `/api/v1/dashboard/alerts` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/area-overview` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/coordinator-queue` | list | `dashboard.list` | yes |
+| `GET` | `/api/v1/dashboard/equipment/active` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/financial-summary` | list | `dashboard.list` | no |
 | `GET` | `/api/v1/dashboard/hours` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/live-counts` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/map` | list | `dashboard.list` | yes |
 | `GET` | `/api/v1/dashboard/monthly-costs` | list | `dashboard.list` | no |
 | `GET` | `/api/v1/dashboard/my-tasks` | list | `dashboard.list` | yes |
-| `GET` | `/api/v1/dashboard/projects` | list | `dashboard.list` | yes |
 
-_ועוד 24 ב-CSV._
+_ועוד 28 ב-CSV._
 
 ---
 
 ## 5. Endpoints בינוניים (🟡)
 
-סה"כ 33 — בעיקר read/list בלי `require_permission`. פחות חמור מ-🔴 (אין side effect) אבל עדיין דליפת מידע אם משתמש לא מורשה ניגש.
+סה"כ 29 — בעיקר read/list בלי `require_permission`. פחות חמור מ-🔴 (אין side effect) אבל עדיין דליפת מידע אם משתמש לא מורשה ניגש.
 
 דוגמאות (10 ראשונות):
 
@@ -262,11 +262,11 @@ _ועוד 24 ב-CSV._
 | `GET` | `/api/v1/auth/biometric/credentials` | `auth.list` |
 | `GET` | `/api/v1/auth/devices` | `auth.list` |
 | `GET` | `/api/v1/auth/sessions` | `auth.list` |
-| `GET` | `/api/v1/dashboard/equipment/active` | `dashboard.list` |
-| `GET` | `/api/v1/dashboard/stats` | `dashboard.list` |
-| `GET` | `/api/v1/dashboard/suppliers/active` | `dashboard.list` |
-| `GET` | `/api/v1/dashboard/work-manager-overview` | `dashboard.list` |
 | `GET` | `/api/v1/equipment-models` | `equipment_models.list` |
+| `GET` | `/api/v1/equipment-models/active` | `equipment_models.list` |
+| `GET` | `/api/v1/geo/areas/boundaries` | `geo.list` |
+| `GET` | `/api/v1/geo/layers/all` | `geo.list` |
+| `GET` | `/api/v1/geo/projects/{project_id}/navigation-point` | `geo.read` |
 
 ---
 
@@ -321,9 +321,9 @@ _ועוד 24 ב-CSV._
 
 ### 🔴 דחוף — אכיפת הרשאות בendpoints קריטיים
 
-להוסיף `require_permission` ל-54 endpoints. הכי קריטי לפי החתכים האלה:
+להוסיף `require_permission` ל-58 endpoints. הכי קריטי לפי החתכים האלה:
 
-- **`dashboard`** (18 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
+- **`dashboard`** (22 endpoints) — כל ה-`/dashboard/*` חשוף — דליפת KPIs, תקציבים, work orders. read endpoints, אבל ה-payload מכיל data רגיש לפי תפקיד.
 - **`auth`** (15 endpoints) — endpoints של 2FA/biometric/WebAuthn — אין UI, אבל אם API נחשף משתמש מאומת יכול register passkey לחשבון אחר. דורש חידוד.
 - **`notifications`** (4 endpoints) — bulk-action, cleanup, read-all — user יכול לסמן הודעות של אחרים כנקראו.
 - **`support_tickets`** (3 endpoints) — create/update/list — user יכול לערוך טיקטים של אחרים.
