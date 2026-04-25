@@ -170,6 +170,18 @@ def parse_router_file(path: str):
         body_src = resolved.get("body_src", ast.unparse(node) if hasattr(ast, "unparse") else "")
         require_perms = list(resolved.get("require_perms", []))
         custom_verify = list(resolved.get("custom_verify", []))
+        # Custom dependency injected via FastAPI Depends() that itself
+        # calls require_permission. Example: `def _dashboard_view(...):
+        # require_permission(current_user, "dashboard.view")` used as
+        # `Depends(_dashboard_view)` on every route in the file.
+        # Look up any Depends(<helper>) in the signature whose target
+        # function (in this same file) calls require_permission.
+        for dep_name in re.findall(r"Depends\(\s*(_\w+)\s*\)", body_src):
+            dep_info = func_enforcement.get(dep_name)
+            if dep_info and dep_info.get("require_perms"):
+                for p in dep_info["require_perms"]:
+                    if p not in require_perms:
+                        require_perms.append(p)
         # `inline_role_block` collapses ALL non-permission-based enforcement
         # patterns: direct role check, indirect (`is_admin` variable),
         # helper-call check, AND self-service scope filter on user_id.
