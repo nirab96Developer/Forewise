@@ -50,9 +50,18 @@ def parse_router_file(path: str):
             continue
         body_src = ast.unparse(node) if hasattr(ast, "unparse") else ""
         sig_src = ast.unparse(node.args) if hasattr(ast, "unparse") else ""
-        rp = sorted(set(re.findall(
-            r"require_permission\([^,]*,\s*['\"]([^'\"]+)['\"]", body_src
-        )))
+        # Two enforcement patterns:
+        #   1. Inline:   require_permission(current_user, "perm.code")
+        #   2. Factory:  Depends(require_permission("perm.code"))
+        # Both count as enforcement; the matrix doesn't distinguish.
+        rp = sorted(set(
+            re.findall(
+                r"require_permission\([^,]*,\s*['\"]([^'\"]+)['\"]", body_src
+            )
+            + re.findall(
+                r"Depends\(\s*require_permission\(\s*['\"]([^'\"]+)['\"]", body_src
+            )
+        ))
         cv = sorted(set(re.findall(
             r"verify_(admin|owner|manager|coordinator)\(\s*current_user",
             body_src,

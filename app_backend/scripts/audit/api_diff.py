@@ -128,6 +128,13 @@ def main():
         for m, p, src in orphan_be:
             f.write(f"{m:6s}  {p:55s}  {src}\n")
 
+    # Also write the matched set so the matrix builder can mark
+    # ui_exposed=yes per (method, normalized_path).
+    with open("/tmp/diff_matched.txt", "w") as f:
+        f.write(f"# Matched (method, normalized_path) pairs ({len(matched)})\n\n")
+        for m, p in sorted(matched):
+            f.write(f"{m:6s}  {p}\n")
+
     print(f"Backend routes:  {len(backend)}")
     print(f"Frontend calls:  {len(frontend)}")
     print(f"Matched:         {len(matched)}")
