@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_permission
+from app.core.authorization import AuthorizationService
 from app.models.user import User
 from app.schemas.budget import (
     BudgetCreate, BudgetUpdate, BudgetResponse,
@@ -392,8 +393,12 @@ def get_budget_detail(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Budget detail with project/region/area info + KPIs."""
-    require_permission(current_user, "budgets.read")
+    """Budget detail with project/region/area info + KPIs.
+
+    Phase 3 Wave 1 — uses AuthorizationService.authorize() instead of
+    the previous require_permission + _check_budget_scope pair. Behavior
+    identical (same permission, same scope strategy); single call site.
+    """
     from app.models import Budget, Project, Region, Area
     from sqlalchemy import text
 
@@ -401,7 +406,7 @@ def get_budget_detail(
     if not budget:
         raise HTTPException(status_code=404, detail="תקציב לא נמצא")
 
-    _check_budget_scope(db, current_user, budget)
+    AuthorizationService(db).authorize(current_user, "budgets.read", resource=budget, resource_type="Budget")
     
     project = db.query(Project).filter(Project.id == budget.project_id).first() if budget.project_id else None
     region = db.query(Region).filter(Region.id == budget.region_id).first() if budget.region_id else None
@@ -446,15 +451,17 @@ def get_budget_committed(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Work Orders holding budget (committed amounts)."""
-    require_permission(current_user, "budgets.read")
+    """Work Orders holding budget (committed amounts).
+
+    Phase 3 Wave 1 — single AuthorizationService.authorize() call.
+    """
     from app.models import Budget, WorkOrder, Supplier
 
     budget = db.query(Budget).filter(Budget.id == budget_id, Budget.is_active == True).first()
     if not budget:
         return {"total": 0, "sum": 0, "items": []}
 
-    _check_budget_scope(db, current_user, budget)
+    AuthorizationService(db).authorize(current_user, "budgets.read", resource=budget, resource_type="Budget")
 
     if not budget.project_id:
         return {"total": 0, "sum": 0, "items": []}
@@ -498,15 +505,17 @@ def get_budget_spent(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Worklogs that consumed budget (spent amounts)."""
-    require_permission(current_user, "budgets.read")
+    """Worklogs that consumed budget (spent amounts).
+
+    Phase 3 Wave 1 — single AuthorizationService.authorize() call.
+    """
     from app.models import Budget, Worklog
 
     budget = db.query(Budget).filter(Budget.id == budget_id, Budget.is_active == True).first()
     if not budget:
         return {"total": 0, "sum": 0, "vat_sum": 0, "items": []}
 
-    _check_budget_scope(db, current_user, budget)
+    AuthorizationService(db).authorize(current_user, "budgets.read", resource=budget, resource_type="Budget")
 
     if not budget.project_id:
         return {"total": 0, "sum": 0, "vat_sum": 0, "items": []}
