@@ -423,8 +423,32 @@ def update_worklog(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Update worklog"""
+    """Update worklog.
+
+    Phase 3 Wave 3.1.6.c — defense-in-depth scope check on top of
+    the existing `worklogs.update` perm gate. Today only ADMIN holds
+    that perm (via require_permission bypass), so the strategy is a
+    no-op for the only caller in production. If product later grants
+    update perms to a non-global role:
+      - REGION/AREA/WORK_MGR → restricted to their scope
+      - SUPPLIER/FIELD_WORKER → restricted to their own worklog (via
+        the strategy's OWN_ONLY branch — natural "owner can update
+        their own" semantics)
+    No behavior change today.
+
+    Permissions: worklogs.update (RBAC, unchanged).
+    """
     require_permission(current_user, "worklogs.update")
+
+    worklog = db.query(Worklog).filter(Worklog.id == worklog_id).first()
+    if not worklog:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Worklog not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=worklog,
+        resource_type="Worklog",
+    )
 
     try:
         worklog = worklog_service.update(db, worklog_id, data, current_user.id)
@@ -439,8 +463,24 @@ def delete_worklog(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Deactivate worklog (TRANSACTIONS - uses is_active)"""
+    """Deactivate worklog (TRANSACTIONS - uses is_active).
+
+    Phase 3 Wave 3.1.6.c — defense-in-depth scope check. Today
+    only ADMIN holds `worklogs.delete`, so the strategy is a no-op
+    for the only caller. Defense for the day a non-admin role gets
+    the perm.
+    """
     require_permission(current_user, "worklogs.delete")
+
+    worklog = db.query(Worklog).filter(Worklog.id == worklog_id).first()
+    if not worklog:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Worklog {worklog_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=worklog,
+        resource_type="Worklog",
+    )
 
     try:
         worklog_service.deactivate(db, worklog_id, current_user.id)
@@ -455,8 +495,22 @@ def activate_worklog(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Activate worklog"""
+    """Activate worklog.
+
+    Phase 3 Wave 3.1.6.c — defense-in-depth scope check. Today
+    only ADMIN holds `worklogs.restore`. Defense for future grants.
+    """
     require_permission(current_user, "worklogs.restore")
+
+    worklog = db.query(Worklog).filter(Worklog.id == worklog_id).first()
+    if not worklog:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Worklog {worklog_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=worklog,
+        resource_type="Worklog",
+    )
 
     try:
         worklog = worklog_service.activate(db, worklog_id, current_user.id)
@@ -525,18 +579,40 @@ def submit_worklog(
     # Accept either a JSON body or a legacy query param
     notes = (body.notes if body and body.notes else notes)
     """
-    Submit worklog for approval
+    Submit worklog for approval.
 
-    Permissions: worklogs.submit (or owner)
+    Phase 3 Wave 3.1.6.c — owner-bypass preserved exactly.
+    Owner: no perm, no scope check — submitting your own report is
+    self-service, identical to today's behavior.
+    Non-owner: keeps the existing `worklogs.submit` perm gate, plus a
+    new defense-in-depth scope check (no behavior change today —
+    SUPPLIER holds `worklogs.submit` but the OWN_ONLY branch already
+    constrained them; defense for the day a non-supplier role gets
+    the perm).
+
+    fetch + 404 + owner-or-(perm+scope) live OUTSIDE the try/except so
+    HTTPException propagates cleanly (the inner try also re-raises
+    HTTPException explicitly, which is good — but the broad
+    `except Exception` would otherwise mask a 403/404 by turning it
+    into a 500).
+
+    The scan-gate validation (lines below) is untouched.
+
+    Permissions: worklogs.submit (RBAC, only enforced for non-owners).
     """
-    try:
-        # Check if owner or has permission
-        worklog = worklog_service.get_by_id(db, worklog_id)
-        if not worklog:
-            raise HTTPException(status_code=404, detail="דיווח לא נמצא")
-        if worklog.user_id != current_user.id:
-            require_permission(current_user, "worklogs.submit")
+    worklog = worklog_service.get_by_id(db, worklog_id)
+    if not worklog:
+        raise HTTPException(status_code=404, detail="דיווח לא נמצא")
 
+    if worklog.user_id != current_user.id:
+        require_permission(current_user, "worklogs.submit")
+        AuthorizationService(db).authorize(
+            current_user,
+            resource=worklog,
+            resource_type="Worklog",
+        )
+
+    try:
         # ============================================
         # SCAN GATE: חובה סריקה יומית לפני הגשת דיווח
         # Enterprise validation rules:
