@@ -289,6 +289,39 @@ class NotificationScopeStrategy:
         return query.filter(Notification.user_id == user.id)
 
 
+class SupportTicketScopeStrategy:
+    """SupportTicket ownership (Phase 3 Wave 3.1.5).
+
+    Mirrors the legacy inline checks in routers/support_tickets.py
+    exactly so existing tests stay green:
+
+      ADMIN          → bypass (sees everyone's tickets, can edit them)
+      everyone else  → ticket.user_id == user.id, else 403
+
+    Note: unlike NotificationScopeStrategy, this one does NOT bypass
+    SUPER_ADMIN. The legacy support_tickets code only checks the
+    string "ADMIN", and we preserve that behavior. If SUPER_ADMIN
+    needs access in the future, that's a deliberate product change,
+    not a side-effect of the centralization wave.
+    """
+
+    DETAIL = "Not authorized to view this ticket"
+
+    def check(self, db: Session, user: User, ticket) -> None:
+        code = (user.role.code if user.role else "").upper()
+        if code == "ADMIN":
+            return
+        if ticket.user_id != user.id:
+            raise _FORBIDDEN(self.DETAIL)
+
+    def filter(self, db: Session, user: User, query):
+        from app.models.support_ticket import SupportTicket
+        code = (user.role.code if user.role else "").upper()
+        if code == "ADMIN":
+            return query
+        return query.filter(SupportTicket.user_id == user.id)
+
+
 class ProjectScopeStrategy:
     """Project-level scope (Phase 3 Wave 1.3.e).
 
@@ -368,8 +401,8 @@ STRATEGIES: dict[str, Any] = {
     "WorkOrder": WorkOrderScopeStrategy(),                   # Wave 3.1.2
     "Project": ProjectScopeStrategy(),                       # Wave 3.1.3.e
     "Notification": NotificationScopeStrategy(),             # Wave 3.1.4
+    "SupportTicket": SupportTicketScopeStrategy(),           # Wave 3.1.5
     # "SupplierRotation":  SupplierRotationScopeStrategy(),  # Wave 3.1.3
     # "Worklog":           WorklogScopeStrategy(),           # Wave 3.1.5
     # "Invoice":           InvoiceScopeStrategy(),           # Wave 3.1.6
-    # "SupportTicket":     SupportTicketScopeStrategy(),     # Wave 3.1.7
 }

@@ -10,6 +10,7 @@ from datetime import datetime
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user
+from app.core.authorization import AuthorizationService
 from app.core.email import send_email
 from app.models.user import User
 from app.models.support_ticket import SupportTicket
@@ -161,10 +162,12 @@ async def get_support_tickets(
     if category:
         query = query.filter(SupportTicket.category == category)
     
-    # Filter by user if not admin
-    if current_user.role.code != "ADMIN":
-        query = query.filter(SupportTicket.user_id == current_user.id)
-    
+    # Phase 3 Wave 3.1.5 — scope filter via AuthorizationService.
+    # Behavior identical: ADMIN sees all, others see own.
+    query = AuthorizationService(db).filter_query(
+        current_user, query, "SupportTicket",
+    )
+
     # Order by most recent first
     offset = (page - 1) * limit if page > 1 else skip
     tickets = query.order_by(SupportTicket.created_at.desc()).offset(offset).limit(limit).all()
@@ -202,14 +205,13 @@ async def get_support_ticket(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Support ticket not found"
         )
-    
-    # Check permission: admin or ticket owner
-    if current_user.role.code != "ADMIN" and ticket.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view this ticket"
-        )
-    
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=ticket,
+        resource_type="SupportTicket",
+    )
+
     return ticket
 
 
@@ -403,14 +405,13 @@ async def update_support_ticket(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Support ticket not found"
         )
-    
-    # Check permission
-    if current_user.role.code != "ADMIN" and db_ticket.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this ticket"
-        )
-    
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=db_ticket,
+        resource_type="SupportTicket",
+    )
+
     # Track status change for logging
     old_status = db_ticket.status
     
@@ -454,11 +455,13 @@ async def get_ticket_comments(
     ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    
-    # Permission check
-    if current_user.role.code != "ADMIN" and ticket.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=ticket,
+        resource_type="SupportTicket",
+    )
+
     comments = (
         db.query(SupportTicketComment)
         .filter(SupportTicketComment.ticket_id == ticket_id)
@@ -497,11 +500,13 @@ async def add_ticket_comment(
     ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    
-    # Permission check
-    if current_user.role.code != "ADMIN" and ticket.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=ticket,
+        resource_type="SupportTicket",
+    )
+
     is_staff = current_user.role.code == "ADMIN"
     
     # Create comment
