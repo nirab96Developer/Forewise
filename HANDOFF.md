@@ -185,6 +185,14 @@
 
 ---
 
+## Performance Debt — recorded
+
+| # | Where | What | Trigger to fix |
+|---|---|---|---|
+| PD-1 | `routers/work_orders.py:list_work_orders` | REGION_MGR / WORK_MGR scope is applied **post-hoc in Python** after `WorkOrderService.list()`. Pagination totals (`total`, `total_pages`) get re-calculated from the post-filter list — wrong page math possible on non-final pages. Fine today (~60 WOs). | Total WOs > 200, **or** QA reports "less than page_size items on a non-final page" for REGION/WORK_MGR. Fix: push filter into the service via `AuthorizationService.filter_query(user, q, "WorkOrder")` (strategy's `.filter()` is already written + tested). |
+
+---
+
 ## הוראה לצ'אט הבא
 
 > Phase 2 (Permission Enforcement) הושלם.
