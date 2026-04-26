@@ -250,6 +250,74 @@ class WorkOrderScopeStrategy:
         return query.filter(False)
 
 
+class ProjectScopeStrategy:
+    """Project-level scope (Phase 3 Wave 1.3.e).
+
+    Used by endpoints that act *on* a child of a project but where
+    the entity doesn't exist yet — e.g. POST /work-orders, where we
+    need to scope by `payload.project_id` before the WorkOrder row
+    exists, so WorkOrderScopeStrategy's `wo.project` dereference
+    doesn't apply.
+
+    Mirrors WorkOrderScopeStrategy.GLOBAL_ROLES exactly to keep the
+    matrix consistent: a user who can list a project's WOs in the
+    UI can also create one in that project (subject to RBAC perm —
+    e.g. ACCOUNTANT lacks `work_orders.create` so RBAC blocks even
+    though they're in GLOBAL_ROLES here).
+
+    Roles:
+      ADMIN / SUPER_ADMIN / ORDER_COORDINATOR / ACCOUNTANT → all
+      REGION_MANAGER → project.region_id == user.region_id
+      AREA_MANAGER   → project.area_id   == user.area_id
+      WORK_MANAGER   → project.id ∈ user's active project_assignments
+      SUPPLIER / FIELD_WORKER / anything else → 403
+    """
+
+    DETAIL = "אין הרשאה לפרויקט זה"
+
+    GLOBAL_ROLES = ("ADMIN", "SUPER_ADMIN", "ORDER_COORDINATOR", "ACCOUNTANT")
+
+    def check(self, db: Session, user: User, project) -> None:
+        code = (user.role.code if user.role else "").upper()
+
+        if code in self.GLOBAL_ROLES:
+            return
+
+        if code == "REGION_MANAGER":
+            if not user.region_id or project.region_id != user.region_id:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        if code == "AREA_MANAGER":
+            if not user.area_id or project.area_id != user.area_id:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        if code == "WORK_MANAGER":
+            from app.models.project_assignment import ProjectAssignment
+            assigned = (
+                db.query(ProjectAssignment)
+                .filter(
+                    ProjectAssignment.user_id == user.id,
+                    ProjectAssignment.project_id == project.id,
+                    ProjectAssignment.is_active == True,
+                )
+                .first()
+            )
+            if not assigned:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        # SUPPLIER, FIELD_WORKER, anything else → blocked.
+        raise _FORBIDDEN(self.DETAIL)
+
+    def filter(self, db: Session, user: User, query):
+        """Not used in Wave 1.3.e — left as a no-op so future "list
+        projects I can act on" use cases can wire in without changing
+        the strategy contract."""
+        return query
+
+
 # ---------------------------------------------------------------------------
 # Strategy registry — Wave 1 ships only Budget. The rest are placeholders
 # so a future wave adds the class then maps its name here, and the rest
@@ -259,6 +327,7 @@ class WorkOrderScopeStrategy:
 STRATEGIES: dict[str, Any] = {
     "Budget": BudgetScopeStrategy(),
     "WorkOrder": WorkOrderScopeStrategy(),                   # Wave 3.1.2
+    "Project": ProjectScopeStrategy(),                       # Wave 3.1.3.e
     # "SupplierRotation":  SupplierRotationScopeStrategy(),  # Wave 3.1.3
     # "Notification":      NotificationScopeStrategy(),      # Wave 3.1.4
     # "Worklog":           WorklogScopeStrategy(),           # Wave 3.1.5

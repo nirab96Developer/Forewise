@@ -293,12 +293,40 @@ def create_work_order(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Create new work order
-    
-    Permissions: work_orders.create
+    Create new work order.
+
+    Phase 3 Wave 1.3.e — pre-create scope check on `data.project_id`.
+    Closes the gap where any role with `work_orders.create` could
+    create a WO inside any project, regardless of region/area/
+    assignment. Now scoped via the new ProjectScopeStrategy:
+      ADMIN / SUPER_ADMIN / ORDER_COORDINATOR / ACCOUNTANT → all
+      REGION_MANAGER → project.region_id == user.region_id
+      AREA_MANAGER   → project.area_id   == user.area_id
+      WORK_MANAGER   → project ∈ assigned projects
+      SUPPLIER / FIELD_WORKER / others → 403
+
+    `project_id` is Optional in the schema (rootless WOs exist).
+    When omitted we keep the legacy behavior — RBAC alone — since
+    there's no project to scope against. This preserves any existing
+    rootless-WO flow in the field while closing the project-bound leak.
+
+    Permissions: work_orders.create (RBAC, unchanged).
     """
     require_permission(current_user, "work_orders.create")
-    
+
+    if data.project_id is not None:
+        project = db.query(Project).filter(Project.id == data.project_id).first()
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Project {data.project_id} not found",
+            )
+        AuthorizationService(db).authorize(
+            current_user,
+            resource=project,
+            resource_type="Project",
+        )
+
     try:
         work_order = work_order_service.create(db, data, current_user_id=current_user.id)
         notify_work_order_created(db, work_order)
