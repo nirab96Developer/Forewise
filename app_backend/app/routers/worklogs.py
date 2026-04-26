@@ -627,16 +627,38 @@ def approve_worklog(
     # Accept either a JSON body or a legacy query param
     notes = (body.notes if body and body.notes else notes)
     """
-    Approve worklog and send PDF report
-    
+    Approve worklog and send PDF report.
+
     On approval, PDF is sent to:
     - Supplier (for their records)
     - Area Accountant (for billing)
     - Area Manager (for oversight)
 
-    Permissions: worklogs.approve
+    Phase 3 Wave 3.1.6.b — defense-in-depth scope check on top of
+    the existing `worklogs.approve` perm gate. Today only ADMIN
+    holds that perm (via require_permission bypass), so the strategy
+    is a no-op for the only caller in production. If the perm is
+    ever granted to AREA / REGION / WORK_MANAGER, the strategy will
+    enforce their respective scopes automatically — no behavior
+    change today.
+
+    fetch + authorize live BEFORE the try/except so HTTPException
+    propagates cleanly instead of being swallowed into 500 by the
+    broad `except Exception` (same pattern as work_orders 1.3.a/b).
+
+    Permissions: worklogs.approve (RBAC, unchanged).
     """
     require_permission(current_user, "worklogs.approve")
+
+    worklog = db.query(Worklog).filter(Worklog.id == worklog_id).first()
+    if not worklog:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Worklog not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=worklog,
+        resource_type="Worklog",
+    )
 
     try:
         # Use service method (handles log internally)
@@ -789,11 +811,30 @@ def reject_worklog(
     rejection_reason: Optional[str] = Query(default=None, description="Legacy: prefer JSON body.rejection_reason"),
 ):
     """
-    Reject worklog (with mandatory reason)
+    Reject worklog (with mandatory reason).
 
-    Permissions: worklogs.approve
+    Phase 3 Wave 3.1.6.b — defense-in-depth scope check, same shape
+    as approve. No behavior change today (only ADMIN holds the perm).
+
+    Note: the perm gate uses `worklogs.approve`, not `worklogs.reject`.
+    AREA / REGION / WORK_MANAGER do hold `worklogs.reject` in DB but
+    today's check on `.approve` makes that grant dead code — we
+    deliberately do NOT fix that here (out of scope per user direction;
+    flagged for a separate worklog perms cleanup wave).
+
+    Permissions: worklogs.approve (same as approve, unchanged).
     """
     require_permission(current_user, "worklogs.approve")
+
+    worklog = db.query(Worklog).filter(Worklog.id == worklog_id).first()
+    if not worklog:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Worklog not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=worklog,
+        resource_type="Worklog",
+    )
 
     # Accept either a JSON body or a legacy query param
     reason = (body.rejection_reason if body and body.rejection_reason else rejection_reason)
