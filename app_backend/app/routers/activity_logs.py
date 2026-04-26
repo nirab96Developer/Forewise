@@ -26,10 +26,63 @@ def _get_scope_for_role(role_code: str) -> str:
     """Determine max scope level for a role."""
     scope_map = {
         "ADMIN": "system",
+        "SUPER_ADMIN": "system",
         "REGION_MANAGER": "region",
         "AREA_MANAGER": "area",
     }
     return scope_map.get(role_code, "my")
+
+
+def _user_can_see_log(db: Session, user: User, log: ActivityLog) -> bool:
+    """Per-row scope predicate for the detail endpoint.
+
+    Mirrors the list endpoint's filtering rules so a user who can't
+    see a log in the list also can't open it by ID. Phase 3 Wave 2.1.a
+    closes the legacy gap where /activity-logs/{id} returned any row
+    to any authenticated caller.
+
+    Behavior:
+      - Owner (`log.user_id == user.id`) always passes — same as list,
+        which always includes own activity in the "my" path.
+      - ADMIN / SUPER_ADMIN: system scope — see everything.
+      - REGION_MANAGER: see logs from users in their region.
+      - AREA_MANAGER:   see logs from users in their area.
+      - everyone else:  own logs only.
+      - Category auto-filter (matches list's "no category specified"
+        branch): ACCOUNTANT sees financial/system; WORK_MANAGER and
+        ORDER_COORDINATOR see operational/system. Logs outside that
+        category set are filtered out (return False).
+    """
+    role_code = (user.role.code if user.role else "").upper()
+
+    if log.category:
+        if role_code == "ACCOUNTANT" and log.category not in ("financial", "system"):
+            return False
+        if role_code == "WORK_MANAGER" and log.category not in ("operational", "system"):
+            return False
+        if role_code == "ORDER_COORDINATOR" and log.category not in ("operational", "system"):
+            return False
+
+    if log.user_id is not None and log.user_id == user.id:
+        return True
+
+    max_scope = _get_scope_for_role(role_code)
+    if max_scope == "system":
+        return True
+
+    if max_scope == "region":
+        if not user.region_id or log.user_id is None:
+            return False
+        log_user = db.query(User).filter(User.id == log.user_id).first()
+        return bool(log_user and log_user.region_id == user.region_id)
+
+    if max_scope == "area":
+        if not user.area_id or log.user_id is None:
+            return False
+        log_user = db.query(User).filter(User.id == log.user_id).first()
+        return bool(log_user and log_user.area_id == user.area_id)
+
+    return False
 
 
 @router.get("/")
@@ -146,14 +199,26 @@ async def get_activity_log(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get a specific activity log by ID."""
+    """Get a specific activity log by ID.
+
+    Phase 3 Wave 2.1.a — same scope as the list endpoint. Without
+    this check, any authenticated user could read any log row by
+    guessing IDs (G4 in PHASE3_WAVE2_RECON.md).
+    """
+    from fastapi import HTTPException, status
+
     log = db.query(ActivityLog).filter(ActivityLog.id == log_id).first()
     if not log:
-        from fastapi import HTTPException, status
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Activity log not found"
         )
-    
+
+    if not _user_can_see_log(db, current_user, log):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No permission to view this activity log"
+        )
+
     return log
 
