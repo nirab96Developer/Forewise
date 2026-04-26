@@ -331,16 +331,39 @@ def update_work_order(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Update work order
-    
-    Permissions: work_orders.update
+    Update work order.
+
+    Phase 3 Wave 1.3.a — scope-enforced. RBAC unchanged
+    (`work_orders.update` perm still required first), then
+    AuthorizationService applies the per-resource scope:
+      ADMIN/COORDINATOR/ACCOUNTANT* → all (ACCOUNTANT lacks the perm
+      so RBAC blocks anyway — strategy is defense-in-depth)
+      REGION_MANAGER → same region as wo.project
+      AREA_MANAGER   → same area as wo.project
+      WORK_MANAGER   → only on assigned projects
+      SUPPLIER       → blocked
+    Closes the leak where AREA_MANAGER could PATCH a WO outside their
+    area via direct URL.
     """
     require_permission(current_user, "work_orders.update")
-    
+
+    work_order = db.query(WorkOrder).filter(
+        WorkOrder.id == work_order_id,
+        WorkOrder.deleted_at.is_(None),
+    ).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Work order {work_order_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
+
     try:
         work_order = work_order_service.update(db, work_order_id, data, current_user_id=current_user.id)
         return work_order
-    
+
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:
@@ -361,18 +384,25 @@ def delete_work_order(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Delete work order (soft delete) + activity log
-    
-    Permissions: work_orders.delete
+    Delete work order (soft delete) + activity log.
+
+    Phase 3 Wave 1.3.a — scope-enforced. Today only ADMIN holds
+    `work_orders.delete` so the strategy's GLOBAL_ROLES branch passes.
+    Defense-in-depth for the day a non-admin role gets the perm.
     """
     require_permission(current_user, "work_orders.delete")
-    
+
+    work_order = work_order_service.get_work_order(db, work_order_id)
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Work order {work_order_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
+
     try:
-        # Fetch order details before deletion for activity log
-        work_order = work_order_service.get_work_order(db, work_order_id)
-        if not work_order:
-            raise NotFoundException(f"Work order {work_order_id} not found")
-        
         order_number = getattr(work_order, 'order_number', work_order_id)
         admin_name = getattr(current_user, 'full_name', None) or getattr(current_user, 'username', f'User {current_user.id}')
         
@@ -522,16 +552,31 @@ def cancel_work_order(
     version: Optional[int] = None
 ):
     """
-    Cancel work order
-    
-    Permissions: work_orders.cancel
+    Cancel work order.
+
+    Phase 3 Wave 1.3.a — scope-enforced. WORK_MANAGER doesn't have
+    `work_orders.cancel` in DB today; if granted later, the strategy
+    will limit them to assigned projects.
     """
     require_permission(current_user, "work_orders.cancel")
-    
+
+    work_order = db.query(WorkOrder).filter(
+        WorkOrder.id == work_order_id,
+        WorkOrder.deleted_at.is_(None),
+    ).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Work order {work_order_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
+
     try:
         work_order = work_order_service.cancel(db, work_order_id, notes, version, current_user_id=current_user.id)
         return work_order
-    
+
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValidationException as e:
@@ -554,11 +599,27 @@ def close_work_order(
     version: Optional[int] = None
 ):
     """
-    Close/Complete work order
+    Close/Complete work order.
 
-    Permissions: work_orders.close
+    Phase 3 Wave 1.3.a — scope-enforced. Same as cancel: today no
+    field role holds `work_orders.close`, so the strategy is mostly
+    defense-in-depth. Also covers the `/complete` alias which routes
+    here directly.
     """
     require_permission(current_user, "work_orders.close")
+
+    work_order = db.query(WorkOrder).filter(
+        WorkOrder.id == work_order_id,
+        WorkOrder.deleted_at.is_(None),
+    ).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Work order {work_order_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
 
     try:
         from decimal import Decimal
@@ -636,15 +697,29 @@ def start_work_order(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Start work order (transition to in_progress status)
-    
-    Permissions: work_orders.update
+    Start work order (transition to in_progress status).
+
+    Phase 3 Wave 1.3.a — scope-enforced. This is the highest-impact
+    change: closes the leak where WORK_MANAGER could /start a WO on a
+    project they're not assigned to, just by knowing the URL.
     """
     require_permission(current_user, "work_orders.update")
-    
+
+    work_order = db.query(WorkOrder).filter(
+        WorkOrder.id == work_order_id,
+        WorkOrder.deleted_at.is_(None),
+    ).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Work order {work_order_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
+
     try:
         work_order = work_order_service.start(db, work_order_id, current_user.id)
-        # Activity log is handled in service
         return work_order
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
