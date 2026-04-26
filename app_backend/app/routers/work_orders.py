@@ -1575,8 +1575,32 @@ def get_work_order_pdf(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Generate and return Work Order PDF (A4, RTL, weasyprint)."""
+    """Generate and return Work Order PDF (A4, RTL, weasyprint).
+
+    Phase 3 Wave 1.3.d — scope enforcement. Closes info disclosure
+    where any user with `work_orders.read` could download financial
+    fields (frozen_amount, hourly_rate, remaining_frozen) for any WO
+    via direct URL. Now scoped identically to `GET /work-orders/{id}`.
+
+    The fetch + authorize lives BEFORE the try/except wrapping PDF
+    generation so HTTPException(403/404) propagates cleanly instead
+    of falling through to the HTML fallback (which used to re-query
+    and rebuild the same sensitive content).
+    """
     require_permission(current_user, "work_orders.read")
+
+    work_order = db.query(WorkOrder).filter(
+        WorkOrder.id == work_order_id,
+        WorkOrder.deleted_at.is_(None),
+    ).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="WorkOrder not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
 
     from fastapi.responses import Response
     from app.services.pdf_documents import generate_work_order_pdf
@@ -1589,13 +1613,10 @@ def get_work_order_pdf(
         import logging
         logging.getLogger(__name__).error(f"Work Order PDF generation failed: {e}")
         from fastapi.responses import HTMLResponse
-        html = _build_work_order_html(
-            db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first(), db
-        )
+        html = _build_work_order_html(work_order, db)
         return HTMLResponse(content=html)
 
-    wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
-    filename = f"work_order_{wo.order_number or work_order_id}.pdf"
+    filename = f"work_order_{work_order.order_number or work_order_id}.pdf"
 
     return Response(
         content=pdf_bytes,
