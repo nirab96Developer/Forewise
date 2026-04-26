@@ -862,14 +862,26 @@ def remove_equipment_from_project(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Remove equipment from project — release remaining frozen budget, free equipment, STOPPED."""
+    """Remove equipment from project — release remaining frozen budget, free equipment, STOPPED.
+
+    Phase 3 Wave 1.3.b — scope-enforced. WORK_MANAGER stays restricted
+    to assigned projects. Note: per the recon (PHASE3_WAVE13_RECON.md
+    open question Q2), whether WORK_MGR should have this action at all
+    is flagged for product review; for now matches today's DB grant.
+    """
     require_permission(current_user, "work_orders.update")
 
-    try:
-        work_order = work_order_service.get_work_order(db, work_order_id)
-        if not work_order:
-            raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+    work_order = work_order_service.get_work_order(db, work_order_id)
+    if not work_order:
+        raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
 
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
+
+    try:
         budget = None
         if work_order.project_id:
             budget = (
@@ -1101,6 +1113,12 @@ def scan_equipment(
       A) Full match — plate + type match → auto-approve
       B) Same type, different plate → return question for user confirmation
       C) Wrong type → block (only Admin can override via separate endpoint)
+
+    Phase 3 Wave 1.3.b — scope-enforced. Closes the leak where any
+    authenticated user with `work_orders.read` could scan equipment
+    against a WO outside their scope (e.g. a WORK_MANAGER in a
+    different region triggering a scenario-C bounce on someone else's
+    WO).
     """
     require_permission(current_user, "work_orders.read")
 
@@ -1111,6 +1129,12 @@ def scan_equipment(
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if not wo:
         raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=wo,
+        resource_type="WorkOrder",
+    )
 
     # Block scan if WO not yet approved for execution
     from app.core.enums import WO_EXECUTION
@@ -1257,12 +1281,21 @@ def confirm_equipment(
     Confirm equipment assignment after scenario B (same type, different plate).
     - Assigns equipment to this WO
     - If equipment was in another active WO → release remaining budget there, stop that WO
+
+    Phase 3 Wave 1.3.b — scope-enforced. Defense-in-depth on top of
+    the existing `work_orders.update` perm check.
     """
     require_permission(current_user, "work_orders.update")
 
     wo = db.query(WorkOrder).filter(WorkOrder.id == work_order_id).first()
     if not wo:
         raise HTTPException(status_code=404, detail="הזמנה לא נמצאה")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=wo,
+        resource_type="WorkOrder",
+    )
 
     eq = db.query(Equipment).filter(Equipment.id == body.equipment_id).first()
     if not eq:
