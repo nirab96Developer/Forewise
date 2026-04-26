@@ -1501,7 +1501,32 @@ async def get_accountant_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
-    """Accountant dashboard — worklogs for review, KPIs, filters."""
+    """Accountant dashboard — worklogs for review, KPIs, filters.
+
+    Phase 3 Wave 2.2.b — closes leak D2 (PHASE3_WAVE22_RECON.md):
+    before this commit, any caller with `dashboard.view` (i.e. every
+    authenticated non-supplier user) could pull system-wide
+    financial KPIs (`pending_amount`, `monthly_approved`, draft
+    invoice totals) and a list of worklogs with cost fields. The
+    only intended audience is finance — ACCOUNTANT plus ADMINs.
+
+    Role gate (no scope narrowing — ACCOUNTANT is a global role by
+    design; cross-region financial visibility is intentional):
+      ✅ ACCOUNTANT, ADMIN, SUPER_ADMIN
+      ❌ everyone else (403)
+
+    ORDER_COORDINATOR is NOT included — they have their own queue
+    via /dashboard/coordinator-queue. If product later wants
+    coordinator visibility into financials, that's a deliberate
+    addition.
+    """
+    role_code = (current_user.role.code if current_user.role else "").upper()
+    if role_code not in ("ACCOUNTANT", "ADMIN", "SUPER_ADMIN"):
+        raise HTTPException(
+            status_code=403,
+            detail="Accountant dashboard access required",
+        )
+
     now = datetime.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
