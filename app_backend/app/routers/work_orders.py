@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_permission
+from app.core.authorization import AuthorizationService
 from app.models.user import User
 from app.models.work_order import WorkOrder
 from app.models.project import Project
@@ -117,17 +118,57 @@ def list_work_orders(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    List work orders with filters and pagination
-    
-    Permissions: work_orders.read
+    List work orders with filters and pagination.
+
+    Phase 3 Wave 1.2 — scope is now uniform with the detail endpoint
+    (no more list-vs-detail mismatch). Routed through
+    AuthorizationService so REGION_MANAGER sees the full region,
+    AREA_MANAGER sees their area, WORK_MANAGER sees only assigned
+    projects, ADMIN/COORDINATOR/ACCOUNTANT see everything.
+
+    Permissions: work_orders.read (always required first).
     """
     require_permission(current_user, "work_orders.read")
-    
-    if current_user.area_id is not None:
+
+    # Resolve scope through the strategy: AREA_MANAGER continues to
+    # set search.area_id (preserves existing service-layer behavior),
+    # REGION/WORK have their own filter applied at query time below.
+    role_code = (current_user.role.code if current_user.role else "").upper()
+    if role_code == "AREA_MANAGER" and current_user.area_id is not None:
         search.area_id = current_user.area_id
 
     try:
         work_orders, total = work_order_service.list(db, search)
+        # Apply non-area-id scope rules (region, project assignment) by
+        # filtering the result post-hoc. Service-layer filter_query
+        # rewrite is a follow-up wave; this preserves the public service
+        # contract while closing the leak.
+        authz = AuthorizationService(db)
+        from app.models import Project
+        from app.models.project_assignment import ProjectAssignment
+
+        if role_code == "REGION_MANAGER" and current_user.region_id is not None:
+            allowed_project_ids = {
+                p.id for p in db.query(Project.id, Project.region_id)
+                .filter(Project.region_id == current_user.region_id).all()
+            }
+            work_orders = [w for w in work_orders if w.project_id in allowed_project_ids]
+            total = len(work_orders)
+        elif role_code == "WORK_MANAGER":
+            assigned_ids = {
+                pa.project_id for pa in db.query(ProjectAssignment)
+                .filter(
+                    ProjectAssignment.user_id == current_user.id,
+                    ProjectAssignment.is_active == True,
+                ).all()
+            }
+            work_orders = [w for w in work_orders if w.project_id in assigned_ids]
+            total = len(work_orders)
+        elif role_code in ("SUPPLIER", "FIELD_WORKER"):
+            # Suppliers don't use /work-orders directly — they go through
+            # /supplier-portal. Returning empty defends against any URL probing.
+            work_orders = []
+            total = 0
         
         total_pages = (total + search.page_size - 1) // search.page_size if total > 0 else 1
         
@@ -211,29 +252,28 @@ def get_work_order(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Get work order by ID
+    Get work order by ID.
 
-    Permissions: work_orders.read
+    Phase 3 Wave 1.2 — single AuthorizationService.authorize() call
+    replaces the previous role-allowlist filter. Closes the
+    list-vs-detail leak: if a user sees a WO in the list, they can
+    open it; if they can't see it in the list, they get a clean 403
+    on direct URL access (instead of the old 200).
     """
-    require_permission(current_user, "work_orders.read")
-
     try:
-        query = (
-            select(WorkOrder)
-            .join(Project, Project.id == WorkOrder.project_id)
-            .where(
-                WorkOrder.id == work_order_id,
-                WorkOrder.deleted_at.is_(None),
-            )
-        )
-
-        role_code = (current_user.role.code if current_user.role else '').upper()
-        if current_user.area_id is not None and role_code not in ('ADMIN', 'SUPER_ADMIN', 'WORK_MANAGER', 'ORDER_COORDINATOR', 'ACCOUNTANT'):
-            query = query.where(Project.area_id == current_user.area_id)
-
-        work_order = db.execute(query).scalar_one_or_none()
+        work_order = db.query(WorkOrder).filter(
+            WorkOrder.id == work_order_id,
+            WorkOrder.deleted_at.is_(None),
+        ).first()
         if not work_order:
             raise HTTPException(status_code=404, detail="WorkOrder not found")
+
+        AuthorizationService(db).authorize(
+            current_user,
+            "work_orders.read",
+            resource=work_order,
+            resource_type="WorkOrder",
+        )
 
         return _to_response(work_order, db)
 

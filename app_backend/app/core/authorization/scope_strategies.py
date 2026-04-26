@@ -141,6 +141,115 @@ class BudgetScopeStrategy:
         return query.filter(False)
 
 
+class WorkOrderScopeStrategy:
+    """WorkOrder scope (Phase 3 Wave 1.2).
+
+    The recon (PHASE3_WAVE12_FRONTEND_RECON.md) found two issues in the
+    legacy code:
+      1. list filtered by current_user.area_id for ANY role with an
+         area_id — including admin.
+      2. detail used a different scope rule (5-role allowlist), so the
+         same WO would appear in the list but not the detail (or vice
+         versa) for the same user — an information-leak path via direct
+         URL access on `/work-orders/{id}`.
+
+    This strategy unifies the two paths under one matrix verified
+    against the live DB:
+      ADMIN / SUPER_ADMIN  → all
+      ORDER_COORDINATOR    → all (queue role, must see everything)
+      ACCOUNTANT           → all, read-only by perm convention
+      REGION_MANAGER       → wo.project.region_id == user.region_id
+      AREA_MANAGER         → wo.project.area_id   == user.area_id
+      WORK_MANAGER         → wo.project_id ∈ user's active project_assignments
+      SUPPLIER             → 403 (suppliers go through /supplier-portal,
+                              never call /work-orders directly)
+      anything else        → 403
+    """
+
+    DETAIL = "אין הרשאה להזמנת עבודה זו"
+
+    GLOBAL_ROLES = ("ADMIN", "SUPER_ADMIN", "ORDER_COORDINATOR", "ACCOUNTANT")
+
+    def _project_for(self, db: Session, work_order):
+        """Resolve the WO's project (for region/area scope). Returns None
+        if the WO has no project — that's a data anomaly; non-global
+        roles get 403 in that case."""
+        from app.models import Project
+        if not work_order.project_id:
+            return None
+        return db.query(Project).filter(Project.id == work_order.project_id).first()
+
+    def check(self, db: Session, user: User, work_order) -> None:
+        code = (user.role.code if user.role else "").upper()
+
+        if code in self.GLOBAL_ROLES:
+            return
+
+        if code == "REGION_MANAGER":
+            project = self._project_for(db, work_order)
+            if not user.region_id or not project or project.region_id != user.region_id:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        if code == "AREA_MANAGER":
+            project = self._project_for(db, work_order)
+            if not user.area_id or not project or project.area_id != user.area_id:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        if code == "WORK_MANAGER":
+            from app.models.project_assignment import ProjectAssignment
+            if not work_order.project_id:
+                raise _FORBIDDEN(self.DETAIL)
+            assigned = (
+                db.query(ProjectAssignment)
+                .filter(
+                    ProjectAssignment.user_id == user.id,
+                    ProjectAssignment.project_id == work_order.project_id,
+                    ProjectAssignment.is_active == True,
+                )
+                .first()
+            )
+            if not assigned:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        # SUPPLIER + anything not listed → blocked. Suppliers belong on
+        # the /supplier-portal/{token} path; if one shows up here, deny.
+        raise _FORBIDDEN(self.DETAIL)
+
+    def filter(self, db: Session, user: User, query):
+        from app.models import WorkOrder, Project
+        from app.models.project_assignment import ProjectAssignment
+
+        code = (user.role.code if user.role else "").upper()
+
+        if code in self.GLOBAL_ROLES:
+            return query
+
+        if code == "REGION_MANAGER" and user.region_id:
+            return query.join(Project, Project.id == WorkOrder.project_id) \
+                        .filter(Project.region_id == user.region_id)
+
+        if code == "AREA_MANAGER" and user.area_id:
+            return query.join(Project, Project.id == WorkOrder.project_id) \
+                        .filter(Project.area_id == user.area_id)
+
+        if code == "WORK_MANAGER":
+            assigned_subq = (
+                db.query(ProjectAssignment.project_id)
+                .filter(
+                    ProjectAssignment.user_id == user.id,
+                    ProjectAssignment.is_active == True,
+                )
+                .subquery()
+            )
+            return query.filter(WorkOrder.project_id.in_(assigned_subq))
+
+        # SUPPLIER and unknown roles see nothing.
+        return query.filter(False)
+
+
 # ---------------------------------------------------------------------------
 # Strategy registry — Wave 1 ships only Budget. The rest are placeholders
 # so a future wave adds the class then maps its name here, and the rest
@@ -149,7 +258,7 @@ class BudgetScopeStrategy:
 
 STRATEGIES: dict[str, Any] = {
     "Budget": BudgetScopeStrategy(),
-    # "WorkOrder":         WorkOrderScopeStrategy(),         # Wave 3.1.2
+    "WorkOrder": WorkOrderScopeStrategy(),                   # Wave 3.1.2
     # "SupplierRotation":  SupplierRotationScopeStrategy(),  # Wave 3.1.3
     # "Notification":      NotificationScopeStrategy(),      # Wave 3.1.4
     # "Worklog":           WorklogScopeStrategy(),           # Wave 3.1.5
