@@ -7,6 +7,7 @@ from sqlalchemy import func, and_, or_, desc, extract, text
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_permission
+from app.core.authorization import AuthorizationService
 
 
 # Wave Dashboard — single shared dependency injected on every dashboard
@@ -1582,7 +1583,36 @@ async def get_worklog_detail(
     db: Session = Depends(get_db),
     current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
-    """Detailed worklog view for accountant modal."""
+    """Detailed worklog view for accountant modal.
+
+    Phase 3 Wave 2.2.a — closes leak D1 (PHASE3_WAVE22_RECON.md):
+    before this commit, any caller with `dashboard.view` could fetch
+    any worklog's financials (hourly_rate, cost_with_vat, audit
+    trail, supplier name) by guessing the ID. Same shape as the
+    Worklog PDF leak closed in Wave 3.1.6.a — `WorklogScopeStrategy`
+    already exists; this just wires it.
+
+    Behavior matrix (unchanged for legitimate callers):
+      ADMIN / SUPER_ADMIN / ACCOUNTANT → all worklogs (intended UX).
+      REGION_MANAGER → worklogs in their region.
+      AREA_MANAGER   → worklogs in their area.
+      WORK_MANAGER   → worklogs on assigned projects.
+      SUPPLIER / FIELD_WORKER (hypothetical) → blocked at the
+        `dashboard.view` gate before reaching here, but the strategy
+        adds belt-and-braces (OWN_ONLY branch).
+    """
+    from app.models.worklog import Worklog
+
+    worklog = db.query(Worklog).filter(Worklog.id == worklog_id).first()
+    if not worklog:
+        raise HTTPException(status_code=404, detail="Worklog not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=worklog,
+        resource_type="Worklog",
+    )
+
     row = db.execute(text("""
         SELECT wl.id, wl.report_number, wl.report_date, wl.report_type, wl.status,
                wl.work_hours, wl.break_hours, wl.net_hours, wl.total_hours,
@@ -1605,6 +1635,9 @@ async def get_worklog_detail(
     """), {"wid": worklog_id}).first()
 
     if not row:
+        # Defensive — should not happen since we already fetched the
+        # worklog via ORM above. Kept for parity with the original
+        # error path.
         raise HTTPException(status_code=404, detail="Worklog not found")
 
     warnings = []
