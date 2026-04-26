@@ -7,25 +7,22 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_active_user, require_permission
+from app.core.authorization import AuthorizationService
+from app.core.authorization.scope_strategies import NotificationScopeStrategy
 from app.models.user import User
 
 
-# Wave 7.G — ownership helper for the per-id endpoints
 def _check_notification_ownership(user: User, notification) -> None:
     """Raise 403 if the notification doesn't belong to this user.
 
-    ADMIN bypasses (matches require_permission behavior elsewhere). Other
-    roles must be the notification.user_id to proceed. Used by the
-    per-id read/mutate endpoints so users can never poke at someone
-    else's notifications by guessing IDs.
+    Phase 3 Wave 3.1.4 — this helper is now a thin delegate to
+    NotificationScopeStrategy. Behavior unchanged (ADMIN/SUPER_ADMIN
+    bypass; everyone else must be the owner). Kept as a function so
+    existing call sites and unit tests targeting it continue to work
+    without churn; new code should prefer
+    `AuthorizationService.authorize(... resource_type="Notification")`.
     """
-    if user.role and user.role.code in ("ADMIN", "SUPER_ADMIN"):
-        return
-    if notification.user_id != user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="התראה לא שייכת למשתמש",
-        )
+    NotificationScopeStrategy().check(None, user, notification)
 from app.schemas.notification import (
     NotificationCreate,
     NotificationUpdate,
@@ -199,11 +196,12 @@ def update_notification(
 def _mark_one_as_read(notification_id: int, db: Session, current_user: User):
     """Internal helper — mark a single notification as read.
 
-    Wave 7.G — explicit ownership check via _check_notification_ownership
-    BEFORE the service call. Previously the service silently filtered by
-    user_id, which conflated "doesn't exist" with "belongs to someone
-    else" — both returned 404. Now a non-owner gets a clean 403, matching
-    the behavior the rest of Phase 2 settled on.
+    Phase 3 Wave 3.1.4 — ownership check goes through
+    AuthorizationService now. Behavior identical to Wave 7.G:
+      - missing notification → 404
+      - non-owner non-admin → 403
+      - owner → success
+      - ADMIN/SUPER_ADMIN → bypass (support flow)
     """
     notification = notification_service.get_notification(db, notification_id)
     if not notification:
@@ -211,7 +209,11 @@ def _mark_one_as_read(notification_id: int, db: Session, current_user: User):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notification not found"
         )
-    _check_notification_ownership(current_user, notification)
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=notification,
+        resource_type="Notification",
+    )
     return notification_service.mark_as_read(
         db=db,
         notification_id=notification_id,

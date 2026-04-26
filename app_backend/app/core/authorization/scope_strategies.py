@@ -250,6 +250,45 @@ class WorkOrderScopeStrategy:
         return query.filter(False)
 
 
+class NotificationScopeStrategy:
+    """Notifications are pure-ownership (Phase 3 Wave 3.1.4).
+
+    Unlike WorkOrders or Budgets, notifications carry no region/area/
+    project — they're delivered to a single user_id and that's the
+    whole story. The strategy mirrors the legacy
+    `_check_notification_ownership` helper exactly:
+
+      ADMIN / SUPER_ADMIN  → bypass (used by support flows where a
+                              coordinator helps a field worker mark
+                              their own notifications)
+      everyone else        → notification.user_id == user.id, else 403
+
+    `check()` doesn't need a db handle but accepts one for the
+    uniform Strategy contract. `filter()` narrows a list query to
+    "my notifications" — used as a building block for any future
+    `/notifications` listing that wants to consume the strategy.
+    """
+
+    DETAIL = "התראה לא שייכת למשתמש"
+
+    def check(self, db: Session, user: User, notification) -> None:
+        code = (user.role.code if user.role else "").upper()
+        if code in ("ADMIN", "SUPER_ADMIN"):
+            return
+        if notification.user_id != user.id:
+            raise _FORBIDDEN(self.DETAIL)
+
+    def filter(self, db: Session, user: User, query):
+        from app.models.notification import Notification
+        code = (user.role.code if user.role else "").upper()
+        if code in ("ADMIN", "SUPER_ADMIN"):
+            # Admin's "/my" is still their own — but a future admin
+            # cross-user listing endpoint can opt out by not calling
+            # filter_query. Default to own-only here.
+            return query.filter(Notification.user_id == user.id)
+        return query.filter(Notification.user_id == user.id)
+
+
 class ProjectScopeStrategy:
     """Project-level scope (Phase 3 Wave 1.3.e).
 
@@ -328,8 +367,8 @@ STRATEGIES: dict[str, Any] = {
     "Budget": BudgetScopeStrategy(),
     "WorkOrder": WorkOrderScopeStrategy(),                   # Wave 3.1.2
     "Project": ProjectScopeStrategy(),                       # Wave 3.1.3.e
+    "Notification": NotificationScopeStrategy(),             # Wave 3.1.4
     # "SupplierRotation":  SupplierRotationScopeStrategy(),  # Wave 3.1.3
-    # "Notification":      NotificationScopeStrategy(),      # Wave 3.1.4
     # "Worklog":           WorklogScopeStrategy(),           # Wave 3.1.5
     # "Invoice":           InvoiceScopeStrategy(),           # Wave 3.1.6
     # "SupportTicket":     SupportTicketScopeStrategy(),     # Wave 3.1.7
