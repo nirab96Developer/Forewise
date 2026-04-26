@@ -322,6 +322,135 @@ class SupportTicketScopeStrategy:
         return query.filter(SupportTicket.user_id == user.id)
 
 
+class WorklogScopeStrategy:
+    """Worklog scope (Phase 3 Wave 3.1.6).
+
+    Worklogs sit at the intersection of two scope dimensions:
+      A. Ownership   — `worklog.user_id == user.id` (used by suppliers
+                        and field workers).
+      B. Project     — `worklog.project`'s region/area/assignment matches
+                        the user (used by region/area/work managers).
+
+    Mirrors WorkOrderScopeStrategy structurally, with one new branch
+    (OWN_ONLY_ROLES) since suppliers/field workers care only about
+    their own reported hours, not the project.
+
+    Roles:
+      ADMIN / SUPER_ADMIN / ORDER_COORDINATOR / ACCOUNTANT → all
+      REGION_MANAGER  → wo.project.region_id == user.region_id
+      AREA_MANAGER    → wo.project.area_id   == user.area_id
+      WORK_MANAGER    → worklog.project_id ∈ user's active assignments
+      SUPPLIER        → worklog.user_id == user.id
+      FIELD_WORKER    → worklog.user_id == user.id
+      anything else   → 403
+    """
+
+    DETAIL = "אין הרשאה לדיווח זה"
+
+    GLOBAL_ROLES = ("ADMIN", "SUPER_ADMIN", "ORDER_COORDINATOR", "ACCOUNTANT")
+    OWN_ONLY_ROLES = ("SUPPLIER", "FIELD_WORKER")
+
+    def _project_for(self, db: Session, worklog):
+        """Resolve the worklog's project for region/area lookups.
+
+        Worklogs carry a denormalized `project_id` directly on the row
+        (from the model). Fall back through `work_order.project_id`
+        if the direct field is null (legacy data).
+        """
+        from app.models import Project, WorkOrder
+        pid = getattr(worklog, "project_id", None)
+        if not pid:
+            wo_id = getattr(worklog, "work_order_id", None)
+            if wo_id:
+                wo = db.query(WorkOrder).filter(WorkOrder.id == wo_id).first()
+                if wo:
+                    pid = wo.project_id
+        if not pid:
+            return None
+        return db.query(Project).filter(Project.id == pid).first()
+
+    def check(self, db: Session, user: User, worklog) -> None:
+        code = (user.role.code if user.role else "").upper()
+
+        if code in self.GLOBAL_ROLES:
+            return
+
+        if code in self.OWN_ONLY_ROLES:
+            if worklog.user_id != user.id:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        if code == "REGION_MANAGER":
+            project = self._project_for(db, worklog)
+            if not user.region_id or not project or project.region_id != user.region_id:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        if code == "AREA_MANAGER":
+            project = self._project_for(db, worklog)
+            if not user.area_id or not project or project.area_id != user.area_id:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        if code == "WORK_MANAGER":
+            from app.models.project_assignment import ProjectAssignment
+            pid = getattr(worklog, "project_id", None)
+            if not pid:
+                # Look up via WO if needed
+                project = self._project_for(db, worklog)
+                pid = project.id if project else None
+            if not pid:
+                raise _FORBIDDEN(self.DETAIL)
+            assigned = (
+                db.query(ProjectAssignment)
+                .filter(
+                    ProjectAssignment.user_id == user.id,
+                    ProjectAssignment.project_id == pid,
+                    ProjectAssignment.is_active == True,
+                )
+                .first()
+            )
+            if not assigned:
+                raise _FORBIDDEN(self.DETAIL)
+            return
+
+        raise _FORBIDDEN(self.DETAIL)
+
+    def filter(self, db: Session, user: User, query):
+        from app.models import Project
+        from app.models.project_assignment import ProjectAssignment
+        from app.models.worklog import Worklog
+
+        code = (user.role.code if user.role else "").upper()
+
+        if code in self.GLOBAL_ROLES:
+            return query
+
+        if code in self.OWN_ONLY_ROLES:
+            return query.filter(Worklog.user_id == user.id)
+
+        if code == "REGION_MANAGER" and user.region_id:
+            return query.join(Project, Project.id == Worklog.project_id) \
+                        .filter(Project.region_id == user.region_id)
+
+        if code == "AREA_MANAGER" and user.area_id:
+            return query.join(Project, Project.id == Worklog.project_id) \
+                        .filter(Project.area_id == user.area_id)
+
+        if code == "WORK_MANAGER":
+            assigned_subq = (
+                db.query(ProjectAssignment.project_id)
+                .filter(
+                    ProjectAssignment.user_id == user.id,
+                    ProjectAssignment.is_active == True,
+                )
+                .subquery()
+            )
+            return query.filter(Worklog.project_id.in_(assigned_subq))
+
+        return query.filter(False)
+
+
 class ProjectScopeStrategy:
     """Project-level scope (Phase 3 Wave 1.3.e).
 
@@ -402,7 +531,7 @@ STRATEGIES: dict[str, Any] = {
     "Project": ProjectScopeStrategy(),                       # Wave 3.1.3.e
     "Notification": NotificationScopeStrategy(),             # Wave 3.1.4
     "SupportTicket": SupportTicketScopeStrategy(),           # Wave 3.1.5
-    # "SupplierRotation":  SupplierRotationScopeStrategy(),  # Wave 3.1.3
-    # "Worklog":           WorklogScopeStrategy(),           # Wave 3.1.5
-    # "Invoice":           InvoiceScopeStrategy(),           # Wave 3.1.6
+    "Worklog": WorklogScopeStrategy(),                       # Wave 3.1.6
+    # "SupplierRotation":  SupplierRotationScopeStrategy(),  # Wave 3.1.7
+    # "Invoice":           InvoiceScopeStrategy(),           # Wave 3.1.8
 }

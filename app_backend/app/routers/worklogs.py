@@ -13,6 +13,7 @@ from app.core.database import get_db
 
 logger = logging.getLogger(__name__)
 from app.core.dependencies import get_current_active_user, require_permission
+from app.core.authorization import AuthorizationService
 from app.models.user import User
 from app.models.worklog import Worklog
 from app.models.project import Project
@@ -39,13 +40,61 @@ def list_worklogs(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """List worklogs"""
+    """List worklogs.
+
+    Phase 3 Wave 3.1.6.a — scope is now uniform with the detail
+    endpoint (no more list-vs-detail mismatch). Replaces the broken
+    `area_id` shortcut that used to apply to anyone with an area_id
+    set, including admin. Routed through WorklogScopeStrategy:
+      ADMIN/COORDINATOR/ACCOUNTANT → all
+      REGION_MANAGER → projects in their region
+      AREA_MANAGER   → projects in their area (via search.area_id)
+      WORK_MANAGER   → only assigned projects (post-hoc filter)
+      SUPPLIER / FIELD_WORKER → own user_id only
+    """
     require_permission(current_user, "worklogs.read")
 
-    if current_user.area_id is not None:
+    role_code = (current_user.role.code if current_user.role else "").upper()
+
+    # Use the service's native filters where possible to keep
+    # pagination math correct on the most common cases.
+    if role_code == "AREA_MANAGER" and current_user.area_id is not None:
         search.area_id = current_user.area_id
+    elif role_code in ("SUPPLIER", "FIELD_WORKER"):
+        search.user_id = current_user.id
 
     worklogs, total = worklog_service.list(db, search)
+
+    # REGION_MANAGER and WORK_MANAGER need filters that the service
+    # doesn't expose (Project.region_id JOIN, ProjectAssignment lookup).
+    # Apply those post-hoc — same approach as work_orders Wave 1.2,
+    # tracked as performance debt for SQL pushdown.
+    if role_code == "REGION_MANAGER" and current_user.region_id is not None:
+        from app.models.project_assignment import ProjectAssignment  # noqa: F401 (kept for symmetry)
+        allowed_project_ids = {
+            p.id for p in db.query(Project.id, Project.region_id)
+            .filter(Project.region_id == current_user.region_id).all()
+        }
+        worklogs = [w for w in worklogs if w.project_id in allowed_project_ids]
+        total = len(worklogs)
+    elif role_code == "WORK_MANAGER":
+        from app.models.project_assignment import ProjectAssignment
+        assigned_ids = {
+            pa.project_id for pa in db.query(ProjectAssignment)
+            .filter(
+                ProjectAssignment.user_id == current_user.id,
+                ProjectAssignment.is_active == True,
+            ).all()
+        }
+        worklogs = [w for w in worklogs if w.project_id in assigned_ids]
+        total = len(worklogs)
+    elif role_code not in ("ADMIN", "SUPER_ADMIN", "ORDER_COORDINATOR",
+                            "ACCOUNTANT", "AREA_MANAGER",
+                            "SUPPLIER", "FIELD_WORKER"):
+        # Unknown role with worklogs.read → defensive: see nothing.
+        worklogs = []
+        total = 0
+
     total_pages = (total + search.page_size - 1) // search.page_size if total > 0 else 1
 
     return WorklogList(items=worklogs, total=total, page=search.page, page_size=search.page_size, total_pages=total_pages)
@@ -83,13 +132,42 @@ def get_pending_approval_endpoint(
 ):
     """
     Get worklogs pending approval.
-    This route MUST be before /{worklog_id} to avoid matching "pending-approval" as an ID.
 
-    Permissions: worklogs.approve
+    Phase 3 Wave 3.1.6.a — same scope as /worklogs list. Today only
+    ADMIN holds `worklogs.approve` (via bypass), so the strategy is
+    a no-op for the only caller in production. Defense-in-depth for
+    the day a non-global role gets the perm.
     """
     require_permission(current_user, "worklogs.approve")
     search = WorklogSearch(status="SUBMITTED", page=page, page_size=page_size)
+
+    role_code = (current_user.role.code if current_user.role else "").upper()
+    if role_code == "AREA_MANAGER" and current_user.area_id is not None:
+        search.area_id = current_user.area_id
+    elif role_code in ("SUPPLIER", "FIELD_WORKER"):
+        search.user_id = current_user.id
+
     worklogs, total = worklog_service.list(db, search)
+
+    if role_code == "REGION_MANAGER" and current_user.region_id is not None:
+        allowed_project_ids = {
+            p.id for p in db.query(Project.id, Project.region_id)
+            .filter(Project.region_id == current_user.region_id).all()
+        }
+        worklogs = [w for w in worklogs if w.project_id in allowed_project_ids]
+        total = len(worklogs)
+    elif role_code == "WORK_MANAGER":
+        from app.models.project_assignment import ProjectAssignment
+        assigned_ids = {
+            pa.project_id for pa in db.query(ProjectAssignment)
+            .filter(
+                ProjectAssignment.user_id == current_user.id,
+                ProjectAssignment.is_active == True,
+            ).all()
+        }
+        worklogs = [w for w in worklogs if w.project_id in assigned_ids]
+        total = len(worklogs)
+
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
     return WorklogList(items=worklogs, total=total, page=page, page_size=page_size, total_pages=total_pages)
 
@@ -105,7 +183,15 @@ def get_statistics_endpoint(
 ):
     """
     Get worklog statistics.
-    This route MUST be before /{worklog_id} to avoid matching "statistics" as an ID.
+
+    Phase 3 Wave 3.1.6.a — narrow defensive scoping:
+      OWN_ONLY roles (SUPPLIER, FIELD_WORKER) can only see their own
+      stats. They lack `worklogs.read` in DB so this is mostly
+      defense-in-depth — but if granted in the future, their stats
+      stay personal. ADMIN/COORDINATOR/ACCOUNTANT/AREA/REGION/WORK_MGR
+      keep today's "see system aggregates" behavior; tightening that
+      to per-region/per-area aggregates is a product decision for a
+      separate wave.
     """
     require_permission(current_user, "worklogs.read")
     filters = {}
@@ -113,6 +199,11 @@ def get_statistics_endpoint(
     if user_id: filters["user_id"] = user_id
     if date_from: filters["date_from"] = str(date_from)
     if date_to: filters["date_to"] = str(date_to)
+
+    role_code = (current_user.role.code if current_user.role else "").upper()
+    if role_code in ("SUPPLIER", "FIELD_WORKER"):
+        filters["user_id"] = current_user.id
+
     stats = worklog_service.get_statistics(db, filters=filters if filters else None)
     return stats
 
@@ -141,21 +232,26 @@ def get_worklog(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Get worklog"""
+    """Get worklog.
+
+    Phase 3 Wave 3.1.6.a — single AuthorizationService.authorize() call
+    replaces the previous broken `area_id` filter. Closes the
+    list-vs-detail mismatch: if a user sees a worklog in their list,
+    they can open it; if they can't see it in the list, they get a
+    clean 403 on direct URL access.
+    """
     require_permission(current_user, "worklogs.read")
 
-    query = (
-        select(Worklog)
-        .join(Project, Project.id == Worklog.project_id)
-        .where(Worklog.id == worklog_id)
-    )
-
-    if current_user.area_id is not None:
-        query = query.where(Project.area_id == current_user.area_id)
-
-    worklog = db.execute(query).scalar_one_or_none()
+    worklog = db.query(Worklog).filter(Worklog.id == worklog_id).first()
     if not worklog:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Worklog not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=worklog,
+        resource_type="Worklog",
+    )
+
     return worklog
 
 
@@ -375,11 +471,41 @@ def get_worklogs_by_work_order(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Get worklogs for specific work order"""
+    """Get worklogs for specific work order.
+
+    Phase 3 Wave 3.1.6.a — same scope as the list endpoint. Closes
+    a leak where any user with `worklogs.read` could pull every
+    worklog under any WO ID by guessing.
+    """
     require_permission(current_user, "worklogs.read")
 
+    role_code = (current_user.role.code if current_user.role else "").upper()
     search = WorklogSearch(work_order_id=work_order_id, page=1, page_size=100)
+    if role_code == "AREA_MANAGER" and current_user.area_id is not None:
+        search.area_id = current_user.area_id
+    elif role_code in ("SUPPLIER", "FIELD_WORKER"):
+        search.user_id = current_user.id
+
     worklogs, total = worklog_service.list(db, search)
+
+    if role_code == "REGION_MANAGER" and current_user.region_id is not None:
+        allowed_project_ids = {
+            p.id for p in db.query(Project.id, Project.region_id)
+            .filter(Project.region_id == current_user.region_id).all()
+        }
+        worklogs = [w for w in worklogs if w.project_id in allowed_project_ids]
+        total = len(worklogs)
+    elif role_code == "WORK_MANAGER":
+        from app.models.project_assignment import ProjectAssignment
+        assigned_ids = {
+            pa.project_id for pa in db.query(ProjectAssignment)
+            .filter(
+                ProjectAssignment.user_id == current_user.id,
+                ProjectAssignment.is_active == True,
+            ).all()
+        }
+        worklogs = [w for w in worklogs if w.project_id in assigned_ids]
+        total = len(worklogs)
 
     return WorklogList(items=worklogs, total=total, page=1, page_size=100, total_pages=1)
 
@@ -699,8 +825,27 @@ def get_worklog_pdf(
 ):
     """
     Generate and return a PDF for a worklog report.
+
+    Phase 3 Wave 3.1.6.a — scope-enforced. Closes info disclosure
+    where any user with `worklogs.read` could download a PDF for
+    any worklog ID by guessing, exposing financial fields
+    (`hourly_rate_snapshot`, `cost_with_vat`, `paid_hours`,
+    `overnight_total`, supplier email).
+
+    fetch+authorize lives BEFORE the try/except so HTTPException
+    propagates cleanly instead of being swallowed into 500.
     """
     require_permission(current_user, "worklogs.read")
+
+    worklog = db.query(Worklog).filter(Worklog.id == worklog_id).first()
+    if not worklog:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Worklog not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=worklog,
+        resource_type="Worklog",
+    )
 
     from fastapi.responses import Response
     from app.services.pdf_report_service import generate_and_save_worklog_pdf
