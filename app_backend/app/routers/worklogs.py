@@ -34,6 +34,67 @@ router = APIRouter(prefix="/worklogs", tags=["Worklogs"])
 worklog_service = WorklogService()
 
 
+def _check_create_scope(
+    db: Session,
+    current_user: User,
+    *,
+    work_order_id: Optional[int] = None,
+    project_id: Optional[int] = None,
+) -> None:
+    """Pre-create scope check (Phase 3 Wave 3.1.6.d).
+
+    Validates that `current_user` can create a worklog inside the
+    target WorkOrder or Project. Strategy preference:
+      1. If work_order_id provided → fetch WorkOrder and run
+         WorkOrderScopeStrategy. This is the natural choice for
+         worklogs since most flows go through a specific WO.
+      2. Else if project_id provided → fetch Project and run
+         ProjectScopeStrategy. Used by rare worklog flows where a
+         project is set directly without a WO.
+      3. Else (both null) → no scope check. Preserves the legacy
+         "rootless worklog" path; admin-only via the existing
+         `worklogs.create` perm gate.
+
+    Raises:
+      HTTPException 404 if the referenced WO/Project doesn't exist.
+      HTTPException 403 (via the strategy) if out of scope.
+    """
+    if work_order_id is not None:
+        from app.models.work_order import WorkOrder
+        wo = (
+            db.query(WorkOrder)
+            .filter(
+                WorkOrder.id == work_order_id,
+                WorkOrder.deleted_at.is_(None),
+            )
+            .first()
+        )
+        if not wo:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Work order {work_order_id} not found",
+            )
+        AuthorizationService(db).authorize(
+            current_user,
+            resource=wo,
+            resource_type="WorkOrder",
+        )
+        return
+
+    if project_id is not None:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Project {project_id} not found",
+            )
+        AuthorizationService(db).authorize(
+            current_user,
+            resource=project,
+            resource_type="Project",
+        )
+
+
 @router.get("", response_model=WorklogList)
 def list_worklogs(
     search: Annotated[WorklogSearch, Depends()],
@@ -261,8 +322,28 @@ def create_worklog(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
-    """Create worklog"""
+    """Create worklog.
+
+    Phase 3 Wave 3.1.6.d — pre-create scope check on the target
+    work_order_id or project_id. Closes the gap where any role with
+    `worklogs.create` could log hours against any WO / project. With
+    the check:
+      ADMIN / SUPER_ADMIN / ORDER_COORDINATOR / ACCOUNTANT → all
+      REGION_MANAGER → only WOs in their region
+      AREA_MANAGER   → only WOs in their area
+      WORK_MANAGER   → only WOs whose project they're assigned to
+      SUPPLIER       → blocked at perm gate today (no worklogs.create)
+
+    Permissions: worklogs.create (RBAC, unchanged).
+    """
     require_permission(current_user, "worklogs.create")
+
+    _check_create_scope(
+        db,
+        current_user,
+        work_order_id=data.work_order_id,
+        project_id=data.project_id,
+    )
 
     try:
         worklog = worklog_service.create(db, data, current_user.id)
@@ -290,8 +371,13 @@ def create_standard_worklog(
     """
     Create standard worklog - 9 net work hours (+ 1.5 break, not counted)
     תקן: 9 שעות עבודה נטו. הפסקה 1.5 שעות לא נספרת.
+
+    Phase 3 Wave 3.1.6.d — pre-create scope check via the WO. Same
+    matrix as POST /worklogs.
     """
     require_permission(current_user, "worklogs.create")
+
+    _check_create_scope(db, current_user, work_order_id=work_order_id)
 
     try:
         from datetime import date as date_type
@@ -335,9 +421,14 @@ def create_manual_worklog(
 ):
     """
     Create manual worklog with activity code (1-14)
-    דיווח ידני עם קוד פעילות
+    דיווח ידני עם קוד פעילות.
+
+    Phase 3 Wave 3.1.6.d — pre-create scope check via the WO. Same
+    matrix as POST /worklogs.
     """
     require_permission(current_user, "worklogs.create")
+
+    _check_create_scope(db, current_user, work_order_id=work_order_id)
 
     try:
         from datetime import date as date_type
@@ -382,9 +473,13 @@ def create_storage_worklog(
 ):
     """
     Create storage worklog - equipment storage overnight (150 NIS per night)
-    דיווח אחסון כלים - 150 ש"ח ללילה
+    דיווח אחסון כלים - 150 ש"ח ללילה.
+
+    Phase 3 Wave 3.1.6.d — pre-create scope check via the WO.
     """
     require_permission(current_user, "worklogs.create")
+
+    _check_create_scope(db, current_user, work_order_id=work_order_id)
 
     try:
         from datetime import date as date_type

@@ -190,6 +190,7 @@
 | # | Where | What | Trigger to fix |
 |---|---|---|---|
 | PD-1 | `routers/work_orders.py:list_work_orders` | REGION_MGR / WORK_MGR scope is applied **post-hoc in Python** after `WorkOrderService.list()`. Pagination totals (`total`, `total_pages`) get re-calculated from the post-filter list — wrong page math possible on non-final pages. Fine today (~60 WOs). | Total WOs > 200, **or** QA reports "less than page_size items on a non-final page" for REGION/WORK_MGR. Fix: push filter into the service via `AuthorizationService.filter_query(user, q, "WorkOrder")` (strategy's `.filter()` is already written + tested). |
+| PD-2 | `routers/worklogs.py:list_worklogs` (and `pending-approval`, `by-work-order`) | Same pattern: REGION_MGR / WORK_MGR scope is applied post-hoc in Python after `WorklogService.list()`. AREA_MGR uses the service's native `area_id` filter (correct). SUPPLIER / FIELD_WORKER use `search.user_id`. REGION/WORK_MGR pages may have wrong totals on non-final pages once volume grows. | Total worklogs > 500 **or** QA report. Fix: push scope into `WorklogService.list()` via `AuthorizationService.filter_query(user, q, "Worklog")` (strategy's `.filter()` already written + tested). |
 
 ---
 
