@@ -474,15 +474,36 @@ def approve_work_order(
     request: Optional[WorkOrderApproveRequest] = None,
 ):
     """
-    Approve work order
-    
+    Approve work order.
+
     Business Rule: equipment_id is REQUIRED for approval!
-    
-    Permissions: work_orders.approve
+
+    Phase 3 Wave 1.3.c — defense-in-depth scope check.
+    `_require_order_coordinator_or_admin` is the queue gate (today's
+    behavior, unchanged). The added `authorize` is a no-op for those
+    roles since they're all in WorkOrderScopeStrategy.GLOBAL_ROLES,
+    so behavior is preserved exactly. The check kicks in if the queue
+    wrapper is ever relaxed: a REGION/AREA/WORK_MGR slipping through
+    would still be scope-checked.
+
+    Permissions: work_orders.approve (RBAC, unchanged).
     """
     require_permission(current_user, "work_orders.approve")
     _require_order_coordinator_or_admin(current_user)
-    
+
+    work_order = db.query(WorkOrder).filter(
+        WorkOrder.id == work_order_id,
+        WorkOrder.deleted_at.is_(None),
+    ).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Work order {work_order_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
+
     try:
         # Service handles: status transition + supplier email + work-manager email
         # + project-manager in-app notification.
@@ -518,13 +539,29 @@ def reject_work_order(
     current_user: Annotated[User, Depends(get_current_active_user)]
 ):
     """
-    Reject work order
-    
-    Permissions: work_orders.approve (same as approve)
+    Reject work order.
+
+    Phase 3 Wave 1.3.c — defense-in-depth scope check, same shape as
+    approve. No behavior change today.
+
+    Permissions: work_orders.approve (same as approve, unchanged).
     """
     require_permission(current_user, "work_orders.approve")
     _require_order_coordinator_or_admin(current_user)
-    
+
+    work_order = db.query(WorkOrder).filter(
+        WorkOrder.id == work_order_id,
+        WorkOrder.deleted_at.is_(None),
+    ).first()
+    if not work_order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Work order {work_order_id} not found")
+
+    AuthorizationService(db).authorize(
+        current_user,
+        resource=work_order,
+        resource_type="WorkOrder",
+    )
+
     try:
         work_order = work_order_service.reject(db, work_order_id, request, current_user_id=current_user.id)
         reason = getattr(request, 'reason', '') or getattr(request, 'notes', '') or ''
