@@ -19,6 +19,32 @@ from app.core.database import engine, get_db
 from app.core.logging import logger, setup_logging
 from app.core.rate_limiting import rate_limit_middleware
 
+# ============================================================
+# Phase 3 Wave 2.6 — version metadata captured at startup
+# ============================================================
+# Read git SHA + build timestamp once when the module loads.
+# Falls back to "unknown" if git isn't available (e.g. when
+# running from a tarball deploy with no .git dir).
+APP_VERSION = "1.1.0"
+
+
+def _detect_git_sha() -> str:
+    try:
+        import subprocess
+        sha = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=2,
+            cwd="/root/forewise",
+        ).stdout.strip()
+        return sha or "unknown"
+    except Exception:
+        return "unknown"
+
+
+GIT_SHA = _detect_git_sha()
+BUILD_TIME = datetime.now().isoformat()
+
+
 # Sentry — Error Monitoring (initialised only when DSN is configured)
 try:
     import sentry_sdk
@@ -410,19 +436,89 @@ async def root():
 @app.get("/health", tags=[" מערכת"], summary="בדיקת תקינות", description="בודק את מצב המערכת והחיבורים")
 async def health_check():
     """
-    בדיקת תקינות המערכת.
+    בדיקת תקינות המערכת — light, unauthenticated.
 
-    בודק:
-    - חיבור ל-Database
-    - חיבור ל-Redis (אם מופעל)
-    - סטטוס כללי
+    Returns 200 if the app is alive. Used by load balancers and
+    uptime monitors. For DB/Redis checks see /health/deep.
     """
     return {
         "status": "ok",
         "timestamp": datetime.now().isoformat(),
-        "version": "1.1.0",
+        "version": APP_VERSION,
         "environment": settings.ENVIRONMENT,
     }
+
+
+@app.get("/version", tags=[" מערכת"], summary="גרסת מערכת",
+         description="Build version + git SHA + environment metadata")
+async def version_info():
+    """Return build/version metadata for the deployed instance.
+
+    Phase 3 Wave 2.6 — gives the frontend footer + ops dashboards
+    a stable surface to display "what's running right now". Safe to
+    expose unauthenticated: contains no secrets, no infrastructure
+    details, just version/SHA/build_time/environment.
+    """
+    return {
+        "version": APP_VERSION,
+        "git_sha": GIT_SHA,
+        "build_time": BUILD_TIME,
+        "environment": settings.ENVIRONMENT,
+    }
+
+
+@app.get("/health/deep", tags=[" מערכת"], summary="בדיקת תקינות מורחבת",
+         description="App + DB + alembic head + version")
+async def health_check_deep():
+    """Deep health check — used by readiness probes and post-deploy
+    smoke tests.
+
+    Phase 3 Wave 2.6. Returns 200 with details on success, 503 with
+    error details on DB failure. NEVER returns secrets (DB URL,
+    env vars, etc.) — only status flags + version metadata.
+    """
+    from sqlalchemy import text
+
+    db_status = "ok"
+    db_error = None
+    alembic_head = None
+    try:
+        db = next(get_db())
+        try:
+            db.execute(text("SELECT 1"))
+            try:
+                row = db.execute(
+                    text("SELECT version_num FROM alembic_version LIMIT 1")
+                ).first()
+                alembic_head = row[0] if row else None
+            except Exception:
+                alembic_head = None
+        finally:
+            db.close()
+    except Exception as e:
+        db_status = "error"
+        db_error = type(e).__name__
+
+    overall = "ok" if db_status == "ok" else "degraded"
+    payload = {
+        "status": overall,
+        "timestamp": datetime.now().isoformat(),
+        "version": APP_VERSION,
+        "git_sha": GIT_SHA,
+        "build_time": BUILD_TIME,
+        "environment": settings.ENVIRONMENT,
+        "checks": {
+            "app": "ok",
+            "database": db_status,
+            "alembic_head": alembic_head,
+        },
+    }
+    if db_error:
+        payload["checks"]["database_error_type"] = db_error
+
+    if overall != "ok":
+        return JSONResponse(status_code=503, content=payload)
+    return payload
 
 
 @app.get("/api/v1/health", tags=[" מערכת"], summary="בדיקת תקינות API", description="בודק את מצב ה-API")

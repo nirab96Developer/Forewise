@@ -17,6 +17,7 @@ import { FullScreenLoader } from "./components/common/UnifiedLoader";
 import { debugLogger } from "./utils/debug";
 import { useIsMobile } from "./hooks/useIsMobile";
 import PWAInstallBanner from "./components/PWAInstallBanner";
+import VersionFooter from "./components/common/VersionFooter";
 import { useOfflineSync } from "./hooks/useOfflineSync";
 
 const OfflineSyncOnReconnect: React.FC = () => {
@@ -137,6 +138,9 @@ const App: React.FC = () => {
 
         {/* iOS PWA Install Banner */}
         <PWAInstallBanner />
+
+        {/* Phase 3 Wave 2.6 — version stamp (small, unobtrusive) */}
+        <VersionFooter />
 
         {/* Debug Panel Toggle Button */}
         {import.meta.env.DEV && (
