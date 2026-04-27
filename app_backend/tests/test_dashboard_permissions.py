@@ -57,12 +57,12 @@ class TestDashboardViewAssignment:
                 SELECT 1 FROM role_permissions rp
                 JOIN roles r ON r.id = rp.role_id
                 JOIN permissions p ON p.id = rp.permission_id
-                WHERE r.code = 'SUPPLIER' AND p.code = 'DASHBOARD.VIEW'
+                WHERE r.code = 'SUPPLIER' AND p.code = 'dashboard.view'
                 """
             )).fetchone()
             assert row is None, (
-                "SUPPLIER must NOT have DASHBOARD.VIEW after migration "
-                "a3b4c5d6e7f8. Run alembic upgrade head."
+                "SUPPLIER must NOT have dashboard.view after migrations "
+                "a3b4c5d6e7f8 + b5c6d7e8f9a0. Run alembic upgrade head."
             )
         finally:
             db.close()
@@ -75,7 +75,7 @@ class TestDashboardViewAssignment:
                 SELECT r.code FROM role_permissions rp
                 JOIN roles r ON r.id = rp.role_id
                 JOIN permissions p ON p.id = rp.permission_id
-                WHERE p.code = 'DASHBOARD.VIEW'
+                WHERE p.code = 'dashboard.view'
                 ORDER BY r.code
                 """
             )).fetchall()
@@ -85,7 +85,7 @@ class TestDashboardViewAssignment:
                 "ORDER_COORDINATOR", "REGION_MANAGER", "WORK_MANAGER",
             }
             assert actual == expected, (
-                f"DASHBOARD.VIEW assignment drift. Expected {expected}, got {actual}."
+                f"dashboard.view assignment drift. Expected {expected}, got {actual}."
             )
         finally:
             db.close()

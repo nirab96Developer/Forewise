@@ -11,9 +11,9 @@
 
 | Severity | Count | Items |
 |---|---|---|
-| 🔴 **CRITICAL** | 1 | F-1: UPPERCASE permission pollution in DB grants unintended access |
+| ~~🔴 CRITICAL~~ | ~~1~~ → **0** | ~~F-1~~ **CLOSED** by migration b5c6d7e8f9a0 (commit pending) |
 | 🟠 **HIGH** | 0 | — |
-| 🟡 MEDIUM | 1 | F-2: WORK_MGR can call `/worklogs/X/approve` — perm gate is bypassed |
+| 🟡 MEDIUM | 1 | F-2: WORK_MGR can call `/worklogs/X/approve` — **awaiting Phase 2 PR** for per-perm policy revocations |
 | 🟢 LOW / cosmetic | 0 | — |
 | ✅ Verified working | 73 | scope/auth/dashboards/widgets/notifications/activity logs/role gates |
 
@@ -25,7 +25,21 @@
 
 ## Findings
 
-### F-1 — CRITICAL — UPPERCASE permission pollution in DB
+### F-1 — ✅ CLOSED — UPPERCASE permission pollution in DB
+**Closed by**: alembic migration `b5c6d7e8f9a0` (case normalization).
+
+**What changed**:
+- 184 → **169 active permissions** (15 HAS_TWIN UPPERCASE deactivated; their grants pre-merged into the lowercase twins).
+- 35 NO_TWIN UPPERCASE perms renamed to lowercase in place; grants preserved.
+- Per-role effective access: **identical pre/post** (verified by snapshot diff and embedded migration assertion).
+- Live re-verification post-migration: 17/17 smoke + all sanity probes 200.
+- Test pinned: `tests/test_permissions_table_invariants.py` — fails CI if any active UPPERCASE perm or case-insensitive duplicate ever returns.
+
+Detail of the original finding follows for historical record.
+
+---
+
+
 **Discovered by**: probing `/worklogs/pending-approval` as WORK_MANAGER (token for user `adira`, id=100).
 
 **What we found**:
@@ -65,6 +79,16 @@ PGPASSWORD=... psql -d forewise_prod -c \
 ---
 
 ### F-2 — MEDIUM — WORK_MANAGER can call /worklogs/X/approve
+**Status after F-1 closure**: still open. Phase 2 PR will revoke specific
+grants per documented policy. After Phase 1, `WORKLOGS.APPROVE` (uppercase)
+was renamed to `worklogs.approve` (lowercase) — WORK_MANAGER still holds
+this grant in `role_permissions`. The grant is now **visible in
+PERMISSIONS_MATRIX.md territory** instead of hidden behind case-insensitive
+matching, so Phase 2 can audit and REVOKE it explicitly.
+
+Tracking: `tests/test_permissions_table_invariants.py::TestF2OpenItems`
+contains 2 xfail tests that will turn green once Phase 2 lands.
+
 **Discovered by**: same probe + downstream test.
 
 **Observations**:
