@@ -258,6 +258,33 @@ Admin-only counts properly blank for scoped roles. Per-project counts properly n
 
 ---
 
+### Section 15 — UI Redesign / UX Proposal (read-only review)
+
+A separate document: **[UI_REDESIGN_PROPOSAL.md](./UI_REDESIGN_PROPOSAL.md)** —
+proposal only, no code changes.
+
+Top-line findings from the UI review:
+
+| Severity | Count | Examples |
+|---|---|---|
+| 🟠 HIGH-impact | 7 | U-1: Accountant dashboard 541 lines / one screen overload. U-2: KPIs are bare numbers, no trend. U-4: 3 placeholder dashboards ship in production (FieldWorker / SupplierManager / Viewer). U-5: side menu has 30+ flat items without grouping. |
+| 🟡 MEDIUM | 8 | U-13: status pills inconsistent (English/Hebrew mix). U-14: date format mix. U-11: no auto-refresh + no freshness indicator. U-15: notification bell vs `/notifications` page diverge. |
+| 🟢 LOW / cosmetic | 5 | U-19: version footer too low-contrast (text-gray-400 on white). U-18: dev debug panel button wired but panel not rendered. |
+
+**Recommended track plan** (per the proposal doc):
+
+| Track | Scope | Effort | Ships |
+|---|---|---|---|
+| **A — Quick Wins** | Q-1..Q-8: status pill consistency, version footer contrast, freshness indicator, skeleton loaders, empty-state component, sticky table headers, date helper, delete the 3 placeholder dashboards | ~1 week | Pure frontend, no risk |
+| **B — Accountant + FieldWorker rebuild** | B-1: split AccountantDashboard into Worklogs/Invoices tabs. B-6: build FieldWorker dashboard properly. | ~2 weeks | Frontend only, pilot before ship |
+| **C — Strategic redesign** | B-2 kanban for coordinator, B-3 map-first for region, B-4 KPI sparklines, B-5 menu grouping | ~4-6 weeks | Needs 3 small backend additions; do after F-1 closes |
+
+**Bug opened?** No — proposal phase. Open tickets per item if/when track approved.
+
+**Recommendation**: approve Track A immediately (low risk, big visible win); pilot Track B with one accountant + one field worker before broader rollout; defer Track C until F-1 (DB perm cleanup) closes per Section 1's blocker list.
+
+---
+
 ## Production data observations (notable)
 
 - **0 budget overruns** in production today → Wave 2.2.c SQL fix is silently correct (no user-visible change).
@@ -272,10 +299,11 @@ Admin-only counts properly blank for scoped roles. Per-project counts properly n
 
 1. **Open ticket F-1** + create DB cleanup migration (highest priority — closes both findings).
 2. After F-1 fix, re-run this verification.
-3. Wave 2.3 — UI polish (RTL, empty states, mobile) — needs designer/QA pass.
-4. Section 5/9 — manual UI smoke for equipment intake + supplier portal — best done with screen-recording during a real device test.
-5. Sentry 403 — investigate separately when ready.
-6. Defer: Invoice strategy, SupplierRotation strategy, Smart Notifications enhancements — not blocked by F-1, but lower urgency than the cleanup.
+3. **UI Track A — Quick Wins** (per UI_REDESIGN_PROPOSAL.md) — pure frontend, no risk, ~1 week.
+4. **UI Track B — Accountant + FieldWorker rebuild** — pilot first, then ship.
+5. Section 5/9 — manual UI smoke for equipment intake + supplier portal — best done with screen-recording during a real device test.
+6. Sentry 403 — investigate separately when ready.
+7. Defer: Invoice strategy, SupplierRotation strategy, Smart Notifications enhancements, **UI Track C** — not blocked by F-1, but lower urgency than the cleanup.
 
 ---
 
