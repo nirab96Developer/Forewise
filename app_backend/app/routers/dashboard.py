@@ -890,21 +890,81 @@ async def get_dashboard_hours(
     }
 
 
+def _dashboard_scoped_project_ids(db: Session, user: User):
+    """Phase 3 Wave 2.2.d — central scope resolver for dashboard
+    widget endpoints that don't have a registered strategy
+    (Equipment, Supplier).
+
+    Returns:
+      None  → user has global scope; caller should NOT filter.
+      set() → user has no scope; caller should return [].
+      set of project ids → caller should filter by those.
+
+    Mirrors ProjectScopeStrategy logic (kept inline rather than
+    extending the strategy because ProjectScopeStrategy.filter() is
+    deliberately a no-op per Wave 1.3.e). If we ever add a real
+    `Equipment` or `Supplier` strategy, this helper can be replaced
+    with `AuthorizationService.filter_query` calls.
+    """
+    role = (user.role.code if user.role else "").upper()
+
+    if role in ("ADMIN", "SUPER_ADMIN", "ACCOUNTANT", "ORDER_COORDINATOR"):
+        return None
+
+    if role == "REGION_MANAGER" and user.region_id:
+        return {
+            row[0] for row in
+            db.query(Project.id).filter(Project.region_id == user.region_id).all()
+        }
+
+    if role == "AREA_MANAGER" and user.area_id:
+        return {
+            row[0] for row in
+            db.query(Project.id).filter(Project.area_id == user.area_id).all()
+        }
+
+    if role == "WORK_MANAGER":
+        from app.models.project_assignment import ProjectAssignment
+        return {
+            pa.project_id for pa in
+            db.query(ProjectAssignment).filter(
+                ProjectAssignment.user_id == user.id,
+                ProjectAssignment.is_active == True,
+            ).all()
+        }
+
+    # SUPPLIER / FIELD_WORKER / unknown — defensive empty set.
+    # In production they are 403'd at the dashboard.view gate, so
+    # this branch normally isn't reached.
+    return set()
+
+
 @router.get("/equipment/active")
 async def get_dashboard_active_equipment(
     db: Session = Depends(get_db),
     current_user: User = Depends(_dashboard_view),
     limit: int = 20
 ) -> List[Dict[str, Any]]:
-    """Active equipment for dashboard widget."""
+    """Active equipment for dashboard widget.
+
+    Phase 3 Wave 2.2.d — scoped via assigned_project_id. Closes the
+    leak from PHASE3_WAVE22_RECON.md (D4): list was unscoped, so any
+    caller with `dashboard.view` saw the full equipment fleet across
+    all projects.
+    """
     from app.models.equipment import Equipment
 
-    equipment_list = (
-        db.query(Equipment)
-        .filter(Equipment.status == "in_use", Equipment.is_active == True)
-        .limit(limit)
-        .all()
+    query = db.query(Equipment).filter(
+        Equipment.status == "in_use", Equipment.is_active == True
     )
+
+    allowed = _dashboard_scoped_project_ids(db, current_user)
+    if allowed is not None:
+        if not allowed:
+            return []
+        query = query.filter(Equipment.assigned_project_id.in_(allowed))
+
+    equipment_list = query.limit(limit).all()
 
     return [
         {
@@ -924,15 +984,31 @@ async def get_dashboard_active_suppliers(
     current_user: User = Depends(_dashboard_view),
     limit: int = 20
 ) -> List[Dict[str, Any]]:
-    """Active suppliers for dashboard widget."""
+    """Active suppliers for dashboard widget.
+
+    Phase 3 Wave 2.2.d — scoped via WorkOrder.supplier_id JOIN.
+    A supplier is "active for me" if they have at least one active
+    work order on a project in my scope. ADMIN / ACCOUNTANT /
+    COORDINATOR / SUPER_ADMIN see the full supplier list as today.
+    """
     from app.models.supplier import Supplier
 
-    suppliers = (
-        db.query(Supplier)
-        .filter(Supplier.is_active == True)
-        .limit(limit)
-        .all()
-    )
+    query = db.query(Supplier).filter(Supplier.is_active == True)
+
+    allowed = _dashboard_scoped_project_ids(db, current_user)
+    if allowed is not None:
+        if not allowed:
+            return []
+        # Suppliers with at least one active WO on a scoped project.
+        active_supplier_ids = db.query(WorkOrder.supplier_id).filter(
+            WorkOrder.project_id.in_(allowed),
+            WorkOrder.is_active == True,
+            WorkOrder.deleted_at.is_(None),
+            WorkOrder.supplier_id.is_not(None),
+        ).distinct()
+        query = query.filter(Supplier.id.in_(active_supplier_ids))
+
+    suppliers = query.limit(limit).all()
 
     return [
         {
