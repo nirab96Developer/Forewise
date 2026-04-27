@@ -661,93 +661,200 @@ async def get_live_counts(
     """
     Live counts for badges across all settings/admin pages.
     Used to show "12 active users", "3 pending", etc.
+
+    Phase 3 Wave 2.2.f — closes leak D3 from PHASE3_WAVE22_RECON.md.
+    Before: 17 counts, all global. AREA_MGR saw "system has 315
+    users, 45 suppliers" — info they shouldn't need.
+
+    After: counts are categorized into three groups:
+
+      ADMIN-ONLY (system-wide only):
+        users_active, users_total, roles, permissions,
+        regions, areas, locations, rates, tickets_open
+        → returned globally for ADMIN/SUPER_ADMIN/ACCOUNTANT/COORDINATOR;
+          0 for scoped roles. Response keys preserved (frontend stays
+          happy).
+
+      PER-PROJECT (scoped):
+        projects_active, equipment_total, equipment_in_use,
+        suppliers_active, budgets_total, budgets_overrun,
+        wo_pending, wo_in_progress, wo_no_status,
+        invoices_total, invoices_pending, invoices_paid
+        → narrowed to the user's project scope (region / area /
+          assigned). Empty scope → 0.
+
+      USER-SCOPED (always self):
+        notifications_unread → already user_id-filtered; unchanged.
     """
     from app.models import User as U, Project, WorkOrder, Budget, Region, Area, Location
     from app.models.equipment import Equipment
     from app.models.supplier import Supplier
-    
-    counts = {}
-    
-    # Users
-    counts["users_active"] = db.query(func.count(U.id)).filter(U.is_active == True).scalar() or 0
-    counts["users_total"] = db.query(func.count(U.id)).scalar() or 0
-    
-    # Roles & Permissions
     from app.models.role import Role
     from app.models.permission import Permission
-    counts["roles"] = db.query(func.count(Role.id)).filter(Role.is_active == True).scalar() or 0
-    counts["permissions"] = db.query(func.count(Permission.id)).filter(Permission.is_active == True).scalar() or 0
-    
-    # Suppliers
-    counts["suppliers_active"] = db.query(func.count(Supplier.id)).filter(Supplier.is_active == True).scalar() or 0
-    
-    # Equipment
-    counts["equipment_total"] = db.query(func.count(Equipment.id)).filter(Equipment.is_active == True).scalar() or 0
-    counts["equipment_in_use"] = db.query(func.count(Equipment.id)).filter(Equipment.status == "in_use").scalar() or 0
-    
-    # Projects
-    counts["projects_active"] = db.query(func.count(Project.id)).filter(Project.is_active == True).scalar() or 0
-    
-    # Regions / Areas
-    counts["regions"] = db.query(func.count(Region.id)).scalar() or 0
-    counts["areas"] = db.query(func.count(Area.id)).scalar() or 0
-    counts["locations"] = db.query(func.count(Location.id)).scalar() or 0
-    
-    # Budgets
-    counts["budgets_total"] = db.query(func.count(Budget.id)).filter(Budget.is_active == True).scalar() or 0
-    
-    # Budget overruns
+
+    allowed = _dashboard_scoped_project_ids(db, current_user)
+    is_global = allowed is None
+    empty_scope = allowed is not None and not allowed
+
+    def _scoped_count(query, project_id_col):
+        """Return count from `query`, scoped by project_id_col IN
+        allowed if needed. Empty scope → 0; global → query as-is."""
+        if empty_scope:
+            return 0
+        if not is_global:
+            query = query.filter(project_id_col.in_(allowed))
+        return query.scalar() or 0
+
+    counts: Dict[str, Any] = {}
+
+    # ── ADMIN-ONLY (system-wide) counts ──
+    if is_global:
+        counts["users_active"] = db.query(func.count(U.id)).filter(U.is_active == True).scalar() or 0
+        counts["users_total"] = db.query(func.count(U.id)).scalar() or 0
+        counts["roles"] = db.query(func.count(Role.id)).filter(Role.is_active == True).scalar() or 0
+        counts["permissions"] = db.query(func.count(Permission.id)).filter(Permission.is_active == True).scalar() or 0
+        counts["regions"] = db.query(func.count(Region.id)).scalar() or 0
+        counts["areas"] = db.query(func.count(Area.id)).scalar() or 0
+        counts["locations"] = db.query(func.count(Location.id)).scalar() or 0
+        try:
+            counts["rates"] = db.execute(text("SELECT COUNT(*) FROM system_rates WHERE is_active = true")).scalar() or 0
+        except Exception:
+            counts["rates"] = 0
+        try:
+            from app.models.support_ticket import SupportTicket
+            counts["tickets_open"] = db.query(func.count(SupportTicket.id)).filter(
+                SupportTicket.status.in_(["open", "in_progress"]), SupportTicket.is_active == True
+            ).scalar() or 0
+        except Exception:
+            counts["tickets_open"] = 0
+    else:
+        # Scoped roles: keep response shape stable, return 0.
+        for k in ("users_active", "users_total", "roles", "permissions",
+                  "regions", "areas", "locations", "rates", "tickets_open"):
+            counts[k] = 0
+
+    # ── PER-PROJECT (scoped) counts ──
+    counts["projects_active"] = _scoped_count(
+        db.query(func.count(Project.id)).filter(Project.is_active == True),
+        Project.id,
+    )
+
+    counts["equipment_total"] = _scoped_count(
+        db.query(func.count(Equipment.id)).filter(Equipment.is_active == True),
+        Equipment.assigned_project_id,
+    )
+    counts["equipment_in_use"] = _scoped_count(
+        db.query(func.count(Equipment.id)).filter(Equipment.status == "in_use"),
+        Equipment.assigned_project_id,
+    )
+
+    # Suppliers: a supplier is "active for me" if they have at least
+    # one active WO on a project in my scope (matches /suppliers/active).
+    if is_global:
+        counts["suppliers_active"] = (
+            db.query(func.count(Supplier.id)).filter(Supplier.is_active == True).scalar() or 0
+        )
+    elif empty_scope:
+        counts["suppliers_active"] = 0
+    else:
+        active_supplier_ids = db.query(WorkOrder.supplier_id).filter(
+            WorkOrder.project_id.in_(allowed),
+            WorkOrder.is_active == True,
+            WorkOrder.deleted_at.is_(None),
+            WorkOrder.supplier_id.is_not(None),
+        ).distinct()
+        counts["suppliers_active"] = (
+            db.query(func.count(Supplier.id))
+            .filter(Supplier.is_active == True, Supplier.id.in_(active_supplier_ids))
+            .scalar() or 0
+        )
+
+    counts["budgets_total"] = _scoped_count(
+        db.query(func.count(Budget.id)).filter(Budget.is_active == True),
+        Budget.project_id,
+    )
     try:
-        counts["budgets_overrun"] = db.query(func.count(Budget.id)).filter(
-            and_(Budget.spent_amount > Budget.total_amount, Budget.total_amount > 0)
-        ).scalar() or 0
-    except:
+        counts["budgets_overrun"] = _scoped_count(
+            db.query(func.count(Budget.id)).filter(
+                and_(Budget.spent_amount > Budget.total_amount, Budget.total_amount > 0)
+            ),
+            Budget.project_id,
+        )
+    except Exception:
         counts["budgets_overrun"] = 0
-    
-    # Work Orders by status
-    counts["wo_pending"] = db.query(func.count(WorkOrder.id)).filter(
-        WorkOrder.status.in_(["PENDING", "PENDING_SUPPLIER"]), WorkOrder.is_active == True
-    ).scalar() or 0
-    counts["wo_in_progress"] = db.query(func.count(WorkOrder.id)).filter(
-        WorkOrder.status == "IN_PROGRESS", WorkOrder.is_active == True
-    ).scalar() or 0
-    counts["wo_no_status"] = db.query(func.count(WorkOrder.id)).filter(
-        or_(WorkOrder.status == None, WorkOrder.status == "")
-    ).scalar() or 0
-    
-    # Support tickets
-    try:
-        from app.models.support_ticket import SupportTicket
-        counts["tickets_open"] = db.query(func.count(SupportTicket.id)).filter(
-            SupportTicket.status.in_(["open", "in_progress"]), SupportTicket.is_active == True
-        ).scalar() or 0
-    except:
-        counts["tickets_open"] = 0
-    
-    # System rates
-    try:
-        counts["rates"] = db.execute(text("SELECT COUNT(*) FROM system_rates WHERE is_active = true")).scalar() or 0
-    except:
-        counts["rates"] = 0
-    
-    # Notifications unread
+
+    counts["wo_pending"] = _scoped_count(
+        db.query(func.count(WorkOrder.id)).filter(
+            WorkOrder.status.in_(["PENDING", "PENDING_SUPPLIER"]),
+            WorkOrder.is_active == True,
+        ),
+        WorkOrder.project_id,
+    )
+    counts["wo_in_progress"] = _scoped_count(
+        db.query(func.count(WorkOrder.id)).filter(
+            WorkOrder.status == "IN_PROGRESS", WorkOrder.is_active == True
+        ),
+        WorkOrder.project_id,
+    )
+    counts["wo_no_status"] = _scoped_count(
+        db.query(func.count(WorkOrder.id)).filter(
+            or_(WorkOrder.status == None, WorkOrder.status == "")
+        ),
+        WorkOrder.project_id,
+    )
+
+    # ── USER-SCOPED (always self) ──
     try:
         counts["notifications_unread"] = db.execute(text(
             "SELECT COUNT(*) FROM notifications WHERE is_read = false AND user_id = :uid"
         ), {"uid": current_user.id}).scalar() or 0
-    except:
+    except Exception:
         counts["notifications_unread"] = 0
-    
-    # Invoices by status
-    try:
-        counts["invoices_total"] = db.execute(text("SELECT COUNT(*) FROM invoices WHERE is_active = true")).scalar() or 0
-        counts["invoices_pending"] = db.execute(text("SELECT COUNT(*) FROM invoices WHERE UPPER(status) = 'PENDING' AND is_active = true")).scalar() or 0
-        counts["invoices_paid"] = db.execute(text("SELECT COUNT(*) FROM invoices WHERE UPPER(status) = 'PAID' AND is_active = true")).scalar() or 0
-    except:
+
+    # ── Invoices (per-project; raw SQL with placeholders) ──
+    if is_global:
+        try:
+            counts["invoices_total"] = db.execute(text(
+                "SELECT COUNT(*) FROM invoices WHERE is_active = true"
+            )).scalar() or 0
+            counts["invoices_pending"] = db.execute(text(
+                "SELECT COUNT(*) FROM invoices WHERE UPPER(status) = 'PENDING' AND is_active = true"
+            )).scalar() or 0
+            counts["invoices_paid"] = db.execute(text(
+                "SELECT COUNT(*) FROM invoices WHERE UPPER(status) = 'PAID' AND is_active = true"
+            )).scalar() or 0
+        except Exception:
+            counts["invoices_total"] = 0
+            counts["invoices_pending"] = 0
+            counts["invoices_paid"] = 0
+    elif empty_scope:
         counts["invoices_total"] = 0
         counts["invoices_pending"] = 0
         counts["invoices_paid"] = 0
-    
+    else:
+        # ANY operator with bound parameters — same approach as
+        # /accountant-overview's project_id IN expansion.
+        try:
+            allowed_list = list(allowed)
+            counts["invoices_total"] = db.execute(text(
+                "SELECT COUNT(*) FROM invoices "
+                "WHERE is_active = true AND project_id = ANY(:pids)"
+            ), {"pids": allowed_list}).scalar() or 0
+            counts["invoices_pending"] = db.execute(text(
+                "SELECT COUNT(*) FROM invoices "
+                "WHERE UPPER(status) = 'PENDING' AND is_active = true "
+                "AND project_id = ANY(:pids)"
+            ), {"pids": allowed_list}).scalar() or 0
+            counts["invoices_paid"] = db.execute(text(
+                "SELECT COUNT(*) FROM invoices "
+                "WHERE UPPER(status) = 'PAID' AND is_active = true "
+                "AND project_id = ANY(:pids)"
+            ), {"pids": allowed_list}).scalar() or 0
+        except Exception:
+            counts["invoices_total"] = 0
+            counts["invoices_pending"] = 0
+            counts["invoices_paid"] = 0
+
     return counts
 
 
