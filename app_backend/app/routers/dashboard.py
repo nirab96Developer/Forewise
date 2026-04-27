@@ -890,6 +890,25 @@ async def get_dashboard_hours(
     }
 
 
+def _require_role(user: User, *allowed_roles: str) -> None:
+    """Phase 3 Wave 2.2.e — backend role gate for role-specific
+    dashboard endpoints. UI routes per role today, but the backend
+    didn't enforce it — any caller with `dashboard.view` could open
+    any role's dashboard endpoint and get back a partial / wrong-shape
+    response. This is the defense-in-depth layer.
+
+    Raises HTTPException 403 if `user.role.code` is not in
+    `allowed_roles` (case-insensitive). The `_dashboard_view`
+    permission gate is separate and runs first.
+    """
+    role_code = (user.role.code if user.role else "").upper()
+    if role_code not in {r.upper() for r in allowed_roles}:
+        raise HTTPException(
+            status_code=403,
+            detail="No permission to access this dashboard",
+        )
+
+
 def _dashboard_scoped_project_ids(db: Session, user: User):
     """Phase 3 Wave 2.2.d — central scope resolver for dashboard
     widget endpoints that don't have a registered strategy
@@ -1073,7 +1092,14 @@ async def get_region_areas_breakdown(
     db: Session = Depends(get_db),
     current_user: User = Depends(_dashboard_view),
 ) -> List[Dict[str, Any]]:
-    """Area breakdown for region manager dashboard."""
+    """Area breakdown for region manager dashboard.
+
+    Phase 3 Wave 2.2.e — role gate. Without it, an AREA_MANAGER (or
+    any non-region role with `dashboard.view`) could call this and
+    get an unscoped breakdown of "their" area's region. Restrict to
+    REGION_MANAGER + admins.
+    """
+    _require_role(current_user, "REGION_MANAGER", "ADMIN", "SUPER_ADMIN")
     from app.models import Worklog
 
     user = db.query(User).options(selectinload(User.role)).filter(User.id == current_user.id).first()
@@ -1123,7 +1149,14 @@ async def get_work_manager_summary(
     """
     Weekly summary for WORK_MANAGER dashboard.
     Returns real hours, active work orders, equipment in use.
+
+    Phase 3 Wave 2.2.e — role gate. Today every authenticated user
+    with `dashboard.view` could call this and get back their own
+    personal weekly summary (the body filters by current_user.id).
+    Restrict to WORK_MANAGER + admins so other roles get a clean
+    403 instead of a misleading "your stats" response.
     """
+    _require_role(current_user, "WORK_MANAGER", "ADMIN", "SUPER_ADMIN")
     now = datetime.now()
     week_ago = now - timedelta(days=7)
 
@@ -1252,7 +1285,12 @@ async def get_work_manager_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
-    """Alias — frontend calls this name."""
+    """Alias — frontend calls this name.
+
+    Phase 3 Wave 2.2.e — role gate (defense-in-depth even though the
+    delegate also gates).
+    """
+    _require_role(current_user, "WORK_MANAGER", "ADMIN", "SUPER_ADMIN")
     return await get_work_manager_summary(db=db, current_user=current_user)
 
 
@@ -1264,7 +1302,14 @@ async def get_region_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
-    """Region Manager dashboard — scoped to the user's region."""
+    """Region Manager dashboard — scoped to the user's region.
+
+    Phase 3 Wave 2.2.e — role gate. Without it, AREA_MGR or
+    WORK_MGR could call this and get either an empty/garbage
+    response (region_id mismatch) or REGION_MANAGER-shaped data
+    they're not supposed to operate on.
+    """
+    _require_role(current_user, "REGION_MANAGER", "ADMIN", "SUPER_ADMIN")
     rid = current_user.region_id
     region_name = current_user.region.name if current_user.region else "מרחב"
     now = datetime.now()
@@ -1366,7 +1411,17 @@ async def get_area_overview(
     db: Session = Depends(get_db),
     current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
-    """Area Manager dashboard — scoped to the user's area."""
+    """Area Manager dashboard — scoped to the user's area.
+
+    Phase 3 Wave 2.2.e — role gate. REGION_MANAGER is intentionally
+    included so a region manager can drill into one of their areas
+    via "view-as area"; ADMIN/SUPER_ADMIN for support flows. Other
+    roles get 403.
+    """
+    _require_role(
+        current_user,
+        "AREA_MANAGER", "REGION_MANAGER", "ADMIN", "SUPER_ADMIN",
+    )
     aid = current_user.area_id
     area_name = current_user.area.name if current_user.area else "אזור"
     now = datetime.now()
@@ -1458,7 +1513,14 @@ async def get_coordinator_queue(
     db: Session = Depends(get_db),
     current_user: User = Depends(_dashboard_view),
 ) -> Dict[str, Any]:
-    """Order coordinator work order queue with filters."""
+    """Order coordinator work order queue with filters.
+
+    Phase 3 Wave 2.2.e — role gate. Today the body uses `role_code`
+    to apply the region filter for ORDER_COORDINATOR; other roles
+    fell through to the global queue. Restrict to coordinator +
+    admins so other roles get a clean 403.
+    """
+    _require_role(current_user, "ORDER_COORDINATOR", "ADMIN", "SUPER_ADMIN")
     base_filter = "wo.deleted_at IS NULL AND wo.is_active = true"
     params: dict = {}
     role_code = getattr(getattr(current_user, "role", None), "code", None) or ""
