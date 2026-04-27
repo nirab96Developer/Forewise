@@ -517,13 +517,39 @@ async def get_dashboard_alerts(
     current_user: User = Depends(_dashboard_view),
     limit: int = 5
 ) -> List[Dict[str, Any]]:
-    """Get system alerts for dashboard"""
-    
+    """Get system alerts for dashboard.
+
+    Phase 3 Wave 2.2.c — fixes the SQL scope bug documented in
+    PHASE3_WAVE22_RECON.md (D in /alerts):
+
+      BEFORE:
+        overbudget_query = db.query(Budget).filter(...)
+        # bug: filter Project.region_id on a Budget query with no JOIN.
+        # SQLAlchemy emits an implicit cross-join → Cartesian product.
+        # Net effect: REGION/AREA managers either errored or got
+        # incorrect (often zero) overrun counts.
+
+      AFTER:
+        Use Budget.region_id / Budget.area_id directly. Both columns
+        already exist on the Budget model, denormalized from Project.
+        This matches /financial-summary which already does the right
+        thing.
+
+    NOTE: production REGION_MANAGER and AREA_MANAGER users may have
+    been seeing zero budget-overrun alerts up to this point because
+    of the bug. Post-deploy, real overruns in their scope will start
+    appearing — that's the intended fix, not a behavior regression.
+
+    The /pending WO count below is intentionally NOT scoped in this
+    wave. That's a separate cleanup tracked under "other gaps" in the
+    Wave 2.2 recon.
+    """
     alerts = []
-    
+
     # Note: Project model has no planned_end_date field, so we skip overdue check
-    
-    # Check for budget overruns (via Budget relationship)
+
+    # Check for budget overruns (scoped via the denormalized
+    # Budget.region_id / Budget.area_id columns — no JOIN needed).
     try:
         overbudget_query = db.query(Budget).filter(
             and_(
@@ -532,12 +558,12 @@ async def get_dashboard_alerts(
                 Budget.is_active == True
             )
         )
-        
+
         if current_user.role.code == "REGION_MANAGER" and current_user.region_id:
-            overbudget_query = overbudget_query.filter(Project.region_id == current_user.region_id)
+            overbudget_query = overbudget_query.filter(Budget.region_id == current_user.region_id)
         elif current_user.role.code == "AREA_MANAGER" and current_user.area_id:
-            overbudget_query = overbudget_query.filter(Project.area_id == current_user.area_id)
-        
+            overbudget_query = overbudget_query.filter(Budget.area_id == current_user.area_id)
+
         overbudget_count = overbudget_query.count()
         if overbudget_count > 0:
             alerts.append({
